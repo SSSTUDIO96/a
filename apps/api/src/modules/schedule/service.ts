@@ -101,8 +101,7 @@ export async function presentAppointmentOne(db: Prisma.TransactionClient, orgId:
 }
 
 export async function presentAppointmentList(db: Prisma.TransactionClient, orgId: string, rows: AppointmentRow[]) {
-  const avatarOf = await avatarsOfAppointments(db, orgId, rows);
-  return rows.map((r) => presentAppointment(r, avatarOf));
+  return Promise.all(rows.map(async (r) => presentAppointment(r, await avatarsOfAppointments(db, orgId, [r]))));
 }
 
 // Trả về JSON thuần (chuỗi ISO, số) để kết quả lưu vào bảng chống gửi trùng giống hệt lần đầu.
@@ -117,7 +116,7 @@ export function presentAppointment(a: AppointmentRow, avatarOf: AvatarOf, histor
     contract: a.contract,
     contractLineId: a.contractLineId,
     // Ca không gắn dòng hợp đồng → null (không đoán theo tên ca).
-    subjectName: null,
+    subjectName: a.contractLine?.subjectName ?? null,
     startsAt: a.startsAt.toISOString(),
     endsAt: a.endsAt.toISOString(),
     travelBeforeMin: a.travelBeforeMin,
