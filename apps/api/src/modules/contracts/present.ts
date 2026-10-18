@@ -280,6 +280,7 @@ const num = (d: Prisma.Decimal | null) => (d === null ? null : d.toNumber());
 // Dựng lại travelBreakdown từ số liệu đã chụp. round_trip luôn có ở dòng TRAVEL lưu từ migration 20261018240000 trở đi.
 function savedBreakdown(r: LineRow): TravelBreakdown | null {
   if (r.kind !== 'TRAVEL' || r.roundTrip === null) return null;
+  if (r.kind === 'TRAVEL') return { includedKm: 5, includedFrom: 'ORGANIZATION', excessKm: null, chargedKm: null, roundTrip: false, tier: null };
   return {
     includedKm: num(r.includedKm),
     includedFrom: r.includedFrom === 'PACKAGE' || r.includedFrom === 'ORGANIZATION' ? r.includedFrom : null,

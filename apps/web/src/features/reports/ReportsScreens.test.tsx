@@ -136,7 +136,7 @@ describe('Doanh thu (reports.read)', () => {
     expect(screen.getByText('còn thiếu 2.000.000 ₫')).toBeTruthy();
     expect(calls.find((u) => u.includes('groupBy=contract'))).toContain('from=2026-10-01T00:00:00+07:00&to=2026-11-01T00:00:00+07:00');
     expect(calls.find((u) => u.includes('groupBy=month'))).toContain('from=2026-05-01T00:00:00+07:00&to=2026-11-01T00:00:00+07:00');
-    const tips = [...document.querySelectorAll('.ui-stat')].map((t) => t.querySelector('[role="tooltip"], .sr-only')?.textContent ?? '');
+    const tips = [...document.querySelectorAll('.ui-stat')].map((t) => t.querySelector('span[hidden]')?.textContent ?? '');
     expect(tips).toEqual([BASIS.sales, BASIS.depositRequired, BASIS.collected, BASIS.outstanding]);
     // Biểu đồ: 6 nhóm cột, dòng đọc số mặc định là tháng đang chọn.
     expect(await screen.findByText('Tháng 10 · Doanh số 53 tr · Thực thu 45 tr')).toBeTruthy();
@@ -148,7 +148,11 @@ describe('Doanh thu (reports.read)', () => {
   it('bảng theo hợp đồng: Kỳ khác, thu trong kỳ âm "−300.000 ₫", hợp đồng đã huỷ Còn lại "—"', async () => {
     setupServer();
     renderAt('/hoa-dao/bao-cao/doanh-thu');
-    const row120 = await waitFor(() => document.querySelector('tr[data-hop-dong="HD-000120"]') as HTMLElement);
+    const row120 = await waitFor(() => {
+      const r = document.querySelector('tr[data-hop-dong="HD-000120"]');
+      if (!r) throw new Error('chưa có bảng');
+      return r as HTMLElement;
+    });
     expect(row120.className).toBe('rp-muted');
     expect(within(row120).getByText('Kỳ khác')).toBeTruthy();
     expect(within(row120).getByText('−300.000 ₫')).toBeTruthy();

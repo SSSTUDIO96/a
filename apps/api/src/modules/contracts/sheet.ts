@@ -605,7 +605,7 @@ export async function insertLines(
       distanceKm: l.distanceKm === null ? null : new Prisma.Decimal(l.distanceKm.toFixed(2)),
       perKmAmount: l.perKmAmount === null ? null : BigInt(l.perKmAmount),
       courseClassId: l.courseClassId,
-      ...travelSnapshot(null),
+      ...travelSnapshot(l.travelBreakdown),
       note: l.note,
       sortOrder: args.firstSort + i,
       addedAfterConfirm: args.addedAfterConfirm,
