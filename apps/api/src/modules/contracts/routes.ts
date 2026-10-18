@@ -276,6 +276,8 @@ async function createLineAppointments(
   });
   const created: string[] = [];
   for (const l of lines) {
+    // Lưới cuối: dòng PACKAGE/SERVICE thiếu giờ đã bị chốt trên chặn (409). Chỉ còn bắt dữ liệu lạ ghi thẳng database
+    // (loại dòng khác mà có giờ / có thợ) để không bao giờ gọi module lịch với giờ null.
     if (!l.scheduledStart || !l.scheduledEnd) {
       throw new AppError(
         'VALIDATION_FAILED',
