@@ -3,7 +3,7 @@ import { addServicePrice, createService, updateService } from '../../api/catalog
 import { getServicePayRates, putServicePayRates } from '../../api/staff';
 import type { PayRateSheet, PayRatesInput, Service, ServiceKind } from '../../api/types';
 import { useOnline } from '../../layout/ErrorStates';
-import { Button, Dialog, MoneyInput, SettingRow, Switch, TextInput, UnitInput } from '../../ui';
+import { Button, Dialog, MoneyInput, Select, SettingRow, Switch, TextInput, UnitInput, type SelectOption } from '../../ui';
 import { useFirstErrorFocus, useInputErrors, useStableKey } from './formHooks';
 import { TIP_ACTIVE, TIP_SALE } from './groups/InfoPriceGroup';
 import { PayRatesGroup } from './groups/PayRatesGroup';
@@ -18,6 +18,7 @@ import {
   serviceToForm,
   validateServiceForm,
   hasDuration,
+  showDurationField,
   type FormErrors,
   type PricingPerms,
   type SaveStep,
@@ -28,6 +29,9 @@ import { ErrorBanner, Group } from './parts';
 export type ServiceTarget = { kind: 'edit'; service: Service } | { kind: 'create'; serviceKind: ServiceKind };
 
 const KIND_LABEL: Record<ServiceKind, string> = { MAIN: 'Dịch vụ trong gói', ADDON: 'Dịch vụ phụ', SURCHARGE: 'Phụ phí' };
+const KIND_OPTIONS: SelectOption[] = (['ADDON', 'SURCHARGE', 'MAIN'] as const).map((k) => ({ value: k, label: KIND_LABEL[k] }));
+export const TIP_KIND = 'Phụ phí không cần thời lượng. Dịch vụ trong gói và dịch vụ phụ bắt buộc có thời lượng.';
+export const TIP_SURCHARGE_DURATION = 'Phụ phí không cần thời lượng: xoá trống ô để bỏ.';
 
 /**
  * Hộp dịch vụ (bản vẽ C mục 4.2b): Tên, Mã, Thời lượng, Giá niêm yết, Giá bán, Tiền công thợ theo bậc.
@@ -52,7 +56,7 @@ export function ServiceDialog({
   const online = useOnline();
   const mode = target.kind;
   const [base, setBase] = useState<Service | null>(target.kind === 'edit' ? target.service : null);
-  const [form, setForm] = useState<ServiceForm>(() => serviceToForm(target.kind === 'edit' ? target.service : null));
+  const [form, setForm] = useState<ServiceForm>(() => (target.kind === 'edit' ? serviceToForm(target.service) : serviceToForm(null, target.serviceKind)));
   const [errors, setErrors] = useState<FormErrors>({});
   const [banner, setBanner] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -89,7 +93,14 @@ export function ServiceDialog({
     });
   };
 
-  const kind = target.kind === 'edit' ? target.service.kind : target.serviceKind;
+  // Loại đang lưu (tiêu đề hộp) và loại đang chọn trong hộp (quyết định ô thời lượng).
+  const savedKind = target.kind === 'edit' ? (base?.kind ?? target.service.kind) : target.serviceKind;
+  const kind = form.kind;
+  const storedDuration = base?.durationMinutes ?? null;
+  const showDuration = showDurationField(kind, storedDuration, errors.durationMinutes);
+  const changeKind = (k: ServiceKind) =>
+    // Ô thời lượng bị ẩn (tạo phụ phí) thì bỏ số đã gõ — không gửi số người dùng không thấy.
+    set(showDurationField(k, storedDuration) ? { kind: k } : { kind: k, durationMinutes: null });
   const canInfo = mode === 'create' ? perms.canCreatePriced : perms.catalogWrite;
   const canPrice = perms.pricesWrite;
   const canEditAny = mode === 'create' ? perms.canCreatePriced : perms.catalogWrite || perms.pricesWrite || perms.payrollWrite;
@@ -103,7 +114,7 @@ export function ServiceDialog({
 
   async function save() {
     setBanner(null);
-    const v = validateServiceForm(form, kind);
+    const v = validateServiceForm(form);
     setErrors(v);
     if (Object.keys(v).length > 0 || inputErrors.any()) {
       focusFirstError();
@@ -113,7 +124,7 @@ export function ServiceDialog({
     try {
       if (mode === 'create') {
         try {
-          const body = buildServiceCreate(kind, form);
+          const body = buildServiceCreate(form);
           onCreated(await createService(orgId, body, createKey.get(JSON.stringify(body))));
         } catch (err) {
           fail(err, 'create');
@@ -167,8 +178,8 @@ export function ServiceDialog({
     <Dialog
       open
       onClose={onClose}
-      title={mode === 'create' ? `${KIND_LABEL[kind]} mới` : (base?.name ?? '')}
-      eyebrow={mode === 'create' ? KIND_LABEL[kind] : `${KIND_LABEL[kind]} · ${base?.code ?? ''}`}
+      title={mode === 'create' ? `${KIND_LABEL[savedKind]} mới` : (base?.name ?? '')}
+      eyebrow={mode === 'create' ? KIND_LABEL[savedKind] : `${KIND_LABEL[savedKind]} · ${base?.code ?? ''}`}
       className="pr-dlg-md"
       footer={canEditAny ? undefined : <Button onClick={onClose}>Đóng</Button>}
       primaryLabel="Lưu"
@@ -185,13 +196,17 @@ export function ServiceDialog({
           <SettingRow label="Mã" htmlFor={`${id}-ma`} controlWidth={180}>
             <TextInput id={`${id}-ma`} value={form.code} maxLength={32} onChange={(e) => set({ code: e.target.value })} error={errors.code} disabled={!canInfo} />
           </SettingRow>
-          {hasDuration(kind) && (
-            <SettingRow label="Thời lượng" htmlFor={`${id}-tl`} controlWidth={180}>
+          <SettingRow label="Loại" htmlFor={`${id}-loai`} tip={TIP_KIND} controlWidth={180}>
+            <Select id={`${id}-loai`} options={KIND_OPTIONS} value={kind} onChange={(e) => changeKind(e.target.value as ServiceKind)} error={errors.kind} disabled={!canInfo} />
+          </SettingRow>
+          {showDuration && (
+            <SettingRow label="Thời lượng" htmlFor={`${id}-tl`} tip={hasDuration(kind) ? undefined : TIP_SURCHARGE_DURATION} controlWidth={180}>
               <UnitInput
                 id={`${id}-tl`}
                 unit="phút"
                 min={1}
                 max={1440}
+                placeholder={hasDuration(kind) ? undefined : 'Không áp dụng'}
                 value={form.durationMinutes}
                 onChange={(v) => set({ durationMinutes: v })}
                 onInputError={(m) => inputErrors.report('durationMinutes', m)}

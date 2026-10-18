@@ -198,7 +198,8 @@ export interface Service {
   code: string;
   name: string;
   description: string | null;
-  durationMinutes: number;
+  // null = không áp dụng — chỉ phụ phí (SURCHARGE) được bỏ trống; MAIN/ADDON luôn có số phút (catalog/services.ts).
+  durationMinutes: number | null;
   categoryId: string | null;
   isActive: boolean;
   isPublic: boolean;
@@ -222,7 +223,8 @@ export interface ServiceUpdateInput {
   code?: string;
   name?: string;
   description?: string | null;
-  durationMinutes?: number;
+  // null = bỏ trống thời lượng — chỉ hợp lệ khi loại (sau khi sửa) là SURCHARGE, còn lại máy chủ trả 400 ở ô durationMinutes.
+  durationMinutes?: number | null;
   categoryId?: string | null;
   isActive?: boolean;
   isPublic?: boolean;
@@ -233,7 +235,8 @@ export interface ServiceUpdateInput {
 export interface ServiceCreateInput extends ServiceUpdateInput {
   code: string;
   name: string;
-  durationMinutes: number;
+  // Phụ phí: bỏ trống (vắng mặt hoặc null) → máy chủ lưu null. MAIN/ADDON bắt buộc (kind vắng mặt = MAIN).
+  durationMinutes?: number | null;
   listPrice: Vnd;
   salePrice?: Vnd | null;
 }
@@ -582,6 +585,9 @@ export type ContractQuoteBody = ContractBody & { excludeContractId?: string };
 // Sửa nháp hạ tổng dưới số đã thu → 409, details { reason: 'TOTAL_BELOW_PAID', paid, newTotal, total }.
 export interface ContractUpdateInput {
   expectedUpdatedAt: IsoDateTime;
+  // Đổi khách — chỉ hợp đồng NHÁP. 404 khách không thuộc tổ chức; 409 reason CUSTOMER_IN_USE (kèm số lịch / thẻ thiết kế
+  // đang mang tên khách cũ) hoặc 409 khi hợp đồng đã xác nhận (contracts/routes.ts checkCustomerChange).
+  customerId?: string;
   lines?: ContractLineInput[];
   discount?: Vnd;
   depositRequired?: Vnd;
@@ -1158,7 +1164,8 @@ export interface PaymentLedger extends Page<PaymentLedgerEntry> {
   from: IsoDateTime;
   to: IsoDateTime;
   // Tổng chỉ tính phiếu còn hiệu lực; danh sách vẫn có phiếu đã huỷ (voidedAt) để đối soát.
-  totals: { received: Vnd; receiptCount: number; refunded: Vnd; refundCount: number; net: Vnd };
+  // null = tổng vượt ngưỡng số nguyên an toàn (totalsOverflow = true) — giao diện hiện "—".
+  totals: { received: Vnd | null; receiptCount: number; refunded: Vnd | null; refundCount: number; net: Vnd | null };
   // true = có tổng vượt ngưỡng số nguyên an toàn → ô đó null, giao diện hiện "—".
   totalsOverflow: boolean;
 }
@@ -1176,15 +1183,16 @@ export interface RevenueQuery {
   groupBy?: RevenueGroupBy;
 }
 
+// Ô tiền null = vượt ngưỡng số nguyên an toàn (payments/reports.ts presentBucket → vndOrNull); totalsOverflow = true.
 export interface RevenueBucket {
   contractCount: number;
-  sales: Vnd;
-  depositRequired: Vnd;
-  depositOutstanding: Vnd;
-  outstanding: Vnd;
-  received: Vnd;
-  refunded: Vnd;
-  collected: Vnd;
+  sales: Vnd | null;
+  depositRequired: Vnd | null;
+  depositOutstanding: Vnd | null;
+  outstanding: Vnd | null;
+  received: Vnd | null;
+  refunded: Vnd | null;
+  collected: Vnd | null;
 }
 
 // Lời giải thích cách tính từng chỉ số (máy chủ soạn, giao diện hiện nguyên văn).
@@ -1212,11 +1220,12 @@ export interface RevenueContractRow {
   eventDate: IsoDateTime | null;
   // true = tính vào doanh số của kỳ; false = chỉ có tiền thu/hoàn trong kỳ.
   bookedInPeriod: boolean;
-  total: Vnd;
-  depositRequired: Vnd;
-  paid: Vnd;
-  paidInPeriod: Vnd;
-  // Hợp đồng đã huỷ → null (không còn phải thu).
+  // null = vượt ngưỡng số nguyên an toàn (totalsOverflow = true).
+  total: Vnd | null;
+  depositRequired: Vnd | null;
+  paid: Vnd | null;
+  paidInPeriod: Vnd | null;
+  // Hợp đồng đã huỷ, hoặc một trong total/depositRequired/paid tràn → null.
   remaining: Vnd | null;
   depositOutstanding: Vnd | null;
 }
@@ -1354,7 +1363,8 @@ export interface PublicService {
   kind: ServiceKind;
   name: string;
   description: string | null;
-  durationMinutes: number;
+  // null = phụ phí không có thời lượng.
+  durationMinutes: number | null;
   // Tên danh mục.
   category: string | null;
   price: PublicPrice | null;
@@ -1373,7 +1383,7 @@ export interface PublicPackage {
   terms: string | null;
   price: PublicPrice | null;
   included: { name: string; quantity: number }[];
-  addons: { serviceId: string; name: string; durationMinutes: number; quantity: number; price: PublicPrice | null }[];
+  addons: { serviceId: string; name: string; durationMinutes: number | null; quantity: number; price: PublicPrice | null }[];
 }
 
 export interface PublicSite {

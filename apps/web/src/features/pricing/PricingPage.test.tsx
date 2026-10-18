@@ -4,7 +4,6 @@ import { createMemoryRouter, RouterProvider } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SYSTEM_ROLES } from '@makeup/shared';
 import { routes } from '../../app/routes';
-import { SURCHARGE_DURATION_MINUTES } from './logic';
 
 // Lần tải đầu (khung + phiên + quyền + 3 đường bảng giá) có lúc quá 1 giây khi cả bộ thử chạy song song.
 configure({ asyncUtilTimeout: 5000 });
@@ -551,23 +550,101 @@ describe('biên bản web 2: bảng giá', () => {
     expect(screen.getByRole('dialog')).toBeTruthy();
   });
 
-  it('N5: phụ phí không hiện "· n phút" ở danh sách và không hỏi thời lượng; tạo phụ phí gửi thời lượng mặc định của máy chủ', async () => {
+  // Máy chủ 74fda02/2f362c9: phụ phí bỏ trống thời lượng (durationMinutes: null); MAIN/ADDON vẫn bắt buộc.
+  const PP_NULL = { ...svc('pple', 'SURCHARGE', 'Phụ phí ngày lễ', 200_000), durationMinutes: null };
+  const listWith = (items: unknown[]): Override => (m, p) =>
+    m === 'GET' && p === '/orgs/org-1/services' ? json(200, { items, page: 1, pageSize: 100, total: items.length }) : undefined;
+  const chain = (...os: Override[]): Override => (m, p, b) => os.reduce<Response | undefined>((r, o) => r ?? o(m, p, b), undefined);
+
+  it('N5: phụ phí thời lượng null → danh sách để trống (không "0 phút"); hộp tạo phụ phí không hỏi thời lượng và KHÔNG gửi trường durationMinutes', async () => {
     const user = userEvent.setup();
-    const calls = setupServer(OWNER, (m, p, b) =>
-      m === 'POST' && p === '/orgs/org-1/services' ? json(201, { ...svc('moi', 'SURCHARGE', 'Phụ phí ngoài giờ', 300_000), ...(b as object) }) : undefined,
+    const calls = setupServer(
+      OWNER,
+      chain(listWith([SERVICES[1], PP_NULL]), (m, p, b) =>
+        m === 'POST' && p === '/orgs/org-1/services' ? json(201, { ...svc('moi', 'SURCHARGE', 'Phụ phí ngoài giờ', 300_000), durationMinutes: null, ...(b as object) }) : undefined,
+      ),
     );
     renderAt('/chien/bang-gia/dich-vu');
     const row = await screen.findByRole('button', { name: /Phụ phí ngày lễ/ });
     expect([...row.children].map((c) => c.textContent)).toEqual(['Phụ phí ngày lễ', '', '200.000 ₫']);
+    expect(row.textContent).not.toMatch(/phút/);
     await user.click(screen.getByRole('button', { name: 'Thêm phụ phí' }));
     const dlg = await screen.findByRole('dialog');
     expect(within(dlg).queryByLabelText('Thời lượng')).toBeNull();
+    expect((within(dlg).getByLabelText('Loại') as HTMLSelectElement).value).toBe('SURCHARGE');
     await user.type(within(dlg).getByLabelText('Tên'), 'Phụ phí ngoài giờ');
     await user.type(within(dlg).getByLabelText('Mã'), 'PP-NG');
     await user.type(within(dlg).getByLabelText('Giá niêm yết'), '300000');
     await user.click(within(dlg).getByRole('button', { name: 'Lưu' }));
     await waitFor(() => expect(calls.some((c) => c.method === 'POST' && c.path === '/orgs/org-1/services')).toBe(true));
     const body = calls.find((c) => c.method === 'POST' && c.path === '/orgs/org-1/services')?.body as Record<string, unknown>;
-    expect(body).toMatchObject({ kind: 'SURCHARGE', name: 'Phụ phí ngoài giờ', durationMinutes: SURCHARGE_DURATION_MINUTES, listPrice: 300_000 });
+    expect(body).toMatchObject({ kind: 'SURCHARGE', name: 'Phụ phí ngoài giờ', listPrice: 300_000 });
+    expect('durationMinutes' in body).toBe(false);
+  });
+
+  it('đổi phụ phí (thời lượng trống) sang Dịch vụ trong gói: hiện ô Thời lượng, Lưu khi trống → lỗi đúng ô, KHÔNG gọi máy chủ; nhập số → PATCH kind + durationMinutes', async () => {
+    const user = userEvent.setup();
+    const calls = setupServer(
+      OWNER,
+      chain(listWith([PP_NULL]), (m, p, b) => (m === 'PATCH' && p === '/orgs/org-1/services/pple' ? json(200, { ...PP_NULL, ...(b as object) }) : undefined)),
+    );
+    renderAt('/chien/bang-gia/dich-vu');
+    await user.click(await screen.findByRole('button', { name: /Phụ phí ngày lễ/ }));
+    const dlg = await screen.findByRole('dialog');
+    expect(within(dlg).queryByLabelText('Thời lượng')).toBeNull();
+    await user.selectOptions(within(dlg).getByLabelText('Loại'), 'MAIN');
+    const dur = within(dlg).getByLabelText('Thời lượng');
+    await user.click(within(dlg).getByRole('button', { name: 'Lưu' }));
+    expect(await within(dlg).findByText('Nhập thời lượng.')).toBeTruthy();
+    expect(dur.getAttribute('aria-invalid')).toBe('true');
+    expect(calls.some((c) => c.method === 'PATCH')).toBe(false);
+    await user.type(dur, '60');
+    await user.click(within(dlg).getByRole('button', { name: 'Lưu' }));
+    await waitFor(() => expect(calls.find((c) => c.method === 'PATCH')?.body).toEqual({ kind: 'MAIN', durationMinutes: 60 }));
+  });
+
+  it('400 của máy chủ ở durationMinutes (details.issues[0].path) → lời máy chủ nằm dưới ô Thời lượng, hộp vẫn mở', async () => {
+    const user = userEvent.setup();
+    const msg = 'Dịch vụ chính và dịch vụ phụ phải có thời lượng (1–1440 phút); chỉ phụ phí được bỏ trống';
+    setupServer(
+      OWNER,
+      chain(listWith([PP_NULL]), (m, p) =>
+        m === 'PATCH' && p === '/orgs/org-1/services/pple'
+          ? err(400, 'VALIDATION_FAILED', msg, { formErrors: [], fieldErrors: { durationMinutes: [msg] }, issues: [{ path: 'durationMinutes', message: msg }] })
+          : undefined,
+      ),
+    );
+    renderAt('/chien/bang-gia/dich-vu');
+    await user.click(await screen.findByRole('button', { name: /Phụ phí ngày lễ/ }));
+    const dlg = await screen.findByRole('dialog');
+    // Đổi tên (phụ phí vẫn là phụ phí, ô thời lượng ẩn) — máy chủ vẫn trả 400 ở durationMinutes: ô phải hiện ra để mang lỗi.
+    await user.type(within(dlg).getByLabelText('Tên'), ' 2');
+    await user.click(within(dlg).getByRole('button', { name: 'Lưu' }));
+    expect(await within(dlg).findByText(msg)).toBeTruthy();
+    expect(within(dlg).getByLabelText('Thời lượng').getAttribute('aria-invalid')).toBe('true');
+    expect(screen.getByRole('dialog')).toBeTruthy();
+  });
+
+  it('phụ phí cũ mang số phút giả: mở hộp thấy ô (để tự xoá), sửa chỗ khác KHÔNG gửi thời lượng; xoá trống → gửi durationMinutes: null', async () => {
+    const user = userEvent.setup();
+    const legacy = { ...svc('pple', 'SURCHARGE', 'Phụ phí ngày lễ', 200_000), durationMinutes: 1 };
+    const calls = setupServer(
+      OWNER,
+      chain(listWith([legacy]), (m, p, b) => (m === 'PATCH' && p === '/orgs/org-1/services/pple' ? json(200, { ...legacy, ...(b as object) }) : undefined)),
+    );
+    renderAt('/chien/bang-gia/dich-vu');
+    const row = await screen.findByRole('button', { name: /Phụ phí ngày lễ/ });
+    expect([...row.children].map((c) => c.textContent)).toEqual(['Phụ phí ngày lễ', '', '200.000 ₫']);
+    await user.click(row);
+    let dlg = await screen.findByRole('dialog');
+    await user.type(within(dlg).getByLabelText('Tên'), ' 2');
+    await user.click(within(dlg).getByRole('button', { name: 'Lưu' }));
+    await waitFor(() => expect(calls.find((c) => c.method === 'PATCH')?.body).toEqual({ name: 'Phụ phí ngày lễ 2' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    await user.click(await screen.findByRole('button', { name: /Phụ phí ngày lễ/ }));
+    dlg = await screen.findByRole('dialog');
+    await user.clear(within(dlg).getByLabelText('Thời lượng'));
+    await user.click(within(dlg).getByRole('button', { name: 'Lưu' }));
+    await waitFor(() => expect(calls.filter((c) => c.method === 'PATCH').at(-1)?.body).toEqual({ durationMinutes: null }));
   });
 });

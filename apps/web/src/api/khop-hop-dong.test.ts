@@ -322,7 +322,27 @@ describe('types.ts khớp đúng dữ liệu máy chủ thật trả về (tên 
       { code: 'TOC', name: 'Làm tóc', kind: 'ADDON', durationMinutes: 30, isPublic: true, listPrice: 300_000 },
       newIdempotencyKey(),
     );
-    surcharge = await catalog.createService(orgId, { code: 'SOM', name: 'Ca sớm', kind: 'SURCHARGE', durationMinutes: 1, listPrice: 200_000 }, newIdempotencyKey());
+    // Phụ phí bỏ trống thời lượng (máy chủ 74fda02): không gửi trường → máy chủ lưu và trả durationMinutes: null.
+    surcharge = await chk(
+      'catalog.createService',
+      catalog.createService(orgId, { code: 'SOM', name: 'Ca sớm', kind: 'SURCHARGE', listPrice: 200_000 }, newIdempotencyKey()),
+      'createService (phụ phí không thời lượng)',
+    );
+    expect(surcharge.durationMinutes).toBeNull();
+    // Đổi phụ phí (thời lượng trống) sang MAIN mà không gửi thời lượng → 400, lỗi đúng trường durationMinutes.
+    const toMain: unknown = await catalog.updateService(orgId, surcharge.id, { kind: 'MAIN' }).catch((e: unknown) => e);
+    expect(errorKind(toMain)).toBe('validation');
+    expect(Object.keys(fieldErrors(toMain))).toEqual(['durationMinutes']);
+    // Dịch vụ phụ đặt null → 400 đúng trường; phụ phí đặt null → nhận (giữ null).
+    const addonNull: unknown = await catalog.updateService(orgId, addon.id, { durationMinutes: null }).catch((e: unknown) => e);
+    expect(Object.keys(fieldErrors(addonNull))).toEqual(['durationMinutes']);
+    const kept = await chk('catalog.updateService', catalog.updateService(orgId, surcharge.id, { durationMinutes: null }), 'updateService (phụ phí null)');
+    expect(kept.durationMinutes).toBeNull();
+    // Tạo dịch vụ phụ thiếu thời lượng → 400 đúng trường.
+    const addonMissing: unknown = await catalog
+      .createService(orgId, { code: 'THIEU', name: 'Thiếu thời lượng', kind: 'ADDON', listPrice: 1 }, newIdempotencyKey())
+      .catch((e: unknown) => e);
+    expect(Object.keys(fieldErrors(addonMissing))).toEqual(['durationMinutes']);
     await chk('catalog.updateService', catalog.updateService(orgId, main.id, { description: 'Gồm tóc cơ bản' }));
     await chk('catalog.getService', catalog.getService(orgId, main.id));
     first((await chk('catalog.listServices', catalog.listServices(orgId, { kind: 'ADDON' }))).items, 'dịch vụ phụ');
@@ -622,6 +642,27 @@ describe('types.ts khớp đúng dữ liệu máy chủ thật trả về (tên 
       { contractId: c2.id, startsAt: '2026-12-21T07:00:00+07:00', endsAt: '2026-12-21T08:00:00+07:00' },
       newIdempotencyKey(),
     );
+    // Đổi khách hợp đồng NHÁP đã có lịch chưa huỷ → 409 CUSTOMER_IN_USE kèm số lượng (contracts/routes.ts checkCustomerChange).
+    const inUse: unknown = await contracts.updateContract(orgId, c2.id, { expectedUpdatedAt: c2.updatedAt, customerId: customer.id }).catch((e: unknown) => e);
+    expect(errorKind(inUse)).toBe('conflict');
+    expect((inUse as { details?: unknown }).details).toEqual({ reason: 'CUSTOMER_IN_USE', appointments: 1, designCards: 0 });
+    // Nháp chưa có lịch / thẻ: đổi được; khách lạ (không thuộc tổ chức) → 404; hợp đồng đã xác nhận → 409.
+    const c3 = await contracts.createContract(
+      orgId,
+      { newCustomer: { fullName: 'Khách sẽ đổi' }, lines: [{ kind: 'CUSTOM', name: 'Thử', unitPrice: 100_000, quantity: 1 }] },
+      newIdempotencyKey(),
+    );
+    const swapped = await chk('contracts.updateContract', contracts.updateContract(orgId, c3.id, { expectedUpdatedAt: c3.updatedAt, customerId: customer.id }), 'updateContract (đổi khách)');
+    expect(swapped.customer.id).toBe(customer.id);
+    const stranger: unknown = await contracts
+      .updateContract(orgId, c3.id, { expectedUpdatedAt: swapped.updatedAt, customerId: '00000000-0000-4000-8000-000000000000' })
+      .catch((e: unknown) => e);
+    expect(errorKind(stranger)).toBe('not_found');
+    const confirmedSwap: unknown = await contracts
+      .updateContract(orgId, contract.id, { expectedUpdatedAt: (await contracts.getContract(orgId, contract.id)).updatedAt, customerId: c3.customer.id })
+      .catch((e: unknown) => e);
+    expect(errorKind(confirmedSwap)).toBe('conflict');
+
     const cancelled = await chk('contracts.changeContractStatus', contracts.changeContractStatus(orgId, c2.id, { to: 'CANCELLED', reason: 'Khách đổi ý' }), 'changeContractStatus (huỷ)');
     expect(first(cancelled.cancelledAppointments, 'lịch bị huỷ theo hợp đồng')).toMatchObject({ id: a2.id, status: 'CANCELLED' });
   });

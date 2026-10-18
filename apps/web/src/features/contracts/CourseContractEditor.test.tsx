@@ -449,3 +449,31 @@ describe('quyền', () => {
     expect(within(group).queryAllByRole('radio')).toHaveLength(0);
   });
 });
+
+describe('đổi học viên của hợp đồng khoá học nháp đã lưu', () => {
+  it('nút "Đổi" gửi PATCH chỉ customerId; 409 CUSTOMER_IN_USE báo rõ; đã xác nhận thì không có nút', async () => {
+    const sched = vi.mocked(await import('../../api/schedule'));
+    sched.listCustomers.mockResolvedValue({ items: [{ id: 'kh-2', fullName: 'Nguyễn Thị Lan', phone: '0987654321', email: null }], page: 1, pageSize: 8, total: 1 } as never);
+    api.getContract.mockResolvedValue(detail('DRAFT') as never);
+    api.updateContract
+      .mockRejectedValueOnce(new ApiError('CONFLICT', 'x', 409, 'r', { reason: 'CUSTOMER_IN_USE', appointments: 0, designCards: 2 }))
+      .mockResolvedValueOnce({ ...detail('DRAFT'), updatedAt: '2026-10-18T06:01:00.000Z', customer: { id: 'kh-2', fullName: 'Nguyễn Thị Lan', phone: '0987654321', email: null } } as never);
+    renderAt('/hv/hop-dong/hd-1');
+    await userEvent.click(await screen.findByRole('button', { name: 'Đổi khách' }));
+    await userEvent.type(screen.getByLabelText('Tìm khách theo tên hoặc số điện thoại'), 'Lan');
+    await userEvent.click(await screen.findByRole('option', { name: /Nguyễn Thị Lan/ }));
+    expect(await screen.findByText('Chưa đổi được khách: hợp đồng đã có 2 thẻ thiết kế mang tên khách hiện tại. Muốn đổi, xoá thẻ thiết kế trước.')).toBeTruthy();
+    expect(api.updateContract.mock.calls[0]?.[2]).toEqual({ customerId: 'kh-2', expectedUpdatedAt: '2026-10-18T06:00:00.000Z' });
+    await userEvent.click(screen.getByRole('option', { name: /Nguyễn Thị Lan/ }));
+    expect(await screen.findByText('Đã đổi sang Nguyễn Thị Lan — đã lưu vào hợp đồng.')).toBeTruthy();
+    expect(screen.queryByLabelText('Tìm khách theo tên hoặc số điện thoại')).toBeNull();
+  });
+
+  it('đã xác nhận: không bày nút đổi học viên', async () => {
+    api.getContract.mockResolvedValue(detail('CONFIRMED') as never);
+    renderAt('/hv/hop-dong/hd-1');
+    expect(await screen.findByRole('heading', { name: /HĐKH-2026-0057/ })).toBeTruthy();
+    await screen.findByText('Tôn Nữ Hoàng Bảo Ngọc Phương Thảo');
+    expect(screen.queryByRole('button', { name: 'Đổi khách' })).toBeNull();
+  });
+});

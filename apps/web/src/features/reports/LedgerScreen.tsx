@@ -23,8 +23,7 @@ const KIND_OPTIONS: { value: PaymentKind; label: string }[] = [
   { value: 'REFUND', label: 'Phiếu hoàn' },
 ];
 
-type LedgerResp = PaymentLedger & { totalsOverflow?: boolean };
-type Load = { status: 'loading' } | { status: 'error'; error: unknown } | { status: 'ready'; data: LedgerResp; key: string };
+type Load = { status: 'loading' } | { status: 'error'; error: unknown } | { status: 'ready'; data: PaymentLedger; key: string };
 
 function isMethod(v: string | null): v is PaymentMethod {
   return v !== null && (PAYMENT_METHODS as readonly string[]).includes(v);

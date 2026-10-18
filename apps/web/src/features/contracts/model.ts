@@ -548,6 +548,31 @@ export function belowPaidText(err: unknown): string | null {
 }
 
 // ---------------------------------------------------------------------------------------------
+// Đổi khách của hợp đồng NHÁP đã lưu (PATCH customerId — contracts/routes.ts checkCustomerChange).
+// 409 CUSTOMER_IN_USE: details = { reason, appointments, designCards } — số lịch chưa huỷ / thẻ thiết kế chưa xoá đang
+// chép khách hiện tại. 404: khách không thuộc tổ chức. 409 khác (đã xác nhận): lời máy chủ.
+export function customerInUse(err: unknown): { appointments: number; designCards: number } | null {
+  if (!(err instanceof ApiError) || err.status !== 409) return null;
+  const d = err.details as { reason?: unknown; appointments?: unknown; designCards?: unknown } | undefined;
+  if (d?.reason !== 'CUSTOMER_IN_USE') return null;
+  const n = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
+  return { appointments: n(d.appointments), designCards: n(d.designCards) };
+}
+
+export function customerChangeText(err: unknown): string {
+  const used = customerInUse(err);
+  if (used) {
+    const parts = [used.appointments > 0 ? `${used.appointments} lịch` : null, used.designCards > 0 ? `${used.designCards} thẻ thiết kế` : null].filter(Boolean);
+    const what = parts.length > 0 ? parts.join(' và ') : 'lịch hoặc thẻ thiết kế';
+    const fix = [used.appointments > 0 ? 'huỷ lịch' : null, used.designCards > 0 ? 'xoá thẻ thiết kế' : null].filter(Boolean).join(' và ') || 'huỷ lịch / xoá thẻ';
+    return `Chưa đổi được khách: hợp đồng đã có ${what} mang tên khách hiện tại. Muốn đổi, ${fix} trước.`;
+  }
+  if (err instanceof ApiError && err.status === 404) return 'Không tìm thấy khách này trong tổ chức. Chọn lại khách.';
+  if (isStaleVersion(err)) return 'Hợp đồng vừa được người khác sửa — tải bản mới rồi đổi khách.';
+  return err instanceof ApiError && err.message ? err.message : 'Chưa đổi được khách. Thử lại.';
+}
+
+// ---------------------------------------------------------------------------------------------
 // N8: lời lỗi tiền của máy chủ in số thô "Giảm giá hợp đồng (99000000) lớn hơn tổng các dòng (1950000)" → định dạng
 // tiền Việt và đặt dưới đúng ô (Giảm giá / Cọc cần thu). Chỉ đổi cách hiện số, không đổi nội dung.
 export function prettyMoneyText(text: string): string {

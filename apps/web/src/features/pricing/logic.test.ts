@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { SYSTEM_ROLES } from '@makeup/shared';
 import { ApiError } from '../../api/errors';
-import type { MakeupSubject, PayRateSheet, ServicePackage } from '../../api/types';
+import type { MakeupSubject, PayRateSheet, Service, ServicePackage } from '../../api/types';
 import {
   buildPackageCreate,
   buildPackagePatch,
   buildPayRatesInput,
   buildPriceInput,
+  buildServiceCreate,
   buildServicePatch,
   buildTravelInput,
   emptyPackageForm,
@@ -21,12 +22,15 @@ import {
   PRICING_GROUPS,
   pricingPerms,
   resolveGroup,
+  serviceToForm,
+  showDurationField,
   sortOrderPatches,
   splitCards,
   subjectCards,
   travelDirty,
   travelToForm,
   validatePackageForm,
+  validateServiceForm,
   validateTravelForm,
 } from './logic';
 
@@ -215,8 +219,86 @@ describe('biểu mẫu gói', () => {
 
   it('dịch vụ: mã so theo chữ hoa (máy chủ tự đổi)', () => {
     const svc = { id: 'n', kind: 'ADDON' as const, code: 'NAIL', name: 'Làm nail', description: null, durationMinutes: 40, categoryId: null, isActive: true, isPublic: true, sortOrder: 0, createdAt: T, updatedAt: T, category: null, currentPrice: null };
-    expect(buildServicePatch(svc, { code: 'nail', name: 'Làm nail', isActive: true, durationMinutes: 40, listPrice: 1, salePrice: null, payRates: {} })).toBeNull();
-    expect(buildServicePatch(svc, { code: 'NAIL2', name: 'Nail', isActive: false, durationMinutes: 30, listPrice: 1, salePrice: null, payRates: {} })).toEqual({ code: 'NAIL2', name: 'Nail', isActive: false, durationMinutes: 30 });
+    expect(buildServicePatch(svc, { kind: 'ADDON', code: 'nail', name: 'Làm nail', isActive: true, durationMinutes: 40, listPrice: 1, salePrice: null, payRates: {} })).toBeNull();
+    expect(buildServicePatch(svc, { kind: 'ADDON', code: 'NAIL2', name: 'Nail', isActive: false, durationMinutes: 30, listPrice: 1, salePrice: null, payRates: {} })).toEqual({ code: 'NAIL2', name: 'Nail', isActive: false, durationMinutes: 30 });
+  });
+});
+
+// Máy chủ commit 74fda02/2f362c9: phụ phí (SURCHARGE) được bỏ trống thời lượng — lưu và trả durationMinutes: null.
+describe('thời lượng dịch vụ: phụ phí để trống, MAIN/ADDON bắt buộc', () => {
+  const service = (over: Partial<Service>): Service => ({
+    id: 's',
+    kind: 'SURCHARGE',
+    code: 'PP-LE',
+    name: 'Phụ phí ngày lễ',
+    description: null,
+    durationMinutes: null,
+    categoryId: null,
+    isActive: true,
+    isPublic: true,
+    sortOrder: 0,
+    createdAt: T,
+    updatedAt: T,
+    category: null,
+    currentPrice: { priceVersionId: 'pv', listPrice: 200_000, salePrice: null, unitPrice: 200_000, effectiveFrom: T },
+    ...over,
+  });
+
+  it('null hiện trống, không phải "0 phút"', () => {
+    expect(formatDuration(null)).toBe('');
+    expect(formatDuration(30)).toBe('30 phút');
+  });
+
+  it('tạo phụ phí: KHÔNG gửi trường durationMinutes (kể cả còn số đã gõ trước khi đổi loại); dịch vụ phụ gửi đủ', () => {
+    const f = { ...serviceToForm(null, 'SURCHARGE'), code: 'PP-NG', name: 'Phụ phí ngoài giờ', listPrice: 300_000 };
+    expect(validateServiceForm(f)).toEqual({});
+    const body = buildServiceCreate(f);
+    expect('durationMinutes' in body).toBe(false);
+    expect(body).toMatchObject({ kind: 'SURCHARGE', code: 'PP-NG', listPrice: 300_000 });
+    expect('durationMinutes' in buildServiceCreate({ ...f, durationMinutes: 45 })).toBe(false);
+    expect(buildServiceCreate({ ...f, kind: 'ADDON', durationMinutes: 30 })).toMatchObject({ kind: 'ADDON', durationMinutes: 30 });
+  });
+
+  it('MAIN/ADDON thiếu thời lượng → lỗi ô; phụ phí để trống hợp lệ, có số thì vẫn kiểm 1..1440', () => {
+    const f = { ...serviceToForm(null, 'MAIN'), code: 'X', name: 'X', listPrice: 1 };
+    expect(Object.keys(validateServiceForm(f))).toEqual(['durationMinutes']);
+    expect(Object.keys(validateServiceForm({ ...f, kind: 'ADDON' }))).toEqual(['durationMinutes']);
+    expect(validateServiceForm({ ...f, kind: 'SURCHARGE' })).toEqual({});
+    expect(Object.keys(validateServiceForm({ ...f, kind: 'SURCHARGE', durationMinutes: 0 }))).toEqual(['durationMinutes']);
+    expect(() => buildServiceCreate(f)).toThrow();
+  });
+
+  it('sửa phụ phí: xoá trống ô → gửi durationMinutes: null; phụ phí cũ mang số phút giả mà không đụng tới → không gửi gì', () => {
+    const legacy = service({ durationMinutes: 1 });
+    expect(buildServicePatch(legacy, serviceToForm(legacy))).toBeNull();
+    expect(buildServicePatch(legacy, { ...serviceToForm(legacy), durationMinutes: null })).toEqual({ durationMinutes: null });
+    const clean = service({});
+    expect(serviceToForm(clean).durationMinutes).toBeNull();
+    expect(buildServicePatch(clean, serviceToForm(clean))).toBeNull();
+  });
+
+  it('đổi phụ phí sang MAIN/ADDON: form bắt nhập thời lượng; có số thì gửi kind + durationMinutes; không bao giờ gửi null cho MAIN/ADDON', () => {
+    const s = service({});
+    const toMain = { ...serviceToForm(s), kind: 'MAIN' as const };
+    expect(validateServiceForm(toMain).durationMinutes).toBeTruthy();
+    expect(buildServicePatch(s, toMain)).toEqual({ kind: 'MAIN' });
+    expect(buildServicePatch(s, { ...toMain, durationMinutes: 60 })).toEqual({ kind: 'MAIN', durationMinutes: 60 });
+    const main = service({ kind: 'MAIN', durationMinutes: 30 });
+    expect(buildServicePatch(main, { ...serviceToForm(main), durationMinutes: null })).toBeNull();
+  });
+
+  it('ô thời lượng: MAIN/ADDON luôn hiện; phụ phí chỉ hiện khi bản lưu còn số phút hoặc ô đang có lỗi', () => {
+    expect(showDurationField('MAIN', null)).toBe(true);
+    expect(showDurationField('ADDON', null)).toBe(true);
+    expect(showDurationField('SURCHARGE', null)).toBe(false);
+    expect(showDurationField('SURCHARGE', 1)).toBe(true);
+    expect(showDurationField('SURCHARGE', null, 'Lỗi máy chủ')).toBe(true);
+  });
+
+  it('400 của máy chủ (details.issues[0].path = durationMinutes) → lời lỗi nằm đúng ô Thời lượng, không thành dải chung', () => {
+    const msg = 'Dịch vụ chính và dịch vụ phụ phải có thời lượng (1–1440 phút); chỉ phụ phí được bỏ trống';
+    const err = apiErr(400, 'VALIDATION_FAILED', msg, { formErrors: [], fieldErrors: { durationMinutes: [msg] }, issues: [{ path: 'durationMinutes', message: msg }] });
+    expect(mapSaveError(err, 'package')).toEqual({ fields: { durationMinutes: msg }, banner: null });
   });
 });
 

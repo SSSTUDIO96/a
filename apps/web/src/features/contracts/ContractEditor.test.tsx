@@ -317,7 +317,7 @@ describe('ẩn / khoá theo quyền', () => {
     expect(screen.queryByRole('button', { name: /Xác nhận hợp đồng/ })).toBeNull();
     expect(screen.queryByText('Bảng giá')).toBeNull();
     expect((screen.getByLabelText('Giờ bắt đầu') as HTMLButtonElement).disabled).toBe(true);
-    expect(screen.queryByRole('button', { name: 'Đổi' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Đổi khách' })).toBeNull();
   });
 
   it('đã xác nhận + lễ tân (không có contracts.adjust): có "+ Phát sinh", KHÔNG có "Huỷ dòng"', async () => {
@@ -623,5 +623,80 @@ describe('biên bản web 2', () => {
     renderEditor(OWNER);
     const code = await screen.findByText('HĐ-2026-0142', { selector: '.ct-code' });
     expect(code.tagName).toBe('SPAN');
+  });
+});
+
+// Máy chủ (contracts/routes.ts checkCustomerChange): PATCH hợp đồng NHÁP nhận customerId; 409 CUSTOMER_IN_USE kèm số
+// lịch chưa huỷ / thẻ thiết kế; 404 khách không thuộc tổ chức; hợp đồng đã xác nhận → 409.
+describe('đổi khách của hợp đồng nháp đã lưu', () => {
+  const sched = vi.mocked(scheduleApi);
+  const LAN = { id: 'c-2', fullName: 'Nguyễn Thị Lan', phone: '0987654321', email: null, note: null, avatarFileId: null, avatarUrl: null, createdAt: '', updatedAt: '' };
+
+  async function pickLan() {
+    sched.listCustomers.mockResolvedValue({ items: [LAN], page: 1, pageSize: 8, total: 1 } as never);
+    await userEvent.click(await screen.findByRole('button', { name: 'Đổi khách' }));
+    await userEvent.type(screen.getByLabelText('Tìm khách theo tên hoặc số điện thoại'), 'Lan');
+    await userEvent.click(await screen.findByRole('option', { name: /Nguyễn Thị Lan/ }));
+  }
+
+  it('nút "Đổi" gửi PATCH CHỈ customerId kèm expectedUpdatedAt; xong hiện thẻ khách mới, không đụng phần đang sửa dở', async () => {
+    const v1 = detail('DRAFT', { updatedAt: '2026-10-18T10:00:00.000Z' });
+    api.getContract.mockResolvedValue(v1 as never);
+    api.quoteContract.mockResolvedValue(quote([]) as never);
+    api.updateContract.mockResolvedValue({ ...v1, updatedAt: '2026-10-18T10:01:00.000Z', customer: { id: 'c-2', fullName: 'Nguyễn Thị Lan', phone: '0987654321', email: null } } as never);
+    renderEditor(OWNER);
+    // Sửa dở ghi chú (chưa lưu) — đổi khách không được gửi kèm, ghi chú vẫn là "chưa lưu".
+    await userEvent.type(await screen.findByLabelText('Ghi chú hợp đồng'), 'Đến sớm');
+    await pickLan();
+    await waitFor(() => expect(api.updateContract).toHaveBeenCalledTimes(1));
+    expect(api.updateContract.mock.calls[0]?.[2]).toEqual({ customerId: 'c-2', expectedUpdatedAt: '2026-10-18T10:00:00.000Z' });
+    expect(await screen.findByText('Đã đổi sang Nguyễn Thị Lan — đã lưu vào hợp đồng.')).toBeTruthy();
+    expect(screen.getByText('0987654321')).toBeTruthy();
+    expect(screen.queryByLabelText('Tìm khách theo tên hoặc số điện thoại')).toBeNull();
+    expect((screen.getByLabelText('Ghi chú hợp đồng') as HTMLTextAreaElement).value).toBe('Đến sớm');
+    expect(screen.getByRole('link', { name: 'Sửa ở hồ sơ khách' }).getAttribute('href')).toBe('/studio/khach-hang/c-2');
+    // Lưu nháp sau đó dùng phiên bản MỚI (sau lần đổi khách).
+    api.updateContract.mockResolvedValue({ ...v1, updatedAt: '2026-10-18T10:02:00.000Z' } as never);
+    await userEvent.click(screen.getByRole('button', { name: 'Lưu nháp' }));
+    await waitFor(() => expect(api.updateContract.mock.calls.at(-1)?.[2]).toMatchObject({ expectedUpdatedAt: '2026-10-18T10:01:00.000Z', notes: 'Đến sớm' }));
+    expect(api.updateContract.mock.calls.at(-1)?.[2]).not.toHaveProperty('customerId');
+  });
+
+  it('409 CUSTOMER_IN_USE → lời báo rõ số lịch / thẻ thiết kế; vẫn giữ khách cũ; "Giữ khách hiện tại" quay về thẻ cũ', async () => {
+    api.getContract.mockResolvedValue(detail('DRAFT') as never);
+    api.quoteContract.mockResolvedValue(quote([]) as never);
+    api.updateContract.mockRejectedValue(
+      new ApiError('CONFLICT', 'Hợp đồng đã có lịch hoặc thẻ thiết kế mang tên khách hiện tại — huỷ lịch / xoá thẻ trước khi đổi khách', 409, 'r', {
+        reason: 'CUSTOMER_IN_USE',
+        appointments: 2,
+        designCards: 1,
+      }),
+    );
+    renderEditor(OWNER);
+    await pickLan();
+    expect(
+      await screen.findByText('Chưa đổi được khách: hợp đồng đã có 2 lịch và 1 thẻ thiết kế mang tên khách hiện tại. Muốn đổi, huỷ lịch và xoá thẻ thiết kế trước.'),
+    ).toBeTruthy();
+    expect(screen.queryByText('Tôn Nữ Hoàng Bảo Ngọc Phương Thảo')).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'Giữ khách hiện tại' }));
+    expect(screen.getByText('Tôn Nữ Hoàng Bảo Ngọc Phương Thảo')).toBeTruthy();
+    expect(screen.queryByText(/Chưa đổi được khách/)).toBeNull();
+  });
+
+  it('404 (khách không thuộc tổ chức) → báo chọn lại khách', async () => {
+    api.getContract.mockResolvedValue(detail('DRAFT') as never);
+    api.quoteContract.mockResolvedValue(quote([]) as never);
+    api.updateContract.mockRejectedValue(new ApiError('NOT_FOUND', 'Không tìm thấy khách hàng', 404, 'r'));
+    renderEditor(OWNER);
+    await pickLan();
+    expect(await screen.findByText('Không tìm thấy khách này trong tổ chức. Chọn lại khách.')).toBeTruthy();
+  });
+
+  it('hợp đồng đã xác nhận: không bày nút "Đổi" (máy chủ không cho đổi khách)', async () => {
+    api.getContract.mockResolvedValue(detail('CONFIRMED') as never);
+    renderEditor(OWNER);
+    await screen.findByText('Dòng đã chốt. Chỉ thêm phát sinh hoặc huỷ dòng kèm lý do.');
+    expect(screen.queryByRole('button', { name: 'Đổi khách' })).toBeNull();
+    expect(screen.getByText('Tôn Nữ Hoàng Bảo Ngọc Phương Thảo')).toBeTruthy();
   });
 });

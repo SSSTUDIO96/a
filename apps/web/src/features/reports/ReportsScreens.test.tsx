@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { PaymentLedgerEntry, RevenueBasis, RevenueBucket } from '../../api/types';
+import type { PaymentLedgerEntry, RevenueBasis, RevenueBucket, RevenueContractRow } from '../../api/types';
 import { LedgerScreen } from './LedgerScreen';
 import { RevenueScreen } from './RevenueScreen';
 
@@ -175,6 +175,45 @@ describe('Doanh thu (reports.read)', () => {
     setupServer({ revenue: err(403, 'FORBIDDEN', 'Bạn không có quyền xem báo cáo doanh thu') });
     renderAt('/hoa-dao/bao-cao/doanh-thu');
     expect((await screen.findByRole('alert')).textContent).toBe('Bạn không có quyền xem báo cáo doanh thu');
+  });
+});
+
+// Máy chủ (payments/reports.ts presentBucket, routes.ts sổ thu): ô tiền vượt ngưỡng số nguyên an toàn → null + totalsOverflow.
+describe('tổng tràn (null) → "—"', () => {
+  it('báo cáo: ô tổng null hiện "—", dòng hợp đồng tràn hiện "—", có dải cảnh báo', async () => {
+    const totals: RevenueBucket = { ...TOTALS, sales: null, outstanding: null };
+    const row: RevenueContractRow = {
+      contractId: 'h7', code: 'HD-000007', kind: 'SERVICE', status: 'CONFIRMED', customer: { id: 'k7', fullName: 'Đỗ Ngọc Hà' }, courses: [],
+      confirmedAt: '2026-10-12T03:00:00Z', eventDate: null, bookedInPeriod: true,
+      total: null, depositRequired: null, paid: 1_000_000, paidInPeriod: null, remaining: null, depositOutstanding: null,
+    };
+    setupServer({ revenue: json(200, { from: '', to: '', kind: null, groupBy: 'contract', basis: BASIS, totals, totalsOverflow: true, rows: [row] }) });
+    renderAt('/hoa-dao/bao-cao/doanh-thu');
+    await waitFor(() => expect(tile('sales')).toBe('—'));
+    expect(tile('outstanding')).toBe('—');
+    expect(tile('collected')).toBe('28.200.000 ₫');
+    expect(screen.getByText('Có tổng quá lớn để hiện đúng (ô hiện "—"). Kiểm lại các phiếu có số tiền bất thường trong Sổ thu.')).toBeTruthy();
+    const tr = await waitFor(() => {
+      const r = document.querySelector('tr[data-hop-dong="HD-000007"]');
+      if (!r) throw new Error('chưa có bảng');
+      return r as HTMLElement;
+    });
+    const cell = (l: string) => tr.querySelector(`td[data-l="${l}"]`)?.textContent;
+    expect([cell('Tổng'), cell('Cọc'), cell('Đã thu'), cell('Thu trong kỳ'), cell('Còn lại')]).toEqual(['—', '—', '1.000.000 ₫', '—', '—']);
+    expect(document.body.textContent).not.toContain('NaN');
+  });
+
+  it('sổ thu: tổng null hiện "—", số phiếu vẫn hiện, có dải cảnh báo', async () => {
+    setupServer({
+      ledger: () =>
+        json(200, { from: '', to: '', totals: { received: null, receiptCount: 3, refunded: 300_000, refundCount: 1, net: null }, totalsOverflow: true, items: [ledgerItem({})], page: 1, pageSize: 50, total: 1 }),
+    });
+    renderAt('/hoa-dao/bao-cao/so-thu?ky=2026-10');
+    await waitFor(() => expect(tile('received')).toBe('—'));
+    expect(tile('net')).toBe('—');
+    expect(tile('refunded')).toBe('300.000 ₫');
+    expect(screen.getByText('3 phiếu')).toBeTruthy();
+    expect(screen.getByText('Có tổng quá lớn để hiện đúng (ô hiện "—"). Kiểm lại các phiếu có số tiền bất thường trong bảng dưới.')).toBeTruthy();
   });
 });
 

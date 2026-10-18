@@ -39,7 +39,7 @@ import { CustomerBlock } from './CustomerBlock';
 import { ExtraDialog, type ExtraTarget } from './ExtraDialog';
 import { ExtrasCard, type ExtraRow } from './ExtrasCard';
 import { IconWarn } from './icons';
-import { addedLabel, belowPaidText, contractAbilities, errorLineOf, isStaleVersion, liveErrors, moneyFieldOf, newLineKey, prettyMoneyText, type CustomDraft } from './model';
+import { addedLabel, belowPaidText, contractAbilities, customerChangeText, errorLineOf, isStaleVersion, liveErrors, moneyFieldOf, newLineKey, prettyMoneyText, type CustomDraft } from './model';
 import { TotalsCard } from './TotalsCard';
 import { useCourseCatalog } from './useCourseCatalog';
 import { VoidLineDialog } from './VoidLineDialog';
@@ -311,6 +311,21 @@ export function CourseContractEditor({ orgId, slug, tz, orgName, has, detail: in
     }
   }
 
+  // Đổi học viên của hợp đồng NHÁP đã lưu: PATCH chỉ customerId (kèm phiên bản), không đụng dòng đang sửa dở.
+  async function changeCustomer(c: Extract<CourseContractDraft['customer'], { kind: 'existing' }>): Promise<string | null> {
+    if (!detail) return 'Hợp đồng chưa lưu.';
+    try {
+      const d = await updateContract(orgId, detail.id, withVersion(detail, { customerId: c.id }));
+      setDetail(d);
+      const k = d.customer;
+      setDraft((x) => ({ ...x, customer: { kind: 'existing', id: k.id, fullName: k.fullName, phone: k.phone, email: k.email } }));
+      return null;
+    } catch (err) {
+      if (isStaleVersion(err)) applyError(err);
+      return customerChangeText(err);
+    }
+  }
+
   async function onSave() {
     setBusy('save');
     const d = await save();
@@ -567,6 +582,7 @@ export function CourseContractEditor({ orgId, slug, tz, orgName, has, detail: in
                   value={draft.customer}
                   onChange={(customer) => update((d) => ({ ...d, customer }))}
                   locked={detail !== null || !ab.canEdit}
+                  onChangeSaved={detail && status === 'DRAFT' && ab.canEdit ? changeCustomer : undefined}
                   canSearch={ab.canSearchCustomers}
                   canCreate={ab.canCreateCustomer}
                   errors={errors}

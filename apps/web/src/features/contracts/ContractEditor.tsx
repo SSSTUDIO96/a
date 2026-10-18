@@ -47,6 +47,7 @@ import {
   conflictsOf,
   confirmResultText,
   contractAbilities,
+  customerChangeText,
   draftDiffs,
   displayDate,
   displayDateTime,
@@ -438,6 +439,23 @@ export function ContractEditor({ orgId, slug, tz, has, contractId, kindSwitch, o
     setBusy(null);
   }
 
+  // Đổi khách của hợp đồng NHÁP đã lưu: PATCH chỉ customerId (kèm phiên bản), không đụng dòng đang sửa dở.
+  // Chữ ký nháp (sig) không gồm khách nên phần chưa lưu vẫn là "chưa lưu".
+  async function changeCustomer(c: Extract<ContractDraft['customer'], { kind: 'existing' }>): Promise<string | null> {
+    if (!detail) return 'Hợp đồng chưa lưu.';
+    try {
+      const d = (await updateContract(orgId, detail.id, withVersion(detail, { customerId: c.id }))) as ContractDetail;
+      setDetail(d);
+      const k = d.customer;
+      setDraft((x) => ({ ...x, customer: { kind: 'existing', id: k.id, fullName: k.fullName, phone: k.phone, email: k.email } }));
+      return null;
+    } catch (err) {
+      // Bản đã bị sửa nơi khác: hiện dải "Tải bản mới" như khi lưu.
+      if (isStaleVersion(err)) applyError(err);
+      return customerChangeText(err);
+    }
+  }
+
   async function onConfirm() {
     if (blockedReason) return;
     setBusy('confirm');
@@ -698,6 +716,7 @@ export function ContractEditor({ orgId, slug, tz, has, contractId, kindSwitch, o
                   value={draft.customer}
                   onChange={(customer) => update((d) => ({ ...d, customer }))}
                   locked={detail !== null || !ab.canEdit}
+                  onChangeSaved={detail && status === 'DRAFT' && ab.canEdit ? changeCustomer : undefined}
                   canSearch={ab.canSearchCustomers}
                   canCreate={ab.canCreateCustomer}
                   errors={errors}

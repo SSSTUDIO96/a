@@ -101,7 +101,9 @@ export function locationsForForm(types: readonly LocationType[]): LocationType[]
   return types.length === 0 ? [...LOCATION_ORDER] : LOCATION_ORDER.filter((t) => types.includes(t));
 }
 
-export function formatDuration(minutes: number): string {
+// null = không áp dụng (phụ phí bỏ trống thời lượng) → chuỗi rỗng, KHÔNG phải "0 phút".
+export function formatDuration(minutes: number | null): string {
+  if (minutes === null) return '';
   if (minutes < 60) return `${minutes} phút`;
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
@@ -530,17 +532,21 @@ export function sortOrderPatches(list: readonly MakeupSubject[]): { id: string; 
 // ======================= Dịch vụ phụ & phụ phí =======================
 
 export interface ServiceForm {
+  // Loại SAU khi sửa: đổi loại ngay trong hộp (PATCH kind). Quyết định ô thời lượng có bắt buộc hay không.
+  kind: ServiceKind;
   code: string;
   name: string;
   isActive: boolean;
+  // null = để trống: chỉ phụ phí được để trống (máy chủ lưu null = "không áp dụng").
   durationMinutes: number | null;
   listPrice: Vnd | null;
   salePrice: Vnd | null;
   payRates: Record<string, Vnd | null>;
 }
 
-export function serviceToForm(s: Service | null): ServiceForm {
+export function serviceToForm(s: Service | null, kind: ServiceKind = 'MAIN'): ServiceForm {
   return {
+    kind: s?.kind ?? kind,
     code: s?.code ?? '',
     name: s?.name ?? '',
     isActive: s?.isActive ?? true,
@@ -551,39 +557,61 @@ export function serviceToForm(s: Service | null): ServiceForm {
   };
 }
 
-// N5 (biên bản web 2): phụ phí (ngày lễ, ngoài giờ…) không có thời lượng — màn không hỏi, không hiện "· 1 phút".
-// Máy chủ còn bắt buộc durationMinutes ≥ 1 (catalog/common.ts Duration) → khi tạo phụ phí gửi mức nhỏ nhất máy chủ nhận.
-// Phiếu vướng: máy chủ cho phụ phí bỏ trống thời lượng thì bỏ hằng này.
-export const SURCHARGE_DURATION_MINUTES = 1;
-
+// Dịch vụ trong gói (MAIN) và dịch vụ phụ (ADDON) chiếm giờ thợ → bắt buộc thời lượng. Phụ phí (ngày lễ, ngoài giờ…)
+// không có thời lượng: máy chủ nhận bỏ trống và trả durationMinutes: null (catalog/services.ts durationAllowed).
 export function hasDuration(kind: ServiceKind): boolean {
   return kind !== 'SURCHARGE';
 }
 
-export function validateServiceForm(f: ServiceForm, kind: ServiceKind = 'MAIN'): FormErrors {
+/**
+ * Hộp dịch vụ có hiện ô Thời lượng không. MAIN/ADDON: luôn hiện (bắt buộc). Phụ phí: chỉ hiện khi bản đang lưu còn số phút
+ * (phụ phí cũ mang số phút giả từ thời máy chủ bắt buộc) — để người dùng TỰ xoá trống; màn không tự đổi. Có lỗi ở ô
+ * (vd 400 của máy chủ) thì luôn hiện để lời lỗi nằm đúng ô.
+ */
+export function showDurationField(kind: ServiceKind, stored: number | null, error?: string): boolean {
+  return hasDuration(kind) || stored !== null || error !== undefined;
+}
+
+export function validateServiceForm(f: ServiceForm): FormErrors {
   const e: FormErrors = {};
   if (!f.code.trim()) e.code = 'Nhập mã.';
   if (!f.name.trim()) e.name = 'Nhập tên.';
-  if (!hasDuration(kind)) {
-    // Phụ phí: không kiểm thời lượng.
-  } else if (f.durationMinutes === null) e.durationMinutes = 'Nhập thời lượng.';
-  else if (f.durationMinutes < 1 || f.durationMinutes > 1440) e.durationMinutes = 'Thời lượng từ 1 đến 1440 phút.';
+  if (f.durationMinutes === null) {
+    if (hasDuration(f.kind)) e.durationMinutes = 'Nhập thời lượng.';
+  } else if (f.durationMinutes < 1 || f.durationMinutes > 1440) e.durationMinutes = 'Thời lượng từ 1 đến 1440 phút.';
   if (f.listPrice === null) e.listPrice = 'Nhập giá niêm yết.';
   return e;
 }
 
 // PATCH /services/:id — chỉ trường đã đổi. Mã máy chủ tự đổi sang chữ hoa nên so ở dạng chữ hoa.
+// Thời lượng để trống → gửi null chỉ khi loại (sau khi sửa) là phụ phí; MAIN/ADDON thì validateServiceForm đã chặn.
+// Phụ phí cũ còn số phút giả mà người dùng không đụng tới ô → không gửi gì (không tự đổi dữ liệu cũ).
 export function buildServicePatch(original: Service, f: ServiceForm): ServiceUpdateInput | null {
   const patch: ServiceUpdateInput = {};
+  if (f.kind !== original.kind) patch.kind = f.kind;
   if (f.name.trim() !== original.name) patch.name = f.name.trim();
   if (f.code.trim().toUpperCase() !== original.code) patch.code = f.code.trim();
   if (f.isActive !== original.isActive) patch.isActive = f.isActive;
-  if (f.durationMinutes !== null && f.durationMinutes !== original.durationMinutes) patch.durationMinutes = f.durationMinutes;
+  if (f.durationMinutes !== original.durationMinutes) {
+    if (f.durationMinutes !== null) patch.durationMinutes = f.durationMinutes;
+    else if (!hasDuration(f.kind)) patch.durationMinutes = null;
+  }
   return Object.keys(patch).length > 0 ? patch : null;
 }
 
-export function buildServiceCreate(kind: ServiceKind, f: ServiceForm): ServiceCreateInput {
-  const durationMinutes = hasDuration(kind) ? f.durationMinutes : SURCHARGE_DURATION_MINUTES;
-  if (durationMinutes === null || f.listPrice === null) throw new Error('Gọi validateServiceForm trước khi dựng thân tạo dịch vụ');
-  return { kind, code: f.code.trim(), name: f.name.trim(), isActive: f.isActive, durationMinutes, listPrice: f.listPrice, salePrice: f.salePrice };
+// POST /services — phụ phí KHÔNG gửi trường durationMinutes (hộp tạo phụ phí không có ô này; máy chủ lưu null).
+export function buildServiceCreate(f: ServiceForm): ServiceCreateInput {
+  const durationMinutes = hasDuration(f.kind) ? f.durationMinutes : null;
+  if (f.listPrice === null || (hasDuration(f.kind) && durationMinutes === null)) {
+    throw new Error('Gọi validateServiceForm trước khi dựng thân tạo dịch vụ');
+  }
+  return {
+    kind: f.kind,
+    code: f.code.trim(),
+    name: f.name.trim(),
+    isActive: f.isActive,
+    ...(durationMinutes !== null ? { durationMinutes } : {}),
+    listPrice: f.listPrice,
+    salePrice: f.salePrice,
+  };
 }
