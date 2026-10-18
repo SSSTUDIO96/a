@@ -29,4 +29,11 @@ Anh Chiến nhắn lúc khoảng 15:13 UTC ngày 18/10/2026: *"Tự làm vào ch
 | 16:20 | Refresh token cho trang web | Chỉ nằm trong cookie httpOnly (SameSite=Strict, chỉ đường /api/v1/auth). Web phải gửi header `X-Client: web`. App điện thoại vẫn nhận trong thân như cũ. | Mã độc chèn vào trang không lấy trộm được thẻ dài hạn | Được |
 | 16:20 | Tên miền web và API | Web gọi `/api` trên **cùng tên miền**; Vercel chuyển tiếp sang máy chủ Railway | Cookie an toàn nhất khi cùng tên miền; không cần mở CORS cho trình duyệt | Được: đổi cấu hình triển khai |
 
+| 17:05 | G1: huỷ hợp đồng mà lịch đã gắn vẫn giữ giờ thợ | Huỷ hợp đồng thì **huỷ luôn** các lịch chưa làm (nháp/chờ/đã xác nhận). Lịch **đang thực hiện** thì chặn huỷ hợp đồng (409). Lịch đã xong giữ nguyên. | Thợ không bị giữ giờ cho đơn đã huỷ; không xoá dấu vết việc đã làm | Được |
+| 17:05 | G2: lễ tân đưa hợp đồng về 0 đ bằng giảm giá, huỷ được dòng hợp đồng đã xác nhận | Thêm quyền **"Điều chỉnh hợp đồng đã xác nhận"** (`contracts.adjust`). Chủ, quản trị, quản lý có; **lễ tân không**. Ở hợp đồng nháp, lễ tân vẫn giảm giá và huỷ dòng như cũ. | Tiền đã chốt với khách thì chỉ người có trách nhiệm mới được giảm | Được: thêm quyền cho lễ tân bằng vai trò tuỳ chỉnh |
+| 17:05 | G3: kế toán đặt được tiền công thợ | Kế toán **chỉ xem** tiền công; chủ, quản trị đặt | Mức công là quyết định của chủ | Được |
+| 17:05 | G4: hợp đồng nhận mọi dịch vụ phụ, không giới hạn theo danh sách tick của gói | **Giữ nguyên** như quyết định lúc 15:23 | Khách hay xin thêm món ngoài gói | — |
+| 17:05 | G5: thợ xem được số điện thoại thợ khác | Số điện thoại **thợ** chỉ hiện với người có quyền sửa nhân sự. Số điện thoại **khách** trong lịch của thợ vẫn hiện, vì thợ cần gọi khách. | Bảo vệ thông tin cá nhân giữa nhân viên | Được |
+| 17:10 | GitHub | Anh đã cài Claude GitHub App chỉ cho kho `a`. Đã đẩy nhánh `claude/nen-mong-makeup`. | — | — |
+
 **Cần anh xem lại nhất:** phân quyền theo vai trò mẫu (dòng 15:16). Studio anh có thể muốn thợ chính thấy cả lịch của đội.
