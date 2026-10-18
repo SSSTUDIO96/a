@@ -20,6 +20,7 @@ export interface GateFixture {
 
 // Thân yêu cầu HỢP LỆ cho các đường sửa/tạo có tham số id — để phép thử "dùng id của tổ chức khác"
 // không bị chặn sớm vì dữ liệu sai (400) mà phải đi tới đúng câu tra cứu.
+// Với đường GET: giá trị là tham số truy vấn bắt buộc (ví dụ khoảng ngày from/to của lịch).
 export type Samples = Record<string, (o: GateOrg) => unknown>;
 
 export interface GateCheck {
@@ -72,6 +73,7 @@ async function setupOrg(app: App, label: string): Promise<GateOrg> {
     durationMinutes: 120,
     listPrice: 1500000,
   });
+  const tierId = await post(app, owner, `${o}/staff-tiers`, { name: `Bậc ${label}` });
   const customerId = await post(app, owner, `${o}/customers`, { fullName: `Khách ${label}` });
   const appointmentId = await post(app, owner, `${o}/appointments`, {
     customerId,
@@ -104,6 +106,7 @@ async function setupOrg(app: App, label: string): Promise<GateOrg> {
       appointmentId,
       contractId,
       lineId,
+      tierId,
     },
   };
 }
@@ -125,7 +128,8 @@ function send(app: App, route: AnyRoute, path: string, headers: Record<string, s
   for (const [k, v] of Object.entries(headers)) req.set(k, v);
   // Luôn kèm khoá chống gửi trùng mới: đường bắt buộc khoá không bị chặn sớm ở 400 thay vì tới câu tra cứu.
   if (route.method !== 'get') req.set('idempotency-key', randomUUID());
-  return route.method === 'get' || route.method === 'delete' ? req : req.send(body as object);
+  if (route.method === 'get') return body ? req.query(body as Record<string, string>) : req;
+  return route.method === 'delete' ? req : req.send(body as object);
 }
 
 function check(): GateCheck {
@@ -191,7 +195,7 @@ export async function runIsolationGate(
   }
   // 6. Mọi đường xem của B (đúng id của B) không được chứa dữ liệu nào của A.
   for (const r of orgRoutes.filter((x) => x.method === 'get')) {
-    const res = await send(app, r, fill(r, fx.b.ids), bearer(fx.b.owner), {});
+    const res = await send(app, r, fill(r, fx.b.ids), bearer(fx.b.owner), samples[key(r)]?.(fx.b));
     const text = JSON.stringify(res.body ?? '');
     const leaked = secretsOfA.filter((s) => text.includes(s));
     record(report.leak, leaked.length === 0, `${key(r)} lộ ${leaked.length} giá trị của A`);
@@ -199,7 +203,8 @@ export async function runIsolationGate(
   // 7. GIỮ: chủ A dùng thật phải được trả lời đúng nghĩa — xem: 200; gửi thân rỗng: 400 (lỗi dữ liệu,
   //    không phải 404/409/500); xoá: 2xx. Phép này chạy cuối vì có thể xoá thật.
   for (const r of orgRoutes) {
-    const res = await send(app, r, fill(r, fx.a.ids), bearer(fx.a.owner), {});
+    const body = r.method === 'get' ? samples[key(r)]?.(fx.a) : {};
+    const res = await send(app, r, fill(r, fx.a.ids), bearer(fx.a.owner), body);
     const want = r.method === 'get' ? [200] : r.method === 'delete' ? [200, 204] : [400];
     record(report.keep, want.includes(res.status), `${key(r)} → ${res.status} (cần ${want.join('/')})`);
   }

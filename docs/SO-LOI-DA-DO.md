@@ -38,6 +38,30 @@ Mỗi lỗi ghi đủ: triệu chứng · gốc bệnh · số đo · cách ch�
 - **Triệu chứng:** bản lưu đầu tiên gom vài ảnh R&D đang chụp dở.
 - **Cách chặn:** khi nhiều thợ chạy song song, điều phối chỉ lưu theo đúng đường dẫn tệp đã nghiệm thu, không dùng `git add -A`.
 
+### 7. Cửa gác "phá thử 2 lần đều đỏ" mà vẫn mù với 3 kiểu lỗi (thợ chấm độc lập tìm ra)
+- **Triệu chứng:** cửa gác cách ly in 10/10 ở mọi phép. Thợ chấm cài 3 lỗi thật vào mã thì cửa gác vẫn xanh: quên lọc theo tổ chức trong câu tra cứu, đường khai sai loại, phần xử lý hỏng hẳn.
+- **Gốc bệnh:** người làm tự chọn cách phá thử, nên chỉ phá đúng những chỗ mình đã nghĩ tới. Cửa gác chỉ kiểm lớp cửa vào, không kiểm phần bên trong.
+- **Cách chặn:** dựng lại cửa gác với 7 phép: loại đường, người ngoài, thiếu quyền, chưa đăng nhập, **id chéo tổ chức**, **rò dữ liệu**, **giữ đúng nghĩa**. Kèm `test/gate-mutants.test.ts`: cài 5 kiểu lỗi, cửa gác phải đỏ đúng phép.
+- **Bài học cho studio khác:** người làm không được tự chấm, kể cả khi đã "tự phá thử". Thợ chấm khác người làm mới nghĩ ra cách phá người làm không nghĩ tới.
+
+### 8. Quản lý hạ được quản trị (lỗi nghiêm trọng, thợ chấm tìm ra)
+- **Gốc bệnh:** luật thứ bậc chỉ bảo vệ vai trò "chủ". Mọi vai trò khác không được che.
+- **Cách chặn:** không ai đổi, khoá hay cho rời người đang giữ quyền mình không có. Sửa một vai trò thì phải có đủ cả quyền cũ lẫn quyền mới. Quyền được tra lại **sau** khi khoá dữ liệu tổ chức. Số đo đua 15 lượt: mọi lệnh được chấp nhận đều chạy trước lệnh hạ quyền (3/15), không lệnh nào lọt sau.
+
+### 9. Bài thử xanh trong khi mã thiếu hẳn một hàm
+- **Triệu chứng:** điều phối thay một đoạn mã "từ mốc này tới hết tệp", làm mất luôn hàm nằm phía sau. Bài thử vẫn 10/10, chỉ kiểm tra kiểu mới báo lỗi.
+- **Gốc bệnh:** công cụ chạy bài thử bỏ qua kiểm tra kiểu.
+- **Cách chặn:** lệnh `pnpm test` của máy chủ chạy kiểm tra kiểu trước, đỏ thì không chạy bài thử.
+
+### 10. Ràng buộc database bắt được mã ghi thiếu dữ liệu
+- **Triệu chứng:** thợ bảng giá thấy 4 bài đổi thẻ đăng nhập trả 500 khi chạy toàn bộ.
+- **Gốc bệnh:** database của thợ nhận ràng buộc mới "thu hồi thì phải có lý do", trong khi mã của thợ vẫn là bản cũ không ghi lý do.
+- **Kết luận:** đây không phải lỗi của ràng buộc. Ràng buộc đã chặn đúng một đường ghi thiếu dữ liệu. Chạy lại sau khi đồng bộ: 10/10.
+
+### 11. Thay chữ bằng lệnh tự động: dấu ngoặc kép bị chèn sai (2 lần)
+- **Triệu chứng:** sau khi sửa bản vẽ dữ liệu bằng lệnh tự động, Prisma báo "dòng không hợp lệ". Ra là dấu `"` bị biến thành `\"`.
+- **Cách chặn:** sau mỗi lần sửa bằng lệnh tự động, chạy kiểm tra hợp lệ ngay; dò toàn tệp xem còn dấu `\` nào không.
+
 ---
 
 ## Phần CỦA RIÊNG DỰ ÁN NÀY

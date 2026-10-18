@@ -1,4 +1,6 @@
 import type { AnyRoute } from '../../http/route';
+import { payRateRoutes } from './payRates';
+import { profileRoutes } from './profiles';
+import { tierRoutes } from './tiers';
 
-// Thợ phụ trách module nhân sự & bậc lương điền các đường API vào đây.
-export const staffRoutes: AnyRoute[] = [];
+export const staffRoutes: AnyRoute[] = [...tierRoutes, ...profileRoutes, ...payRateRoutes];

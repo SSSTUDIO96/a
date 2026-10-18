@@ -10,6 +10,7 @@ const deps = makeDeps();
 
 // Thân yêu cầu hợp lệ cho các đường POST/PATCH có tham số id (khoá: "METHOD /đường").
 export const SAMPLES: Samples = {
+  'GET /orgs/:orgId/appointments': () => ({ from: '2026-11-25T00:00:00.000Z', to: '2026-12-10T00:00:00.000Z' }),
   'PATCH /orgs/:orgId/members/:membershipId': () => ({ status: 'SUSPENDED' }),
   'PATCH /orgs/:orgId/roles/:roleId': () => ({ name: 'Đổi tên thử' }),
   'PATCH /orgs/:orgId/service-categories/:categoryId': () => ({ name: 'Đổi tên thử' }),
@@ -31,6 +32,11 @@ export const SAMPLES: Samples = {
   }),
   'POST /orgs/:orgId/contracts/:contractId/lines/:lineId/void': () => ({ reason: 'Thử cửa gác' }),
   'POST /orgs/:orgId/contracts/:contractId/status': () => ({ to: 'CANCELLED', reason: 'Thử cửa gác' }),
+  'PATCH /orgs/:orgId/staff-tiers/:tierId': () => ({ name: 'Đổi tên thử' }),
+  'PATCH /orgs/:orgId/staff/:membershipId': () => ({ displayName: 'Tên thử' }),
+  // Bậc lấy từ CHÍNH tổ chức đang gọi — để chỉ id gói/dịch vụ là của tổ chức khác.
+  'PUT /orgs/:orgId/packages/:packageId/pay-rates': (o) => ({ rates: [{ tierId: o.ids.tierId, amount: 100000 }] }),
+  'PUT /orgs/:orgId/services/:serviceId/pay-rates': (o) => ({ rates: [{ tierId: o.ids.tierId, amount: 100000 }] }),
 };
 
 let report: GateReport;
