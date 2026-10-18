@@ -8,6 +8,7 @@ import * as contractsApi from '../../api/contracts';
 import * as scheduleApi from '../../api/schedule';
 import * as catalogApi from '../../api/catalog';
 import { ContractEditor } from './ContractEditor';
+import { ExtraPackageDialog } from './ExtraPackageDialog';
 
 // Màn hợp đồng với tầng API giả (vi.mock): cảnh báo thợ 3 mức, chặn xác nhận khi đỏ, lỗi 400/403/409, ẩn/khoá theo quyền.
 
@@ -738,11 +739,15 @@ describe('biên bản nghiệm thu cuối', () => {
     await waitFor(async () => expect(((await confirmButton()) as HTMLButtonElement).disabled).toBe(false));
   });
 
-  it('N2: máy chủ vẫn chặn (4xx kèm mã dòng thiếu giờ — bản trên máy chủ đã khác) → dải đỏ kể dòng, đánh dấu thẻ dòng, mời tải bản mới', async () => {
+  it('N2: máy chủ vẫn chặn (409 LINES_MISSING_TIME — bản trên máy chủ đã khác) → dải đỏ kể dòng, đánh dấu thẻ dòng, mời tải bản mới', async () => {
     api.getContract.mockResolvedValue(detail('DRAFT') as never);
     api.quoteContract.mockResolvedValue(quote([]) as never);
     api.changeContractStatus.mockRejectedValue(
-      new ApiError('VALIDATION_FAILED', 'Còn dòng chưa có giờ', 400, 'r', { reason: 'LINES_WITHOUT_TIME', lineIds: ['l1'] }),
+      new ApiError('CONFLICT', 'Dòng "Mẹ – Trang điểm nhẹ nhàng — Mẹ cô dâu" chưa có giờ bắt đầu và giờ kết thúc', 409, 'r', {
+        reason: 'LINES_MISSING_TIME',
+        lineIds: ['l1'],
+        lines: [{ id: 'l1', name: 'Mẹ – Trang điểm nhẹ nhàng', subjectName: 'Mẹ cô dâu', missing: ['scheduledStart', 'scheduledEnd'] }],
+      }),
     );
     renderEditor(OWNER);
     await screen.findByText('600.000 ₫', { selector: '.ct-ln__ft b' });
@@ -752,11 +757,11 @@ describe('biên bản nghiệm thu cuối', () => {
     await waitFor(() => expect(api.changeContractStatus).toHaveBeenCalled());
     expect(
       await screen.findByText(
-        'Chưa xác nhận được: trên máy chủ còn 1 dòng chưa có giờ (Mẹ – Trang điểm nhẹ nhàng) — hợp đồng có thể vừa được sửa ở máy khác. Tải bản mới, nhập giờ cho dòng đó rồi xác nhận lại.',
+        'Chưa xác nhận được: trên máy chủ còn 1 dòng chưa có giờ (Mẹ cô dâu · Mẹ – Trang điểm nhẹ nhàng: chưa có giờ bắt đầu và giờ kết thúc) — hợp đồng có thể vừa được sửa ở máy khác. Tải bản mới, nhập giờ cho dòng đó rồi xác nhận lại.',
       ),
     ).toBeTruthy();
     const card = document.querySelector('[data-dong="0"]') as HTMLElement;
-    expect(within(card).getByRole('alert').textContent).toBe('Dòng này chưa có giờ — nhập giờ bắt đầu và giờ kết thúc rồi xác nhận lại.');
+    expect(within(card).getByRole('alert').textContent).toBe('Dòng này chưa có giờ bắt đầu và giờ kết thúc — nhập giờ rồi xác nhận lại.');
     expect(screen.getByRole('button', { name: 'Tải bản mới' })).toBeTruthy();
   });
 
@@ -783,3 +788,62 @@ describe('biên bản nghiệm thu cuối', () => {
     expect(end.value).toBe('10:15');
   });
 });
+
+describe('N2 ở cửa thêm phát sinh (hợp đồng đã xác nhận)', () => {
+  const CATALOG = {
+    packages: [PKG_ME],
+    surcharges: [],
+    subjects: [{ id: 's-me', name: 'Mẹ cô dâu', sortOrder: 1, isActive: true }],
+    studios: [{ id: 'st-1', name: 'Studio Chiến', address: '25 Hoàng Quốc Việt', isDefault: true, isActive: true }],
+    policy: { defaultMode: 'PER_KM', fixedAmount: 150_000, perKmAmount: 10_000, freeKm: 1.5, minimumAmount: 0, roundTrip: true, tiers: [], updatedAt: '' },
+  };
+  const renderDialog = () =>
+    render(
+      <ExtraPackageDialog
+        pkg={PKG_ME as never}
+        orgId="org-1"
+        tz={TZ}
+        detail={detail('CONFIRMED') as never}
+        catalog={CATALOG as never}
+        canPickStaff
+        phone={false}
+        onClose={() => {}}
+        onAdded={() => {}}
+      />,
+    );
+
+  it('chưa có giờ → không gửi, báo ngay dưới ô giờ bắt đầu và kết thúc', async () => {
+    api.quoteContract.mockResolvedValue(noTimeQuoteFor() as never);
+    renderDialog();
+    await userEvent.click(await screen.findByRole('button', { name: 'Thêm phát sinh' }));
+    expect(await screen.findByText('Nhập giờ bắt đầu.')).toBeTruthy();
+    expect(screen.getByText('Nhập giờ kết thúc.')).toBeTruthy();
+    expect(screen.getByText('Dòng phát sinh phải có giờ bắt đầu và giờ kết thúc để lên lịch.').getAttribute('role')).toBe('alert');
+    expect(api.addContractLine).not.toHaveBeenCalled();
+  });
+
+  it('máy chủ trả 409 LINES_MISSING_TIME (dòng vừa thêm bị quay lui) → đánh dấu đúng ô giờ thiếu của dòng đang thêm', async () => {
+    api.quoteContract.mockResolvedValue(noTimeQuoteFor() as never);
+    api.addContractLine.mockRejectedValue(
+      new ApiError('CONFLICT', 'Dòng "Mẹ – Trang điểm nhẹ nhàng" chưa có giờ kết thúc', 409, 'r', {
+        reason: 'LINES_MISSING_TIME',
+        lineIds: ['l-new'],
+        lines: [{ id: 'l-new', name: 'Mẹ – Trang điểm nhẹ nhàng', subjectName: 'Mẹ cô dâu', missing: ['scheduledEnd'] }],
+      }),
+    );
+    renderDialog();
+    await userEvent.type(await screen.findByRole('textbox', { name: 'Giờ bắt đầu' }), '05:00');
+    await userEvent.type(screen.getByRole('textbox', { name: 'Giờ kết thúc' }), '06:00');
+    await userEvent.click(screen.getByRole('button', { name: 'Thêm phát sinh' }));
+    await waitFor(() => expect(api.addContractLine).toHaveBeenCalledTimes(1));
+    expect(await screen.findByText('Chưa thêm được: Mẹ cô dâu · Mẹ – Trang điểm nhẹ nhàng: chưa có giờ kết thúc. Dòng phát sinh phải có giờ để lên lịch — nhập giờ rồi thêm lại.')).toBeTruthy();
+    const end = screen.getByRole('textbox', { name: 'Giờ kết thúc' });
+    expect(end.getAttribute('aria-invalid')).toBe('true');
+    expect(screen.getByText('Nhập giờ kết thúc.')).toBeTruthy();
+    expect(screen.getByRole('textbox', { name: 'Giờ bắt đầu' }).getAttribute('aria-invalid')).toBeNull();
+  });
+});
+
+function noTimeQuoteFor() {
+  return { ...quote([]), lines: [line({ id: null, scheduledStart: null, scheduledEnd: null, staff: [], staffWarnings: [] })] };
+}

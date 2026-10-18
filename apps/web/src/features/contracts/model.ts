@@ -528,48 +528,63 @@ export function noTimeBlockedReason(lines: NoTimeLine[]): string | null {
   return `Còn ${lines.length} dòng chưa có giờ (${lines.map((l) => l.label).join('; ')}). Nhập giờ bắt đầu và giờ kết thúc rồi mới xác nhận được — hợp đồng đã chốt phải có lịch.`;
 }
 
-// Lỗi máy chủ khi xác nhận mà còn dòng chưa có giờ (dữ liệu có thể vừa đổi ở máy khác).
-// ⚠ CẦN KHỚP LẠI khi thợ Y1 xong phần máy chủ. Hình dạng dự kiến theo lối lỗi sẵn có (AppError → ApiError
-// { status, code, details }, như TOTAL_BELOW_PAID / CUSTOMER_IN_USE):
-//   4xx (VALIDATION_FAILED 400 hoặc 409/422), details = { reason: 'LINES_WITHOUT_TIME', lineIds: string[] }.
-// Đọc nới cho tới khi có hình dạng thật: reason thuộc NO_TIME_REASONS (hoặc có chữ TIME); mã dòng lấy từ lineIds |
-// missingTimeLineIds | lines (chuỗi hoặc { id | lineId }) | lineId (lỗi một dòng cũ của createLineAppointments —
-// VALIDATION_FAILED không có reason).
-export const NO_TIME_REASONS: ReadonlySet<string> = new Set([
-  'LINES_WITHOUT_TIME',
-  'LINE_WITHOUT_TIME',
-  'LINES_MISSING_TIME',
-  'MISSING_TIME',
-  'NO_TIME',
-]);
+// Máy chủ chặn sinh lịch vì còn dòng cần lên lịch (PACKAGE/SERVICE chưa huỷ) thiếu giờ — cửa xác nhận hợp đồng và cửa
+// thêm phát sinh (POST /contracts/:id/lines, khi đó lineIds là dòng vừa thêm đã bị quay lui).
+// Hình dạng (apps/api/src/modules/contracts/routes.ts assertSchedulableLinesHaveTime): HTTP 409, code CONFLICT,
+// details = { reason: 'LINES_MISSING_TIME', lineIds: string[] (theo thứ tự dòng),
+//             lines: [{ id, name, subjectName, missing: ('scheduledStart' | 'scheduledEnd')[] }] }.
+// Chỉ nhận ĐÚNG hình dạng này; lệch chỗ nào → null (không đoán, không đường lui im lặng). Bài khớp hai đầu:
+// apps/web/src/api/khop-hop-dong.test.ts.
+export const LINES_MISSING_TIME = 'LINES_MISSING_TIME';
 
-export function noTimeLineIdsOf(err: unknown): string[] | null {
-  if (!(err instanceof ApiError) || err.status < 400 || err.status >= 500) return null;
-  const d = err.details;
-  if (!d || typeof d !== 'object') return null;
-  const o = d as Record<string, unknown>;
-  const reason = typeof o.reason === 'string' ? o.reason : null;
-  if (reason !== null) {
-    if (!NO_TIME_REASONS.has(reason) && !/TIME/i.test(reason)) return null;
-  } else if (err.code !== 'VALIDATION_FAILED' || 'conflicts' in o) {
-    return null;
-  }
-  const ids: string[] = [];
-  const take = (v: unknown) => {
-    if (typeof v === 'string' && v) ids.push(v);
-    else if (v && typeof v === 'object') {
-      const x = v as { id?: unknown; lineId?: unknown };
-      if (typeof x.lineId === 'string') ids.push(x.lineId);
-      else if (typeof x.id === 'string') ids.push(x.id);
-    }
-  };
-  for (const key of ['lineIds', 'missingTimeLineIds', 'lines']) {
-    const v = o[key];
-    if (Array.isArray(v)) v.forEach(take);
-  }
-  take(o.lineId);
-  const uniq = [...new Set(ids)];
-  return uniq.length > 0 ? uniq : null;
+export type MissingTimeField = 'scheduledStart' | 'scheduledEnd';
+
+// Khai cục bộ (chưa có trong api/types.ts).
+export interface MissingTimeLine {
+  id: string;
+  name: string;
+  subjectName: string | null;
+  missing: MissingTimeField[];
+}
+
+export interface MissingTimeError {
+  lineIds: string[];
+  lines: MissingTimeLine[];
+}
+
+function isMissingTimeLine(v: unknown): v is MissingTimeLine {
+  if (!v || typeof v !== 'object') return false;
+  const o = v as Record<string, unknown>;
+  return (
+    typeof o.id === 'string' &&
+    typeof o.name === 'string' &&
+    (o.subjectName === null || typeof o.subjectName === 'string') &&
+    Array.isArray(o.missing) &&
+    o.missing.length > 0 &&
+    o.missing.every((m) => m === 'scheduledStart' || m === 'scheduledEnd')
+  );
+}
+
+export function missingTimeOf(err: unknown): MissingTimeError | null {
+  if (!(err instanceof ApiError) || err.status !== 409 || err.code !== 'CONFLICT') return null;
+  const d = err.details as { reason?: unknown; lineIds?: unknown; lines?: unknown } | null | undefined;
+  if (!d || typeof d !== 'object' || d.reason !== LINES_MISSING_TIME) return null;
+  const { lineIds, lines } = d;
+  if (!Array.isArray(lineIds) || lineIds.length === 0 || !lineIds.every((x): x is string => typeof x === 'string' && x !== '')) return null;
+  if (!Array.isArray(lines) || lines.length !== lineIds.length || !lines.every(isMissingTimeLine)) return null;
+  if (lines.some((l, i) => l.id !== lineIds[i])) return null;
+  return { lineIds, lines };
+}
+
+// "giờ bắt đầu và giờ kết thúc" / "giờ bắt đầu" / "giờ kết thúc"
+export function missingTimeWhat(missing: readonly MissingTimeField[]): string {
+  if (missing.includes('scheduledStart') && missing.includes('scheduledEnd')) return 'giờ bắt đầu và giờ kết thúc';
+  return missing.includes('scheduledStart') ? 'giờ bắt đầu' : 'giờ kết thúc';
+}
+
+// "Phù dâu · Trang điểm nhẹ: chưa có giờ bắt đầu và giờ kết thúc"
+export function missingTimeLabel(l: MissingTimeLine): string {
+  return `${l.subjectName && l.subjectName !== l.name ? `${l.subjectName} · ` : ''}${l.name}: chưa có ${missingTimeWhat(l.missing)}`;
 }
 
 /**

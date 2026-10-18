@@ -10,7 +10,8 @@ import {
   draftIndexesOfLineIds,
   linesWithoutTime,
   noTimeBlockedReason,
-  noTimeLineIdsOf,
+  missingTimeLabel,
+  missingTimeOf,
   staffGapText,
   confirmBlockedReason,
   conflictsOf,
@@ -338,17 +339,26 @@ describe('N2: dòng chưa có giờ chặn xác nhận hợp đồng dịch vụ
     expect(staffGapText({ noStaff: 0, noTime: 2 })).toBeNull();
   });
 
-  it('đọc lỗi máy chủ: reason + lineIds (dự kiến), các khoá khác, lỗi một dòng cũ; lỗi khác → null', () => {
-    const e = (status: number, details: unknown, code = 'VALIDATION_FAILED') => new ApiError(code, 'x', status, 'r', details);
-    expect(noTimeLineIdsOf(e(400, { reason: 'LINES_WITHOUT_TIME', lineIds: ['l1', 'l2'] }))).toEqual(['l1', 'l2']);
-    expect(noTimeLineIdsOf(e(409, { reason: 'LINES_MISSING_TIME', lines: [{ id: 'l3', name: 'A' }, { lineId: 'l4' }] }, 'CONFLICT'))).toEqual(['l3', 'l4']);
-    expect(noTimeLineIdsOf(e(422, { reason: 'SCHEDULE_TIME_REQUIRED', missingTimeLineIds: ['l5'] }))).toEqual(['l5']);
-    expect(noTimeLineIdsOf(e(400, { lineId: 'l6' }))).toEqual(['l6']);
-    expect(noTimeLineIdsOf(e(409, { reason: 'STALE_VERSION', lineIds: ['l1'] }, 'CONFLICT'))).toBeNull();
-    expect(noTimeLineIdsOf(e(409, { conflicts: [], lineId: 'l1' }, 'CONFLICT'))).toBeNull();
-    expect(noTimeLineIdsOf(e(400, { reason: 'LINES_WITHOUT_TIME', lineIds: [] }))).toBeNull();
-    expect(noTimeLineIdsOf(e(500, { reason: 'LINES_WITHOUT_TIME', lineIds: ['l1'] }, 'INTERNAL'))).toBeNull();
-    expect(noTimeLineIdsOf(new Error('x'))).toBeNull();
+  it('đọc lỗi máy chủ 409 LINES_MISSING_TIME đúng một hình dạng; lệch chỗ nào → null, không đoán', () => {
+    const e = (status: number, details: unknown, code = 'CONFLICT') => new ApiError(code, 'x', status, 'r', details);
+    const l1 = { id: 'l1', name: 'Phù dâu', subjectName: null, missing: ['scheduledStart', 'scheduledEnd'] };
+    const l2 = { id: 'l2', name: 'Trang điểm', subjectName: 'Mẹ cô dâu', missing: ['scheduledEnd'] };
+    const ok = { reason: 'LINES_MISSING_TIME', lineIds: ['l1', 'l2'], lines: [l1, l2] };
+    expect(missingTimeOf(e(409, ok))).toEqual({ lineIds: ['l1', 'l2'], lines: [l1, l2] });
+    expect(missingTimeLabel(l1 as never)).toBe('Phù dâu: chưa có giờ bắt đầu và giờ kết thúc');
+    expect(missingTimeLabel(l2 as never)).toBe('Mẹ cô dâu · Trang điểm: chưa có giờ kết thúc');
+    // Sai mã / sai trạng thái / sai reason / thiếu hoặc lệch lineIds, lines → null.
+    expect(missingTimeOf(e(400, ok, 'VALIDATION_FAILED'))).toBeNull();
+    expect(missingTimeOf(e(409, ok, 'INVALID_STATE'))).toBeNull();
+    expect(missingTimeOf(e(409, { ...ok, reason: 'LINES_WITHOUT_TIME' }))).toBeNull();
+    expect(missingTimeOf(e(409, { ...ok, lineIds: [] , lines: [] }))).toBeNull();
+    expect(missingTimeOf(e(409, { reason: 'LINES_MISSING_TIME', lineIds: ['l1'] }))).toBeNull();
+    expect(missingTimeOf(e(409, { reason: 'LINES_MISSING_TIME', lines: [l1] }))).toBeNull();
+    expect(missingTimeOf(e(409, { ...ok, lineIds: ['l2', 'l1'] }))).toBeNull();
+    expect(missingTimeOf(e(409, { ...ok, lines: [l1, { ...l2, missing: ['startsAt'] }] }))).toBeNull();
+    expect(missingTimeOf(e(409, { reason: 'LINES_MISSING_TIME', lineId: 'l1' }))).toBeNull();
+    expect(missingTimeOf(e(400, { lineId: 'l1' }, 'VALIDATION_FAILED'))).toBeNull();
+    expect(missingTimeOf(new Error('x'))).toBeNull();
   });
 
   it('mã dòng máy chủ → vị trí trong nháp theo thứ tự dòng gói; không thấy / lệch số dòng → null', () => {

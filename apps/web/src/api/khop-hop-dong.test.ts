@@ -11,6 +11,7 @@ import { setAccessToken } from './client';
 import * as contracts from './contracts';
 import * as courses from './courses';
 import { errorKind, fieldErrors } from './errors';
+import { draftFromDetail, draftIndexesOfLineIds, linesWithoutTime, missingTimeOf } from '../features/contracts/model';
 import * as files from './files';
 import { newIdempotencyKey } from './idempotency';
 import { napKieu, soKieu, type Kieu } from './khop-kieu';
@@ -518,6 +519,47 @@ describe('types.ts khớp đúng dữ liệu máy chủ thật trả về (tên 
     expect(first(confirmed.createdAppointments, 'lịch tạo khi xác nhận')).toMatchObject({ contractLineId: line.id, status: 'CONFIRMED' });
     contract = confirmed;
     expect(confirmed.status).toBe('CONFIRMED');
+  });
+
+  it('409 LINES_MISSING_TIME: web đọc đúng lỗi máy chủ ở cửa xác nhận và cửa thêm phát sinh (biên bản nghiệm thu cuối N2)', async () => {
+    const tz = 'Asia/Ho_Chi_Minh';
+    const noTime = {
+      kind: 'PACKAGE' as const,
+      packageId: pkg.id,
+      subjectId: subject.id,
+      quantity: 1,
+      locationType: 'CUSTOMER_HOME' as const,
+      address: '12 Nguyễn Huệ, Quận 1',
+      travel: { mode: 'PER_KM' as const, distanceKm: 3 },
+    };
+    // Cửa xác nhận: nháp có một dòng gói chưa có giờ (kèm khoản tự đặt tên — không cần lên lịch).
+    const nt = await contracts.createContract(
+      orgId,
+      { customerId: customer.id, eventDate: '2026-12-21T00:00:00+07:00', lines: [noTime, { kind: 'CUSTOM', name: 'Phí gửi xe', unitPrice: 50_000, quantity: 1 }] },
+      newIdempotencyKey(),
+    );
+    const ntLine = first(nt.lines.filter((l) => l.kind === 'PACKAGE'), 'dòng gói chưa có giờ');
+    const draft = draftFromDetail(nt, tz);
+    // Web chặn đúng tập dòng máy chủ chặn: dòng PACKAGE/SERVICE chưa huỷ, không tính CUSTOM.
+    expect(linesWithoutTime(draft, () => null).map((x) => x.index)).toEqual([0]);
+    const e1: unknown = await contracts.changeContractStatus(orgId, nt.id, { to: 'CONFIRMED' }).catch((e: unknown) => e);
+    const m1 = missingTimeOf(e1);
+    expect(m1, `lỗi máy chủ lệch hình dạng web đọc: ${JSON.stringify((e1 as { details?: unknown }).details)}`).not.toBeNull();
+    expect(m1).toEqual({
+      lineIds: [ntLine.id],
+      lines: [{ id: ntLine.id, name: ntLine.name, subjectName: subject.name, missing: ['scheduledStart', 'scheduledEnd'] }],
+    });
+    expect(draftIndexesOfLineIds(nt.lines, draft, m1?.lineIds ?? [])).toEqual([{ id: ntLine.id, index: 0, name: ntLine.name }]);
+    expect((await contracts.getContract(orgId, nt.id)).status).toBe('DRAFT');
+
+    // Cửa thêm phát sinh vào hợp đồng đã xác nhận: dòng vừa thêm bị quay lui, lineIds là mã dòng đó.
+    const before = await contracts.getContract(orgId, contract.id);
+    const e2: unknown = await contracts.addContractLine(orgId, contract.id, noTime, newIdempotencyKey()).catch((e: unknown) => e);
+    const m2 = missingTimeOf(e2);
+    expect(m2, `lỗi máy chủ lệch hình dạng web đọc: ${JSON.stringify((e2 as { details?: unknown }).details)}`).not.toBeNull();
+    expect(m2?.lineIds).toHaveLength(1);
+    expect(m2?.lines).toEqual([{ id: m2?.lineIds[0], name: pkg.name, subjectName: subject.name, missing: ['scheduledStart', 'scheduledEnd'] }]);
+    expect((await contracts.getContract(orgId, contract.id)).lines.map((l) => l.id)).toEqual(before.lines.map((l) => l.id));
   });
 
   it('thu tiền: tiến độ, phiếu thu, huỷ phiếu, sổ thu, báo cáo doanh số', async () => {

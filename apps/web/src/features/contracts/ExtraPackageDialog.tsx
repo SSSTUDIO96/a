@@ -10,6 +10,9 @@ import {
   errorLineOf,
   lineInput,
   matchQuote,
+  missingTimeLabel,
+  missingTimeOf,
+  missingTimeWhat,
   newPackageLine,
   serverWarnings,
   displayWarnings,
@@ -73,7 +76,14 @@ export function ExtraPackageDialog(p: ExtraPackageDialogProps) {
   const view = body ? (matchQuote(draft, quote.data as ContractQuote | null)[0] ?? null) : null;
   if (!pkg || !line) return null;
 
-  const errors = { ...(showErrors ? local : {}), ...quote.fieldErrors, ...saveError.fields };
+  // Dòng phát sinh của hợp đồng đã chốt được lên lịch ngay: thiếu giờ thì máy chủ chặn (409 LINES_MISSING_TIME) — chặn
+  // trước ở đây: lời ngắn dưới ô giờ (ô hẹp), lý do ở lời lỗi của dòng. Không đưa vào `local` vì quote xem giá vẫn chạy
+  // khi chưa có giờ.
+  const timeErrors: Record<string, string> = {
+    ...(line.start ? {} : { 'lines.0.scheduledStart': 'Nhập giờ bắt đầu.' }),
+    ...(line.end ? {} : { 'lines.0.scheduledEnd': 'Nhập giờ kết thúc.' }),
+  };
+  const errors = { ...(showErrors ? { ...timeErrors, ...local } : {}), ...quote.fieldErrors, ...saveError.fields };
   const subjectName = (id: string | null) => catalog.subjects.find((s) => s.id === id)?.name ?? null;
   // Dòng phát sinh của hợp đồng ĐÃ xác nhận: KHÔNG gửi excludeContractId — lịch đã có của chính hợp đồng vẫn phải tính trùng.
   const warnings = displayWarnings(serverWarnings(view?.staffWarnings), tz).filter((w) =>
@@ -83,12 +93,22 @@ export function ExtraPackageDialog(p: ExtraPackageDialogProps) {
   async function add() {
     if (!line) return;
     setShowErrors(true);
-    if (Object.keys(local).length > 0) return;
+    if (Object.keys(local).length > 0 || !line.start || !line.end) return;
     setBusy(true);
     try {
       const d = await addContractLine(p.orgId, detail.id, lineInput(line, eventDate, tz), newIdempotencyKey());
       p.onAdded(d as ContractDetail);
     } catch (err) {
+      // 409 LINES_MISSING_TIME: máy chủ quay lui dòng vừa thêm vì thiếu giờ → đánh dấu đúng ô giờ của dòng đang thêm.
+      const miss = missingTimeOf(err);
+      if (miss) {
+        const fields: Record<string, string> = {};
+        for (const f of new Set(miss.lines.flatMap((l) => l.missing))) {
+          fields[`lines.0.${f}`] = `Nhập ${missingTimeWhat([f])}.`;
+        }
+        setSaveError({ fields, message: `Chưa thêm được: ${miss.lines.map(missingTimeLabel).join('; ')}. Dòng phát sinh phải có giờ để lên lịch — nhập giờ rồi thêm lại.` });
+        return;
+      }
       // Thân gửi là MỘT dòng: đường dẫn lỗi không có tiền tố "lines.0." — thêm vào để hiện đúng ô của thẻ.
       const fields = Object.fromEntries(Object.entries(fieldErrors(err)).map(([k, v]) => [`lines.0.${k}`, v]));
       setSaveError({ fields, message: Object.keys(fields).length > 0 && errorLineOf(err) === null ? null : userMessage(err) });
@@ -131,11 +151,18 @@ export function ExtraPackageDialog(p: ExtraPackageDialogProps) {
             pending={quote.loading}
             locked={false}
             errors={errors}
-            lineError={saveError.message ?? (quote.errorLine === 0 ? userMessage(quote.error) : null)}
+            lineError={
+              saveError.message ??
+              (showErrors && Object.keys(timeErrors).length > 0 ? 'Dòng phát sinh phải có giờ bắt đầu và giờ kết thúc để lên lịch.' : null) ??
+              (quote.errorLine === 0 ? userMessage(quote.error) : null)
+            }
             warnings={warnings}
             people={line.staff.map((s) => ({ ...s, displayName: people.find((x) => x.membershipId === s.membershipId)?.displayName ?? '' }))}
             nameOf={(id) => people.find((x) => x.membershipId === id)?.displayName ?? ''}
-            onChange={(patch) => setLine({ ...line, ...patch })}
+            onChange={(patch) => {
+              setLine({ ...line, ...patch });
+              if ('start' in patch || 'end' in patch) setSaveError({ fields: {}, message: null });
+            }}
             onRemove={p.onClose}
             onPickStaff={() => setPicking(true)}
             canPickStaff={p.canPickStaff}

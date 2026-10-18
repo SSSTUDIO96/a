@@ -65,7 +65,9 @@ import {
   newPackageLine,
   newLineKey,
   noTimeBlockedReason,
-  noTimeLineIdsOf,
+  missingTimeLabel,
+  missingTimeOf,
+  missingTimeWhat,
   overlapLineCount,
   patchBody,
   placedFromView,
@@ -149,7 +151,7 @@ export function ContractEditor({ orgId, slug, tz, has, contractId, kindSwitch, o
   });
   const [alert, setAlert] = useState<Alert | null>(null);
   // N2: dòng máy chủ báo chưa có giờ khi xác nhận (vị trí trong draft.lines) — đánh dấu ngay trên thẻ dòng.
-  const [serverNoTime, setServerNoTime] = useState<number[]>([]);
+  const [serverNoTime, setServerNoTime] = useState<{ index: number; text: string }[]>([]);
   const [busy, setBusy] = useState<'save' | 'confirm' | null>(null);
   const [pickedPeople, setPickedPeople] = useState<Map<string, StaffPerson>>(new Map());
   const [pickerFor, setPickerFor] = useState<string | null>(null);
@@ -267,7 +269,8 @@ export function ContractEditor({ orgId, slug, tz, has, contractId, kindSwitch, o
     ...serverErrors.fields,
   };
   const lineErrorAt = (i: number): string | null => {
-    if (serverNoTime.includes(i)) return 'Dòng này chưa có giờ — nhập giờ bắt đầu và giờ kết thúc rồi xác nhận lại.';
+    const noTime = serverNoTime.find((x) => x.index === i);
+    if (noTime) return noTime.text;
     if (serverErrors.line === i) return serverErrors.message;
     if (quoteBody && quote.errorLine === i) return prettyMoneyText(userMessage(quote.error));
     return null;
@@ -360,27 +363,32 @@ export function ContractEditor({ orgId, slug, tz, has, contractId, kindSwitch, o
       el.querySelector<HTMLInputElement>('input[aria-label="Giờ bắt đầu"]:not([disabled])')?.focus({ preventScroll: true });
     });
 
-  // N2: máy chủ chặn xác nhận vì còn dòng chưa có giờ. Trả true nếu đã xử lý lỗi này.
+  // N2: máy chủ chặn xác nhận (409 LINES_MISSING_TIME) vì còn dòng chưa có giờ. Trả true nếu đã xử lý lỗi này.
   const applyNoTimeError = (err: unknown, saved: ContractDetail): boolean => {
-    const ids = noTimeLineIdsOf(err);
-    if (!ids) return false;
-    const hits = draftIndexesOfLineIds(saved.lines, draft, ids);
-    const indexes = hits.flatMap((h) => (h.index === null ? [] : [h.index]));
-    const names = hits.map((h) => h.name ?? 'một dòng đã đổi').join('; ');
+    const miss = missingTimeOf(err);
+    if (!miss) return false;
+    const hits = draftIndexesOfLineIds(saved.lines, draft, miss.lineIds);
+    const marks = hits.flatMap((h, k) => {
+      const l = miss.lines[k];
+      if (h.index === null || !l) return [];
+      return [{ index: h.index, text: `Dòng này chưa có ${missingTimeWhat(l.missing)} — nhập giờ rồi xác nhận lại.` }];
+    });
+    const names = miss.lines.map(missingTimeLabel).join('; ');
     // Nháp trên màn đã có giờ (hoặc không thấy dòng) mà máy chủ vẫn báo thiếu: bản trên máy chủ đã khác (sửa ở máy khác).
-    const localMissing = indexes.filter((i) => {
-      const l = draft.lines[i];
+    const localMissing = marks.filter(({ index }) => {
+      const l = draft.lines[index];
       return l !== undefined && isPlaced(l) && (!l.start || !l.end);
     });
-    const differs = indexes.length < ids.length || localMissing.length < indexes.length;
-    setServerNoTime(indexes);
+    const n = miss.lineIds.length;
+    const differs = marks.length < n || localMissing.length < marks.length;
+    setServerNoTime(marks);
     setAlert({
       text: differs
-        ? `Chưa xác nhận được: trên máy chủ còn ${ids.length} dòng chưa có giờ (${names}) — hợp đồng có thể vừa được sửa ở máy khác. Tải bản mới, nhập giờ cho dòng đó rồi xác nhận lại.`
-        : `Chưa xác nhận được: còn ${ids.length} dòng chưa có giờ (${names}). Nhập giờ cho dòng được đánh dấu rồi xác nhận lại.`,
+        ? `Chưa xác nhận được: trên máy chủ còn ${n} dòng chưa có giờ (${names}) — hợp đồng có thể vừa được sửa ở máy khác. Tải bản mới, nhập giờ cho dòng đó rồi xác nhận lại.`
+        : `Chưa xác nhận được: còn ${n} dòng chưa có giờ (${names}). Nhập giờ cho dòng được đánh dấu rồi xác nhận lại.`,
     });
     if (differs) setStale({ phase: 'conflict' });
-    if (indexes[0] !== undefined) scrollToLine(indexes[0]);
+    if (marks[0] !== undefined) scrollToLine(marks[0].index);
     else scrollToFirstError();
     return true;
   };
