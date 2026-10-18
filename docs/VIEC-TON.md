@@ -15,6 +15,8 @@ Danh sách việc các thợ, thợ chấm và R&D đã nêu nhưng **chưa làm
 | 7 | Mẫu chào mừng thứ 20 | R&D 3 | Đang có 19 |
 | 8 | Tổ chức bị khoá: chặn hẳn (hiện tại) hay chỉ cho đọc | thợ màn quản trị | Hết hạn quá ân hạn thì chỉ đọc; khoá thì chặn hẳn |
 | 9 | Phông chữ ký: chọn MP Chữ ký 1–4, và tải phông SS-Album lên | R&D 3 | Đang dùng phông OFL tạm |
+| 10a | Áp giới hạn gói cước (số thành viên, lịch mỗi tháng, dung lượng) — hiện chỉ áp khoá học và học viên. Gói Dùng thử đang cho 1 thành viên, 0 khoá học | thợ chấm cuối T2, T3 | Việc thương mại của anh (luật 15) |
+| 10b | Gói vừa tạo có tự "hiện trên trang công khai" không — hiện mặc định tắt, xuất bản xong trang chưa có bảng giá | thợ chấm cuối L5 | Đang giữ tắt |
 | 10 | "ssnew" — gửi ảnh màn trả lương của ssnew để so | R&D 2 | Màn tiền công đang dựng theo lời anh tả |
 
 ## Máy chủ
