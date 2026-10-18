@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { UnitInput } from './UnitInput';
-import { formatKm } from './format';
+import { formatKm, parseKm } from './format';
 
 function Harness({ unit = 'km', initial = null, onValue = () => {} }: { unit?: string; initial?: number | null; onValue?: (v: number | null) => void }) {
   const [value, setValue] = useState<number | null>(initial);
@@ -102,7 +102,7 @@ describe('UnitInput km — dấu chấm mơ hồ, đơn vị dán kèm, giá tr�
     expect(onValue).not.toHaveBeenCalledWith(2500);
   });
 
-  it('N7: số lớn gõ liền "2500" → 2500 km; rời ô hiện "2.500", vào lại ô hiện "2500" (không tự sinh dạng mơ hồ)', async () => {
+  it('N7: số lớn gõ liền "2500" → 2500 km; rời ô hiện "2500" (đúng như formatKm), vào lại ô vẫn "2500" (không tự sinh dạng mơ hồ)', async () => {
     const user = userEvent.setup();
     const onValue = vi.fn();
     render(<Harness onValue={onValue} />);
@@ -110,7 +110,7 @@ describe('UnitInput km — dấu chấm mơ hồ, đơn vị dán kèm, giá tr�
     await user.keyboard('2500');
     expect(onValue).toHaveBeenLastCalledWith(2500);
     await user.click(screen.getByText('Ô khác'));
-    expect(input().value).toBe('2.500');
+    expect(input().value).toBe('2500');
     await user.click(input());
     expect(input().value).toBe('2500');
     await user.keyboard(',5');
@@ -189,7 +189,7 @@ describe('UnitInput — chọn hết rồi gõ thay cả ô', () => {
     const onValue = vi.fn();
     render(<Harness initial={2500} onValue={onValue} />);
     const el = input();
-    expect(el.value).toBe('2.500');
+    expect(el.value).toBe('2500');
     el.setSelectionRange(0, el.value.length);
     await act(async () => el.focus());
     expect([el.selectionStart, el.selectionEnd]).toEqual([0, 4]);
@@ -280,5 +280,66 @@ describe('UnitInput — form đặt lại đúng giá cũ (N-J1)', () => {
     await user.keyboard('1 5');
     expect(onValue).not.toHaveBeenCalledWith(15);
     expect(input().getAttribute('aria-invalid')).toBe('true');
+  });
+});
+
+// Điều phối quyết (đợt sửa 1): ô km rời ô hiện đúng như formatKm (không ngăn nghìn) — chép chữ trong ô km dán sang ô km khác luôn nhận.
+describe('UnitInput km — chữ hiện khi rời ô đọc lại được', () => {
+  it('rời ô: chữ trong ô (bỏ hậu tố) === formatKm(x) bỏ " km", và parseKm đọc lại đúng x', () => {
+    for (const km of [0.5, 999, 1000, 2500, 12_345.6, 99_999.99]) {
+      const { unmount } = render(<Harness initial={km} />);
+      expect(input().value, String(km)).toBe(formatKm(km).replace(/ km$/, ''));
+      expect(parseKm(input().value)).toEqual({ ok: true, value: km });
+      unmount();
+    }
+  });
+  it('ô phút/lần (số nguyên) vẫn ngăn nghìn khi rời ô: 1440 phút → "1.440"', () => {
+    render(<Harness unit="phút" initial={1440} />);
+    expect(input().value).toBe('1.440');
+  });
+});
+
+// Điều phối quyết (đợt sửa 1): ô bị gỡ khỏi form khi đang lỗi phải báo onInputError(null) lúc gỡ.
+describe('UnitInput — gỡ ô đang lỗi khỏi form', () => {
+  it('ô km đang lỗi (",,") bị gỡ (xoá bậc) → báo hết lỗi, form lưu được', async () => {
+    const user = userEvent.setup();
+    function Form() {
+      const [errors, setErrors] = useState<Record<string, string>>({});
+      const [shown, setShown] = useState(true);
+      const [km, setKm] = useState<number | null>(3);
+      return (
+        <>
+          {shown && (
+            <UnitInput
+              aria-label="Số đo"
+              unit="km"
+              value={km}
+              onChange={setKm}
+              onInputError={(m) =>
+                setErrors((e) => {
+                  const next = { ...e };
+                  if (m) next.km = m;
+                  else delete next.km;
+                  return next;
+                })
+              }
+            />
+          )}
+          <button type="button" onClick={() => setShown(false)}>
+            Bỏ bậc
+          </button>
+          <button type="button" disabled={Object.keys(errors).length > 0}>
+            Lưu
+          </button>
+        </>
+      );
+    }
+    render(<Form />);
+    await user.click(input());
+    await user.type(input(), ',,', { initialSelectionStart: 0, initialSelectionEnd: input().value.length });
+    expect((screen.getByText('Lưu') as HTMLButtonElement).disabled).toBe(true);
+    await user.click(screen.getByText('Bỏ bậc'));
+    expect(screen.queryByLabelText('Số đo')).toBeNull();
+    expect((screen.getByText('Lưu') as HTMLButtonElement).disabled).toBe(false);
   });
 });

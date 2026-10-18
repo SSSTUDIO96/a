@@ -116,6 +116,9 @@ export const QuoteBodySchema = strict({ ...contractBodyShape, excludeContractId:
   .refine(termsOrTemplate, TERMS_OR_TEMPLATE);
 
 export const ContractPatchSchema = strict({
+  // BẮT BUỘC: updatedAt của bản hợp đồng máy khách đang sửa (lấy từ phản hồi gần nhất). Lệch bản hiện hành → 409
+  // (biên bản nghiệm thu web 2, T2: hai thẻ cùng sửa, thẻ sau xoá im lặng giảm giá của thẻ trước).
+  expectedUpdatedAt: DateTime,
   lines: Lines.optional(),
   discount: Money.optional(),
   depositRequired: Money.optional(),
@@ -126,7 +129,7 @@ export const ContractPatchSchema = strict({
   termsTemplateId: z.uuid().nullable().optional(),
   rulesTemplateId: z.uuid().nullable().optional(),
 })
-  .refine((b) => Object.values(b).some((v) => v !== undefined), 'Không có gì để sửa')
+  .refine((b) => Object.entries(b).some(([k, v]) => k !== 'expectedUpdatedAt' && v !== undefined), 'Không có gì để sửa')
   .refine(termsOrTemplate, TERMS_OR_TEMPLATE);
 
 export const VoidBodySchema = strict({ reason: z.string().trim().min(1, 'Phải nêu lý do huỷ dòng').max(1000) });

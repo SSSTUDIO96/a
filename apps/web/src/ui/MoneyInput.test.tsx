@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MoneyInput } from './MoneyInput';
-import type { Vnd } from './format';
+import { ERR_SPACE_IN_NUMBER, type Vnd } from './format';
 
 function Harness({ initial = null, onValue = () => {}, error }: { initial?: Vnd | null; onValue?: (v: Vnd | null) => void; error?: string }) {
   const [value, setValue] = useState<Vnd | null>(initial);
@@ -369,5 +369,95 @@ describe('MoneyInput — form đặt lại đúng giá cũ (N-J1)', () => {
     expect(el.value).toBe('-5');
     expect(el.getAttribute('aria-invalid')).toBe('true');
     expect(onInputError).not.toHaveBeenLastCalledWith(null);
+  });
+});
+
+// Điều phối quyết (đợt sửa 1): ô bị gỡ khỏi form khi đang lỗi phải báo onInputError(null) lúc gỡ.
+describe('MoneyInput — gỡ ô đang lỗi khỏi form', () => {
+  it('ô tiền đang lỗi ("-5") bị gỡ (xoá bậc) → báo hết lỗi, form lưu được', async () => {
+    const user = userEvent.setup();
+    const onInputError = vi.fn();
+    function Form() {
+      const [errors, setErrors] = useState<Record<string, string>>({});
+      const [shown, setShown] = useState(true);
+      const [v, setV] = useState<Vnd | null>(3_000_000);
+      return (
+        <>
+          {shown && (
+            <MoneyInput
+              aria-label="Giá bán"
+              value={v}
+              onChange={setV}
+              onInputError={(m) => {
+                onInputError(m);
+                setErrors((e) => {
+                  const next = { ...e };
+                  if (m) next.amount = m;
+                  else delete next.amount;
+                  return next;
+                });
+              }}
+            />
+          )}
+          <button type="button" onClick={() => setShown(false)}>
+            Bỏ bậc
+          </button>
+          <button type="button" disabled={Object.keys(errors).length > 0}>
+            Lưu
+          </button>
+        </>
+      );
+    }
+    render(<Form />);
+    await user.click(input());
+    await user.type(input(), '-5', { initialSelectionStart: 0, initialSelectionEnd: input().value.length });
+    expect((screen.getByText('Lưu') as HTMLButtonElement).disabled).toBe(true);
+    await user.click(screen.getByText('Bỏ bậc'));
+    expect((screen.getByText('Lưu') as HTMLButtonElement).disabled).toBe(false);
+    expect(onInputError).toHaveBeenLastCalledWith(null);
+  });
+
+  it('GIỮ: gỡ ô KHÔNG có lỗi → không báo gì thêm', async () => {
+    const onInputError = vi.fn();
+    const { unmount } = render(<MoneyInput aria-label="Giá bán" value={1} onChange={() => {}} onInputError={onInputError} />);
+    unmount();
+    expect(onInputError).not.toHaveBeenCalled();
+  });
+});
+
+// Điều phối quyết (đợt sửa 1): gõ từng phím "1 5" vào ô tiền → báo lỗi như lúc dán, không thành 15.
+describe('MoneyInput — dấu cách khi gõ', () => {
+  it('gõ "1 5" → lỗi "Có dấu cách xen giữa chữ số", giá trị không thành 15', async () => {
+    const user = userEvent.setup();
+    const onValue = vi.fn();
+    render(<Harness onValue={onValue} />);
+    await user.click(input());
+    await user.keyboard('1 5');
+    expect(onValue).not.toHaveBeenCalledWith(15);
+    expect(input().getAttribute('aria-invalid')).toBe('true');
+    expect(screen.getByRole('alert').textContent).toContain(ERR_SPACE_IN_NUMBER);
+    expect(input().value).toBe('1 5');
+  });
+
+  it('gõ ngăn nghìn bằng dấu cách đúng nhóm 3 ("1 500 000") → nhận 1.500.000, hiện "1.500.000"', async () => {
+    const user = userEvent.setup();
+    const onValue = vi.fn();
+    render(<Harness onValue={onValue} />);
+    await user.click(input());
+    await user.keyboard('1 500 000');
+    expect(onValue).toHaveBeenLastCalledWith(1_500_000);
+    expect(input().hasAttribute('aria-invalid')).toBe(false);
+    expect(input().value.replace(/\s+$/, '')).toBe('1.500.000');
+  });
+
+  it('gõ "1 5" rồi xoá dấu cách → "15" hợp lệ, hết lỗi', async () => {
+    const user = userEvent.setup();
+    const onValue = vi.fn();
+    render(<Harness onValue={onValue} />);
+    await user.click(input());
+    await user.keyboard('1 5{ArrowLeft}{Backspace}');
+    expect(input().value).toBe('15');
+    expect(onValue).toHaveBeenLastCalledWith(15);
+    expect(input().hasAttribute('aria-invalid')).toBe(false);
   });
 });

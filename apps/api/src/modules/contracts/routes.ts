@@ -148,6 +148,23 @@ async function lockContract(tx: Tx, orgId: string, contractId: string) {
   return tx.contract.findUniqueOrThrow({ where: { id: contractId } });
 }
 
+// Phiên bản hợp đồng = updatedAt (độ chính xác mili giây). Mỗi lệnh ghi của module này đặt updatedAt TĂNG NGẶT so với
+// bản trước (kể cả hai lệnh trong cùng một mili giây) để kiểm phiên bản không bao giờ nhận nhầm hai bản là một.
+function nextVersion(c: { updatedAt: Date }): Date {
+  return new Date(Math.max(Date.now(), c.updatedAt.getTime() + 1));
+}
+
+// Sửa hợp đồng phải nói rõ đang sửa trên bản nào; bản đã đổi (người khác vừa lưu) → 409, không ghi đè im lặng.
+function assertSameVersion(c: { updatedAt: Date }, expected: string): void {
+  if (new Date(expected).getTime() !== c.updatedAt.getTime()) {
+    throw new AppError('CONFLICT', 'Hợp đồng vừa được người khác sửa — tải lại để xem bản mới', {
+      reason: 'STALE_VERSION',
+      currentUpdatedAt: c.updatedAt.toISOString(),
+      expectedUpdatedAt: expected,
+    });
+  }
+}
+
 function assertNotClosed(status: ContractStatus): void {
   if (status === 'COMPLETED' || status === 'CANCELLED') {
     throw new AppError('CONFLICT', `Hợp đồng đã ${CONTRACT_STATUS_LABELS[status].toLowerCase()} — không thay đổi được`);
@@ -163,15 +180,18 @@ function assertCanAdjust(o: OrgContext, status: ContractStatus, action: string):
   }
 }
 
-// Dòng chưa huỷ có thợ dự kiến → một lịch đã xác nhận cho đúng thợ, đúng giờ, đúng nơi. Trùng giờ thì module lịch
-// ném 409 kèm danh sách và cả transaction quay lui (hợp đồng giữ nguyên trạng thái cũ).
+// Dòng chưa huỷ có GIỜ HẸN hoặc có thợ dự kiến → một lịch đã xác nhận đúng giờ, đúng nơi, đúng thợ. Dòng có giờ mà
+// CHƯA có thợ vẫn sinh lịch (không thợ — hiện ở hàng "Chưa có thợ" của Lịch): hợp đồng đã chốt không được vắng mặt
+// trên lịch (biên bản nghiệm thu web 2, S1 — quyết định điều phối: xác nhận KHÔNG bắt buộc có thợ). Trùng giờ thì module
+// lịch ném 409 kèm danh sách và cả transaction quay lui (hợp đồng giữ nguyên trạng thái cũ).
+// Dùng cho MỌI cửa sinh lịch từ hợp đồng: xác nhận hợp đồng, thêm dòng phát sinh sau xác nhận.
 async function createLineAppointments(tx: Tx, ctx: TxCtx, contract: { id: string; customerId: string }, onlyLineIds?: string[]) {
   const lines = await tx.contractLine.findMany({
     where: {
       contractId: contract.id,
       organizationId: ctx.orgId,
       voidedAt: null,
-      plannedStaff: { some: {} },
+      OR: [{ scheduledStart: { not: null } }, { plannedStaff: { some: {} } }],
       ...(onlyLineIds ? { id: { in: onlyLineIds } } : {}),
     },
     include: { plannedStaff: { select: { membershipId: true, role: true } } },
@@ -180,9 +200,13 @@ async function createLineAppointments(tx: Tx, ctx: TxCtx, contract: { id: string
   const created: string[] = [];
   for (const l of lines) {
     if (!l.scheduledStart || !l.scheduledEnd) {
-      throw new AppError('VALIDATION_FAILED', `Dòng "${l.name}" có thợ phụ trách nhưng chưa có giờ làm — thêm giờ trước khi xác nhận`, {
-        lineId: l.id,
-      });
+      throw new AppError(
+        'VALIDATION_FAILED',
+        l.scheduledStart
+          ? `Dòng "${l.name}" có giờ bắt đầu nhưng chưa có giờ kết thúc — thêm giờ kết thúc trước khi xác nhận`
+          : `Dòng "${l.name}" có thợ phụ trách nhưng chưa có giờ làm — thêm giờ trước khi xác nhận`,
+        { lineId: l.id },
+      );
     }
     const appt = await createAppointmentTx(tx, ctx, {
       kind: 'MAKEUP',
@@ -414,6 +438,7 @@ export const contractRoutes: AnyRoute[] = [
       const detail = await deps.db.$transaction(async (tx) => {
         const c = await lockContract(tx, o.id, params.contractId);
         assertNotClosed(c.status);
+        assertSameVersion(c, body.expectedUpdatedAt);
         const before = {
           subtotal: vnd(c.subtotal, 'tạm tính'),
           discount: vnd(c.discount, 'giảm giá'),
@@ -483,6 +508,7 @@ export const contractRoutes: AnyRoute[] = [
         await tx.contract.update({
           where: { id: c.id },
           data: {
+            updatedAt: nextVersion(c),
             ...textChanges,
             ...textChoice,
             ...(body.eventDate !== undefined ? { eventDate: body.eventDate === null ? null : new Date(body.eventDate) } : {}),
@@ -559,7 +585,7 @@ export const contractRoutes: AnyRoute[] = [
           addedAfterConfirm,
         });
         const { subtotal, total } = await recompute(tx, o.id, c.id, vnd(c.discount, 'giảm giá'));
-        await tx.contract.update({ where: { id: c.id }, data: { subtotal: BigInt(subtotal), total: BigInt(total) } });
+        await tx.contract.update({ where: { id: c.id }, data: { subtotal: BigInt(subtotal), total: BigInt(total), updatedAt: nextVersion(c) } });
         // Dòng khoá học thêm vào hợp đồng ĐÃ xác nhận → giữ chỗ + ghi danh ngay, cùng transaction (nháp không giữ chỗ).
         const enrollmentIds = addedAfterConfirm
           ? await enrollContractLines(
@@ -651,6 +677,7 @@ export const contractRoutes: AnyRoute[] = [
         await tx.contract.update({
           where: { id: c.id },
           data: {
+            updatedAt: nextVersion(c),
             subtotal: BigInt(subtotal),
             discount: BigInt(discount),
             total: BigInt(total),
@@ -705,6 +732,9 @@ export const contractRoutes: AnyRoute[] = [
         if (body.to === 'CANCELLED' && !body.reason) {
           throw new AppError('VALIDATION_FAILED', 'Huỷ hợp đồng phải nêu lý do');
         }
+        // Huỷ hợp đồng ĐÃ XÁC NHẬN là hạ tiền đã chốt với khách về 0 → cần quyền điều chỉnh như huỷ một dòng
+        // (biên bản nghiệm thu web 2, T4 — quyết định điều phối). Huỷ hợp đồng nháp giữ như cũ (contracts.write).
+        if (body.to === 'CANCELLED') assertCanAdjust(o, c.status, 'huỷ hợp đồng');
         if (body.to === 'CONFIRMED') {
           const active = await tx.contractLine.count({ where: { contractId: c.id, organizationId: o.id, voidedAt: null } });
           if (active === 0) throw new AppError('CONFLICT', 'Hợp đồng chưa có dòng nào còn hiệu lực — không xác nhận được');
@@ -740,6 +770,7 @@ export const contractRoutes: AnyRoute[] = [
           where: { id: c.id },
           data: {
             status: body.to,
+            updatedAt: nextVersion(c),
             ...snapshot,
             ...(body.to === 'CONFIRMED' ? { confirmedAt: new Date() } : {}),
             ...(body.to === 'CANCELLED' ? { cancelReason: body.reason } : {}),

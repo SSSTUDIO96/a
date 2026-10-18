@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { MAX_INSTALLMENTS, PAYMENT_KINDS, PAYMENT_METHODS } from '@makeup/shared';
+import { MAX_MONEY_VND, MONEY_TOO_LARGE_MESSAGE } from '../../lib/money';
 
 // Không âm thầm bỏ trường lạ: gửi nhầm thì báo rõ (cùng mẫu với module hợp đồng).
 function strict<S extends z.ZodRawShape>(shape: S) {
@@ -14,11 +15,15 @@ const Amount = z
   .positive('Số tiền phải lớn hơn 0')
   .max(Number.MAX_SAFE_INTEGER, 'Số tiền vượt ngưỡng cho phép');
 
-// Trần MỘT phiếu thu/hoàn: 100 tỷ đồng (biên bản máy chủ lát 2, M3). Lý do: hợp đồng makeup lớn nhất thực tế cỡ vài trăm
-// triệu; trần cũ là Number.MAX_SAFE_INTEGER (~9 triệu tỷ) nên hai phiếu gõ thừa số 0 cộng lại vượt ngưỡng số nguyên an toàn
-// và làm sập báo cáo/sổ thu của cả tổ chức. Với trần này, tổng một kỳ chỉ vượt ngưỡng khi có > 90.000 phiếu 100 tỷ.
-export const MAX_PAYMENT_AMOUNT = 100_000_000_000;
-const PaymentAmount = Amount.max(MAX_PAYMENT_AMOUNT, 'Số tiền một phiếu tối đa 100.000.000.000 đ (100 tỷ) — kiểm lại số 0 gõ thừa');
+// Trần MỘT phiếu thu/hoàn = trần chung mọi số tiền (lib/money.ts, 100 tỷ đ; biên bản máy chủ lát 2, M3): hai phiếu gõ thừa
+// số 0 cộng lại từng vượt ngưỡng số nguyên an toàn và làm sập báo cáo/sổ thu. Với trần này, tổng một kỳ chỉ vượt ngưỡng
+// khi có > 90.000 phiếu 100 tỷ (và nếu có, sổ thu/báo cáo trả tổng null + cờ totalsOverflow, không 500).
+export const MAX_PAYMENT_AMOUNT = MAX_MONEY_VND;
+const PaymentAmount = z
+  .number({ error: 'Số tiền phải là số' })
+  .int('Số tiền phải là số nguyên đồng, không có phần lẻ')
+  .positive('Số tiền phải lớn hơn 0')
+  .max(MAX_PAYMENT_AMOUNT, MONEY_TOO_LARGE_MESSAGE);
 
 const DateTime = z.iso.datetime({ offset: true, error: 'Thời gian phải theo dạng ISO 8601, ví dụ 2026-11-01T08:00:00+07:00' });
 const Note = z.string().trim().min(1).max(1000);

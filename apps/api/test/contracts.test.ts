@@ -222,6 +222,10 @@ function stripIds(lines: Line[]): unknown {
   return lines.map((l) => one(l as Line));
 }
 
+async function version(contractId: string) {
+  return (await deps.db.contract.findUniqueOrThrow({ where: { id: contractId }, select: { updatedAt: true } })).updatedAt.toISOString();
+}
+
 async function contractCount(orgId: string) {
   return deps.db.contract.count({ where: { organizationId: orgId } });
 }
@@ -547,14 +551,16 @@ describe('vòng đời hợp đồng', () => {
     };
     const c = (await create(A.owner, A.orgId, body).expect(201)).body;
     expect(c.total).toBe(3_800_000);
-    const patch = (b: object) => request(app).patch(url(A.orgId, `/${c.id}`)).set(bearer(A.owner)).send(b);
+    // PATCH bắt buộc expectedUpdatedAt (biên bản web 2, T2): mỗi lần sửa gửi đúng phiên bản hiện hành.
+    const patch = async (b: object) => request(app).patch(url(A.orgId, `/${c.id}`)).set(bearer(A.owner)).send({ expectedUpdatedAt: await version(c.id), ...b });
 
     // Nháp: thay toàn bộ dòng + giảm giá
     const p1 = await patch({
       discount: 100_000,
       depositRequired: 3_500_000,
       lines: [...body.lines, { kind: 'CUSTOM', name: 'Phụ kiện', unitPrice: 50_000, quantity: 2 }],
-    }).expect(200);
+    });
+    expect(p1.status).toBe(200);
     expect(p1.body).toMatchObject({ subtotal: 3_900_000, discount: 100_000, total: 3_800_000, depositRequired: 3_500_000 });
     expect(p1.body.lines).toHaveLength(3);
     // Nháp: đổi giảm giá làm tổng thấp hơn cọc hiện tại mà không gửi cọc mới → 400
@@ -571,7 +577,8 @@ describe('vòng đời hợp đồng', () => {
     expect(p2.status).toBe(409);
     expect((await patch({ discount: 0 })).status).toBe(409);
     expect((await patch({ notes: 'Khách đổi giờ', discount: 0 })).status).toBe(409);
-    expect((await patch({ notes: 'Khách đổi giờ' }).expect(200)).body.notes).toBe('Khách đổi giờ');
+    const p3 = await patch({ notes: 'Khách đổi giờ' });
+    expect([p3.status, p3.body.notes]).toEqual([200, 'Khách đổi giờ']);
 
     // Phụ phí phát sinh sau xác nhận
     const addKey = idem();
@@ -677,8 +684,9 @@ describe('vòng đời hợp đồng', () => {
     const r = await request(app)
       .patch(url(A.orgId, `/${c.id}`))
       .set(bearer(A.owner))
-      .send({ lines: [{ kind: 'CUSTOM', name: 'x', unitPrice: 1, quantity: 1 }] });
+      .send({ expectedUpdatedAt: detail.updatedAt, lines: [{ kind: 'CUSTOM', name: 'x', unitPrice: 1, quantity: 1 }] });
     expect(r.status).toBe(409);
+    expect(r.body.error.message).toMatch(/^Đã có lịch gắn vào dòng/);
   });
 });
 
@@ -1113,7 +1121,7 @@ describe('cách ly tổ chức', () => {
   it('chủ B không xem/sửa được hợp đồng A (qua đường của B → 404, qua đường của A → 404)', async () => {
     const viaB = (rest: string) => url(B.orgId, rest);
     expect((await request(app).get(viaB(`/${contractA.id}`)).set(bearer(B.owner))).status).toBe(404);
-    expect((await request(app).patch(viaB(`/${contractA.id}`)).set(bearer(B.owner)).send({ notes: 'x' })).status).toBe(404);
+    expect((await request(app).patch(viaB(`/${contractA.id}`)).set(bearer(B.owner)).send({ expectedUpdatedAt: contractA.updatedAt, notes: 'x' })).status).toBe(404);
     expect((await request(app).post(viaB(`/${contractA.id}/status`)).set(bearer(B.owner)).send({ to: 'CONFIRMED' })).status).toBe(404);
     expect(
       (

@@ -9,7 +9,7 @@ import {
 } from 'react';
 import { cx } from './cx';
 import { FieldShell, useFieldIds, type FieldMessages } from './Field';
-import { formatVnd, groupThousands, parseMoney, type Vnd } from './format';
+import { ERR_SPACE_IN_NUMBER, formatVnd, groupThousands, hasMisplacedSpace, parseMoney, type Vnd } from './format';
 import { caretAfterDigits, digitsBefore, useCaret } from './useCaret';
 import './ui.css';
 
@@ -104,18 +104,34 @@ export function MoneyInput({
       reportRef.current?.(localError);
     }
   }, [localError]);
+  // Ô bị gỡ khỏi form (xoá bậc, đóng nhóm) khi đang báo lỗi → báo hết lỗi, kẻo form bị chặn lưu mãi vì một ô không còn nữa.
+  useEffect(
+    () => () => {
+      if (lastReported.current !== null) {
+        lastReported.current = null;
+        reportRef.current?.(null);
+      }
+    },
+    [],
+  );
 
   const shownError = localError ?? error;
   const f = useFieldIds({ error: shownError, hint }, describedByProp);
   const text = draft ?? displayOf(value, focused);
 
-  function accept(next: Vnd | null, nextText: string) {
+  function accept(next: Vnd | null, nextText: string, trailingSpace = false) {
     if (next !== null && max !== undefined && next > max) {
       setDraft(nextText);
       setLocalError(`Tối đa ${formatVnd(max)}.`);
       return;
     }
-    setDraft(nextText);
+    // Vừa gõ dấu cách sau chữ số: giữ dấu cách trong ô để phím kế tiếp được xét ("1 5" là lỗi, "1 500" là ngăn nghìn).
+    if (trailingSpace) {
+      setDraft(`${nextText} `);
+      setCaret(nextText.length + 1);
+    } else {
+      setDraft(nextText);
+    }
     setLocalError(null);
     setStrictDots(false);
     if (next !== value) {
@@ -133,6 +149,13 @@ export function MoneyInput({
       setCaret(Math.max(0, caret - (raw.length - text.length)));
       return;
     }
+    // Khoảng trắng xen giữa chữ số sai nhóm 3 ("1 5"): báo lỗi như lúc dán (parseMoney), không lặng lẽ ghép thành 15.
+    if (hasMisplacedSpace(raw)) {
+      setDraft(raw);
+      setLocalError(ERR_SPACE_IN_NUMBER);
+      return;
+    }
+    const trailingSpace = caret === raw.length && /\d[\s\u00a0\u202f]+$/u.test(raw);
     const trimmed = raw.replace(/[\s  ₫đĐ]/gu, '');
     if (/^-/.test(trimmed) || trimmed.includes(',')) {
       // Âm hoặc có phần lẻ: giữ đúng chữ người dùng gõ để họ thấy chỗ sai.
@@ -154,7 +177,7 @@ export function MoneyInput({
       }
       const nextText = r.value === null ? '' : groupThousands(String(r.value));
       setCaret(caretAfterDigits(nextText, digitsBefore(raw, caret)));
-      accept(r.value, nextText);
+      accept(r.value, nextText, trailingSpace);
       return;
     }
     const digits = trimmed.replace(/\./g, '');
@@ -171,7 +194,7 @@ export function MoneyInput({
       setLocalError('Số tiền quá lớn.');
       return;
     }
-    accept(n, grouped);
+    accept(n, grouped, trailingSpace);
   }
 
   function handlePaste(e: ClipboardEvent<HTMLInputElement>) {

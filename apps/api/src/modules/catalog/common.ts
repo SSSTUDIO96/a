@@ -4,6 +4,7 @@ import { vndFromBigInt, type Vnd } from '@makeup/shared';
 import type { OrgContext } from '../../http/route';
 import { AppError } from '../../lib/errors';
 import { writeAudit } from '../../lib/audit';
+import { MAX_MONEY_VND, MONEY_TOO_LARGE_MESSAGE } from '../../lib/money';
 import {
   assertSaleNotAboveList,
   presentPrice,
@@ -30,7 +31,8 @@ export const Money = z
   .number({ error: 'Số tiền phải là số' })
   .int('Số tiền phải là số nguyên đồng, không có phần lẻ')
   .nonnegative('Số tiền không được âm')
-  .max(Number.MAX_SAFE_INTEGER, 'Số tiền vượt ngưỡng cho phép');
+  // Trần chung với phiếu thu (lib/money.ts) — giá, cọc, phí di chuyển dùng chung schema này.
+  .max(MAX_MONEY_VND, MONEY_TOO_LARGE_MESSAGE);
 
 export const Code = z
   .string()

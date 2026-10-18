@@ -50,3 +50,5 @@ Danh sách việc các thợ, thợ chấm và R&D đã nêu nhưng **chưa làm
 | 32 | Máy chủ: `GET /contracts` trả `paid`, `remaining`; lọc "chưa có ngày sự kiện"; phiếu thu có `installmentId`, tài khoản nhận, người thu; xuất CSV sổ thu ở máy chủ | thợ Thu tiền |
 | 33 | Dịch vụ phụ có bật "công khai" hiện cả trên trang giới thiệu — anh xác nhận giữ hay chỉ hiện gói | thợ Thương hiệu |
 | 34 | Thẻ `og:` cho Zalo/Facebook in sẵn từ máy chủ; đặt `VITE_PUBLIC_SITE_ORIGIN` trên Vercel | thợ Thương hiệu |
+| 35 | `GET /staff` trả ngày vào studio ("tham gia …") và tên vai trò | thợ Nhân sự |
+| 36 | src/ui thêm IconSearch, IconGrip, ô tìm có kính lúp, hộp thoại tự đổi Dialog/ngăn kéo đáy theo khổ (nay đang dựng tạm trong features/staff) | thợ Nhân sự |

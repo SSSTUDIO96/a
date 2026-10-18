@@ -97,13 +97,25 @@ export function UnitInput({
       reportRef.current?.(localError);
     }
   }, [localError]);
+  // Ô bị gỡ khỏi form (xoá bậc, đóng nhóm) khi đang báo lỗi → báo hết lỗi, kẻo form bị chặn lưu mãi vì một ô không còn nữa.
+  useEffect(
+    () => () => {
+      if (lastReported.current !== null) {
+        lastReported.current = null;
+        reportRef.current?.(null);
+      }
+    },
+    [],
+  );
 
   const valueRef = useRef(value);
   valueRef.current = value;
 
   const shownError = localError ?? error;
   const f = useFieldIds({ error: shownError, hint }, describedByProp);
-  const text = draft ?? (value === null ? '' : formatDecimal(value, fractionDigits));
+  // Ô có phần lẻ (km): rời ô hiện KHÔNG ngăn nghìn, đúng như formatKm ("2500", "12345,6") — "2.500" là dạng mơ hồ ô km
+  // từ chối, nên chữ chép từ ô này dán sang ô km khác vẫn đọc được. Ô số nguyên (phút, lần) thì "1.440" không mơ hồ, giữ ngăn nghìn.
+  const text = draft ?? (value === null ? '' : formatDecimal(value, fractionDigits, fractionDigits === 0));
 
   function parse(raw: string): ParseResult<number | null> {
     if (isKm && decimals === undefined && max === undefined && min === undefined) return parseKm(raw);

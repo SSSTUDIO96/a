@@ -32,6 +32,11 @@ function stripSpaces(input: string): string | null {
   return input.replace(SPACES, '');
 }
 
+/** Có khoảng trắng xen giữa chữ số mà không phải ngăn nghìn đúng nhóm 3 ("1 5") — ô tiền dùng khi gõ từng phím. */
+export function hasMisplacedSpace(input: string): boolean {
+  return stripSpaces(input) === null;
+}
+
 /** Chữ số có dấu chấm ngăn nghìn đúng nhóm 3 ("1.500.000") hoặc liền ("1500000"). */
 function readGroupedInteger(text: string): string | null {
   if (/^\d+$/.test(text)) return text;

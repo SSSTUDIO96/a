@@ -6,6 +6,7 @@ import { AppError } from '../../lib/errors';
 import { writeAudit } from '../../lib/audit';
 import { avatarSelect, resolveAvatarUrls } from '../files/service';
 import { initialsOf } from './common';
+import { MAX_MONEY_VND, MONEY_TOO_LARGE_MESSAGE } from '../../lib/money';
 
 // Tiền công theo bậc cho MỘT gói hoặc MỘT dịch vụ. Màn hình: mỗi bậc một hàng — ảnh + tên các thợ thuộc bậc — ô nhập tiền.
 type OwnerKind = 'package' | 'service';
@@ -97,7 +98,7 @@ const RatesBody = z.object({
       z.object({
         tierId: z.uuid(),
         // Số nguyên đồng ≥ 0; null = xoá mức công của bậc này.
-        amount: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER).nullable(),
+        amount: z.number().int().min(0).max(MAX_MONEY_VND, MONEY_TOO_LARGE_MESSAGE).nullable(),
       }),
     )
     .min(1)
