@@ -166,6 +166,15 @@ export function sameInput(a: Draft, b: Draft): boolean {
   return JSON.stringify(toInput(a).input) === JSON.stringify(toInput(b).input);
 }
 
+// Có ca đang mở mà chưa đủ giờ: chưa gửi được nhưng là thay đổi người dùng đang làm dở.
+export function hasIncompleteShift(d: Draft): boolean {
+  return d.days.some((day) => day.open && day.shifts.some((s) => s.open === null || s.close === null));
+}
+
+export function isDirty(draft: Draft, baseline: Draft): boolean {
+  return !sameInput(draft, baseline) || hasIncompleteShift(draft);
+}
+
 // Khoá lỗi: tên trường (brandName, instagram, logoFileId, styles…), "hours.N" (N = 1…7), "workingHours" (chung), "_form".
 export type FormErrors = Record<string, string>;
 

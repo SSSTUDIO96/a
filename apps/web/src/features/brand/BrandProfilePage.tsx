@@ -17,7 +17,7 @@ import {
   IMAGE_SLOTS,
   MAX_LENGTH,
   mapSaveError,
-  sameInput,
+  isDirty,
   TEXT_FIELDS,
   toInput,
   validateDraft,
@@ -90,7 +90,7 @@ function BrandProfileScreen({ orgId, slug }: { orgId: string; slug: string }) {
   const bodyRef = useRef<HTMLDivElement>(null);
 
   const ready = p.load.status === 'ready';
-  const dirty = ready && !sameInput(p.draft, p.baseline);
+  const dirty = ready && isDirty(p.draft, p.baseline);
   const profile = p.result?.hasProfile ? p.result.profile : null;
   const published = profile?.isPublished ?? false;
   const canPublish = Boolean(profile && profile.brandName.trim() !== '');
