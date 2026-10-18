@@ -97,6 +97,7 @@ export const locationRoutes = [
   defineRoute({
     method: 'post',
     path: '/orgs/:orgId/studio-locations',
+    idempotent: true,
     scope: 'org',
     permission: 'catalog.write',
     tag: 'Bảng giá',

@@ -21,7 +21,7 @@ type Body = Record<string, unknown>;
 
 async function newService(u: TestUser, org: string, extra: Body = {}) {
   const res = await request(app)
-    .post(url(org, '/services'))
+    .post(url(org, '/services')).set(idem())
     .set(bearer(u))
     .send({ code: `DV-${uniq()}`, name: `Dịch vụ ${uniq()}`, durationMinutes: 60, listPrice: 1_000_000, ...extra });
   if (res.status !== 201) throw new Error(`Tạo dịch vụ thất bại ${res.status}: ${JSON.stringify(res.body)}`);
@@ -30,7 +30,7 @@ async function newService(u: TestUser, org: string, extra: Body = {}) {
 
 async function newPackage(u: TestUser, org: string, extra: Body = {}) {
   const res = await request(app)
-    .post(url(org, '/packages'))
+    .post(url(org, '/packages')).set(idem())
     .set(bearer(u))
     .send({ code: `GOI-${uniq()}`, name: `Gói ${uniq()}`, durationMinutes: 120, listPrice: 3_000_000, ...extra });
   if (res.status !== 201) throw new Error(`Tạo gói thất bại ${res.status}: ${JSON.stringify(res.body)}`);
@@ -51,7 +51,7 @@ beforeAll(async () => {
   orgB = await createOrg(app, ownerB, 'bang-gia-b');
   await addMember(app, ownerA, orgA, artistA, ['artist']);
   await request(app)
-    .post(url(orgA, '/roles'))
+    .post(url(orgA, '/roles')).set(idem())
     .set(bearer(ownerA))
     .send({ key: 'chi_dich_vu', name: 'Chỉ sửa dịch vụ', permissions: ['catalog.read', 'catalog.write'] })
     .expect(201);
@@ -65,8 +65,8 @@ afterAll(async () => {
 describe('danh mục dịch vụ', () => {
   it('tạo, trùng tên → 409, đổi tên/thứ tự/tắt, lọc theo hoạt động', async () => {
     const name = `Trang điểm ${uniq()}`;
-    const c = await request(app).post(url(orgA, '/service-categories')).set(bearer(ownerA)).send({ name }).expect(201);
-    const dup = await request(app).post(url(orgA, '/service-categories')).set(bearer(ownerA)).send({ name });
+    const c = await request(app).post(url(orgA, '/service-categories')).set(idem()).set(bearer(ownerA)).send({ name }).expect(201);
+    const dup = await request(app).post(url(orgA, '/service-categories')).set(idem()).set(bearer(ownerA)).send({ name });
     expect(dup.status).toBe(409);
     expect(dup.body.error.message).toBe('Tên danh mục đã có trong tổ chức');
     const p = await request(app)
@@ -82,7 +82,7 @@ describe('danh mục dịch vụ', () => {
   });
 
   it('PATCH rỗng → 400', async () => {
-    const c = await request(app).post(url(orgA, '/service-categories')).set(bearer(ownerA)).send({ name: `DM ${uniq()}` }).expect(201);
+    const c = await request(app).post(url(orgA, '/service-categories')).set(idem()).set(bearer(ownerA)).send({ name: `DM ${uniq()}` }).expect(201);
     await request(app).patch(url(orgA, `/service-categories/${c.body.id}`)).set(bearer(ownerA)).send({}).expect(400);
   });
 });
@@ -96,13 +96,36 @@ describe('dịch vụ', () => {
     expect(s.currentPrice).toMatchObject({ listPrice: 1_500_000, salePrice: null, unitPrice: 1_500_000 });
     expect(typeof s.currentPrice?.effectiveFrom).toBe('string');
     const dup = await request(app)
-      .post(url(orgA, '/services'))
+      .post(url(orgA, '/services')).set(idem())
       .set(bearer(ownerA))
       .send({ code: code.toUpperCase(), name: 'Khác', durationMinutes: 30, listPrice: 1 });
     expect(dup.status).toBe(409);
     expect(dup.body.error.message).toBe('Mã dịch vụ đã có trong tổ chức');
     const versions = await deps.db.priceVersion.count({ where: { serviceId: s.id } });
     expect(versions).toBe(1);
+  });
+
+  it('chống gửi trùng khi tạo: cùng khoá + cùng thân → cùng kết quả, một bản ghi; thiếu khoá → 400', async () => {
+    const headers = idem();
+    const body = { code: `TRUNG-${uniq()}`, name: 'Bấm lưu hai lần', durationMinutes: 45, listPrice: 700_000 };
+    const r1 = await request(app).post(url(orgA, '/services')).set(bearer(ownerA)).set(headers).send(body).expect(201);
+    const r2 = await request(app).post(url(orgA, '/services')).set(bearer(ownerA)).set(headers).send(body).expect(201);
+    expect(r2.body.id).toBe(r1.body.id);
+    expect(await deps.db.service.count({ where: { organizationId: orgA, code: body.code } })).toBe(1);
+    expect(await deps.db.priceVersion.count({ where: { serviceId: r1.body.id } })).toBe(1);
+    const other = await request(app).post(url(orgA, '/services')).set(bearer(ownerA)).set(headers).send({ ...body, name: 'Khác' });
+    expect(other.status).toBe(409);
+    for (const [path, b] of [
+      ['/services', { code: `K-${uniq()}`, name: 'K', durationMinutes: 30, listPrice: 1 }],
+      ['/packages', { code: `K-${uniq()}`, name: 'K', durationMinutes: 30, listPrice: 1 }],
+      ['/service-categories', { name: `K ${uniq()}` }],
+      ['/makeup-subjects', { name: `K ${uniq()}` }],
+      ['/studio-locations', { name: 'K', address: 'K' }],
+    ] as const) {
+      const res = await request(app).post(url(orgA, path)).set(bearer(ownerA)).send(b);
+      expect(res.status, path).toBe(400);
+      expect(res.body.error.message, path).toContain('Idempotency-Key');
+    }
   });
 
   it('cùng mã ở tổ chức khác thì được', async () => {
@@ -126,7 +149,7 @@ describe('dịch vụ', () => {
   });
 
   it('lọc theo danh mục, hoạt động, loại, từ khoá (tên/mã); phân trang', async () => {
-    const cat = await request(app).post(url(orgA, '/service-categories')).set(bearer(ownerA)).send({ name: `Lọc ${uniq()}` }).expect(201);
+    const cat = await request(app).post(url(orgA, '/service-categories')).set(idem()).set(bearer(ownerA)).send({ name: `Lọc ${uniq()}` }).expect(201);
     const tag = uniq();
     const a = await newService(ownerA, orgA, { categoryId: cat.body.id, name: `Tóc cô dâu ${tag}` });
     const b = await newService(ownerA, orgA, { categoryId: cat.body.id, code: `NAIL-${tag}`, isActive: false });
@@ -157,9 +180,9 @@ describe('dịch vụ', () => {
   });
 
   it('danh mục của tổ chức khác → 400', async () => {
-    const catB = await request(app).post(url(orgB, '/service-categories')).set(bearer(ownerB)).send({ name: `B ${uniq()}` }).expect(201);
+    const catB = await request(app).post(url(orgB, '/service-categories')).set(idem()).set(bearer(ownerB)).send({ name: `B ${uniq()}` }).expect(201);
     const res = await request(app)
-      .post(url(orgA, '/services'))
+      .post(url(orgA, '/services')).set(idem())
       .set(bearer(ownerA))
       .send({ code: `X-${uniq()}`, name: 'X', durationMinutes: 30, listPrice: 1, categoryId: catB.body.id });
     expect(res.status).toBe(400);
@@ -235,7 +258,7 @@ describe('phiên bản giá', () => {
     expect(bad.status).toBe(400);
     expect(bad.body.error.message).toBe('Giá khuyến mại không được lớn hơn giá niêm yết');
     const badCreate = await request(app)
-      .post(url(orgA, '/services'))
+      .post(url(orgA, '/services')).set(idem())
       .set(bearer(ownerA))
       .send({ code: `KM-${uniq()}`, name: 'KM', durationMinutes: 30, listPrice: 100, salePrice: 101 });
     expect(badCreate.status).toBe(400);
@@ -265,7 +288,7 @@ describe('phiên bản giá', () => {
       expect(res.status, `listPrice=${String(listPrice)}`).toBe(400);
     }
     const odd = await request(app)
-      .post(url(orgA, '/services'))
+      .post(url(orgA, '/services')).set(idem())
       .set(bearer(ownerA))
       .send({ code: `LE-${uniq()}`, name: 'Lẻ', durationMinutes: 30, listPrice: 1500.5 });
     expect(odd.status).toBe(400);
@@ -287,7 +310,7 @@ describe('phiên bản giá', () => {
   });
 
   it('giá cả trang (một truy vấn) khớp công thức tra từng dịch vụ', async () => {
-    const cat = await request(app).post(url(orgA, '/service-categories')).set(bearer(ownerA)).send({ name: `So ${uniq()}` }).expect(201);
+    const cat = await request(app).post(url(orgA, '/service-categories')).set(idem()).set(bearer(ownerA)).send({ name: `So ${uniq()}` }).expect(201);
     const s1 = await newService(ownerA, orgA, { categoryId: cat.body.id, listPrice: 100, salePrice: 90 });
     const s2 = await newService(ownerA, orgA, { categoryId: cat.body.id, listPrice: 200 });
     await changePrice(ownerA, orgA, `/services/${s2.id}/prices`, { listPrice: 250 }).expect(201);
@@ -314,15 +337,15 @@ describe('quyền', () => {
     await request(app).get(url(orgA, '/packages')).set(bearer(artistA)).expect(200);
     await request(app).get(url(orgA, '/travel-fee-policy')).set(bearer(artistA)).expect(200);
     const denied = [
-      request(app).post(url(orgA, '/services')).set(bearer(artistA)).send({ code: 'X1', name: 'X', durationMinutes: 30, listPrice: 1 }),
+      request(app).post(url(orgA, '/services')).set(idem()).set(bearer(artistA)).send({ code: 'X1', name: 'X', durationMinutes: 30, listPrice: 1 }),
       request(app).patch(url(orgA, `/services/${s.id}`)).set(bearer(artistA)).send({ name: 'Đổi' }),
       changePrice(artistA, orgA, `/services/${s.id}/prices`, { listPrice: 1 }),
-      request(app).post(url(orgA, '/packages')).set(bearer(artistA)).send({ code: 'G1', name: 'G', durationMinutes: 30, listPrice: 1 }),
+      request(app).post(url(orgA, '/packages')).set(idem()).set(bearer(artistA)).send({ code: 'G1', name: 'G', durationMinutes: 30, listPrice: 1 }),
       request(app).patch(url(orgA, `/packages/${p.id}`)).set(bearer(artistA)).send({ name: 'Đổi' }),
       changePrice(artistA, orgA, `/packages/${p.id}/prices`, { listPrice: 1 }),
-      request(app).post(url(orgA, '/service-categories')).set(bearer(artistA)).send({ name: 'X' }),
-      request(app).post(url(orgA, '/makeup-subjects')).set(bearer(artistA)).send({ name: 'X' }),
-      request(app).post(url(orgA, '/studio-locations')).set(bearer(artistA)).send({ name: 'X', address: 'Y' }),
+      request(app).post(url(orgA, '/service-categories')).set(idem()).set(bearer(artistA)).send({ name: 'X' }),
+      request(app).post(url(orgA, '/makeup-subjects')).set(idem()).set(bearer(artistA)).send({ name: 'X' }),
+      request(app).post(url(orgA, '/studio-locations')).set(idem()).set(bearer(artistA)).send({ name: 'X', address: 'Y' }),
       request(app)
         .put(url(orgA, '/travel-fee-policy'))
         .set(bearer(artistA))
@@ -337,7 +360,7 @@ describe('quyền', () => {
     const s = await newService(ownerA, orgA);
     await request(app).patch(url(orgA, `/services/${s.id}`)).set(bearer(catalogOnlyA)).send({ name: 'Sửa được' }).expect(200);
     const res = await request(app)
-      .post(url(orgA, '/services'))
+      .post(url(orgA, '/services')).set(idem())
       .set(bearer(catalogOnlyA))
       .send({ code: `Q-${uniq()}`, name: 'Q', durationMinutes: 30, listPrice: 1 });
     expect(res.status).toBe(403);
@@ -380,7 +403,7 @@ describe('cách ly tổ chức', () => {
     expect(res.status).toBe(400);
     expect(res.body.error.message).toBe('Có dịch vụ không tồn tại trong tổ chức');
     const create = await request(app)
-      .post(url(orgA, '/packages'))
+      .post(url(orgA, '/packages')).set(idem())
       .set(bearer(ownerA))
       .send({ code: `G-${uniq()}`, name: 'G', durationMinutes: 60, listPrice: 1, items: [{ serviceId: sB.id }] });
     expect(create.status).toBe(400);
@@ -388,8 +411,8 @@ describe('cách ly tổ chức', () => {
   });
 
   it('nhân vật, studio, cấu hình phí di chuyển của A: B không thấy, không sửa được', async () => {
-    const subj = await request(app).post(url(orgA, '/makeup-subjects')).set(bearer(ownerA)).send({ name: `Mẹ ${uniq()}` }).expect(201);
-    const loc = await request(app).post(url(orgA, '/studio-locations')).set(bearer(ownerA)).send({ name: 'Studio A', address: '1 Lê Lợi' }).expect(201);
+    const subj = await request(app).post(url(orgA, '/makeup-subjects')).set(idem()).set(bearer(ownerA)).send({ name: `Mẹ ${uniq()}` }).expect(201);
+    const loc = await request(app).post(url(orgA, '/studio-locations')).set(idem()).set(bearer(ownerA)).send({ name: 'Studio A', address: '1 Lê Lợi' }).expect(201);
     const r = await Promise.all([
       request(app).patch(url(orgB, `/makeup-subjects/${subj.body.id}`)).set(bearer(ownerB)).send({ name: 'Chiếm' }),
       request(app).patch(url(orgB, `/studio-locations/${loc.body.id}`)).set(bearer(ownerB)).send({ name: 'Chiếm' }),
@@ -421,11 +444,11 @@ describe('nhân vật makeup', () => {
   it('tổ chức mới có sẵn nhân vật mẫu; tạo, trùng tên → 409, sửa, lọc hoạt động', async () => {
     const list = await request(app).get(url(orgA, '/makeup-subjects')).set(bearer(artistA)).expect(200);
     expect(list.body.items.map((x: { name: string }) => x.name)).toContain('Cô dâu');
-    const dupDefault = await request(app).post(url(orgA, '/makeup-subjects')).set(bearer(ownerA)).send({ name: 'Cô dâu' });
+    const dupDefault = await request(app).post(url(orgA, '/makeup-subjects')).set(idem()).set(bearer(ownerA)).send({ name: 'Cô dâu' });
     expect(dupDefault.status).toBe(409);
     expect(dupDefault.body.error.message).toBe('Tên nhân vật makeup đã có trong tổ chức');
     const name = `Bé gái ${uniq()}`;
-    const c = await request(app).post(url(orgA, '/makeup-subjects')).set(bearer(ownerA)).send({ name, sortOrder: 9 }).expect(201);
+    const c = await request(app).post(url(orgA, '/makeup-subjects')).set(idem()).set(bearer(ownerA)).send({ name, sortOrder: 9 }).expect(201);
     await request(app).patch(url(orgA, `/makeup-subjects/${c.body.id}`)).set(bearer(ownerA)).send({ name: 'Cô dâu' }).expect(409);
     const p = await request(app)
       .patch(url(orgA, `/makeup-subjects/${c.body.id}`))
@@ -443,13 +466,13 @@ describe('studio / cửa hàng', () => {
     const owner = await registerUser(app, 'chu-studio');
     const org = await createOrg(app, owner, 'studio');
     const s1 = await request(app)
-      .post(url(org, '/studio-locations'))
+      .post(url(org, '/studio-locations')).set(idem())
       .set(bearer(owner))
       .send({ name: 'Cơ sở 1', address: '12 Nguyễn Huệ, Q1', latitude: 10.776889, longitude: 106.700806, isDefault: true })
       .expect(201);
     expect(s1.body).toMatchObject({ isDefault: true, latitude: 10.776889, longitude: 106.700806 });
     const s2 = await request(app)
-      .post(url(org, '/studio-locations'))
+      .post(url(org, '/studio-locations')).set(idem())
       .set(bearer(owner))
       .send({ name: 'Cơ sở 2', address: '5 Trần Phú', isDefault: true })
       .expect(201);
@@ -464,7 +487,7 @@ describe('studio / cửa hàng', () => {
   it('toạ độ thiếu một nửa, quá 6 số lẻ, ngoài phạm vi → 400; tắt studio mặc định → 400', async () => {
     const owner = await registerUser(app, 'chu-studio2');
     const org = await createOrg(app, owner, 'studio2');
-    const post = (body: Body) => request(app).post(url(org, '/studio-locations')).set(bearer(owner)).send(body);
+    const post = (body: Body) => request(app).post(url(org, '/studio-locations')).set(idem()).set(bearer(owner)).send(body);
     expect((await post({ name: 'A', address: 'B', latitude: 10.5 })).status).toBe(400);
     expect((await post({ name: 'A', address: 'B', latitude: 10.1234567, longitude: 106 })).status).toBe(400);
     expect((await post({ name: 'A', address: 'B', latitude: 91, longitude: 106 })).status).toBe(400);
@@ -514,12 +537,12 @@ describe('cách tính phí di chuyển', () => {
 
 describe('gói dịch vụ', () => {
   it('gói có nhân vật, địa điểm, dịch vụ đã gồm và dịch vụ phụ tick thêm kèm giá hiện hành', async () => {
-    const subj = await request(app).post(url(orgA, '/makeup-subjects')).set(bearer(ownerA)).send({ name: `Cô dâu Huế ${uniq()}` }).expect(201);
+    const subj = await request(app).post(url(orgA, '/makeup-subjects')).set(idem()).set(bearer(ownerA)).send({ name: `Cô dâu Huế ${uniq()}` }).expect(201);
     const main = await newService(ownerA, orgA, { kind: 'MAIN', listPrice: 2_000_000 });
     const hair = await newService(ownerA, orgA, { kind: 'ADDON', listPrice: 500_000, salePrice: 400_000 });
     const lens = await newService(ownerA, orgA, { kind: 'ADDON', listPrice: 100_000 });
     const pkg = await request(app)
-      .post(url(orgA, '/packages'))
+      .post(url(orgA, '/packages')).set(idem())
       .set(bearer(ownerA))
       .send({
         code: `cd-${uniq().toLowerCase()}`,
@@ -572,7 +595,7 @@ describe('gói dịch vụ', () => {
     const sur = await newService(ownerA, orgA, { kind: 'SURCHARGE' });
     const post = (items: Body[]) =>
       request(app)
-        .post(url(orgA, '/packages'))
+        .post(url(orgA, '/packages')).set(idem())
         .set(bearer(ownerA))
         .send({ code: `G-${uniq()}`, name: 'G', durationMinutes: 60, listPrice: 1, items });
     const r1 = await post([{ serviceId: main.id, isOptional: true }]);
@@ -586,29 +609,29 @@ describe('gói dịch vụ', () => {
   });
 
   it('nhân vật của tổ chức B hoặc đang tắt → 400; địa điểm lạ → 400; trùng mã gói → 409', async () => {
-    const subjB = await request(app).post(url(orgB, '/makeup-subjects')).set(bearer(ownerB)).send({ name: `B ${uniq()}` }).expect(201);
+    const subjB = await request(app).post(url(orgB, '/makeup-subjects')).set(idem()).set(bearer(ownerB)).send({ name: `B ${uniq()}` }).expect(201);
     const rB = await request(app)
-      .post(url(orgA, '/packages'))
+      .post(url(orgA, '/packages')).set(idem())
       .set(bearer(ownerA))
       .send({ code: `G-${uniq()}`, name: 'G', durationMinutes: 60, listPrice: 1, subjectId: subjB.body.id });
     expect(rB.status).toBe(400);
     expect(rB.body.error.message).toBe('Nhân vật makeup không tồn tại trong tổ chức');
-    const off = await request(app).post(url(orgA, '/makeup-subjects')).set(bearer(ownerA)).send({ name: `Tắt ${uniq()}`, isActive: false }).expect(201);
+    const off = await request(app).post(url(orgA, '/makeup-subjects')).set(idem()).set(bearer(ownerA)).send({ name: `Tắt ${uniq()}`, isActive: false }).expect(201);
     const rOff = await request(app)
-      .post(url(orgA, '/packages'))
+      .post(url(orgA, '/packages')).set(idem())
       .set(bearer(ownerA))
       .send({ code: `G-${uniq()}`, name: 'G', durationMinutes: 60, listPrice: 1, subjectId: off.body.id });
     expect(rOff.status).toBe(400);
     expect(rOff.body.error.message).toBe('Nhân vật makeup đang ngừng hoạt động');
     const rLoc = await request(app)
-      .post(url(orgA, '/packages'))
+      .post(url(orgA, '/packages')).set(idem())
       .set(bearer(ownerA))
       .send({ code: `G-${uniq()}`, name: 'G', durationMinutes: 60, listPrice: 1, locationTypes: ['BAI_BIEN'] });
     expect(rLoc.status).toBe(400);
     const p = await newPackage(ownerA, orgA);
     const pk = await deps.db.servicePackage.findUniqueOrThrow({ where: { id: p.id } });
     const dup = await request(app)
-      .post(url(orgA, '/packages'))
+      .post(url(orgA, '/packages')).set(idem())
       .set(bearer(ownerA))
       .send({ code: pk.code, name: 'G', durationMinutes: 60, listPrice: 1 });
     expect(dup.status).toBe(409);

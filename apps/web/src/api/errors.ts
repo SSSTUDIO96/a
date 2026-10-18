@@ -79,16 +79,39 @@ export function userMessage(err: unknown): string {
   return FALLBACK_MESSAGE[errorKind(err)];
 }
 
-// Lỗi kiểm dữ liệu 400: details = { formErrors: string[], fieldErrors: { tên_ô: string[] } } (z.flattenError).
+export interface ValidationIssue {
+  // Đường dẫn đầy đủ tới ô, nối bằng dấu chấm: "lines.0.travel.amount". Rỗng = lỗi chung của cả thân.
+  path: string;
+  message: string;
+}
+
+// Lỗi kiểm dữ liệu 400: details = { formErrors, fieldErrors (z.flattenError), issues: [{path, message}] }.
+export function validationIssues(err: unknown): ValidationIssue[] {
+  if (!(err instanceof ApiError) || err.code !== 'VALIDATION_FAILED') return [];
+  const issues = (err.details as { issues?: unknown } | undefined)?.issues;
+  if (!Array.isArray(issues)) return [];
+  return issues.filter(
+    (i): i is ValidationIssue =>
+      typeof i === 'object' && i !== null && typeof (i as { path?: unknown }).path === 'string' && typeof (i as { message?: unknown }).message === 'string',
+  );
+}
+
+/**
+ * Lời lỗi theo ô: { đường_dẫn: lời } — lời đầu tiên của mỗi ô.
+ * Có cả khoá đường dẫn đầy đủ ("lines.0.travel.amount", từ details.issues) lẫn khoá gốc ("lines", từ fieldErrors),
+ * nên form phẳng (email, password, slug...) vẫn đọc như cũ.
+ */
 export function fieldErrors(err: unknown): Record<string, string> {
   const out: Record<string, string> = {};
   if (!(err instanceof ApiError) || err.code !== 'VALIDATION_FAILED') return out;
-  const d = err.details;
-  if (typeof d !== 'object' || d === null || !('fieldErrors' in d)) return out;
-  const fe = (d as { fieldErrors: unknown }).fieldErrors;
-  if (typeof fe !== 'object' || fe === null) return out;
-  for (const [k, v] of Object.entries(fe)) {
-    if (Array.isArray(v) && typeof v[0] === 'string') out[k] = v[0];
+  for (const i of validationIssues(err)) {
+    if (i.path && out[i.path] === undefined) out[i.path] = i.message;
+  }
+  const fe = (err.details as { fieldErrors?: unknown } | undefined)?.fieldErrors;
+  if (typeof fe === 'object' && fe !== null) {
+    for (const [k, v] of Object.entries(fe)) {
+      if (out[k] === undefined && Array.isArray(v) && typeof v[0] === 'string') out[k] = v[0];
+    }
   }
   return out;
 }

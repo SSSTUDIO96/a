@@ -227,6 +227,7 @@ export const packageRoutes = [
   defineRoute({
     method: 'post',
     path: '/orgs/:orgId/packages',
+    idempotent: true,
     scope: 'org',
     permission: 'catalog.write',
     tag: 'Bảng giá',

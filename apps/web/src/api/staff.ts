@@ -1,5 +1,5 @@
 import { api } from './client';
-import { apiPut, idSeg, orgPath, withQuery } from './org';
+import { idSeg, orgPath, withQuery } from './org';
 import type {
   Items,
   PayRateSheet,
@@ -42,7 +42,7 @@ export function getPackagePayRates(orgId: string, packageId: string, signal?: Ab
 }
 
 export function putPackagePayRates(orgId: string, packageId: string, input: PayRatesInput) {
-  return apiPut<PayRateSheet>(orgPath(orgId, `/packages/${idSeg(packageId)}/pay-rates`), input);
+  return api.put<PayRateSheet>(orgPath(orgId, `/packages/${idSeg(packageId)}/pay-rates`), input);
 }
 
 export function getServicePayRates(orgId: string, serviceId: string, signal?: AbortSignal) {
@@ -50,5 +50,5 @@ export function getServicePayRates(orgId: string, serviceId: string, signal?: Ab
 }
 
 export function putServicePayRates(orgId: string, serviceId: string, input: PayRatesInput) {
-  return apiPut<PayRateSheet>(orgPath(orgId, `/services/${idSeg(serviceId)}/pay-rates`), input);
+  return api.put<PayRateSheet>(orgPath(orgId, `/services/${idSeg(serviceId)}/pay-rates`), input);
 }

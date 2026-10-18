@@ -142,5 +142,7 @@ export const api = {
   // POST không tạo dữ liệu (đăng nhập, đăng xuất...).
   post: <T>(path: string, body: unknown, opts: Omit<RequestOptions, 'body'> = {}) => apiRequest<T>('POST', path, { ...opts, body }),
   patch: <T>(path: string, body: unknown) => apiRequest<T>('PATCH', path, { body }),
+  // PUT ghi đè toàn bộ (phí di chuyển, tiền công theo bậc).
+  put: <T>(path: string, body: unknown) => apiRequest<T>('PUT', path, { body }),
   delete: <T>(path: string) => apiRequest<T>('DELETE', path),
 };

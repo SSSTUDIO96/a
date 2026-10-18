@@ -11,7 +11,7 @@ export const QUOTE_DELAY_MS = 300;
 export interface QuoteState {
   data: ContractQuote | null;
   error: unknown;
-  // Lỗi 400 của schema: { tên_trường_gốc: lời }.
+  // Lỗi 400 của schema: { đường_dẫn_đầy_đủ: lời } (vd "lines.0.travel.amount"), kèm cả khoá gốc ("lines").
   fieldErrors: Record<string, string>;
   // Lỗi 400/404 khi tính một dòng: máy chủ trả details.line = vị trí dòng (từ 0) trong lines.
   errorLine: number | null;

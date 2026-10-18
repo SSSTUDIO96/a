@@ -36,6 +36,7 @@ export const categoryRoutes = [
   defineRoute({
     method: 'post',
     path: '/orgs/:orgId/service-categories',
+    idempotent: true,
     scope: 'org',
     permission: 'catalog.write',
     tag: 'Bảng giá',
@@ -117,6 +118,7 @@ export const categoryRoutes = [
   defineRoute({
     method: 'post',
     path: '/orgs/:orgId/makeup-subjects',
+    idempotent: true,
     scope: 'org',
     permission: 'catalog.write',
     tag: 'Bảng giá',

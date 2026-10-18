@@ -1,5 +1,3 @@
-import { apiRequest } from './client';
-
 // Đường thuộc tổ chức: /orgs/:orgId/... (orgId lấy từ tổ chức đang chọn trong phiên).
 export function orgPath(orgId: string, path: string): string {
   if (!orgId) throw new Error('Thiếu orgId khi gọi đường thuộc tổ chức');
@@ -22,9 +20,4 @@ export function withQuery(path: string, query: object | undefined): string {
   }
   const s = params.toString();
   return s ? `${path}?${s}` : path;
-}
-
-// client.ts chưa có api.put; PUT ghi đè (phí di chuyển, tiền công) đi qua apiRequest.
-export function apiPut<T>(path: string, body: unknown): Promise<T> {
-  return apiRequest<T>('PUT', path, { body });
 }

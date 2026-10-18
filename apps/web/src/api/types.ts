@@ -3,18 +3,17 @@
 // Bài thử src/api/khop-hop-dong.test.ts gọi máy chủ thật và so đủ tên trường với các kiểu ở đây.
 // Quy ước: tiền là số nguyên đồng (Vnd); thời điểm là chuỗi ISO 8601; toạ độ, km là số.
 
-// ---- Giá trị liệt kê (khớp packages/shared và schema.prisma; bài thử types-shared.test.ts đối chiếu) ----
-export type Vnd = number;
+// ---- Giá trị liệt kê: lấy từ @makeup/shared khi shared có; còn lại khớp schema.prisma (types-shared.test.ts đối chiếu) ----
+import type { ContractStatus, INITIAL_STATUSES, TravelFeeMode, Vnd, WorkStatus } from '@makeup/shared';
+
+export type { ContractStatus, TravelFeeMode, Vnd, WorkStatus };
 export type IsoDateTime = string;
 
 export type ServiceKind = 'MAIN' | 'ADDON' | 'SURCHARGE';
 export type LocationType = 'STUDIO' | 'CUSTOMER_HOME' | 'OTHER';
-export type TravelFeeMode = 'FIXED' | 'PER_KM' | 'MANUAL';
-export type ContractStatus = 'DRAFT' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED';
 export type ContractLineKind = 'PACKAGE' | 'SERVICE' | 'ADDON' | 'SURCHARGE' | 'TRAVEL' | 'CUSTOM';
-export type WorkStatus = 'DRAFT' | 'PENDING_CONFIRMATION' | 'CONFIRMED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW';
 // Trạng thái được phép khi TẠO lịch (INITIAL_STATUSES).
-export type InitialWorkStatus = 'DRAFT' | 'PENDING_CONFIRMATION' | 'CONFIRMED';
+export type InitialWorkStatus = (typeof INITIAL_STATUSES)[number];
 export type EventKind = 'MAKEUP' | 'COURSE_SESSION' | 'INTERNAL' | 'PERSONAL_BLOCK' | 'OTHER';
 export type StaffRole = 'PRIMARY' | 'ASSIST';
 export type MembershipStatus = 'ACTIVE' | 'SUSPENDED' | 'REMOVED';

@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
-// apps/web chưa khai @makeup/shared trong package.json (phiếu vướng) — bài thử đọc thẳng mã nguồn để đối chiếu.
-import { CONTRACT_STATUSES, INITIAL_STATUSES, TRAVEL_FEE_MODES, WORK_STATUSES } from '../../../../packages/shared/src/index';
+import { CONTRACT_STATUSES, INITIAL_STATUSES, TRAVEL_FEE_MODES, WORK_STATUSES } from '@makeup/shared';
 import type { ContractStatus, InitialWorkStatus, TravelFeeMode, WorkStatus } from './types';
 
 // Bảng đủ mọi giá trị của từng kiểu: thiếu hay thừa một giá trị là lỗi biên dịch.

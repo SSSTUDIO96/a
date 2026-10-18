@@ -144,6 +144,7 @@ export const serviceRoutes = [
   defineRoute({
     method: 'post',
     path: '/orgs/:orgId/services',
+    idempotent: true,
     scope: 'org',
     permission: 'catalog.write',
     tag: 'Bảng giá',

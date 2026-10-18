@@ -1,5 +1,5 @@
 import { api } from './client';
-import { apiPut, idSeg, orgPath, withQuery } from './org';
+import { idSeg, orgPath, withQuery } from './org';
 import type {
   ActiveFilterQuery,
   Items,
@@ -75,7 +75,7 @@ export function getTravelFeePolicy(orgId: string, signal?: AbortSignal) {
 
 // Ghi đè toàn bộ — gửi đủ 6 trường. Quyền prices.write.
 export function putTravelFeePolicy(orgId: string, input: TravelFeePolicyInput) {
-  return apiPut<TravelFeePolicy>(orgPath(orgId, '/travel-fee-policy'), input);
+  return api.put<TravelFeePolicy>(orgPath(orgId, '/travel-fee-policy'), input);
 }
 
 // ---- Dịch vụ ----
