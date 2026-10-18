@@ -146,3 +146,10 @@ Mỗi lỗi ghi đủ: triệu chứng · gốc bệnh · số đo · cách ch�
 - Lỗi 14: migration `20261018190000_tep_thu_tien_nen_tang`; database thử `makeup_test_contract` đã dọn 2 bậc chồng của tổ chức thử, áp `travel_tiers_no_overlap`, sửa checksum; `prisma migrate status` báo khớp 9/9.
 - Lỗi 15: `apps/api/test/gate.ts` phép 9 `platform`, đột biến 9 trong `apps/api/test/gate-mutants.test.ts`.
 - Lỗi 16: `apps/api/prisma/schema.prisma` (datasource directUrl), `apps/api/.env`, lệnh chặn `apps/api/scripts/deploy-to.mjs` (`pnpm db:deploy-to`).
+
+## 23. Điều phối `git add -A` khi một thợ khác đang làm dở
+
+- **Triệu chứng:** commit 745f454 ghi tên "W-HDKH" nhưng lẫn 5 tệp máy chủ dở dang của thợ V (migration phụ phí, schema.prisma, catalog/services.ts, profile/public.ts, bài thử) và vài tệp web thợ V/W-HDKH chưa chốt.
+- **Gốc:** điều phối dùng `git add -A` sau khi thợ W-HDKH báo xong, quên rằng thợ V vẫn đang ghi tệp.
+- **Hậu quả:** commit đó không nhất thiết build được ở phần máy chủ; không được dùng làm commit chấm.
+- **Cách chặn:** khi còn thợ đang chạy, chỉ `git add` đúng danh sách tệp trong báo cáo của thợ đã xong (như commit 2f362c9 của thợ U). `git add -A` chỉ dùng cho bản chụp ghi rõ "WIP — CHƯA nghiệm thu".
