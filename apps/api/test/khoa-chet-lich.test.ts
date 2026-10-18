@@ -46,7 +46,12 @@ async function waitForLockWait(kind: 'any' | 'advisory', timeoutMs = 4000) {
 }
 
 // Một transaction "bên ngoài" chạy từng bước theo lệnh của bài thử.
-function outsideTx(steps: { first: (tx: Prisma.TransactionClient) => Promise<unknown>; second?: (tx: Prisma.TransactionClient) => Promise<unknown> }) {
+// holdAfterMs: giữ transaction thêm một lúc sau bước hai rồi mới commit (bên kia còn việc khác trong transaction).
+function outsideTx(steps: {
+  first: (tx: Prisma.TransactionClient) => Promise<unknown>;
+  second?: (tx: Prisma.TransactionClient) => Promise<unknown>;
+  holdAfterMs?: number;
+}) {
   let go!: () => void;
   const gate = new Promise<void>((r) => (go = r));
   let ready!: () => void;
@@ -58,6 +63,7 @@ function outsideTx(steps: { first: (tx: Prisma.TransactionClient) => Promise<unk
         ready();
         await gate;
         if (steps.second) await steps.second(tx);
+        if (steps.holdAfterMs) await new Promise((r) => setTimeout(r, steps.holdAfterMs));
       },
       { timeout: 30_000 },
     )
@@ -119,6 +125,9 @@ describe('T-I1 — khoá chết khi ghi lịch: không bao giờ 500', () => {
       first: (tx) => moveTo(tx, a2, 9), // chiếm [01:00, 02:00), chưa commit
       // [02:00, 03:00) đụng dòng API [01:30, 02:30), không đụng a2 → chờ API → vòng chờ
       second: (tx) => moveTo(tx, a3, 9, '02', '03'),
+      // Bên kia còn 300 ms việc khác rồi mới commit: tra lại NGAY sau khoá chết sẽ chưa thấy lịch nào (409 rỗng);
+      // lưới đúng phải đợi bên kia kết thúc rồi mới trả lời.
+      holdAfterMs: 300,
     });
     await other.isReady;
     const t0 = Date.now();
@@ -263,6 +272,52 @@ describe('T-I1 — khoá chết khi ghi lịch: không bao giờ 500', () => {
         'thêm dòng sau xác nhận',
       );
     });
+  });
+
+  // Thứ tự khoá cố định: mọi lời gọi xin khoá tổ chức trước, rồi khoá thợ theo giá trị khoá tăng dần, không lặp —
+  // bất kể thứ tự thợ trong yêu cầu. Đo bằng một transaction giả ghi lại từng câu khoá.
+  it('GIỮ (thứ tự khoá): khoá tổ chức trước, khoá thợ tăng dần và không lặp, bất kể thứ tự đầu vào', async () => {
+    const calls: { sql: string; key: bigint }[] = [];
+    const fake = {
+      $executeRaw: (strings: TemplateStringsArray, ...vals: unknown[]) => {
+        calls.push({ sql: strings.join('?'), key: vals[0] as bigint });
+        return Promise.resolve(1);
+      },
+    } as unknown as Prisma.TransactionClient;
+    const ids = [randomUUID(), randomUUID(), randomUUID(), randomUUID()];
+    const orders = [ids, [...ids].reverse(), [ids[2]!, ids[0]!, ids[3]!, ids[1]!, ids[0]!]];
+    const seen: string[] = [];
+    for (const [i, order] of orders.entries()) {
+      calls.length = 0;
+      await lockStaffSchedule(fake, orgId, order, i === 0 ? 'exclusive' : 'shared');
+      expect(calls[0]!.sql).toMatch(i === 0 ? /pg_advisory_xact_lock\(/ : /pg_advisory_xact_lock_shared\(/);
+      const staffKeys = calls.slice(1).map((c) => c.key);
+      expect(calls.slice(1).every((c) => /pg_advisory_xact_lock\(/.test(c.sql))).toBe(true);
+      expect(staffKeys).toHaveLength(4);
+      expect(staffKeys).toEqual([...staffKeys].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0)));
+      seen.push(staffKeys.join(','));
+    }
+    expect(new Set(seen).size).toBe(1);
+  });
+
+  // Tạo lịch giữ khoá tổ chức ĐỘC QUYỀN: module hợp đồng gọi createAppointmentTx nhiều lần trong một transaction nên
+  // khoá thợ của nó không theo một thứ tự chung — phải đợi mọi lệnh ghi lịch khác của tổ chức xong, kể cả của thợ khác.
+  it('GIỮ (khoá tổ chức độc quyền khi tạo lịch): đang có lệnh ghi lịch của THỢ KHÁC → tạo lịch xếp hàng, xong thì 201', async () => {
+    const other = outsideTx({ first: (tx) => lockStaffSchedule(tx, orgId, [mid2], 'shared') });
+    await other.isReady;
+    const pending = post(slot(56)).then((r) => r);
+    let queued = true;
+    try {
+      await waitForLockWait('advisory');
+    } catch {
+      queued = false;
+    }
+    other.go();
+    const [r, o] = await Promise.all([pending, other.done]);
+    console.log(`[T-I1 khoá tổ chức] tạo lịch xếp hàng sau lệnh của thợ khác=${queued}, API ${r.status}, ngoài: ${o}`);
+    expect(queued).toBe(true);
+    expect(o).toBe('commit');
+    expect(r.status, JSON.stringify(r.body)).toBe(201);
   });
 
   // Bài đua N4 viết lại: đếm RIÊNG lượt bên thua nhận 500 (bài cũ gộp vào "không có bên thua").

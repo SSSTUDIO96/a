@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react';
 import { createMemoryRouter, Outlet, RouterProvider, useLocation, type RouteObject } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as auth from '../api/auth';
-import { hasAccessToken } from '../api/client';
+import { api, hasAccessToken } from '../api/client';
 import { ApiError } from '../api/errors';
 import { RequireAuth } from './guards';
 import { retryAfterSeconds, SessionProvider, useSession } from './session';
@@ -207,6 +207,106 @@ describe('khôi phục phiên: 429 là lỗi tạm thời, không phải chưa �
       expect(screen.getByRole('status').textContent).toContain('thử lại sau 12 giây');
     },
   );
+});
+
+// Biên bản N-M1 (M-d): 429 khi refresh GIỮA phiên (thẻ hết hạn lúc đang dùng) không phải hết phiên.
+// Xử lý như lúc khôi phục: giữ phiên, báo bận, tự refresh lại theo Retry-After (một lần), rồi chờ người dùng bấm.
+describe('refresh giữa phiên gặp 429', () => {
+  // Máy chủ: /viec chỉ nhận thẻ mới nhất; refresh trả lần lượt theo `replies` (thẻ tok-1, tok-2…).
+  function setupMidSession(...replies: RefreshReply[]) {
+    let latest = '';
+    setupServer(...replies);
+    const realFetch = vi.mocked(fetch);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url.endsWith('/auth/refresh')) {
+          const res = await realFetch(input, init);
+          if (res.ok) latest = `tok-${refreshCalls}`;
+          return res.ok ? json(200, { accessToken: latest, expiresIn: 900 }) : res;
+        }
+        if (url.endsWith('/viec')) {
+          const auth = (init?.headers as Record<string, string> | undefined)?.Authorization;
+          return auth === `Bearer ${latest}` ? json(200, { ok: true }) : json(401, UNAUTH);
+        }
+        return realFetch(input, init);
+      }),
+    );
+    return { expireToken: () => (latest = 'het-han') };
+  }
+
+  async function callApi() {
+    let result: unknown;
+    await act(async () => {
+      result = await api.get('/viec').then(
+        (v) => v,
+        (e: unknown) => e,
+      );
+    });
+    return result;
+  }
+
+  it('thẻ hết hạn, refresh trả 429 (Retry-After: 12) → ở lại trang, giữ phiên, báo bận 12 giây; hết giờ tự refresh lại và gọi API được', async () => {
+    const server = setupMidSession(ok, busy({ 'Retry-After': '12' }), ok);
+    const router = renderApp();
+    await settle();
+    expect(screen.getByText('Trang trong của Nguyễn Thị Hoa')).toBeTruthy();
+    expect(await callApi()).toEqual({ ok: true });
+
+    server.expireToken();
+    const err = await callApi();
+    expect(err).toBeInstanceOf(ApiError);
+    expect((err as ApiError).status).toBe(429);
+    await settle();
+    expect(refreshCalls).toBe(2);
+    expect(router.state.location.pathname).toBe('/');
+    expect(screen.queryByText('Trang đăng nhập')).toBeNull();
+    expect(screen.getByText('Trang trong của Nguyễn Thị Hoa')).toBeTruthy();
+    expect(hasAccessToken()).toBe(true);
+    expect(screen.getByRole('status').textContent).toContain('Máy chủ đang bận, thử lại sau 12 giây');
+
+    await settle(11_000);
+    expect(refreshCalls).toBe(2);
+    await settle(1_000);
+    expect(refreshCalls).toBe(3);
+    expect(screen.queryByRole('status')).toBeNull();
+    expect(router.state.location.pathname).toBe('/');
+    expect(await callApi()).toEqual({ ok: true });
+  });
+
+  it('429 hai lần giữa phiên → tự thử lại đúng một lần, rồi chờ bấm "Thử lại"; vẫn không về đăng nhập', async () => {
+    const server = setupMidSession(ok, busy({ 'Retry-After': '5' }), busy({ 'Retry-After': '5' }), ok);
+    const router = renderApp();
+    await settle();
+    server.expireToken();
+    await callApi();
+    await settle(5_000);
+    expect(refreshCalls).toBe(3);
+    expect(screen.getByRole('status').textContent).toContain('Máy chủ vẫn đang bận');
+    await settle(10 * 60_000);
+    expect(refreshCalls).toBe(3);
+    expect(router.state.location.pathname).toBe('/');
+    fireEvent.click(screen.getByRole('button', { name: 'Thử lại' }));
+    await settle();
+    expect(refreshCalls).toBe(4);
+    expect(screen.queryByRole('status')).toBeNull();
+    expect(await callApi()).toEqual({ ok: true });
+  });
+
+  it('429 rồi lần tự thử lại bị 401 → lúc đó mới là hết phiên: về trang đăng nhập, xoá thẻ', async () => {
+    const server = setupMidSession(ok, busy({ 'Retry-After': '5' }), unauth);
+    const router = renderApp();
+    await settle();
+    server.expireToken();
+    await callApi();
+    await settle();
+    expect(router.state.location.pathname).toBe('/');
+    await settle(5_000);
+    expect(router.state.location.pathname).toBe('/dang-nhap');
+    expect(hasAccessToken()).toBe(false);
+    expect(screen.queryByRole('status')).toBeNull();
+  });
 });
 
 describe('retryAfterSeconds', () => {

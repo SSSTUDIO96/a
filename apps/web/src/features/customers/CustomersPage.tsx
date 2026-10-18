@@ -4,7 +4,7 @@ import type { Customer } from '../../api/types';
 import { PageHeader } from '../../layout/PageHeader';
 import { useBreakpoint } from '../../layout/useBreakpoint';
 import { usePermissions } from '../../layout/usePermissions';
-import { Button, IconPlus, ListDetail } from '../../ui';
+import { Button, Card, IconPlus, ListDetail, Skeleton } from '../../ui';
 import { useOrgInfo } from '../staff/useOrgInfo';
 import { CustomerDetail } from './CustomerDetail';
 import { CustomerList } from './CustomerList';
@@ -66,7 +66,16 @@ export function CustomersPage() {
           />
         }
         detail={
-          selectedId ? (
+          !isChild && !phone && list.state.status === 'loading' ? (
+            <Card>
+              <div role="status" aria-label="Đang tải hồ sơ khách" className="kh-skel">
+                <Skeleton width="45%" height={20} />
+                <Skeleton width="70%" />
+                <Skeleton width="60%" />
+                <Skeleton width="50%" />
+              </div>
+            </Card>
+          ) : selectedId ? (
             <CustomerDetail
               key={selectedId}
               orgId={org.orgId}

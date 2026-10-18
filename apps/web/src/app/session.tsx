@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { useNavigate } from 'react-router';
 import * as auth from '../api/auth';
 import type { Me, MyOrganization, RegisterInput } from '../api/auth';
-import { setAccessToken, setSessionExpiredHandler } from '../api/client';
+import { setAccessToken, setRefreshBusyHandler, setSessionExpiredHandler } from '../api/client';
 import { ApiError } from '../api/errors';
 
 // Chỉ lưu id tổ chức đang chọn — tiện ích cho từng người xem, mất cũng không sao (chọn tổ chức đầu).
@@ -98,6 +98,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [restoreBusy, setRestoreBusy] = useState<RestoreBusy | null>(null);
   // Đã tự thử lại một lần sau 429 chưa — chỉ tự thử MỘT lần cho mỗi chuỗi khôi phục.
   const autoRetriedRef = useRef(false);
+  // 429 khi refresh GIỮA phiên: cùng cách xử lý như lúc khôi phục — giữ phiên, báo bận, tự thử lại một lần theo Retry-After.
+  const [refreshBusy, setRefreshBusy] = useState<RestoreBusy | null>(null);
+  const refreshAutoRetriedRef = useRef(false);
+  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const navigateRef = useRef(navigate);
   navigateRef.current = navigate;
 
@@ -105,6 +109,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setAccessToken(null);
     setUser(null);
     setStatus('anonymous');
+    clearTimeout(refreshTimerRef.current);
+    setRefreshBusy(null);
   }, []);
 
   const reloadMe = useCallback(async () => {
@@ -122,6 +128,46 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     });
     return () => setSessionExpiredHandler(null);
   }, [clearSession]);
+
+  // Refresh lại sau 429 giữa phiên. Thành công → hết bận. 429 nữa → client.ts báo lại (handler bên dưới);
+  // bị từ chối thật (401) → client.ts gọi hàm hết phiên; lỗi mạng/5xx → thôi báo bận, yêu cầu sau sẽ tự refresh.
+  const runRefreshRetry = useCallback(() => {
+    clearTimeout(refreshTimerRef.current);
+    auth.refreshSession().then(
+      () => {
+        refreshAutoRetriedRef.current = false;
+        setRefreshBusy(null);
+      },
+      (err: unknown) => {
+        if (!isRateLimited(err)) setRefreshBusy(null);
+      },
+    );
+  }, []);
+
+  // Người dùng tự bấm "Thử lại": chuỗi mới, lại được tự thử một lần nếu gặp 429.
+  const retryRefresh = useCallback(() => {
+    refreshAutoRetriedRef.current = false;
+    runRefreshRetry();
+  }, [runRefreshRetry]);
+
+  useEffect(() => {
+    setRefreshBusyHandler((err) => {
+      const waitMs = retryAfterSeconds(err) * 1000;
+      const autoRetry = !refreshAutoRetriedRef.current;
+      clearTimeout(refreshTimerRef.current);
+      setRefreshBusy({ retryAt: Date.now() + waitMs, autoRetry });
+      if (autoRetry) {
+        refreshTimerRef.current = setTimeout(() => {
+          refreshAutoRetriedRef.current = true;
+          runRefreshRetry();
+        }, waitMs);
+      }
+    });
+    return () => {
+      setRefreshBusyHandler(null);
+      clearTimeout(refreshTimerRef.current);
+    };
+  }, [runRefreshRetry]);
 
   // Khôi phục phiên khi tải lại trang: cookie refresh (httpOnly) đổi lấy access token mới.
   useEffect(() => {
@@ -225,6 +271,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   return (
     <SessionContext.Provider value={value}>
       {restoreBusy ? <RestoreBusyNotice key={restoreBusy.retryAt} busy={restoreBusy} onRetry={retryRestore} /> : null}
+      {!restoreBusy && refreshBusy ? <RestoreBusyNotice key={refreshBusy.retryAt} busy={refreshBusy} onRetry={retryRefresh} /> : null}
       {children}
     </SessionContext.Provider>
   );

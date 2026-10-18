@@ -11,6 +11,9 @@ let refreshing: Promise<void> | null = null;
 let onSessionExpired: (() => void) | null = null;
 // Mỗi lần refresh thất bại chỉ báo hết phiên một lần dù nhiều yêu cầu cùng chờ.
 let expiredBy: Promise<void> | null = null;
+// Refresh giữa phiên bị 429 (máy chủ bận): báo session.tsx để hiện "đang bận" và tự thử lại theo Retry-After.
+let onRefreshBusy: ((err: ApiError) => void) | null = null;
+let busyBy: Promise<void> | null = null;
 
 export function setAccessToken(token: string | null): void {
   accessToken = token;
@@ -23,6 +26,11 @@ export function hasAccessToken(): boolean {
 // session.tsx đăng ký hàm này: xoá trạng thái phiên và chuyển về trang đăng nhập.
 export function setSessionExpiredHandler(handler: (() => void) | null): void {
   onSessionExpired = handler;
+}
+
+// session.tsx đăng ký: refresh giữa phiên gặp 429 → giữ phiên, báo bận, hẹn refresh lại (err.retryAfterSeconds).
+export function setRefreshBusyHandler(handler: ((err: ApiError) => void) | null): void {
+  onRefreshBusy = handler;
 }
 
 export type Method = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
@@ -126,6 +134,10 @@ export function refreshSession(expireOnFailure = true): Promise<void> {
       expiredBy = current;
       accessToken = null;
       onSessionExpired?.();
+    } else if (expireOnFailure && err instanceof ApiError && err.status === 429 && busyBy !== current) {
+      // Giữa phiên (khôi phục lúc tải trang tự xử lý 429 trong session.tsx): giữ thẻ, chỉ báo bận MỘT lần cho mỗi lần refresh.
+      busyBy = current;
+      onRefreshBusy?.(err);
     }
     throw err;
   });

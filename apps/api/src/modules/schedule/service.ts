@@ -1,5 +1,4 @@
-import { createHash } from 'node:crypto';
-import { Prisma, type EventKind, type LocationType, type StaffRole } from '@prisma/client';
+import type { EventKind, LocationType, Prisma, StaffRole } from '@prisma/client';
 import {
   INITIAL_STATUSES,
   MAX_APPOINTMENT_MS,
@@ -16,7 +15,7 @@ import {
 import type { OrgContext } from '../../http/route';
 import { AppError } from '../../lib/errors';
 import { writeAudit } from '../../lib/audit';
-import { isStaffOverlapViolation, pgErrorCode } from '../../http/middleware';
+import { isStaffOverlapViolation } from '../../http/middleware';
 import { avatarSelect, resolveAvatarUrls, type AvatarSource } from '../files/service';
 
 export type InitialStatus = (typeof INITIAL_STATUSES)[number];
@@ -306,77 +305,24 @@ export async function assertNoOverlap(
   if (conflicts.length > 0) throw overlapError(conflicts);
 }
 
-// KHOÁ THỢ (biên bản nghiệm thu đợt sửa 1, T-I1). Gốc khoá chết: một lệnh ghi lịch ghi khoảng bận của thợ HAI lần trong
-// cùng transaction — câu ghi appointment_staff, rồi trigger appointments_sync_staff_block của câu UPDATE appointments
-// ghi lại lần nữa. Ràng buộc EXCLUDE appointment_staff_no_overlap phải CHỜ dòng chưa commit của bên kia, nên hai lệnh
-// cùng giờ cùng thợ mỗi bên giữ một dòng mới và chờ dòng của bên kia → PostgreSQL huỷ một bên với 40P01.
-// Chữa ở gốc: mọi cửa ghi có thể chạm ràng buộc xin khoá tư vấn TRƯỚC bước kiểm trước, theo thứ tự cố định:
-//   1) khoá tổ chức — 'shared' cho cửa ghi một lịch (sửa, đổi trạng thái), 'exclusive' cho createAppointmentTx;
-//   2) khoá từng thợ (tổ chức, membershipId), xếp tăng dần theo giá trị khoá.
-// Hai lệnh ghi cùng thợ vì thế xếp hàng: bên sau chỉ chạy bước kiểm trước khi bên trước đã commit, thấy lịch của bên
-// trước và trả 409 kèm danh sách — ràng buộc EXCLUDE không còn phải chờ ai.
-// Vì sao tạo lịch giữ khoá tổ chức 'exclusive': module hợp đồng gọi createAppointmentTx NHIỀU lần trong một
-// transaction (mỗi dòng có thợ một lịch), nên khoá thợ của nó không xếp được theo một thứ tự chung (dòng 1 thợ B, dòng 2
-// thợ A). Giữ khoá tổ chức độc quyền thì không ai khác đang cầm khoá thợ nào của tổ chức (ai cầm khoá thợ cũng cầm khoá
-// tổ chức 'shared'), nên thứ tự khoá thợ bên trong không còn gây vòng chờ. Các lệnh tạo lịch vốn đã xếp hàng theo tổ
-// chức ở bộ đếm mã lịch (nextAppointmentCode), nên không mất thêm độ song song nào.
-// Lưu ý cho người viết cửa mới: một transaction đã cầm 'shared' thì KHÔNG được xin 'exclusive' sau đó (hai bên cùng
-// nâng khoá sẽ chờ nhau).
-function scheduleLockKey(text: string): bigint {
-  return createHash('sha256').update(text).digest().readBigInt64BE(0);
-}
-
-export async function lockStaffSchedule(
-  tx: Prisma.TransactionClient,
-  orgId: string,
-  membershipIds: string[],
-  mode: 'shared' | 'exclusive',
-): Promise<void> {
-  if (membershipIds.length === 0) return;
-  const orgKey = scheduleLockKey(`lich-to-chuc:${orgId}`);
-  if (mode === 'exclusive') await tx.$executeRaw`SELECT pg_advisory_xact_lock(${orgKey}::bigint)`;
-  else await tx.$executeRaw`SELECT pg_advisory_xact_lock_shared(${orgKey}::bigint)`;
-  // Xếp theo chính giá trị khoá (không theo chuỗi id): hai thợ trùng khoá băm vẫn giữ một thứ tự chung, không vòng chờ.
-  const keys = [...new Set(membershipIds.map((id) => scheduleLockKey(`lich-tho:${orgId}:${id}`)))].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
-  for (const key of keys) await tx.$executeRaw`SELECT pg_advisory_xact_lock(${key}::bigint)`;
-}
-
-// Khoá chết (40P01) / lỗi tuần tự hoá (40001). Prisma 6.19 gói lỗi này trong transaction tương tác thành P2034.
-export function isWriteConflict(err: unknown): boolean {
-  if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2034') return true;
-  const code = pgErrorCode(err);
-  return code === '40P01' || code === '40001';
-}
-
 // Bọc các câu ghi có thể chạm ràng buộc EXCLUDE (phân thợ, đổi giờ, đổi trạng thái sang chiếm giờ).
 // Hai yêu cầu đua nhau: bước kiểm trước của bên thua không thấy lịch chưa commit của bên thắng, nên database chặn.
 // Khi đó quay về điểm lưu (transaction vẫn dùng được) rồi TRA LẠI: lúc này lịch bên thắng đã commit nên thấy được,
 // và lỗi 409 kèm đủ danh sách như đường kiểm trước (biên bản nghiệm thu web 1, N4).
-// LƯỚI AN TOÀN khoá chết (T-I1): mọi cửa của module lịch đã xin khoá thợ nên không còn khoá chết giữa chúng; lưới này
-// dành cho bên ghi không xin khoá thợ (script, module khác sau này). Gặp 40P01: quay về điểm lưu rồi GHI LẠI ĐÚNG MỘT LẦN.
-// Không tra lại ngay, vì lúc đó bên kia thường CHƯA commit (nó vừa được nhả khỏi vòng chờ) — tra ngay sẽ không thấy lịch
-// nào, ra 409 rỗng. Ghi lại thì chính ràng buộc EXCLUDE chờ bên kia kết thúc rồi trả lời dứt khoát: bên kia commit →
-// 23P01 → tra lại thấy lịch → 409 kèm danh sách; bên kia lui → ghi được → 200. Khoá chết lần hai (hiếm) → tra lại và trả
-// 409 với những gì thấy được (conflicts vẫn là mảng), không thử nữa để yêu cầu không treo lâu.
 export async function guardOverlap<T>(
   tx: Prisma.TransactionClient,
   check: { orgId: string; membershipIds: string[]; block: { blockStart: Date; blockEnd: Date }; excludeAppointmentId?: string },
   write: () => Promise<T>,
 ): Promise<T> {
-  for (let attempt = 1; ; attempt++) {
-    await tx.$executeRaw`SAVEPOINT chan_trung_lich`;
-    try {
-      const result = await write();
-      await tx.$executeRaw`RELEASE SAVEPOINT chan_trung_lich`;
-      return result;
-    } catch (err) {
-      const deadlock = isWriteConflict(err);
-      if (!deadlock && !isStaffOverlapViolation(err)) throw err;
-      await tx.$executeRaw`ROLLBACK TO SAVEPOINT chan_trung_lich`;
-      await tx.$executeRaw`RELEASE SAVEPOINT chan_trung_lich`;
-      if (deadlock && attempt === 1) continue;
-      throw overlapError(await findOverlaps(tx, check.orgId, check.membershipIds, check.block, check.excludeAppointmentId));
-    }
+  await tx.$executeRaw`SAVEPOINT chan_trung_lich`;
+  try {
+    const result = await write();
+    await tx.$executeRaw`RELEASE SAVEPOINT chan_trung_lich`;
+    return result;
+  } catch (err) {
+    if (!isStaffOverlapViolation(err)) throw err;
+    await tx.$executeRaw`ROLLBACK TO SAVEPOINT chan_trung_lich`;
+    throw overlapError(await findOverlaps(tx, check.orgId, check.membershipIds, check.block, check.excludeAppointmentId));
   }
 }
 
@@ -483,13 +429,6 @@ export async function createAppointmentTx(
   const block = computeBlock(input);
   const isBlocking = isBlockingStatus(input.status);
   if (isBlocking) {
-    // Khoá thợ trước bước kiểm (T-I1). 'exclusive': module hợp đồng gọi hàm này nhiều lần trong một transaction.
-    await lockStaffSchedule(
-      tx,
-      ctx.orgId,
-      input.staff.map((s) => s.membershipId),
-      'exclusive',
-    );
     await assertNoOverlap(
       tx,
       ctx.orgId,
@@ -593,7 +532,6 @@ export async function applyStatusChangeTx(
   };
   const startsBlocking = !wasBlocking && nowBlocking;
   if (startsBlocking) {
-    await lockStaffSchedule(tx, check.orgId, check.membershipIds, 'shared'); // khoá thợ trước bước kiểm (T-I1)
     await assertNoOverlap(tx, check.orgId, check.membershipIds, check.block, check.excludeAppointmentId);
   }
   const write = async () => {
@@ -656,3 +594,6 @@ export async function cancelAppointmentsOfContractTx(
   }
   return { cancelled: toCancel.map((r) => r.id), blocking: [] };
 }
+
+// TẠM (đo trước khi sửa)
+export async function lockStaffSchedule(_tx: Prisma.TransactionClient, _o: string, _i: string[], _m: 'shared' | 'exclusive') {}

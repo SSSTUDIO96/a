@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { PaymentLedgerEntry } from '../../api/types';
 import { ledgerCsv } from './csv';
 import { convertPeriod, monthPeriod, parsePeriod, periodOptions, quarterPeriod, sixMonthsTo, yearPeriod } from './period';
-import { axisMax } from './RevenueChart';
+import { axisMax } from './chartScale';
 
 describe('kỳ báo cáo [from, to) giờ Việt Nam', () => {
   it('tháng, quý, năm: to = đầu kỳ sau', () => {

@@ -79,7 +79,7 @@ export function PayRateSheet({ orgId, slug, timezone, owner, canWrite, canAddTie
           <div key={i} className="st-pr" aria-hidden="true">
             <div className="st-pr__who st-pr__who--skel">
               <Skeleton circle width={28} height={28} />
-              <Skeleton height={12} />
+              <Skeleton height={12} width="auto" style={{ flex: '1 1 0', minWidth: 0 }} />
             </div>
             <Skeleton width={90} height={30} />
           </div>

@@ -76,8 +76,11 @@
   font-size: var(--fs-group); font-weight: 700;
   margin: 8px 0 0; padding-bottom: 6px; border-bottom: 1px solid var(--line);
 }
-.ui-sheet__body > .st-prof__img, .ui-sheet__body > .st-grp, .ui-sheet__body > .ui-row,
-.ui-sheet__body > .st-tiers-edit, .ui-sheet__body > .st-tedit { margin-left: 16px; margin-right: 16px; }
+.st-form-body { padding: 4px 16px 12px; }
+.st-form-body > .st-strip { margin: 8px 0; }
+/* Ngăn kéo điện thoại: nhãn 2 phần, ô 3 phần (ô 160px mặc định quá hẹp cho email). */
+.st-sheet-form .ui-row { grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); }
+.st-sheet-form .ui-row--stack { grid-template-columns: minmax(0, 1fr); }
 
 /* ---------- Hộp Bậc lương ---------- */
 .st-tiers-edit { list-style: none; margin: 4px 0 0; padding: 0; }
@@ -152,7 +155,8 @@
   .st-pr { grid-template-columns: minmax(0, 1fr); padding: 14px; }
   .st-pr__note { text-align: left; }
   .st-sheet__head { flex-wrap: wrap; align-items: flex-start; padding: 12px 14px; }
-  .st-sheet__foot { padding: 10px 14px; }
+  .st-sheet__foot { padding: 10px 14px; gap: 8px; }
+  .st-sheet__rule { flex: 1 1 110px; }
   .st-strip { margin: 10px 14px; }
   .st-sheet__ro .st-strip { margin: 10px 14px 0; }
   .st-search-wrap { padding: 12px 14px; }

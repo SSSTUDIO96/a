@@ -46,7 +46,7 @@ export function SearchBox({
   return (
     <div className={className ? `st-search ${className}` : 'st-search'}>
       <IconSearch />
-      <TextInput type="search" size={size} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} aria-label={label} />
+      <TextInput type="text" enterKeyHint="search" size={size} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} aria-label={label} />
     </div>
   );
 }
@@ -119,8 +119,9 @@ export function FormDialog({
           </span>
         }
         footer={footer}
+        className="st-sheet-form"
       >
-        {children}
+        <div className="st-form-body">{children}</div>
       </BottomSheet>
     );
   }

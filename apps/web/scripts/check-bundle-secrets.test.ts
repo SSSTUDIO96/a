@@ -64,7 +64,7 @@ const DIST_LA: Record<string, [string, RegExp]> = {
   'assets/b-base64.js': [`const k=atob('${Buffer.from(GOOGLE_2).toString('base64')}');`, /khoá Google API .*giải từ atob/],
   'assets/c-supabase-moi.js': [`const s='${SB_SECRET}';createClient(u,s)`, /khoá bí mật Supabase \(sb_secret_/],
   'assets/d-mapbox-secret.js': [`mapboxgl.accessToken='${MAPBOX_SECRET}';`, /thẻ bí mật Mapbox/],
-  'assets/e-twilio.js': [`const twilio={sid:'${TWILIO_SID}',token:'${TWILIO_TOKEN}'};`, /Twilio/],
+  'assets/e-twilio.js': [`const twilio={sid:'${TWILIO_SID}',token:'${TWILIO_TOKEN}'};`, /SID tài khoản Twilio[\s\S]*thẻ xác thực Twilio/],
   'assets/f-fromcharcode.js': [`const k=String.fromCharCode(${[...GOOGLE_2].map((c) => c.charCodeAt(0)).join(',')});`, /khoá Google API .*giải từ String\.fromCharCode/],
   'assets/g-template.js': ["const k=`AIza${'" + GOOGLE_2.slice(4) + "'}`;", /khoá Google API/],
   'assets/h-cong-chuoi.js': [`const k='AIza'+'${GOOGLE_2.slice(4)}';`, /khoá Google API/],

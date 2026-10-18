@@ -5,6 +5,10 @@ import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import request from 'supertest';
 import { getUsage } from '../src/lib/quota';
+import { contractRoutes } from '../src/modules/contracts/routes';
+import { buildGateFixture, printReport, runIsolationGate, type GateFixture, type GateOrg, type GateReport, type RefSamples, type Samples } from './gate';
+import { printPartialReport, runPartialPatchGate, type PartialReport, type PartialSamples } from './gate-partial';
+import { PARTIAL_SAMPLES, REF_SAMPLES, SAMPLES } from './gate-samples';
 import { addMember, bearer, createOrg, makeApp, makeDeps, registerUser, type App, type TestUser } from './helpers';
 
 const deps = makeDeps();
@@ -503,5 +507,162 @@ describe('sửa nháp không được hạ tổng xuống dưới số đã thu 
     expect((await db.contract.findUniqueOrThrow({ where: { id: c.id } })).total).toBe(1_000_000n);
     await request(app).patch(cUrl(A.orgId, `/${c.id}`)).set(bearer(A.owner)).send({ notes: 'Ghi chú' }).expect(200);
     await request(app).patch(cUrl(A.orgId, `/${c.id}`)).set(bearer(A.owner)).send({ lines: [{ kind: 'CUSTOM', name: 'Gói', unitPrice: 1_500_000, quantity: 1 }] }).expect(200);
+  });
+});
+
+// ---------- Cửa gác chạy trên contractRoutes (hợp đồng + mẫu điều khoản): mẫu ĐỀ XUẤT cho test/gate*.ts ----------
+// test/gate*.ts không thuộc thợ S3 → mẫu nằm ở đây, điều phối chép sang gate.ts / gate-samples.ts (xem báo cáo S3).
+// Hai lượt vì đường dẫn :contractId chỉ trỏ được MỘT hợp đồng: lượt 1 trên hợp đồng DỊCH VỤ của fixture (mọi đường),
+// lượt 2 trên một hợp đồng KHOÁ HỌC nháp (chỉ PATCH hợp đồng và thêm dòng — chỗ có trường lines[].courseClassId,
+// rulesTemplateId mà hợp đồng dịch vụ không nhận). Trường "chưa có mẫu" chỉ tính là vi phạm khi CẢ HAI lượt đều thiếu.
+const COURSE_RUN_KEYS = ['PATCH /orgs/:orgId/contracts/:contractId', 'POST /orgs/:orgId/contracts/:contractId/lines'];
+
+// ĐỀ XUẤT thêm vào SAMPLES (gate-samples.ts): thân hợp lệ cho đường mới có tham số id.
+const S3_SAMPLES: Samples = {
+  ...SAMPLES,
+  'PATCH /orgs/:orgId/contract-texts/:textId': () => ({ name: 'Đổi tên thử' }),
+};
+
+const customLine = { kind: 'CUSTOM', name: 'Giáo trình', unitPrice: 100_000, quantity: 1 };
+// ĐỀ XUẤT thay/thêm vào REF_SAMPLES (gate-samples.ts). Mẫu dịch vụ cũ giữ nguyên, thêm mẫu khoá học + trường mới.
+const S3_REF_SAMPLES: RefSamples = {
+  ...REF_SAMPLES,
+  'POST /orgs/:orgId/contracts/quote': [
+    (o) => ({ ...REF_SAMPLES['POST /orgs/:orgId/contracts/quote']![0]!(o), ownerMembershipId: o.ids.membershipId, termsTemplateId: o.ids.textId, excludeContractId: o.ids.contract2Id }),
+    (o) => ({
+      kind: 'COURSE',
+      customerId: o.ids.customerId,
+      ownerMembershipId: o.ids.membershipId,
+      termsTemplateId: o.ids.textId,
+      rulesTemplateId: o.ids.rulesTextId,
+      excludeContractId: o.ids.courseContractId,
+      lines: [{ kind: 'COURSE', courseClassId: o.ids.classId }, customLine],
+    }),
+  ],
+  'POST /orgs/:orgId/contracts': [
+    (o) => ({ ...REF_SAMPLES['POST /orgs/:orgId/contracts']![0]!(o), ownerMembershipId: o.ids.membershipId, termsTemplateId: o.ids.textId }),
+    (o) => ({
+      kind: 'COURSE',
+      customerId: o.ids.customerId,
+      ownerMembershipId: o.ids.membershipId,
+      termsTemplateId: o.ids.textId,
+      rulesTemplateId: o.ids.rulesTextId,
+      lines: [{ kind: 'COURSE', courseClassId: o.ids.classId }, customLine],
+    }),
+  ],
+  // Hợp đồng dịch vụ: termsTemplateId đo ở đây; rulesTemplateId + lines[].courseClassId đo ở lượt hợp đồng khoá học.
+  'PATCH /orgs/:orgId/contracts/:contractId': [...REF_SAMPLES['PATCH /orgs/:orgId/contracts/:contractId']!, (o) => ({ termsTemplateId: o.ids.textId })],
+};
+
+// Lượt 2 (đường dẫn trỏ hợp đồng KHOÁ HỌC nháp): trường của dòng khoá học và nội quy.
+const S3_COURSE_REF_SAMPLES: RefSamples = {
+  'POST /orgs/:orgId/contracts/:contractId/lines': [(o) => ({ kind: 'COURSE', courseClassId: o.ids.class2Id })],
+  'PATCH /orgs/:orgId/contracts/:contractId': [
+    (o) => ({ termsTemplateId: o.ids.textId, rulesTemplateId: o.ids.rulesTextId, lines: [{ kind: 'COURSE', courseClassId: o.ids.classId }, customLine] }),
+  ],
+};
+
+// ĐỀ XUẤT cho PARTIAL_SAMPLES (gate-samples.ts). Mẫu PATCH hợp đồng chạy trên hợp đồng khoá học nháp.
+const S3_PARTIAL_SAMPLES: PartialSamples = {
+  ...PARTIAL_SAMPLES,
+  'PATCH /orgs/:orgId/contracts/:contractId': {
+    full: (c) => ({
+      discount: 1000,
+      depositRequired: 20000,
+      eventDate: '2027-01-15T02:00:00.000Z',
+      notes: 'Ghi chú hợp đồng',
+      termsTemplateId: c.o.ids.textId,
+      rulesTemplateId: c.o.ids.rulesTextId,
+    }),
+    one: () => ({ notes: 'Ghi chú đổi' }),
+    skip: {
+      lines: 'gửi lines là THAY toàn bộ dòng (mã dòng mới) — không phải sửa một phần; cửa gác cách ly đã đo lines',
+      terms: 'loại trừ với termsTemplateId (gửi cả hai → 400); mẫu chung hiện hành đã đo terms trên hợp đồng dịch vụ',
+    },
+    derived: { termsTemplateVersion: 'phiên bản đi kèm mẫu đã chọn', rulesTemplateVersion: 'phiên bản đi kèm mẫu đã chọn' },
+  },
+  'PATCH /orgs/:orgId/contract-texts/:textId': {
+    full: () => ({ name: 'Mẫu đủ', body: 'Nội dung đủ', appliesTo: ['SERVICE', 'COURSE'], isDefault: true, isActive: true }),
+    one: () => ({ name: 'Mẫu đổi tên' }),
+  },
+};
+
+describe('cửa gác trên contractRoutes (mẫu đề xuất)', () => {
+  // Dùng chung mẫu sẵn có của gate-samples.ts cho các đường cũ.
+  let fx1: GateFixture;
+  let fx2: GateFixture;
+  let run1: GateReport;
+  let run2: GateReport;
+  let partial: PartialReport;
+
+  // Thêm vào fixture: tổ chức bật đào tạo, 1 khoá + 2 lớp, mẫu điều khoản (textId) + nội quy (rulesTextId),
+  // hợp đồng khoá học nháp (courseContractId, courseLineId).
+  async function extendGateOrg(o: GateOrg) {
+    await db.organization.update({ where: { id: o.orgId }, data: { kind: 'ACADEMY' } });
+    const co = await db.course.create({
+      data: { organizationId: o.orgId, code: `GAC-${randomUUID().slice(0, 4)}`, name: 'Khoá cửa gác', mode: 'MULTI_CLASS', tuitionFee: 5_000_000n, defaultCapacity: 10, createdById: o.owner.id },
+    });
+    const mk = async (name: string) =>
+      (
+        await db.courseClass.create({
+          data: { organizationId: o.orgId, courseId: co.id, name, startDate: new Date('2027-02-01'), endDate: new Date('2027-04-01'), weekdays: [3, 5], capacity: 10, createdById: o.owner.id },
+        })
+      ).id;
+    o.ids.classId = await mk('G1');
+    o.ids.class2Id = await mk('G2');
+    const text = async (body: object) => {
+      const r = await request(app).post(tUrl(o.orgId)).set(bearer(o.owner)).set('idempotency-key', idem()).send(body);
+      if (r.status !== 201) throw new Error(`Cửa gác: tạo mẫu ${r.status} ${JSON.stringify(r.body)}`);
+      return r.body.id as string;
+    };
+    o.ids.textId = await text({ kind: 'TERMS', appliesTo: [], name: 'Điều khoản cửa gác', body: 'Điều khoản mẫu' });
+    o.ids.rulesTextId = await text({ kind: 'RULES', appliesTo: ['COURSE'], name: 'Nội quy cửa gác', body: 'Nội quy mẫu' });
+    const c = await createContract(o.owner, o.orgId, { kind: 'COURSE', customerId: o.ids.customerId, lines: [{ kind: 'COURSE', courseClassId: o.ids.classId }] });
+    if (c.status !== 201) throw new Error(`Cửa gác: tạo hợp đồng khoá học ${c.status} ${JSON.stringify(c.body)}`);
+    o.ids.courseContractId = c.body.id;
+    o.ids.courseLineId = c.body.lines[0].id;
+  }
+
+  const onCourseContract = (o: GateOrg): GateOrg => ({ ...o, ids: { ...o.ids, contractId: o.ids.courseContractId!, lineId: o.ids.courseLineId! } });
+
+  beforeAll(async () => {
+    fx1 = await buildGateFixture(app);
+    await extendGateOrg(fx1.a);
+    await extendGateOrg(fx1.b);
+    fx2 = { a: onCourseContract(fx1.a), b: onCourseContract(fx1.b) };
+    // Sửa một phần chạy trên hợp đồng khoá học (đủ cả termsTemplateId lẫn rulesTemplateId).
+    partial = await runPartialPatchGate(app, db, contractRoutes, fx2, S3_PARTIAL_SAMPLES);
+    printPartialReport(' (hợp đồng S3)', partial);
+    run1 = await runIsolationGate(app, contractRoutes, fx1, S3_SAMPLES, S3_REF_SAMPLES);
+    printReport(' (hợp đồng S3 — lượt 1, hợp đồng dịch vụ)', run1);
+    const courseOnly = contractRoutes.filter((r) => COURSE_RUN_KEYS.includes(`${r.method.toUpperCase()} ${r.path}`));
+    run2 = await runIsolationGate(app, courseOnly, fx2, S3_SAMPLES, S3_COURSE_REF_SAMPLES);
+    printReport(' (hợp đồng S3 — lượt 2, hợp đồng khoá học)', run2);
+  }, 300_000);
+
+  it('cách ly: mọi phép đạt trên mọi đường hợp đồng + mẫu điều khoản (trường thiếu mẫu ở lượt này được lượt kia phủ)', () => {
+    const uncovered = (r: GateReport) => new Set(r.crossRef.violations.filter((v) => v.endsWith('chưa có mẫu tham chiếu chéo')));
+    const u1 = uncovered(run1);
+    const u2 = uncovered(run2);
+    const course = new Set(COURSE_RUN_KEYS);
+    for (const [name, c] of Object.entries(run1)) {
+      // Lượt 1 thiếu mẫu ở đường KHÔNG chạy lượt 2 → vi phạm; ở đường chạy lượt 2 → chỉ vi phạm nếu lượt 2 cũng thiếu.
+      const v = name === 'crossRef' ? c.violations.filter((x) => !u1.has(x) || !course.has(x.slice(0, x.indexOf(': trường'))) || u2.has(x)) : c.violations;
+      expect(v, `lượt 1 ${name}`).toEqual([]);
+    }
+    for (const [name, c] of Object.entries(run2)) {
+      const v = name === 'crossRef' ? c.violations.filter((x) => !u2.has(x) || u1.has(x)) : c.violations;
+      expect(v, `lượt 2 ${name}`).toEqual([]);
+    }
+    expect(run1.outsider.total).toBe(contractRoutes.length);
+    expect(contractRoutes).toHaveLength(11);
+    expect(run1.refBase.total).toBeGreaterThanOrEqual(8);
+    expect(run2.crossRef.passed).toBeGreaterThan(0);
+  });
+
+  it('sửa một phần: 2/2 đường PATCH (hợp đồng, mẫu điều khoản) giữ nguyên trường không gửi', () => {
+    expect(partial.partialStatic.violations).toEqual([]);
+    expect(partial.partialKeep.violations).toEqual([]);
+    expect(partial.covered).toBe(2);
   });
 });

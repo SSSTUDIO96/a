@@ -2,25 +2,15 @@ import { useState } from 'react';
 import type { RevenueMonthRow } from '../../api/types';
 import { Card, SkeletonText } from '../../ui';
 import { money } from '../payments/money';
+import { axisMax, MILLION } from './chartScale';
 
 // Biểu đồ cột đôi "Doanh số và thực thu 6 tháng" (bản vẽ C2 mục 3.4). Một trục, đơn vị triệu đồng.
 // Màu: Doanh số --kind-bride (#A63D62), Thực thu --kind-event (#5B45A0) — đã chạy bộ kiểm màu (mù màu ΔE 11,8: đạt).
 // Rê chuột / tiêu điểm / chạm vào một tháng → dòng đọc số ở góc phải. Bảng ẩn bên dưới là bản xem dạng bảng (số đủ từng đồng).
 
-const MILLION = 1_000_000;
-
 function trieu(v: number | null): string {
   if (v === null) return '—';
   return (v / MILLION).toLocaleString('vi-VN', { maximumFractionDigits: 1 });
-}
-
-/** Trục: 4 vạch đều, bước "đẹp" (1 · 2 · 2,5 · 5 × 10ⁿ triệu). */
-export function axisMax(maxValue: number): { max: number; step: number } {
-  const target = Math.max(maxValue, 0) / MILLION / 4;
-  if (target <= 0) return { max: 4 * MILLION, step: MILLION };
-  const pow = 10 ** Math.floor(Math.log10(target));
-  const step = [1, 2, 2.5, 5, 10].map((k) => k * pow).find((s) => s >= target) ?? 10 * pow;
-  return { max: step * 4 * MILLION, step: step * MILLION };
 }
 
 const monthNo = (period: string) => Number(period.slice(5, 7));

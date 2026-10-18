@@ -55,8 +55,8 @@ export function LedgerTable({ orgSlug, items, page, pageSize, total, onPage }: L
                   <td className="rp-t-hide" data-l="Cách trả">
                     {PAYMENT_METHOD_LABELS[p.method]}
                   </td>
-                  <td className={voided ? 'rp-r rp-num rp-strike' : 'rp-r rp-num'} data-l="Số tiền">
-                    {paymentAmount(p.kind, p.amount)}
+                  <td className="rp-r rp-num" data-l="Số tiền">
+                    <span className={voided ? 'rp-strike' : undefined}>{paymentAmount(p.kind, p.amount)}</span>
                   </td>
                 </tr>
               );

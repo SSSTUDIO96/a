@@ -61,8 +61,6 @@
 .kh-ap__title { font-weight: 600; overflow-wrap: anywhere; }
 .kh-ap__sub { font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-/* ---------- Hộp Khách mới ---------- */
-.ui-sheet__body > .kh-form { padding: 0 16px; }
 
 /* ---------- Máy tính bảng ---------- */
 @media (max-width: 1180px) {
@@ -80,4 +78,8 @@
   .kh-ap__tag { grid-column: 2; }
   .kh-none { padding: 12px 14px; }
   .kh-ct-all { padding: 10px 14px; }
+  /* Sửa tại chỗ trên điện thoại: nhãn trên, ô dưới, rộng hết. */
+  .kh-edit .ui-row { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  .kh-edit .ui-row__ctl { justify-content: stretch; }
+  .kh-edit .ui-card__body { padding: 8px 14px; }
 }

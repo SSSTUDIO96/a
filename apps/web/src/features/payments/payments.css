@@ -12,7 +12,7 @@
 .pm-queue__tools { display: flex; flex-direction: column; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--line-2); }
 .pm-queue__tools .ui-seg { align-self: flex-start; }
 .pm-queue__more { margin: 0; padding: 8px 16px 10px; font-size: 12.5px; color: var(--muted); border-bottom: 1px solid var(--line-2); }
-.pm-queue .ui-empty { padding: 14px 16px; }
+.pm-queue .ui-card__body > .ui-empty { padding: 14px 16px; }
 
 /* ----- Cột phải ----- */
 .pm-panel { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
@@ -50,7 +50,7 @@
 .pm-dot--void .pm-dot { border-color: var(--faint); background: none; }
 .pm-dot--void .pm-fx { color: var(--faint); }
 .pm-tag-wrap { white-space: normal; overflow-wrap: anywhere; margin-top: 4px; display: inline-block; }
-.pm-empty { padding: 14px 18px; flex-wrap: wrap; }
+.ui-card__body > .ui-empty.pm-empty { padding: 14px 18px; flex-wrap: wrap; }
 
 /* Dải báo */
 .pm-band {
@@ -127,7 +127,7 @@
   .pm-ph-sub { display: none; }
   .pm-item { padding: 12px 14px; }
   .pm-band-wrap { padding: 10px 14px 0; }
-  .pm-empty { padding: 14px; }
+  .ui-card__body > .ui-empty.pm-empty { padding: 14px; }
   /* Cách trả: nhãn trên, nút xuống dòng dưới, rộng hết */
   .pm-row-wide { grid-template-columns: minmax(0, 1fr); gap: 8px; }
   .pm-row-wide .ui-row__ctl { justify-content: stretch; }

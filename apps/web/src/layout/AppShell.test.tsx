@@ -227,7 +227,8 @@ describe('menu con theo quyền (C2 mục 1.1, 3.1, 4.1)', () => {
     const router = renderAt('/hoa-dao/cai-dat');
     await waitFor(() => expect(router.state.location.pathname).toBe('/hoa-dao/cai-dat/thuong-hieu'));
     await waitFor(async () => expect(await subMenuLinks()).toEqual(['Hồ sơ thương hiệu']));
-    expect(activeMenu()).toEqual(['Cài đặt', 'Hồ sơ thương hiệu']);
+    // Màn thật (không còn "Đang dựng") cần vài chục ms mới hiện trong jsdom — chờ, đừng đọc ngay.
+    await waitFor(() => expect(activeMenu()).toEqual(['Cài đặt', 'Hồ sơ thương hiệu']));
   });
 
   it('ở Bảng giá: hiện menu con dưới mục đang chọn', async () => {
