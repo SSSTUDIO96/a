@@ -441,6 +441,13 @@ describe('Sửa một phần: trường không gửi giữ nguyên', () => {
     const res = await call(ownerA, 'patch', url(orgA, `/classes/${k.body.id}`), { note: 'mới' });
     expect(res.status).toBe(200);
     expect({ ...res.body, note: 'cũ' }).toEqual(k.body);
+    // Gửi một nửa cặp giờ: nửa kia lấy từ bản đang lưu (không bị coi là bỏ trống).
+    const half = await call(ownerA, 'patch', url(orgA, `/classes/${k.body.id}`), { startTime: '17:30' });
+    expect(half.status).toBe(200);
+    expect(half.body).toMatchObject({ startTime: '17:30', endTime: '21:30', capacity: 7, note: 'mới' });
+    const late = await call(ownerA, 'patch', url(orgA, `/classes/${k.body.id}`), { startTime: '22:00' });
+    expect(late.status).toBe(400);
+    expect(late.body.error.details.issues.map((i: { path: string }) => i.path)).toContain('endTime');
   });
 
   it('PATCH khoá Một lớp đổi tên → tên lớp đi theo tên khoá', async () => {

@@ -40,6 +40,8 @@ export interface PartialSample {
   derived?: Record<string, string>;
   // Ai gọi: mặc định chủ tổ chức; 'admin' cho đường quản trị nền tảng.
   as?: 'owner' | 'admin';
+  // Mã cho tham số đường dẫn mà fixture chưa có (module mới tự tạo bản ghi trong mẫu thì trả mã ở đây).
+  ids?: (c: PartialCtx) => Record<string, string>;
 }
 
 export type PartialSamples = Record<string, PartialSample>;
@@ -159,7 +161,12 @@ export async function runPartialPatchGate(
       continue;
     }
     const who = s.as === 'admin' ? admin : fx.b.owner;
-    const path = fillPath(r, ids);
+    const missingParam = [...r.path.matchAll(/:([A-Za-z]+)/g)].map((m) => m[1] ?? '').find((n) => !ids[n as keyof typeof ids] && !s.ids?.(ctx)[n]);
+    if (missingParam) {
+      record(report.partialKeep, false, `${k}: chưa có giá trị cho :${missingParam} (thêm vào buildGateFixture hoặc mẫu ids)`);
+      continue;
+    }
+    const path = fillPath(r, { ...ids, ...(s.ids?.(ctx) ?? {}) });
     const r1 = await request(app).patch(path).set(bearer(who)).send(full);
     if (r1.status !== 200) {
       record(report.partialKeep, false, `${k}: thân đầy đủ → ${r1.status} ${JSON.stringify(r1.body).slice(0, 200)}`);

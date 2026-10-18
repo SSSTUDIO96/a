@@ -188,8 +188,12 @@ function namedCheckViolation(err: unknown): { constraint: string; message: strin
   return hit ? { constraint: hit.constraint, message } : null;
 }
 
+export const CONCURRENT_WRITE_MESSAGE = 'Có thao tác khác đang ghi cùng lúc — thử lại.';
+
 // Đổi lỗi database đã biết thành lỗi có nghĩa. Lỗi lạ trả null để bộ bắt lỗi ghi log và trả 500.
 export function databaseError(err: unknown): AppError | null {
+  // Prisma gói khoá chết / xung đột ghi trong transaction tương tác thành P2034 (không kèm mã Postgres).
+  if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2034') return new AppError('CONFLICT', CONCURRENT_WRITE_MESSAGE);
   switch (pgErrorCode(err)) {
     case '23P01':
       if (pgExclusionConstraint(err) === 'travel_tiers_no_overlap') {
@@ -208,6 +212,10 @@ export function databaseError(err: unknown): AppError | null {
     }
     case '23503':
       return new AppError('VALIDATION_FAILED', 'Dữ liệu tham chiếu tới bản ghi không tồn tại hoặc không hợp lệ');
+    // Khoá chết (40P01) / lỗi tuần tự hoá (40001): hai thao tác ghi đụng nhau — lưới chung, không lộ câu SQL.
+    case '40P01':
+    case '40001':
+      return new AppError('CONFLICT', CONCURRENT_WRITE_MESSAGE);
     case '22021':
     case '22P05':
       return new AppError('VALIDATION_FAILED', 'Nội dung chứa ký tự không hợp lệ');

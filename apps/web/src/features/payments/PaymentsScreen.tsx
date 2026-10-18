@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useBreakpoint } from '../../layout/useBreakpoint';
 import { PageHeader } from '../../layout/PageHeader';
 import { Card, EmptyState, ListDetail } from '../../ui';
@@ -25,17 +25,9 @@ export function PaymentsScreen({ orgId, orgSlug, contractId, access }: PaymentsS
   const listPath = `/${orgSlug}/thu-tien`;
 
   const shownId = contractId ?? (bp === 'phone' ? null : firstId);
-  const title = useMemo(
-    () =>
-      bp === 'phone' ? (
-        contractId && code ? code : 'Thu tiền'
-      ) : (
-        <>
-          Thu tiền <span className="pm-ph-sub">hợp đồng dịch vụ makeup</span>
-        </>
-      ),
-    [bp, contractId, code],
-  );
+  // Tiêu đề = tên mục con điều hướng ("Thu tiền"); điện thoại ở màn con: mã hợp đồng (bản mẫu #a-ct). Chữ phụ nằm
+  // trong vùng nội dung của màn, không đè tiêu đề khung.
+  const title = bp === 'phone' && contractId && code ? code : 'Thu tiền';
 
   const list = access.contractsRead ? (
     <ContractQueue orgId={orgId} orgSlug={orgSlug} selectedId={shownId} onFirst={onFirst} />
@@ -63,7 +55,7 @@ export function PaymentsScreen({ orgId, orgSlug, contractId, access }: PaymentsS
 
   return (
     <div className="pm-page">
-      <PageHeader title={title} backTo={contractId ? listPath : undefined} />
+      <PageHeader title={title} backTo={contractId ? listPath : undefined} actions={<span className="pm-ph-sub">hợp đồng dịch vụ makeup</span>} />
       <ListDetail list={list} detail={detail} mobileView={contractId ? 'detail' : 'list'} listLabel="Hợp đồng cần thu" detailLabel="Thu tiền hợp đồng" />
     </div>
   );

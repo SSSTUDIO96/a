@@ -63,4 +63,7 @@ Anh Chiến nhắn lúc khoảng 15:13 UTC ngày 18/10/2026: *"Tự làm vào ch
 | 20:32 | Thu cọc trước khi chốt — ngày thu | Không cho ghi ngày thu trước ngày lập hợp đồng quá 1 ngày; lùi ngày có nhật ký | Kỳ đã chốt không bị đổi số âm thầm | Được |
 | 20:32 | Trang công khai khi thuê bao hết hạn | Quá thời gian ân hạn hoặc đã huỷ → ẩn trang (như chưa xuất bản) | Studio không trả tiền thì không quảng bá | Được |
 
+| 21:30 | Khoá tổ chức nghĩa là gì | Giữ như máy chủ đang làm: **khoá = chặn hẳn** (thành viên không vào được). **Hết hạn quá ân hạn = chỉ đọc.** Đầu bài điều phối giao thợ màn quản trị ghi nhầm "khoá → chỉ đọc"; thợ phát hiện và làm đúng máy chủ | Hai trạng thái khác nhau, hai cách xử lý | Được (anh quyết, việc tồn 8) |
+| 21:31 | Gom việc tồn | Tạo `docs/VIEC-TON.md`: mọi việc đã nêu chưa làm, tách mục "cần anh quyết" | Không để việc rơi giữa các báo cáo | — |
+
 **Cần anh xem lại nhất:** (1) cách anh vào thao tác thực tế (dòng 19:44): chạy trên máy anh hay cho phép đưa lên mạng; (2) phân quyền theo vai trò mẫu (dòng 15:16) — studio anh có thể muốn thợ chính thấy cả lịch của đội.

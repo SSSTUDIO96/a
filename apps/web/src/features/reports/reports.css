@@ -3,7 +3,10 @@
  * Chỉ dùng token ở src/styles/tokens.css. Điểm gãy: máy tính bảng ≤ 1180px, điện thoại ≤ 640px.
  */
 .rp-page { min-width: 0; }
-.rp-ph-sub { font-size: 13.5px; font-weight: 400; color: var(--muted); margin-left: 8px; }
+.rp-ph-sub { font-size: 13.5px; font-weight: 400; color: var(--muted); }
+/* Chữ phụ đứng ngay sau tiêu đề trang; nút (Tải CSV) vẫn ở bên phải. */
+.sh-ph:has(> .rp-ph-sub) > h1 { order: -2; }
+.sh-ph > .rp-ph-sub { order: -1; margin-left: -2px; }
 .rp-phone-actions { display: none; }
 .rp-ld > .ui-ld__detail { gap: 16px; }
 

@@ -183,3 +183,62 @@ describe('hợp đồng trả ảnh thợ qua URL ký có hạn', () => {
     await expectStaffAvatars('xem lại', detail.body);
   });
 });
+
+// K-c (biên bản đợt sửa 1): ảnh đại diện thợ trỏ tới tệp ĐÃ XOÁ không được hiện ở BẤT KỲ cửa nào trả ảnh thợ.
+// Trước khi xoá, mọi cửa phải có URL ký (để chắc bài đo được); sau khi xoá: không cửa nào còn URL đọc tệp.
+describe('K-c — tệp ảnh đại diện đã xoá → avatarUrl null ở mọi cửa', () => {
+  it('danh sách thợ, sửa hồ sơ thợ, bảng tiền công, mức rảnh, xem trước hợp đồng, tạo/xem lịch', async () => {
+    const owner = await registerUser(app, 'chu-anh-kc');
+    const org = await createOrg(app, owner, 'anh-kc');
+    const m = await addMember(app, owner, org, await registerUser(app, 'tho-anh-kc'), ['artist']);
+    const fileId = await upload(org, owner);
+    const tier = await request(app).post(`/api/v1/orgs/${org}/staff-tiers`).set(bearer(owner)).set('idempotency-key', randomUUID()).send({ name: 'Bậc KC' }).expect(201);
+    await request(app).patch(`/api/v1/orgs/${org}/staff/${m}`).set(bearer(owner)).send({ avatarFileId: fileId, tierId: tier.body.id }).expect(200);
+    const svc = await request(app)
+      .post(`/api/v1/orgs/${org}/services`)
+      .set(bearer(owner))
+      .set('idempotency-key', randomUUID())
+      .send({ code: `KC${randomUUID().slice(0, 4)}`, name: 'Makeup KC', durationMinutes: 60, listPrice: 500_000 })
+      .expect(201);
+    const subjectId = (await deps.db.makeupSubject.findFirstOrThrow({ where: { organizationId: org } })).id;
+    const customerId = (await deps.db.customer.create({ data: { organizationId: org, fullName: 'Khách KC' } })).id;
+    const appt = await request(app)
+      .post(`/api/v1/orgs/${org}/appointments`)
+      .set(bearer(owner))
+      .set('idempotency-key', randomUUID())
+      .send({ customerId, startsAt: '2027-07-01T01:00:00.000Z', endsAt: '2027-07-01T02:00:00.000Z', status: 'DRAFT', staff: [{ membershipId: m, role: 'PRIMARY' }] })
+      .expect(201);
+    const doors: [string, () => Promise<request.Response>][] = [
+      ['danh sách thợ', () => request(app).get(`/api/v1/orgs/${org}/staff`).set(bearer(owner))],
+      ['sửa hồ sơ thợ', () => request(app).patch(`/api/v1/orgs/${org}/staff/${m}`).set(bearer(owner)).send({ displayName: `Thợ KC ${randomUUID().slice(0, 4)}` })],
+      ['bảng tiền công', () => request(app).get(`/api/v1/orgs/${org}/services/${svc.body.id}/pay-rates`).set(bearer(owner))],
+      ['mức rảnh', () => request(app).get(`/api/v1/orgs/${org}/staff/availability`).query({ startsAt: '2027-07-02T01:00:00.000Z', endsAt: '2027-07-02T02:00:00.000Z', membershipIds: m }).set(bearer(owner))],
+      [
+        'xem trước hợp đồng',
+        () =>
+          request(app)
+            .post(`/api/v1/orgs/${org}/contracts/quote`)
+            .set(bearer(owner))
+            .send({ customerId, lines: [{ kind: 'SERVICE', serviceId: svc.body.id, subjectId, quantity: 1, locationType: 'STUDIO', scheduledStart: '2027-07-03T01:00:00Z', scheduledEnd: '2027-07-03T02:00:00Z', staff: [{ membershipId: m, role: 'PRIMARY' }] }] }),
+      ],
+      ['xem lịch', () => request(app).get(`/api/v1/orgs/${org}/appointments/${appt.body.id}`).set(bearer(owner))],
+    ];
+    const hasSigned = (r: request.Response) => JSON.stringify(r.body).includes('/api/v1/files/raw/');
+    const before: string[] = [];
+    for (const [label, call] of doors) {
+      const r = await call();
+      expect(r.status, `${label}: ${JSON.stringify(r.body).slice(0, 200)}`).toBe(200);
+      if (hasSigned(r)) before.push(label);
+    }
+    await request(app).delete(`/api/v1/orgs/${org}/files/${fileId}`).set(bearer(owner)).expect(204);
+    const after: string[] = [];
+    for (const [label, call] of doors) {
+      const r = await call();
+      expect(r.status, label).toBe(200);
+      if (hasSigned(r)) after.push(label);
+    }
+    console.log(`[K-c] cửa có ảnh trước khi xoá: ${before.length}/${doors.length}; sau khi xoá còn hiện: ${after.length}/${doors.length} ${after.join(', ')}`);
+    expect(before.length).toBe(doors.length);
+    expect(after).toEqual([]);
+  });
+});

@@ -52,14 +52,6 @@ export function RevenueScreen({ orgId, orgSlug }: { orgId: string; orgSlug: stri
     return () => controller.abort();
   }, [orgId, chartRange, attempt]);
 
-  const title = useMemo(
-    () => (
-      <>
-        Doanh thu <span className="rp-ph-sub">{period.label} · mốc tính: ngày xác nhận hợp đồng</span>
-      </>
-    ),
-    [period.label],
-  );
 
   let detail;
   if (report.status === 'error' && errorKind(report.error) === 'forbidden') {
@@ -128,7 +120,7 @@ export function RevenueScreen({ orgId, orgSlug }: { orgId: string; orgSlug: stri
 
   return (
     <div className="rp-page">
-      <PageHeader title={title} />
+      <PageHeader title="Doanh thu" actions={<span className="rp-ph-sub">{period.label} · mốc tính: ngày xác nhận hợp đồng</span>} />
       <ListDetail
         variant="narrow"
         className="rp-ld"

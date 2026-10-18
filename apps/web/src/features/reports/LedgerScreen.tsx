@@ -95,14 +95,6 @@ export function LedgerScreen({ orgId, orgSlug }: { orgId: string; orgSlug: strin
     }
   }
 
-  const title = useMemo(
-    () => (
-      <>
-        Sổ thu <span className="rp-ph-sub">{period.label} · theo ngày thu</span>
-      </>
-    ),
-    [period.label],
-  );
   const csvButton = (
     <Button onClick={() => void exportCsv()} loading={csvBusy} disabled={state.status !== 'ready'}>
       Tải CSV
@@ -187,7 +179,15 @@ export function LedgerScreen({ orgId, orgSlug }: { orgId: string; orgSlug: strin
 
   return (
     <div className="rp-page">
-      <PageHeader title={title} actions={csvButton} />
+      <PageHeader
+        title="Sổ thu"
+        actions={
+          <>
+            <span className="rp-ph-sub">{period.label} · theo ngày thu</span>
+            {csvButton}
+          </>
+        }
+      />
       <div className="rp-phone-actions">{csvButton}</div>
       <ListDetail variant="narrow" className="rp-ld" list={filters} detail={detail} listLabel="Bộ lọc" detailLabel="Sổ thu" />
     </div>

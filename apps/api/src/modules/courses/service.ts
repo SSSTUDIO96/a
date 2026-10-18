@@ -107,7 +107,7 @@ async function assertGroup(tx: Tx, orgId: string, groupId: string): Promise<void
 }
 
 async function assertInstructor(tx: Tx, orgId: string, membershipId: string, path: string): Promise<void> {
-  const m = await tx.membership.findFirst({ where: { id: membershipId }, select: { status: true } });
+  const m = await tx.membership.findFirst({ where: { id: membershipId, organizationId: orgId }, select: { status: true } });
   if (!m) throw notFound.instructor();
   if (m.status !== 'ACTIVE') throw fieldError(path, 'Giảng viên không còn hoạt động trong tổ chức');
 }
@@ -597,8 +597,8 @@ export async function updateClass(tx: Tx, a: Actor, classId: string, body: Updat
     {
       startDate: body.startDate ?? cur.startDate,
       endDate: body.endDate ?? cur.endDate,
-      startTime: body.startTime === undefined ? cur.startTime : body.startTime,
-      endTime: body.endTime === undefined ? cur.endTime : body.endTime,
+      startTime: body.startTime ?? null,
+      endTime: body.endTime ?? null,
     },
     '',
   );
