@@ -97,6 +97,29 @@ async function checkOwner(db: Tx, orgId: string, membershipId: string): Promise<
   return m.id;
 }
 
+// Đổi khách của hợp đồng NHÁP. Khách phải thuộc tổ chức: mã của tổ chức khác trả ĐÚNG lời như mã bịa (404, không lộ
+// "tổ chức kia có khách này"). Trả null khi không đổi gì (gửi lại đúng khách hiện tại).
+// Lịch (chưa huỷ) hoặc thẻ thiết kế (chưa xoá) đang gắn hợp đồng đã CHÉP khách cũ (appointments.customer_id,
+// design_cards.customer_id + bản chụp tên khách) → 409 CUSTOMER_IN_USE kèm số lượng, không đổi lệch nửa vời; huỷ lịch /
+// xoá thẻ trước rồi đổi khách. Phiếu thu không giữ khách (đi theo hợp đồng) nên không chặn.
+async function checkCustomerChange(db: Tx, orgId: string, c: { id: string; customerId: string }, customerId: string): Promise<string | null> {
+  const found = await db.customer.findFirst({ where: { id: customerId, organizationId: orgId }, select: { id: true } });
+  if (!found) throw new AppError('NOT_FOUND', 'Không tìm thấy khách hàng');
+  if (found.id === c.customerId) return null;
+  const [appointments, designCards] = await Promise.all([
+    db.appointment.count({ where: { organizationId: orgId, contractId: c.id, status: { not: 'CANCELLED' } } }),
+    db.designCard.count({ where: { organizationId: orgId, contractId: c.id, deletedAt: null } }),
+  ]);
+  if (appointments > 0 || designCards > 0) {
+    throw new AppError(
+      'CONFLICT',
+      'Hợp đồng đã có lịch hoặc thẻ thiết kế mang tên khách hiện tại — huỷ lịch / xoá thẻ trước khi đổi khách',
+      { reason: 'CUSTOMER_IN_USE', appointments, designCards },
+    );
+  }
+  return found.id;
+}
+
 // Mẫu điều khoản / nội quy chọn cho hợp đồng nháp: lưu id + phiên bản lúc chọn; lúc xác nhận chụp bản mới nhất.
 async function chooseTexts(
   db: Tx,
@@ -445,6 +468,7 @@ export const contractRoutes: AnyRoute[] = [
           total: vnd(c.total, 'tổng'),
           depositRequired: vnd(c.depositRequired, 'tiền cọc'),
           eventDate: c.eventDate?.toISOString() ?? null,
+          customerId: c.customerId,
         };
         const textChanges = {
           ...(body.notes !== undefined ? { notes: body.notes } : {}),
@@ -452,8 +476,9 @@ export const contractRoutes: AnyRoute[] = [
         };
         let nextMoney: { subtotal: Vnd; discount: Vnd; total: Vnd; depositRequired: Vnd } | null = null;
         let textChoice: Awaited<ReturnType<typeof chooseTexts>> = {};
+        let newCustomerId: string | null = null;
         if (c.status === 'CONFIRMED') {
-          const others = (['lines', 'discount', 'depositRequired', 'eventDate', 'terms', 'termsTemplateId', 'rulesTemplateId'] as const).filter(
+          const others = (['customerId', 'lines', 'discount', 'depositRequired', 'eventDate', 'terms', 'termsTemplateId', 'rulesTemplateId'] as const).filter(
             (k) => body[k] !== undefined,
           );
           if (others.length > 0) {
@@ -464,6 +489,7 @@ export const contractRoutes: AnyRoute[] = [
             );
           }
         } else {
+          if (body.customerId !== undefined) newCustomerId = await checkCustomerChange(tx, o.id, c, body.customerId);
           textChoice = await chooseTexts(tx, o.id, c.kind, body);
           // Thao tác sau thắng: chọn mẫu điều khoản thì bỏ lời tự nhập; tự nhập điều khoản thì bỏ mẫu đã chọn.
           if (typeof body.termsTemplateId === 'string' && body.terms === undefined) Object.assign(textChanges, { terms: null });
@@ -509,6 +535,7 @@ export const contractRoutes: AnyRoute[] = [
           where: { id: c.id },
           data: {
             updatedAt: nextVersion(c),
+            ...(newCustomerId ? { customerId: newCustomerId } : {}),
             ...textChanges,
             ...textChoice,
             ...(body.eventDate !== undefined ? { eventDate: body.eventDate === null ? null : new Date(body.eventDate) } : {}),
@@ -530,7 +557,7 @@ export const contractRoutes: AnyRoute[] = [
           entityId: c.id,
           data: {
             before,
-            after: { ...nextMoney, eventDate: body.eventDate, ...textChanges, ...textChoice },
+            after: { ...nextMoney, eventDate: body.eventDate, ...(newCustomerId ? { customerId: newCustomerId } : {}), ...textChanges, ...textChoice },
             linesReplaced: body.lines !== undefined,
           },
           requestId,

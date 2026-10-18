@@ -97,7 +97,11 @@ export function errorHandler(deps: Deps) {
     } else if (databaseError(err)) {
       appErr = databaseError(err) ?? new AppError('INTERNAL', '');
       // Ràng buộc database phải bắt được lỗi thì máy chủ đã để lọt dữ liệu sai — ghi lại để sửa ở khâu trước.
-      if (appErr.code === 'VALIDATION_FAILED') deps.logger.warn({ requestId, path: req.path, pg: pgErrorCode(err) }, 'Database chặn dữ liệu sai');
+      if (appErr.code === 'VALIDATION_FAILED') {
+        // Tên ràng buộc chỉ vào log cho người vận hành (không vào phản hồi).
+        const prisma = err instanceof Prisma.PrismaClientKnownRequestError ? { prisma: err.code, meta: err.meta } : {};
+        deps.logger.warn({ requestId, path: req.path, pg: pgErrorCode(err), ...prisma }, 'Database chặn dữ liệu sai');
+      }
       if (isStaffOverlapViolation(err)) deps.logger.warn({ requestId, path: req.path }, 'Trùng lịch lọt tới lưới cuối: đường ghi chưa bọc guardOverlap');
     } else if (bodyErrorMessage(err)) {
       appErr = new AppError('VALIDATION_FAILED', bodyErrorMessage(err) ?? '');
@@ -190,10 +194,22 @@ function namedCheckViolation(err: unknown): { constraint: string; message: strin
 
 export const CONCURRENT_WRITE_MESSAGE = 'Có thao tác khác đang ghi cùng lúc — thử lại.';
 
+// Vi phạm khoá ngoại: bước kiểm của máy chủ bỏ sót một mã tham chiếu (mã bịa, mã của tổ chức khác — khoá ngoại kép
+// (id, organization_id)) và database chặn. Prisma 6.19 báo theo HAI dạng: qua create/update/delete của client là
+// PrismaClientKnownRequestError P2003 (KHÔNG có mã Postgres — pgErrorCode trả null, nên trước đây rơi xuống 500);
+// qua SQL thô / lúc lưu transaction là mã Postgres 23503. Cả hai → 400 lời chung, không kèm tên bảng / tên ràng buộc.
+export const FOREIGN_KEY_MESSAGE = 'Không tìm thấy dữ liệu liên quan';
+
+export function isForeignKeyViolation(err: unknown): boolean {
+  if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2003') return true;
+  return pgErrorCode(err) === '23503';
+}
+
 // Đổi lỗi database đã biết thành lỗi có nghĩa. Lỗi lạ trả null để bộ bắt lỗi ghi log và trả 500.
 export function databaseError(err: unknown): AppError | null {
   // Prisma gói khoá chết / xung đột ghi trong transaction tương tác thành P2034 (không kèm mã Postgres).
   if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2034') return new AppError('CONFLICT', CONCURRENT_WRITE_MESSAGE);
+  if (isForeignKeyViolation(err)) return new AppError('VALIDATION_FAILED', FOREIGN_KEY_MESSAGE);
   switch (pgErrorCode(err)) {
     case '23P01':
       if (pgExclusionConstraint(err) === 'travel_tiers_no_overlap') {
@@ -210,8 +226,6 @@ export function databaseError(err: unknown): AppError | null {
       if (named) return new AppError('CONFLICT', named.message, { constraint: named.constraint });
       return new AppError('VALIDATION_FAILED', 'Dữ liệu vi phạm ràng buộc của hệ thống');
     }
-    case '23503':
-      return new AppError('VALIDATION_FAILED', 'Dữ liệu tham chiếu tới bản ghi không tồn tại hoặc không hợp lệ');
     // Khoá chết (40P01) / lỗi tuần tự hoá (40001): hai thao tác ghi đụng nhau — lưới chung, không lộ câu SQL.
     case '40P01':
     case '40001':

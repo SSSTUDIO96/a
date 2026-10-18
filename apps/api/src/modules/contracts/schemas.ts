@@ -121,6 +121,9 @@ export const ContractPatchSchema = strict({
   // BẮT BUỘC: updatedAt của bản hợp đồng máy khách đang sửa (lấy từ phản hồi gần nhất). Lệch bản hiện hành → 409
   // (biên bản nghiệm thu web 2, T2: hai thẻ cùng sửa, thẻ sau xoá im lặng giảm giá của thẻ trước).
   expectedUpdatedAt: DateTime,
+  // Đổi khách khi hợp đồng còn NHÁP (phiếu vướng của thợ web T). Khách phải thuộc tổ chức — mã của tổ chức khác trả đúng
+  // lời như mã bịa (404). Hợp đồng đã xác nhận → 409 (database cũng chặn: trigger contracts_locked).
+  customerId: z.uuid().optional(),
   lines: Lines.optional(),
   discount: Money.optional(),
   depositRequired: Money.optional(),

@@ -150,6 +150,8 @@ export const REF_SAMPLES: RefSamples = {
   'PATCH /orgs/:orgId/contracts/:contractId': [
     async (o, req) => ({ expectedUpdatedAt: await req.currentVersion(), lines: [packageLine(o), serviceLine(o)] }),
     async (o, req) => ({ expectedUpdatedAt: await req.currentVersion(), termsTemplateId: o.ids.textId }),
+    // Đổi khách của hợp đồng nháp (thợ U): mẫu gốc gửi lại đúng khách hiện tại; khách của A / mã bịa → 404 giống hệt.
+    async (o, req) => ({ expectedUpdatedAt: await req.currentVersion(), customerId: o.ids.customerId }),
   ],
   'POST /orgs/:orgId/contracts/:contractId/lines': [packageLine, serviceLine],
   'GET /orgs/:orgId/staff': [(o) => ({ tierId: o.ids.tierId })],
@@ -333,6 +335,9 @@ export const PARTIAL_SAMPLES: PartialSamples = {
   'PATCH /orgs/:orgId/contracts/:contractId': {
     full: async (c, req) => ({
       expectedUpdatedAt: await req.currentVersion(),
+      // Khách hiện tại của hợp đồng (fixture chỉ có một khách mỗi tổ chức; hợp đồng khoá học mẫu có thẻ thiết kế nên đổi
+      // sang khách khác bị 409 CUSTOMER_IN_USE) — vẫn đo được "gửi customerId không làm đổi trường khác".
+      customerId: c.o.ids.customerId,
       discount: 1000,
       depositRequired: 20000,
       eventDate: '2027-01-15T02:00:00.000Z',
