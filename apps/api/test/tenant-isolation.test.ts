@@ -4,7 +4,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { ALL_ROUTES } from '../src/app';
 import { buildGateFixture, printReport, runIsolationGate, type GateReport } from './gate';
-import { REF_SAMPLES, SAMPLES } from './gate-samples';
+import { REF_SAMPLES, REF_VARIANTS, SAMPLES } from './gate-samples';
 import { makeApp, makeDeps } from './helpers';
 
 const deps = makeDeps();
@@ -13,8 +13,8 @@ let report: GateReport;
 
 beforeAll(async () => {
   const app = makeApp(deps);
-  const fx = await buildGateFixture(app);
-  report = await runIsolationGate(app, ALL_ROUTES, fx, SAMPLES, REF_SAMPLES);
+  const fx = await buildGateFixture(app, deps.db);
+  report = await runIsolationGate(app, ALL_ROUTES, fx, SAMPLES, REF_SAMPLES, REF_VARIANTS);
   printReport('', report);
 });
 

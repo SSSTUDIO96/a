@@ -44,6 +44,27 @@ export async function createOrg(app: App, owner: TestUser, label = 'org'): Promi
   return res.body.id as string;
 }
 
+// Tổ chức đã bật đào tạo (kind ACADEMY): đường khoá & lớp, hợp đồng khoá học chỉ mở cho loại này (TEAM → 403).
+export async function createAcademyOrg(app: App, owner: TestUser, label = 'org'): Promise<string> {
+  const res = await request(app)
+    .post('/api/v1/orgs')
+    .set('authorization', `Bearer ${owner.accessToken}`)
+    .send({ name: `Tổ chức ${label}`, slug: `${label}-${randomUUID().slice(0, 8)}`, kind: 'ACADEMY' })
+    .expect(201);
+  return res.body.id as string;
+}
+
+// Gán một gói KHÔNG GIỚI HẠN (mọi max* = null) đang hiệu lực: assertQuota (khoá học, học viên…) trả ngay, không phụ thuộc
+// gói 'trial' của database thử hay bộ đếm của bài khác.
+export async function grantUnlimitedPlan(db: Deps['db'], orgId: string): Promise<void> {
+  const plan = await db.subscriptionPlan.create({
+    data: { code: `kgh_${randomUUID().slice(0, 8)}`, name: 'Gói thử không giới hạn', priceMonthly: 0n, features: [] },
+  });
+  await db.organizationSubscription.create({
+    data: { organizationId: orgId, planId: plan.id, startsAt: new Date(Date.now() - 86_400_000), endsAt: null, status: 'ACTIVE' },
+  });
+}
+
 export async function addMember(app: App, actor: TestUser, orgId: string, user: TestUser, roleKeys: string[]) {
   const res = await request(app)
     .post(`/api/v1/orgs/${orgId}/members`)

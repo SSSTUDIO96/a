@@ -18,7 +18,7 @@ import type { AnyRoute } from '../src/http/route';
 import { fieldsFilledWhenMissing } from '../src/http/partial';
 import type { Db } from '../src/lib/prisma';
 import { grantPlatformAdmin } from '../src/scripts/grant-platform-admin';
-import type { GateCheck, GateFixture, GateOrg } from './gate';
+import { resolveBody, type GateCheck, type GateFixture, type GateOrg } from './gate';
 import { bearer, registerUser, type App, type TestUser } from './helpers';
 
 export interface PartialCtx {
@@ -42,6 +42,9 @@ export interface PartialSample {
   as?: 'owner' | 'admin';
   // Mã cho tham số đường dẫn mà fixture chưa có (module mới tự tạo bản ghi trong mẫu thì trả mã ở đây).
   ids?: (c: PartialCtx) => Record<string, string>;
+  // Phản hồi bọc bản ghi (vd. PATCH khoá trả {course, classes}): chọn phần là bản ghi vừa sửa để so lá
+  // (không chọn thì mọi lá nằm dưới khoá "course" và trường vừa gửi bị tính là "trường không gửi bị đổi").
+  pick?: (body: unknown) => unknown;
 }
 
 export type PartialSamples = Record<string, PartialSample>;
@@ -102,7 +105,10 @@ function record(c: GateCheck, ok: boolean, what: string) {
 
 // Thứ tự chạy: đường làm đổi trạng thái dùng chung (tạm khoá nhân sự, ẩn bậc, khoá tổ chức) chạy sau cùng.
 // Danh mục và nhân vật ẩn đi (isActive=false) sau khi dịch vụ/gói đã dùng chúng.
+// Lớp đóng (status CLOSED) và nhóm khoá ẩn chạy sau thẻ thiết kế / khoá học đang dùng chúng.
 const LAST = [
+  'PATCH /orgs/:orgId/course-groups/:groupId',
+  'PATCH /orgs/:orgId/classes/:classId',
   'PATCH /orgs/:orgId/service-categories/:categoryId',
   'PATCH /orgs/:orgId/makeup-subjects/:subjectId',
   'PATCH /orgs/:orgId/staff-tiers/:tierId',
@@ -167,12 +173,12 @@ export async function runPartialPatchGate(
       continue;
     }
     const path = fillPath(r, { ...ids, ...(s.ids?.(ctx) ?? {}) });
-    const r1 = await request(app).patch(path).set(bearer(who)).send(full);
+    const r1 = await request(app).patch(path).set(bearer(who)).send((await resolveBody(app, fx, path, full)) as object);
     if (r1.status !== 200) {
       record(report.partialKeep, false, `${k}: thân đầy đủ → ${r1.status} ${JSON.stringify(r1.body).slice(0, 200)}`);
       continue;
     }
-    const r2 = await request(app).patch(path).set(bearer(who)).send(one);
+    const r2 = await request(app).patch(path).set(bearer(who)).send((await resolveBody(app, fx, path, one)) as object);
     if (r2.status !== 200) {
       record(report.partialKeep, false, `${k}: thân một trường → ${r2.status} ${JSON.stringify(r2.body).slice(0, 200)}`);
       continue;
@@ -180,8 +186,8 @@ export async function runPartialPatchGate(
     report.covered++;
     const before = new Map<string, string>();
     const after = new Map<string, string>();
-    leaves(r1.body, '', before);
-    leaves(r2.body, '', after);
+    leaves(s.pick ? s.pick(r1.body) : r1.body, '', before);
+    leaves(s.pick ? s.pick(r2.body) : r2.body, '', after);
     const allowed = new Set([...Object.keys(one), ...Object.keys(s.derived ?? {})]);
     const changed: string[] = [];
     for (const [p, v] of before) {

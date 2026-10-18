@@ -122,6 +122,13 @@ Mỗi lỗi ghi đủ: triệu chứng · gốc bệnh · số đo · cách ch�
 - **Cách chặn:** hai lớp chặn. (1) Lúc khởi động, máy chủ duyệt mọi đường sửa một phần; trường nào bị tự điền khi vắng mặt thì máy chủ từ chối khởi động. (2) Cửa gác "sửa một phần" chạy với mọi đường sửa: gửi đủ trường, rồi gửi đúng một trường, so mọi giá trị còn lại phải y nguyên. Đã thử: cài lại lỗi thì cả hai lớp đều bắt.
 - **Bài học cho studio khác:** với mọi nút "sửa", phải thử kiểu "chỉ đổi một ô rồi xem các ô khác còn nguyên không". Lỗi loại này không làm sập gì, chỉ âm thầm đổi cài đặt — nên chỉ phép thử đúng kiểu đó mới thấy.
 
+### 21. Tắt máy chủ của mình bằng lệnh "tắt theo tên" — có thể tắt luôn máy chủ của người khác
+- **Triệu chứng:** một thợ tự khai đã tắt máy chủ thử bằng lệnh tắt mọi tiến trình khớp tên (`pkill -f "tsx src/server.ts"`). Lúc đó nhiều thợ khác cũng đang chạy máy chủ thử cùng tên.
+- **Gốc bệnh:** đầu bài đã ghi "tắt theo PID, không dùng pkill -f", nhưng chỉ là chữ, không có gì chặn. Ngay ngày đầu, điều phối cũng từng tự tắt mất cửa sổ lệnh của chính mình theo đúng kiểu này.
+- **Số đo:** chưa đo được thợ nào bị tắt nhầm. Thợ tự khai và tự kiểm: lúc kiểm, không còn máy chủ nào ở cổng 4000/4120.
+- **Cách chặn:** mỗi thợ ghi PID ngay lúc bật máy chủ, và chỉ tắt đúng PID đó. Đầu bài mọi gói việc giữ câu "KHÔNG pkill -f". Đề xuất cho bộ luật: thêm cửa gác chặn lệnh `pkill -f` trong môi trường nhiều thợ.
+- **Bài học cho studio khác:** khi nhiều người dùng chung một máy, lệnh "tắt mọi thứ tên X" là lệnh phá việc người khác, dù người gõ chỉ định dọn đồ của mình.
+
 ---
 
 ## Phần CỦA RIÊNG DỰ ÁN NÀY

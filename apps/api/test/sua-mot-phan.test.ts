@@ -14,7 +14,7 @@ let report: PartialReport;
 
 beforeAll(async () => {
   const app = makeApp(deps);
-  const fx = await buildGateFixture(app);
+  const fx = await buildGateFixture(app, deps.db);
   report = await runPartialPatchGate(app, deps.db, ALL_ROUTES, fx, PARTIAL_SAMPLES);
   printPartialReport('', report);
 });

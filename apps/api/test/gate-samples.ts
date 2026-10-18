@@ -1,6 +1,6 @@
 // Mẫu dữ liệu cho cửa gác cách ly (dùng chung cho tenant-isolation.test.ts và gate-mutants.test.ts).
 import { randomUUID } from 'node:crypto';
-import type { GateOrg, RefSamples, Samples } from './gate';
+import { CURRENT_VERSION, type GateOrg, type RefSamples, type RefVariants, type Samples } from './gate';
 import type { PartialSamples } from './gate-partial';
 
 // Thân yêu cầu hợp lệ cho các đường POST/PATCH có tham số id (khoá: "METHOD /đường").
@@ -19,7 +19,8 @@ export const SAMPLES: Samples = {
   'PATCH /orgs/:orgId/customers/:customerId': () => ({ fullName: 'Đổi tên thử' }),
   'PATCH /orgs/:orgId/appointments/:appointmentId': () => ({ notes: 'Sửa thử' }),
   'POST /orgs/:orgId/appointments/:appointmentId/status': () => ({ to: 'CANCELLED', reason: 'Thử cửa gác' }),
-  'PATCH /orgs/:orgId/contracts/:contractId': () => ({ notes: 'Sửa thử' }),
+  // expectedUpdatedAt BẮT BUỘC: cửa gác thay dấu CURRENT_VERSION bằng updatedAt thật của hợp đồng trong đường dẫn.
+  'PATCH /orgs/:orgId/contracts/:contractId': () => ({ expectedUpdatedAt: CURRENT_VERSION, notes: 'Sửa thử' }),
   'POST /orgs/:orgId/contracts/:contractId/lines': () => ({
     kind: 'CUSTOM',
     name: 'Phát sinh thử',
@@ -41,6 +42,19 @@ export const SAMPLES: Samples = {
   }),
   'POST /orgs/:orgId/contracts/:contractId/payments': () => ({ method: 'CASH', amount: 1000 }),
   'POST /orgs/:orgId/payments/:paymentId/void': () => ({ reason: 'Thử cửa gác' }),
+  // Mẫu điều khoản / nội quy (thợ S3)
+  'PATCH /orgs/:orgId/contract-texts/:textId': () => ({ name: 'Đổi tên thử' }),
+  // Khoá & lớp (thợ S2)
+  'PATCH /orgs/:orgId/course-groups/:groupId': () => ({ name: 'Đổi tên thử' }),
+  'PATCH /orgs/:orgId/courses/:courseId': () => ({ name: 'Đổi tên thử' }),
+  'POST /orgs/:orgId/courses/:courseId/archive': () => ({ reason: 'Thử cửa gác' }),
+  'POST /orgs/:orgId/courses/:courseId/classes': () => ({ name: 'Lớp thử', startDate: '2027-07-01', endDate: '2027-08-01', weekdays: [1] }),
+  'PATCH /orgs/:orgId/classes/:classId': () => ({ note: 'Sửa thử' }),
+  'POST /orgs/:orgId/classes/:classId/cancel': () => ({ reason: 'Thử cửa gác' }),
+  // Mẫu thiết kế + thẻ (thợ S4)
+  'PATCH /orgs/:orgId/greeting-phrases/:phraseId': () => ({ title: 'Đổi tiêu đề thử' }),
+  'PATCH /orgs/:orgId/design-cards/:cardId': () => ({ title: 'Đổi tiêu đề thử' }),
+  'PUT /orgs/:orgId/design-cards/:cardId/output': (o) => ({ fileId: o.ids.designCardFileId }),
 };
 
 // Mẫu HỢP LỆ dùng toàn mã của chính tổ chức — cửa gác tự thay TỪNG trường mã bằng mã của tổ chức khác.
@@ -59,6 +73,7 @@ const packageLine = (o: GateOrg) => ({
   staff: [{ membershipId: o.ids.membershipId, role: 'PRIMARY' }],
 });
 const serviceLine = (o: GateOrg) => ({ kind: 'SERVICE', serviceId: o.ids.serviceId, quantity: 1 });
+const customLine = { kind: 'CUSTOM', name: 'Giáo trình', unitPrice: 100_000, quantity: 1 };
 export const REF_SAMPLES: RefSamples = {
   'GET /orgs/:orgId/services': [(o) => ({ categoryId: o.ids.categoryId })],
   'POST /orgs/:orgId/services': [
@@ -96,10 +111,45 @@ export const REF_SAMPLES: RefSamples = {
   'PATCH /orgs/:orgId/appointments/:appointmentId': [
     (o) => ({ staff: [{ membershipId: o.ids.membershipId, role: 'PRIMARY' }] }),
   ],
-  'POST /orgs/:orgId/contracts/quote': [(o) => ({ customerId: o.ids.customerId, lines: [packageLine(o), serviceLine(o)] })],
-  'POST /orgs/:orgId/contracts': [(o) => ({ customerId: o.ids.customerId, lines: [packageLine(o), serviceLine(o)] })],
+  // Mẫu [0] giữ nguyên dạng cũ (bài thử của thợ S3 dựng thêm trường trên mẫu [0]); mẫu sau: trường mới + hợp đồng khoá học.
+  'POST /orgs/:orgId/contracts/quote': [
+    (o) => ({ customerId: o.ids.customerId, lines: [packageLine(o), serviceLine(o)] }),
+    (o) => ({
+      customerId: o.ids.customerId,
+      ownerMembershipId: o.ids.membershipId,
+      termsTemplateId: o.ids.textId,
+      excludeContractId: o.ids.contract2Id,
+      lines: [packageLine(o), serviceLine(o)],
+    }),
+    (o) => ({
+      kind: 'COURSE',
+      customerId: o.ids.customerId,
+      ownerMembershipId: o.ids.membershipId,
+      termsTemplateId: o.ids.textId,
+      rulesTemplateId: o.ids.rulesTextId,
+      excludeContractId: o.ids.courseContractId,
+      lines: [{ kind: 'COURSE', courseClassId: o.ids.classId }, customLine],
+    }),
+  ],
+  'POST /orgs/:orgId/contracts': [
+    (o) => ({ customerId: o.ids.customerId, lines: [packageLine(o), serviceLine(o)] }),
+    (o) => ({ customerId: o.ids.customerId, ownerMembershipId: o.ids.membershipId, termsTemplateId: o.ids.textId, lines: [serviceLine(o)] }),
+    (o) => ({
+      kind: 'COURSE',
+      customerId: o.ids.customerId,
+      ownerMembershipId: o.ids.membershipId,
+      termsTemplateId: o.ids.textId,
+      rulesTemplateId: o.ids.rulesTextId,
+      lines: [{ kind: 'COURSE', courseClassId: o.ids.classId }, customLine],
+    }),
+  ],
   'GET /orgs/:orgId/contracts': [(o) => ({ customerId: o.ids.customerId })],
-  'PATCH /orgs/:orgId/contracts/:contractId': [(o) => ({ lines: [packageLine(o), serviceLine(o)] })],
+  // Hợp đồng DỊCH VỤ của fixture; trường chỉ hợp lệ với hợp đồng khoá học (lines[].courseClassId, rulesTemplateId) đo ở
+  // REF_VARIANTS (đường dẫn trỏ hợp đồng khoá học).
+  'PATCH /orgs/:orgId/contracts/:contractId': [
+    (o) => ({ expectedUpdatedAt: CURRENT_VERSION, lines: [packageLine(o), serviceLine(o)] }),
+    (o) => ({ expectedUpdatedAt: CURRENT_VERSION, termsTemplateId: o.ids.textId }),
+  ],
   'POST /orgs/:orgId/contracts/:contractId/lines': [packageLine, serviceLine],
   'GET /orgs/:orgId/staff': [(o) => ({ tierId: o.ids.tierId })],
   'GET /orgs/:orgId/staff/availability': [
@@ -120,6 +170,75 @@ export const REF_SAMPLES: RefSamples = {
   ],
   'PUT /orgs/:orgId/packages/:packageId/pay-rates': [(o) => ({ rates: [{ tierId: o.ids.tierId, amount: 100000 }] })],
   'PUT /orgs/:orgId/services/:serviceId/pay-rates': [(o) => ({ rates: [{ tierId: o.ids.tierId, amount: 100000 }] })],
+  // Ảnh khách (thợ Q)
+  'PATCH /orgs/:orgId/customers/:customerId': [(o) => ({ avatarFileId: o.ids.customerAvatarFileId })],
+  // Khoá & lớp (thợ S2)
+  'GET /orgs/:orgId/courses': [(o) => ({ groupId: o.ids.groupId })],
+  'POST /orgs/:orgId/courses': [
+    (o) => ({
+      name: `Khoá ${code()}`,
+      groupId: o.ids.groupId,
+      mode: 'MULTI_CLASS',
+      tuitionFee: 1_000_000,
+      defaultCapacity: 10,
+      firstClass: {
+        name: 'Lớp mẫu',
+        startDate: '2027-09-01',
+        endDate: '2027-10-01',
+        weekdays: [1, 3],
+        instructorMembershipId: o.ids.membershipId,
+        studioLocationId: o.ids.locationId,
+      },
+    }),
+  ],
+  'PATCH /orgs/:orgId/courses/:courseId': [(o) => ({ groupId: o.ids.groupId })],
+  'POST /orgs/:orgId/courses/:courseId/classes': [
+    (o) => ({
+      name: `Lớp ${code()}`,
+      startDate: '2027-09-01',
+      endDate: '2027-10-01',
+      weekdays: [2],
+      instructorMembershipId: o.ids.membershipId,
+      studioLocationId: o.ids.locationId,
+    }),
+  ],
+  'GET /orgs/:orgId/classes': [(o) => ({ courseId: o.ids.courseId, instructorId: o.ids.membershipId })],
+  'PATCH /orgs/:orgId/classes/:classId': [(o) => ({ instructorMembershipId: o.ids.membershipId, studioLocationId: o.ids.locationId })],
+  // Mẫu thiết kế + thẻ (thợ S4)
+  'GET /orgs/:orgId/design-cards': [(o) => ({ contractId: o.ids.contractId, customerId: o.ids.customerId })],
+  'POST /orgs/:orgId/design-cards': [
+    (o) => ({ kind: 'WELCOME', templateCode: 'shd-01', contractId: o.ids.courseContractId, courseClassId: o.ids.classId, size: '1080x1350' }),
+    (o) => ({
+      kind: 'FEEDBACK',
+      templateCode: 'fb-01',
+      contractId: o.ids.contractId,
+      body: 'Lời khen mẫu',
+      photoFileIds: [o.ids.designPhotoId],
+      size: '1080x1350',
+    }),
+  ],
+  'PATCH /orgs/:orgId/design-cards/:cardId': [(o) => ({ courseClassId: o.ids.classId }), (o) => ({ photoFileIds: [o.ids.designPhotoId] })],
+  'PUT /orgs/:orgId/design-cards/:cardId/output': [(o) => ({ fileId: o.ids.designCardFileId })],
+};
+
+// Mẫu tham chiếu chéo trên HỢP ĐỒNG KHOÁ HỌC nháp của fixture (:contractId = courseContractId).
+const onCourseContract = (o: GateOrg) => ({ contractId: o.ids.courseContractId ?? '' });
+export const REF_VARIANTS: RefVariants = {
+  'PATCH /orgs/:orgId/contracts/:contractId': [
+    {
+      pathIds: onCourseContract,
+      samples: [
+        (o) => ({
+          expectedUpdatedAt: CURRENT_VERSION,
+          termsTemplateId: o.ids.textId,
+          rulesTemplateId: o.ids.rulesTextId,
+          lines: [{ kind: 'COURSE', courseClassId: o.ids.classId }, customLine],
+        }),
+      ],
+    },
+  ],
+  'POST /orgs/:orgId/contracts/:contractId/lines': [{ pathIds: onCourseContract, samples: [(o) => ({ kind: 'COURSE', courseClassId: o.ids.class2Id })] }],
+  'GET /orgs/:orgId/contracts/:contractId/design-data': [{ pathIds: onCourseContract, samples: [(o) => ({ courseClassId: o.ids.classId })] }],
 };
 
 // MẪU "SỬA MỘT PHẦN" cho cửa gác test/gate-partial.ts: mọi đường PATCH phải có mẫu ở đây.
@@ -184,7 +303,13 @@ export const PARTIAL_SAMPLES: PartialSamples = {
     one: () => ({ name: 'Gói đổi tên' }),
   },
   'PATCH /orgs/:orgId/customers/:customerId': {
-    full: () => ({ fullName: 'Khách đủ', phone: '0912345678', email: 'khach-du@thu.local', note: 'Ghi chú khách' }),
+    full: (c) => ({
+      fullName: 'Khách đủ',
+      phone: '0912345678',
+      email: 'khach-du@thu.local',
+      note: 'Ghi chú khách',
+      avatarFileId: c.o.ids.customerAvatarFileId,
+    }),
     one: () => ({ fullName: 'Khách đổi tên' }),
   },
   'PATCH /orgs/:orgId/appointments/:appointmentId': {
@@ -203,16 +328,86 @@ export const PARTIAL_SAMPLES: PartialSamples = {
     }),
     one: () => ({ notes: 'Ghi chú đổi' }),
   },
+  // Chạy trên hợp đồng KHOÁ HỌC nháp (nhận cả termsTemplateId lẫn rulesTemplateId — nội quy chỉ cho hợp đồng khoá học).
   'PATCH /orgs/:orgId/contracts/:contractId': {
-    full: () => ({
+    full: (c) => ({
+      expectedUpdatedAt: CURRENT_VERSION,
       discount: 1000,
       depositRequired: 20000,
       eventDate: '2027-01-15T02:00:00.000Z',
       notes: 'Ghi chú hợp đồng',
-      terms: 'Điều khoản hợp đồng',
+      termsTemplateId: c.o.ids.textId,
+      rulesTemplateId: c.o.ids.rulesTextId,
     }),
-    one: () => ({ notes: 'Ghi chú đổi' }),
-    skip: { lines: 'gửi lines là THAY toàn bộ dòng (mã dòng mới) — không phải sửa một phần; cửa gác cách ly đã đo lines' },
+    one: () => ({ expectedUpdatedAt: CURRENT_VERSION, notes: 'Ghi chú đổi' }),
+    ids: (c) => ({ contractId: c.o.ids.courseContractId ?? '' }),
+    skip: {
+      lines: 'gửi lines là THAY toàn bộ dòng (mã dòng mới) — không phải sửa một phần; cửa gác cách ly đã đo lines',
+      terms: 'loại trừ với termsTemplateId (gửi cả hai → 400); chọn mẫu thì máy chủ bỏ điều khoản tự nhập',
+    },
+    derived: { termsTemplateVersion: 'phiên bản đi kèm mẫu đã chọn', rulesTemplateVersion: 'phiên bản đi kèm mẫu đã chọn' },
+  },
+  'PATCH /orgs/:orgId/contract-texts/:textId': {
+    full: () => ({ name: 'Mẫu đủ', body: 'Nội dung đủ', appliesTo: ['SERVICE', 'COURSE'], isDefault: true, isActive: true }),
+    one: () => ({ name: 'Mẫu đổi tên' }),
+  },
+  'PATCH /orgs/:orgId/course-groups/:groupId': {
+    full: () => ({ name: 'Nhóm khoá đủ', sortOrder: 7, isActive: false }),
+    one: () => ({ name: 'Nhóm khoá đổi tên' }),
+  },
+  'PATCH /orgs/:orgId/courses/:courseId': {
+    full: (c) => ({
+      name: 'Khoá đủ',
+      groupId: c.o.ids.groupId,
+      code: `KHD-${randomUUID().slice(0, 4).toUpperCase()}`,
+      tuitionFee: 7_000_000,
+      depositAmount: 1_500_000,
+      defaultCapacity: 25,
+      sessionCount: 12,
+      sessionMinutes: 150,
+      description: 'Mô tả khoá đủ',
+      sortOrder: 9,
+      mode: 'MULTI_CLASS',
+    }),
+    one: () => ({ name: 'Khoá đổi tên' }),
+    skip: { firstClassName: 'chỉ hợp lệ khi chuyển Một lớp → Nhiều lớp; khoá mẫu đã là Nhiều lớp (gửi → 400)' },
+    pick: (body) => (body as { course?: unknown }).course,
+  },
+  'PATCH /orgs/:orgId/classes/:classId': {
+    full: (c) => ({
+      name: 'Lớp đủ',
+      startDate: '2027-02-08',
+      endDate: '2027-04-20',
+      weekdays: [1, 3, 5],
+      startTime: '08:30',
+      endTime: '11:00',
+      capacity: 25,
+      instructorMembershipId: c.o.ids.membershipId,
+      studioLocationId: c.o.ids.locationId,
+      status: 'CLOSED',
+      note: 'Ghi chú lớp',
+    }),
+    one: () => ({ name: 'Lớp đổi tên' }),
+  },
+  'PATCH /orgs/:orgId/greeting-phrases/:phraseId': {
+    full: () => ({ name: 'Câu đủ', appliesTo: ['COURSE'], title: 'Tiêu đề đủ', body: 'Câu chúc đủ', sortOrder: 7, isActive: false }),
+    one: () => ({ name: 'Câu đổi tên' }),
+  },
+  'PATCH /orgs/:orgId/design-cards/:cardId': {
+    full: (c) => ({
+      templateCode: 'fb-03',
+      courseClassId: c.o.ids.classId,
+      title: 'Tiêu đề đủ',
+      body: 'Lời khen đủ',
+      rating: 4,
+      receivedAt: '2026-11-05',
+      photoFileIds: [c.o.ids.designPhotoId],
+      fontOverride: 'ky-2',
+      size: '1080x1080',
+      snapshot: { ten: 'Tên sửa tay' },
+    }),
+    one: () => ({ fontOverride: 'ky-3' }),
+    derived: { outputUrl: 'URL ký đổi mỗi lần đọc', outputUrlExpiresAt: 'hạn URL ký đổi mỗi lần đọc' },
   },
   'PATCH /orgs/:orgId/staff-tiers/:tierId': {
     full: () => ({ name: 'Bậc đủ', sortOrder: 5, isActive: false }),
