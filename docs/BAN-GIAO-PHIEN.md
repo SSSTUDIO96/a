@@ -12,7 +12,13 @@ Cập nhật: 18/10/2026. Kho: `SSSTUDIO96/a`, nhánh `claude/nen-mong-makeup`.
    - `su postgres -c "createdb -O makeup makeup_test"`
    - `su postgres -c "psql -d makeup_test -c 'create extension btree_gist'"`
 3. `pnpm test` ở gốc kho. Lệnh này kiểm tra kiểu và chạy bài thử của packages/shared, apps/api, apps/web. Bài thử máy chủ tự áp migration, không xoá dữ liệu.
-4. Muốn chạy máy chủ thử: chép `apps/api/.env.example` thành `apps/api/.env`, điền giá trị cho máy thử, rồi `pnpm --filter @makeup/api dev`.
+4. Muốn chạy máy chủ thử (database riêng, cổng riêng — không dùng `makeup_dev`, không dùng database thử của người khác):
+   - `su postgres -c "createdb -O makeup makeup_thu_<tên>"` rồi `su postgres -c "psql -d makeup_thu_<tên> -c 'create extension btree_gist'"`
+   - `pnpm --filter @makeup/api db:deploy-to postgresql://makeup:makeup_local@localhost:5432/makeup_thu_<tên> --khong-phai-database-thu` (tên không bắt đầu bằng `makeup_test` nên phải có cờ)
+   - Tạo `apps/api/.env` tối thiểu: `NODE_ENV=development`, `PORT=<cổng>`, `DATABASE_URL` và `DIRECT_URL` (cùng chuỗi tới `makeup_thu_<tên>`), `JWT_ACCESS_SECRET` ≥ 32 ký tự. Chép `.env.example` cũng được, nhưng dòng `DATABASE_URL` mẫu là chuỗi Supabase (cổng 6543, `pgbouncer=true`) — phải thay. Tệp `.env` bị `.gitignore` chặn, không lên kho.
+   - `pnpm --filter @makeup/api platform:seed-plans -- --with-trial` (thiếu `--with-trial` thì tổ chức chưa có gói bị chặn tạo khoá học với lỗi 503 `NOT_CONFIGURED`).
+   - `pnpm --filter @makeup/api dev`.
+   - Các lệnh `dev`, `platform:grant-admin`, `platform:seed-plans`, `db:sync-roles` tự đọc `apps/api/.env` nếu có (cờ `--env-file-if-exists=.env`); **biến đã đặt sẵn trong cửa sổ lệnh thắng `.env`**. Trước 18/10/2026 các lệnh này không đọc `.env` (sổ lỗi mục 25). Hướng dẫn đầy đủ từng bước: `docs/CHAY-THU-TREN-MAY.md`.
 
 ## Đã xong và đã nghiệm thu (thợ chấm độc lập)
 | Phần | Kết luận | Biên bản |

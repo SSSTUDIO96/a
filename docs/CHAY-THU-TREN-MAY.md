@@ -177,7 +177,7 @@ Cách khác cũng chạy được: `pnpm db:deploy` (đọc địa chỉ từ t�
 Vẫn trong `apps\api`:
 
 ```
-pnpm exec tsx --env-file=.env src/scripts/seed-plans.ts --with-trial
+pnpm platform:seed-plans -- --with-trial
 ```
 
 Kết quả đúng:
@@ -190,23 +190,23 @@ Gói mẫu: tạo mới [trial, individual, pro, team, academy, academy_pro], gi
 - **Phải có `--with-trial`.** Gói "Dùng thử" là gói mặc định cho tổ chức chưa được cấp gói. Thiếu nó, tổ chức chưa có gói sẽ báo lỗi cấu hình khi kiểm giới hạn (`src/scripts/seed-plans.ts`).
 - Chạy lại không sao: gói đã có được giữ nguyên, kể cả giá anh đã đặt.
 
-**Vì sao không gõ `pnpm platform:seed-plans`.** Lệnh có tên sẵn đó **không tự đọc tệp `.env`**. Gõ thẳng thì báo `Thiếu DATABASE_URL`. Phần `--env-file=.env` trong lệnh trên bảo Node đọc tệp `.env` trước khi chạy. Cùng lý do cho bước 7 và bước 10.
+Lệnh này tự đọc tệp `apps\api\.env` ở bước 4 (cũng như lệnh ở bước 7 và bước 10). Phần `--` trước `--with-trial` là để pnpm chuyển cờ cho lệnh.
 
-**[Đã chạy trên Linux 18/10/2026]**: lệnh trên tạo đủ 6 gói. `pnpm platform:seed-plans` gõ thẳng → `Thiếu DATABASE_URL`. Trên Linux còn một cách nữa chạy được: `set -a; . ./.env; set +a; pnpm platform:seed-plans -- --with-trial` (nạp `.env` vào cửa sổ lệnh trước), kết quả `giữ nguyên [trial, individual, …]`. Cách này **không dùng được trong PowerShell**.
+**[Đã chạy trên Linux 18/10/2026]** đúng lệnh trần trên, trong một bản lấy mã mới, `.env` bảy dòng, database `makeup_thu_z2`: tạo đủ 6 gói; chạy lại → `giữ nguyên [trial, individual, pro, team, academy, academy_pro]`. Trước bản sửa (sổ lỗi `docs/SO-LOI-DA-DO.md` mục 25) lệnh này báo `Thiếu DATABASE_URL`.
 
 ### Bước 7. Chạy máy chủ API — cửa sổ lệnh số 1
 
 Mở một PowerShell, đi vào `apps\api` của gốc kho:
 
 ```
-pnpm exec tsx --env-file=.env src/server.ts
+pnpm dev
 ```
 
-Đúng thì có dòng chứa `"msg":"Makeup Pro API đã chạy"`. **Để nguyên cửa sổ này.** Đóng nó là tắt máy chủ. Cửa sổ sẽ in thêm nhiều dòng chữ dài mỗi khi trang web gọi máy chủ; đó là nhật ký, bình thường.
+Đúng thì có dòng chứa `"msg":"Makeup Pro API đã chạy"`. **Để nguyên cửa sổ này.** Đóng nó là tắt máy chủ. Lệnh này tự khởi động lại máy chủ khi có tệp mã thay đổi; anh không sửa mã thì không cần để ý. Cửa sổ sẽ in thêm nhiều dòng chữ dài mỗi khi trang web gọi máy chủ; đó là nhật ký, bình thường.
 
 Kiểm: mở trình duyệt, vào `http://localhost:4000/health`. Phải thấy `{"ok":true}`.
 
-**[Đã chạy trên Linux 18/10/2026]** với `PORT=4240`: in `Makeup Pro API đã chạy`, `/health` trả `{"ok":true}`. Thiếu `--env-file=.env` thì máy chủ dừng ngay với `Cấu hình môi trường không hợp lệ — NODE_ENV: …; DATABASE_URL: …; JWT_ACCESS_SECRET: …` (đã thấy trên Linux).
+**[Đã chạy trên Linux 18/10/2026]** đúng lệnh `pnpm dev` (và `pnpm --filter @makeup/api dev` từ gốc kho) với `PORT=4250` trong `.env`: in `Makeup Pro API đã chạy`, `/health` trả `{"ok":true}`. Không có tệp `.env` (hoặc đứng sai thư mục) thì in `.env not found. Continuing without it.` rồi `Cấu hình môi trường không hợp lệ — NODE_ENV: …; DATABASE_URL: …; JWT_ACCESS_SECRET: …`, máy chủ không chạy (đã thấy trên Linux).
 
 ### Bước 8. Chạy trang web — cửa sổ lệnh số 2
 
@@ -239,14 +239,14 @@ Mở trình duyệt vào `http://localhost:5173`. Trang tự chuyển tới màn
 Mở PowerShell thứ ba, đi vào `apps\api`:
 
 ```
-pnpm exec tsx --env-file=.env src/scripts/grant-platform-admin.ts --email <email anh đã đăng ký>
+pnpm platform:grant-admin -- --email <email anh đã đăng ký>
 ```
 
 Kết quả đúng: `Cấp quyền quản trị nền tảng: <email> (<mã>) — đã ghi nhật ký`. Chạy lại lần nữa thì in `không đổi gì (đã có quyền)`.
 
 Thu lại quyền: thêm `--revoke` vào cuối lệnh. **[Đã chạy trên Linux 18/10/2026]**: in `Thu quyền quản trị nền tảng: … — đã ghi nhật ký`; cấp lại ngay sau đó được.
 
-**[Đã chạy trên Linux 18/10/2026]**: `pnpm platform:grant-admin -- --email …` gõ thẳng → `Thiếu DATABASE_URL`. Nạp `.env` vào cửa sổ lệnh rồi gõ `pnpm platform:grant-admin -- --email …` → cấp được. Lệnh `pnpm exec tsx --env-file=.env …` ở trên → `không đổi gì (đã có quyền)`.
+**[Đã chạy trên Linux 18/10/2026]** đúng lệnh trần trên (bản lấy mã mới, database `makeup_thu_z2`): lần đầu → `Cấp quyền quản trị nền tảng: … — đã ghi nhật ký`; lần hai → `không đổi gì (đã có quyền)`; thêm `--revoke` → `Thu quyền …`, cấp lại được. Tài khoản đó vào trang quản trị thấy đủ 6 gói. Trước bản sửa lệnh này báo `Thiếu DATABASE_URL`.
 
 ### Bước 11. Vào trang quản trị, cấp gói Academy cho học viện
 
@@ -287,13 +287,13 @@ Thu lại quyền: thêm `--revoke` vào cuối lệnh. **[Đã chạy trên Lin
 
 Database PostgreSQL vẫn chạy ngầm sau khi tắt; không cần tắt nó. Bộ cài Windows thường cho PostgreSQL tự chạy khi bật máy **[CHƯA thử trên Windows]**.
 
-**[Đã chạy trên Linux 18/10/2026]**: gửi tín hiệu `Ctrl + C` (SIGINT) cho máy chủ → nhật ký ghi `Đang tắt máy chủ`, cổng đóng; web cũng tắt.
+**[Đã chạy trên Linux 18/10/2026]**: gửi tín hiệu `Ctrl + C` (SIGINT) cho máy chủ → nhật ký ghi `Đang tắt máy chủ`, cổng đóng; web cũng tắt. Thử lại với `pnpm dev`: gửi `Ctrl + C` cho cả nhóm tiến trình → `Đang tắt máy chủ`, không còn tiến trình nào, cổng đóng.
 
 ### Chạy lại lần sau
 
 Không phải làm lại bước 0–6, 9–11. Chỉ cần:
 
-1. Cửa sổ 1: vào `apps\api`, gõ `pnpm exec tsx --env-file=.env src/server.ts`.
+1. Cửa sổ 1: vào `apps\api`, gõ `pnpm dev`.
 2. Cửa sổ 2: vào `apps\web`, gõ `pnpm exec vite`.
 3. Mở `http://localhost:5173`, đăng nhập bằng email và mật khẩu đã đăng ký.
 
@@ -328,9 +328,10 @@ Sau đó sửa hai dòng `DATABASE_URL`, `DIRECT_URL` trong `.env` sang `makeup_
 
 | Thấy gì | Vì sao | Làm gì |
 |---|---|---|
-| `Cấu hình môi trường không hợp lệ — … DATABASE_URL … JWT_ACCESS_SECRET …` | Máy chủ không đọc được `.env` | Đứng đúng thư mục `apps\api`; lệnh phải có `--env-file=.env`; tệp tên đúng `.env` |
+| `.env not found. Continuing without it.` rồi `Cấu hình môi trường không hợp lệ — … DATABASE_URL … JWT_ACCESS_SECRET …` | Không thấy tệp `.env` | Đứng đúng thư mục `apps\api` (hoặc dùng `pnpm --filter @makeup/api …` từ gốc kho); tệp tên đúng `.env`, không phải `.env.txt` |
 | `JWT_ACCESS_SECRET phải dài ít nhất 32 ký tự` | Khoá quá ngắn | Tạo lại bằng lệnh ở bước 4 |
-| `Thiếu DATABASE_URL` | Gõ `pnpm platform:…` thẳng | Dùng lệnh `pnpm exec tsx --env-file=.env …` ở bước 6, 10 |
+| `Thiếu DATABASE_URL` | Như dòng trên: lệnh không thấy tệp `.env`, hoặc trong `.env` thiếu dòng `DATABASE_URL` | Như dòng trên; mở `.env` kiểm đủ bảy dòng ở bước 4 |
+| Lệnh chạy nhưng vào nhầm database | Cửa sổ lệnh đã đặt sẵn biến `DATABASE_URL` (ví dụ từ lần thử trước). Biến đặt sẵn **thắng** dòng trong `.env` | Mở cửa sổ lệnh mới rồi chạy lại |
 | `Từ chối: "…" không phải database thử` | Thiếu cờ | Thêm `--khong-phai-database-thu` (bước 5) |
 | `Chưa có tài khoản với email … — người đó phải tự đăng ký trước` | Cấp quyền trước khi đăng ký | Đăng ký ở web trước (bước 9) |
 | `/quan-tri` báo "Không có trang này." | Tài khoản chưa có quyền quản trị | Làm bước 10, tải lại trang |
@@ -355,8 +356,7 @@ Sau đó sửa hai dòng `DATABASE_URL`, `DIRECT_URL` trong `.env` sang `makeup_
 | Mọi bước riêng của Windows | Cài Git, Node 22, pnpm, PostgreSQL 16 bản Windows; bật `btree_gist` qua SQL Shell; gõ lệnh trong PowerShell; đường dẫn Windows trong `.env`; `pg_dump` trên Windows — **chưa thử lần nào** |
 
 ## Chỗ lệch với tài liệu khác (cho người giữ tài liệu)
-- `docs/BAN-GIAO-PHIEN.md` bước 4 và `docs/DEPLOYMENT.md` mục "Quản trị nền tảng": các lệnh `pnpm --filter @makeup/api dev`, `platform:grant-admin`, `platform:seed-plans` **không đọc `apps/api/.env`** (dự án không dùng dotenv; chỉ lệnh Prisma tự đọc `.env`). Chép `.env` rồi gõ các lệnh này thì báo `Cấu hình môi trường không hợp lệ` hoặc `Thiếu DATABASE_URL` (đã thấy trên Linux 18/10/2026). Tài liệu này dùng `pnpm exec tsx --env-file=.env …` thay thế.
-- `docs/DEPLOYMENT.md` mục 1 ghi kho tệp đọc riêng ở `lib/storage/config.ts`, "không qua `env.ts`", và thiếu cấu hình kho tệp thì máy chủ "vẫn khởi động". Mã hiện tại đã khai biến kho tệp trong `env.ts` (dòng 42–56) và bản thật thiếu biến thì **không khởi động** (`config.ts:9`).
-- `docs/DEPLOYMENT.md` mục 2 ghi "Đủ 9 migration"; nhánh hiện có 15.
-- `docs/DEPLOYMENT.md` không nhắc cờ `--with-trial` của `platform:seed-plans`; thiếu gói `trial` thì tổ chức chưa có thuê bao báo lỗi cấu hình khi kiểm giới hạn.
-- `docs/DEPLOYMENT.md` mục 4 ghi sao lưu "chưa diễn tập khôi phục". Đã diễn tập `pg_dump -Fc` / `pg_restore --no-owner` trên PostgreSQL 16 máy Linux (mục Sao lưu ở trên); chưa trên Supabase.
+Các chỗ lệch ghi lúc viết tài liệu này đã sửa ngày 18/10/2026 (sổ lỗi `docs/SO-LOI-DA-DO.md` mục 25):
+- Các lệnh `dev`, `platform:grant-admin`, `platform:seed-plans`, `db:sync-roles` nay tự đọc `apps/api/.env` (`apps/api/package.json`). Tài liệu này đã bỏ cách né `pnpm exec tsx --env-file=.env …`, dùng lệnh trần.
+- `docs/BAN-GIAO-PHIEN.md` bước 4 và `docs/DEPLOYMENT.md` mục "Quản trị nền tảng": đã sửa theo.
+- `docs/DEPLOYMENT.md` mục 1 (kho tệp khai trong `env.ts`, bản thật thiếu biến thì không khởi động), mục 2 (15 migration, cờ `--with-trial`), mục 4 (sao lưu đã diễn tập trên PostgreSQL 16 Linux, chưa trên Supabase): đã sửa.

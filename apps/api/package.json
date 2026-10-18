@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/server.ts",
+    "dev": "tsx watch --env-file-if-exists=.env src/server.ts",
     "build": "prisma generate && tsup",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
@@ -13,11 +13,11 @@
     "db:deploy": "prisma migrate deploy",
     "db:generate": "prisma generate",
     "db:deploy-to": "node scripts/deploy-to.mjs",
-    "db:sync-roles": "tsx src/scripts/run-sync-system-roles.ts",
+    "db:sync-roles": "tsx --env-file-if-exists=.env src/scripts/run-sync-system-roles.ts",
     "postinstall": "prisma generate",
     "db:sync-roles:prod": "node dist/scripts/run-sync-system-roles.js",
-    "platform:grant-admin": "tsx src/scripts/grant-platform-admin.ts",
-    "platform:seed-plans": "tsx src/scripts/seed-plans.ts",
+    "platform:grant-admin": "tsx --env-file-if-exists=.env src/scripts/grant-platform-admin.ts",
+    "platform:seed-plans": "tsx --env-file-if-exists=.env src/scripts/seed-plans.ts",
     "platform:grant-admin:prod": "node dist/scripts/grant-platform-admin.js",
     "platform:seed-plans:prod": "node dist/scripts/seed-plans.js"
   },
