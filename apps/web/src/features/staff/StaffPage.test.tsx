@@ -162,7 +162,7 @@ describe('Thợ & bậc lương — hiển thị và quyền', () => {
     expect([...select.options].map((o) => o.textContent)).toEqual(['Không có bậc', 'Thợ chính', 'Thợ phụ']);
     expect(select.value).toBe('t1');
     expect(rowOf('Trần Ngọc Anh').textContent).toContain('tắt nhận lịch');
-    expect(screen.getByRole('button', { name: 'Thêm thợ' })).toBeTruthy();
+    expect(screen.getAllByRole('button', { name: 'Thêm thợ' }).length).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: 'Sửa' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Thêm bậc lương' })).toBeTruthy();
   });
@@ -326,7 +326,7 @@ describe('Hộp Bậc lương', () => {
     await userEvent.click(within(dlg).getByRole('button', { name: 'Lưu' }));
     expect(await within(dlg).findByText(/Còn 2 thợ đang thuộc bậc/)).toBeTruthy();
     expect(within(dlg).getByText('Đã có bậc lương tên "Thợ chính"')).toBeTruthy();
-    expect(within(dlg).getByRole('switch', { name: 'Đang dùng: Thợ chính' }).getAttribute('aria-checked')).toBe('true');
+    expect(within(dlg).getAllByRole('switch')[0]?.getAttribute('aria-checked')).toBe('true');
     expect(writes(calls).map((c) => [c.path, c.body])).toEqual([
       ['/orgs/org-1/staff-tiers/t1', { isActive: false }],
       ['/orgs/org-1/staff-tiers/t2', { name: 'Thợ chính' }],
@@ -358,7 +358,8 @@ describe('Hộp Thêm thợ', () => {
     });
     renderAt('/chien/nhan-su');
     await screen.findByText('Lương Hà My');
-    await userEvent.click(screen.getByRole('button', { name: 'Thêm thợ' }));
+    // Nút trên tiêu đề (máy tính) và nút + ở thanh trên (điện thoại, CSS ẩn) cùng tên.
+    await userEvent.click(screen.getAllByRole('button', { name: 'Thêm thợ' })[0]!);
     const dlg = await screen.findByRole('dialog', { name: /Thêm thợ vào studio/ });
     expect((within(dlg).getByLabelText(/Vai trò/) as HTMLSelectElement).value).toBe('artist');
     await userEvent.type(within(dlg).getByLabelText(/Email tài khoản/), 'chua@co.vn');

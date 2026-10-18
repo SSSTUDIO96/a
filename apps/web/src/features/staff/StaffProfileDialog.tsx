@@ -104,34 +104,40 @@ export function StaffProfileDialog(p: StaffProfileDialogProps) {
   return (
     <FormDialog open phone={p.phone} onClose={() => !saving && p.onClose()} title="Hồ sơ thợ" eyebrow={p.roleText || undefined} footer={footer}>
       {banner && <Strip tone="danger" icon="warn">{banner}</Strip>}
-      <ImageUpload
-        className="st-prof__img"
-        layout="inline"
-        shape="round"
-        size={72}
-        label={`Ảnh đại diện ${row.displayName}`}
-        value={shownAvatar}
-        disabled={readOnly || !p.canFiles || saving}
-        emptyContent={<Avatar name={row.displayName} initials={row.initials} colorKey={row.membershipId} className="st-prof__av" />}
-        errorMessage={userMessage}
-        error={errors.avatarFileId || null}
-        onUpload={async (file) => {
-          const stored = await uploadFile(p.orgId, { purpose: 'STAFF_AVATAR', name: file.name.slice(0, 200) || 'anh-dai-dien', data: file }, newIdempotencyKey());
-          set('avatarFileId', stored.id);
-          setPreview(stored.signedUrl);
-        }}
-        onRemove={
-          p.canFiles && !readOnly
-            ? () => {
-                set('avatarFileId', null);
-                setPreview(null);
-              }
-            : undefined
-        }
-      >
-        <span className="st-prof__name">{row.displayName}</span>
-        <span className="st-prof__acc">Tên tài khoản: {row.fullName}</span>
-      </ImageUpload>
+      {readOnly || !p.canFiles ? (
+        <div className="ui-img ui-img--inline st-prof__img">
+          <Avatar name={row.displayName} initials={row.initials} avatarUrl={row.avatarUrl} colorKey={row.membershipId} className="st-prof__av st-prof__av--ro" />
+          <span className="ui-img__side">
+            <span className="st-prof__name">{row.displayName}</span>
+            <span className="st-prof__acc">Tên tài khoản: {row.fullName}</span>
+          </span>
+        </div>
+      ) : (
+        <ImageUpload
+          className="st-prof__img"
+          layout="inline"
+          shape="round"
+          size={72}
+          label={`Ảnh đại diện ${row.displayName}`}
+          value={shownAvatar}
+          disabled={saving}
+          emptyContent={<Avatar name={row.displayName} initials={row.initials} colorKey={row.membershipId} className="st-prof__av" />}
+          errorMessage={userMessage}
+          error={errors.avatarFileId || null}
+          onUpload={async (file) => {
+            const stored = await uploadFile(p.orgId, { purpose: 'STAFF_AVATAR', name: file.name.slice(0, 200) || 'anh-dai-dien', data: file }, newIdempotencyKey());
+            set('avatarFileId', stored.id);
+            setPreview(stored.signedUrl);
+          }}
+          onRemove={() => {
+            set('avatarFileId', null);
+            setPreview(null);
+          }}
+        >
+          <span className="st-prof__name">{row.displayName}</span>
+          <span className="st-prof__acc">Tên tài khoản: {row.fullName}</span>
+        </ImageUpload>
+      )}
 
       <h3 className="st-grp">Thông tin</h3>
       <SettingRow label="Tên hiển thị" htmlFor={ids.name} tip="Tên hiện trên lịch, hợp đồng, màn tiền công. Trống = dùng tên tài khoản." controlWidth={240}>
