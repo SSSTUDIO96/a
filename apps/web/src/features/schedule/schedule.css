@@ -4,11 +4,15 @@
  * Điểm gãy: máy tính bảng ≤ 1180px, điện thoại ≤ 640px.
  */
 
-/* ---------- Màu loại ca ---------- */
-.ws-tone-bride { --c: var(--kind-bride); --b: var(--kind-bride-bg); }
-.ws-tone-engagement { --c: var(--kind-engagement); --b: var(--kind-engagement-bg); }
-.ws-tone-event { --c: var(--kind-event); --b: var(--kind-event-bg); }
-.ws-tone-other { --c: var(--muted); --b: var(--line-2); }
+/* ---------- Màu ca theo nhân vật (bảng nhân vật → màu: model.ts swatchOf) ----------
+   Ba màu đầu là màu loại ca của bản vẽ; ba màu sau lấy từ dãy màu ảnh đại diện / --ok, nền pha nhạt từ chính màu đó. */
+.ws-sw-rose { --c: var(--kind-bride); --b: var(--kind-bride-bg); }
+.ws-sw-violet { --c: var(--kind-event); --b: var(--kind-event-bg); }
+.ws-sw-amber { --c: var(--kind-engagement); --b: var(--kind-engagement-bg); }
+.ws-sw-green { --c: var(--ok); --b: var(--ok-bg); }
+.ws-sw-blue { --c: var(--av-5); --b: color-mix(in srgb, var(--av-5) 10%, var(--surface)); }
+.ws-sw-taupe { --c: var(--av-4); --b: color-mix(in srgb, var(--av-4) 10%, var(--surface)); }
+.ws-sw-other { --c: var(--faint); --b: var(--soft); }
 
 .ws { min-width: 0; }
 .ws-sp { flex: 1; }

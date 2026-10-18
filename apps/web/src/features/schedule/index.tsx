@@ -14,12 +14,12 @@ import { Button, EmptyState, IconPlus, Skeleton } from '../../ui';
 import { AppointmentDialog, type DialogTarget } from './AppointmentDialog';
 import { DayListB } from './DayListB';
 import { FilterDialog } from './FilterDialog';
-import { accessFrom, buildStaffLanes, conflictMarks, DEFAULT_MODE, type ScheduleAccess, type ScheduleMode } from './model';
-import { cx, Legend } from './parts';
+import { accessFrom, buildStaffLanes, conflictMarks, DEFAULT_MODE, legendSubjects, type ScheduleAccess, type ScheduleMode } from './model';
+import { cx, Legend, OrgSubjectsContext } from './parts';
 import { StaffColumnsA } from './StaffColumnsA';
 import { addDays, dayKeyOf, dayLabel, isDayKey, todayKey, weekLabel, type DayKey } from './time';
 import { Toolbar } from './Toolbar';
-import { useStaffList, useWeekAppointments, type ScheduleFilter } from './useScheduleData';
+import { useOrgSubjects, useStaffList, useWeekAppointments, type ScheduleFilter } from './useScheduleData';
 import { WeekGridC } from './WeekGridC';
 import { WeekGridCMobile } from './WeekGridCMobile';
 import './schedule.css';
@@ -66,6 +66,7 @@ export function ScheduleScreen({
 
   const { state, reload } = useWeekAppointments(orgId, day, filter, access.readAll);
   const staff = useStaffList(orgId, access.staffRead);
+  const orgSubjects = useOrgSubjects(orgId, access.catalogRead);
   const appointments = useMemo(() => (state.status === 'ready' ? state.items : []), [state]);
   const allLanes = useMemo(
     () => buildStaffLanes({ staff, appointments, readAll: access.readAll, self }),
@@ -158,70 +159,72 @@ export function ScheduleScreen({
   }
 
   return (
-    <div className={cx('ws', `ws--${mode}`)} data-mode={mode}>
-      <PageHeader title="Lịch makeup" phoneAction={phoneAction} />
-      {deepLinkError && (
-        <div className="ws-err" role="alert">
-          {deepLinkError}{' '}
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => {
-              setDeepLinkError(null);
-              params.delete('ca');
-              setParams(params, { replace: true });
-            }}
-          >
-            Đóng
-          </Button>
-        </div>
-      )}
-      <section className="ws-panel" aria-label="Lịch makeup">
-        <Toolbar
-          mode={mode}
-          onMode={setMode}
-          label={navLabel}
-          prevLabel={mode === 'A' ? 'Ngày trước' : 'Tuần trước'}
-          nextLabel={mode === 'A' ? 'Ngày sau' : 'Tuần sau'}
-          onPrev={() => setDay((d) => addDays(d, -step))}
-          onNext={() => setDay((d) => addDays(d, step))}
-          onToday={() => setDay(todayKey())}
-          canAdd={access.write}
-          onAdd={openCreate}
-          conflictCount={marks.count}
-          filterCount={filterCount}
-          onFilter={() => setFilterOpen(true)}
-          phone={phone}
-        />
-        <div className="ws-body">{body}</div>
-        {mode === 'C' && !phone && state.status === 'ready' && <Legend showUnassigned={showUnassigned} />}
-      </section>
+    <OrgSubjectsContext.Provider value={orgSubjects}>
+      <div className={cx('ws', `ws--${mode}`)} data-mode={mode}>
+        <PageHeader title="Lịch makeup" phoneAction={phoneAction} />
+        {deepLinkError && (
+          <div className="ws-err" role="alert">
+            {deepLinkError}{' '}
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                setDeepLinkError(null);
+                params.delete('ca');
+                setParams(params, { replace: true });
+              }}
+            >
+              Đóng
+            </Button>
+          </div>
+        )}
+        <section className="ws-panel" aria-label="Lịch makeup">
+          <Toolbar
+            mode={mode}
+            onMode={setMode}
+            label={navLabel}
+            prevLabel={mode === 'A' ? 'Ngày trước' : 'Tuần trước'}
+            nextLabel={mode === 'A' ? 'Ngày sau' : 'Tuần sau'}
+            onPrev={() => setDay((d) => addDays(d, -step))}
+            onNext={() => setDay((d) => addDays(d, step))}
+            onToday={() => setDay(todayKey())}
+            canAdd={access.write}
+            onAdd={openCreate}
+            conflictCount={marks.count}
+            filterCount={filterCount}
+            onFilter={() => setFilterOpen(true)}
+            phone={phone}
+          />
+          <div className="ws-body">{body}</div>
+          {mode === 'C' && !phone && state.status === 'ready' && <Legend subjects={legendSubjects(appointments, orgSubjects)} showUnassigned={showUnassigned} />}
+        </section>
 
-      {filterOpen && (
-        <FilterDialog value={filter} lanes={allLanes} canFilterStaff={access.readAll} onApply={setFilter} onClose={() => setFilterOpen(false)} />
-      )}
-      {dialog && (
-        <AppointmentDialog
-          key={dialogSeq}
-          orgId={orgId}
-          orgSlug={orgSlug}
-          target={dialog}
-          access={access}
-          staffMembers={staff}
-          lanes={allLanes}
-          onClose={() => {
-            setDialog(null);
-            setConflicts(null);
-            if (deepId) {
-              params.delete('ca');
-              setParams(params, { replace: true });
-            }
-          }}
-          onSaved={() => reload()}
-          onConflicts={setConflicts}
-        />
-      )}
-    </div>
+        {filterOpen && (
+          <FilterDialog value={filter} lanes={allLanes} canFilterStaff={access.readAll} onApply={setFilter} onClose={() => setFilterOpen(false)} />
+        )}
+        {dialog && (
+          <AppointmentDialog
+            key={dialogSeq}
+            orgId={orgId}
+            orgSlug={orgSlug}
+            target={dialog}
+            access={access}
+            staffMembers={staff}
+            lanes={allLanes}
+            onClose={() => {
+              setDialog(null);
+              setConflicts(null);
+              if (deepId) {
+                params.delete('ca');
+                setParams(params, { replace: true });
+              }
+            }}
+            onSaved={() => reload()}
+            onConflicts={setConflicts}
+          />
+        )}
+      </div>
+    </OrgSubjectsContext.Provider>
   );
 }
 

@@ -101,6 +101,13 @@ Mỗi lỗi ghi đủ: triệu chứng · gốc bệnh · số đo · cách ch�
 - **Cách chặn:** thợ chấm và người đo trên một bản cũ phải dùng bộ đọc database riêng của bản đó, không dùng chung với thư mục đang làm. Gặp bài đỏ lạ thì kiểm giờ sửa của bộ dùng chung trước khi kết luận.
 - **Bài học cho studio khác:** khi nhiều người làm song song trên một máy, "đỏ" chưa chắc là lỗi của mã đang chấm. Phải chắc là đang đo đúng bản, rồi mới tin con số.
 
+### 18. Bài thử "đếm bên thua" không đếm bên thua bị sập
+- **Triệu chứng:** bài đua lịch (10 lượt hai người cùng dời lịch vào một giờ) khi chạy chung thỉnh thoảng ra 8/10 hoặc 9/10. Hai thợ đều cho là bài thử "phụ thuộc thời điểm".
+- **Gốc bệnh:** thật ra là lỗi máy chủ. Hai lệnh đôi khi chờ nhau (khoá chết) ở bước database kiểm trùng lịch. Database huỷ một bên sau khoảng 1 giây, và bên đó nhận lỗi 500 "Máy chủ gặp lỗi". Bài thử chỉ tìm mã 409, nên đếm lượt đó là "không có bên thua" chứ không đếm là lỗi.
+- **Số đo (thợ chấm độc lập):** 4 lần khoá chết trong nhật ký database của một thợ, khớp đúng giờ các lần 8/10. Trên máy thợ chấm, 21 lần chạy có 1 lần 9/10, nhật ký có đúng 1 lần khoá chết. Dựng khoá chết chắc chắn: 2/2 lần ra 500. Dữ liệu vẫn đúng: 0 lượt hai bên cùng thắng.
+- **Cách chặn:** bài thử đua phải đếm riêng từng kết cục (thắng / thua đúng 409 / lỗi khác), và số "lỗi khác" phải bằng 0. Máy chủ: khoá theo thợ theo thứ tự cố định trước khi kiểm, cộng lưới an toàn đổi khoá chết thành 409 "thử lại".
+- **Bài học cho studio khác:** kết quả "lúc được lúc không" không được ghi là "bài thử chập chờn" cho tới khi đào ra gốc. Lần này nó che một lỗi thật mà khách sẽ gặp đúng vào ngày đông lịch nhất.
+
 ---
 
 ## Phần CỦA RIÊNG DỰ ÁN NÀY

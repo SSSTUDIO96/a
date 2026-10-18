@@ -17,7 +17,8 @@ import {
   layoutLanes,
   MODE_OPTIONS,
   nextStatuses,
-  toneOf,
+  legendSubjects,
+  swatchOf,
   UNASSIGNED,
 } from './model';
 import { addDays, dayKeyOf, formatHours, hhmm, weekDays, weekLabel, weekRange, weekStartOf } from './time';
@@ -31,6 +32,7 @@ function appt(p: Partial<Appointment> & { id: string; startsAt: string; endsAt: 
     customer: null,
     contract: null,
     contractLineId: null,
+    subjectName: null,
     travelBeforeMin: 0,
     travelAfterMin: 0,
     locationType: null,
@@ -49,6 +51,8 @@ function appt(p: Partial<Appointment> & { id: string; startsAt: string; endsAt: 
 const staffOf = (membershipId: string, fullName = membershipId) => ({
   membershipId,
   fullName,
+  displayName: fullName,
+  avatarUrl: null,
   role: 'PRIMARY' as const,
   blockStart: '',
   blockEnd: '',
@@ -236,10 +240,56 @@ describe('linh tinh', () => {
     ]);
   });
 
-  it('màu theo chữ trong tên ca', () => {
-    expect(toneOf('Makeup ăn hỏi')).toBe('engagement');
-    expect(toneOf('Gói Cưới Trọn Vẹn — Cô dâu')).toBe('bride');
-    expect(toneOf('Makeup tiệc')).toBe('event');
-    expect(toneOf(null)).toBe('other');
+});
+
+describe('màu ca theo nhân vật (subjectName)', () => {
+  const ORG = ['Cô dâu', 'Chú rể', 'Mẹ cô dâu', 'Mẹ chú rể', 'Phù dâu', 'Khách mời', 'Bà nội', 'Em bé'];
+
+  it('nhân vật cài sẵn có màu cố định, không phân biệt hoa thường và khoảng trắng', () => {
+    expect(swatchOf('Cô dâu', ORG)).toBe('rose');
+    expect(swatchOf(' cô dâu ', [])).toBe('rose');
+    expect(swatchOf('Mẹ cô dâu', ORG)).toBe('violet');
+    expect(swatchOf('Phù dâu', ORG)).toBe('amber');
+    expect(swatchOf('Mẹ chú rể', ORG)).toBe('green');
+    expect(swatchOf('Chú rể', ORG)).toBe('blue');
+    expect(swatchOf('Khách mời', ORG)).toBe('taupe');
+  });
+
+  it('subjectName null hoặc rỗng → "Khác"; KHÔNG đoán theo chữ trong tên ca', () => {
+    expect(swatchOf(null, ORG)).toBe('other');
+    expect(swatchOf('  ', ORG)).toBe('other');
+    // Tên ca có "cô dâu", "ăn hỏi" nhưng không có nhân vật → vẫn "Khác".
+    const a = appt({ id: 'x', title: 'Makeup cô dâu ăn hỏi tiệc', startsAt: '2026-10-24T08:00:00+07:00', endsAt: '2026-10-24T09:00:00+07:00' });
+    expect(swatchOf(a.subjectName, ORG)).toBe('other');
+  });
+
+  it('nhân vật tổ chức tự thêm: màu theo vị trí trong danh sách của tổ chức (xoay vòng 6 màu); không có trong danh sách → cố định theo tên', () => {
+    expect(swatchOf('Bà nội', ORG)).toBe('rose'); // vị trí 6 → 6 % 6 = 0
+    expect(swatchOf('Em bé', ORG)).toBe('violet'); // vị trí 7 → 1
+    const lạ = swatchOf('Bạn thân cô dâu', ORG);
+    expect(lạ).not.toBe('other');
+    expect(swatchOf('Bạn thân cô dâu', [])).toBe(lạ);
+  });
+
+  it('chú thích màu: nhân vật thật có trong tuần theo thứ tự của tổ chức, cuối cùng là "Khác"', () => {
+    const at = (id: string, subjectName: string | null) =>
+      appt({ id, subjectName, startsAt: '2026-10-24T08:00:00+07:00', endsAt: '2026-10-24T09:00:00+07:00' });
+    expect(legendSubjects([at('1', 'Phù dâu'), at('2', null), at('3', 'Cô dâu'), at('4', 'Cô dâu')], ORG)).toEqual([
+      { name: 'Cô dâu', label: 'Cô dâu' },
+      { name: 'Phù dâu', label: 'Phù dâu' },
+      { name: null, label: 'Khác' },
+    ]);
+    expect(legendSubjects([at('1', 'Cô dâu')], ORG)).toEqual([{ name: 'Cô dâu', label: 'Cô dâu' }]);
+  });
+
+  it('hàng thợ lấy từ ca dùng displayName và avatarUrl của ca', () => {
+    const a = appt({
+      id: '1',
+      startsAt: '2026-10-24T08:00:00+07:00',
+      endsAt: '2026-10-24T09:00:00+07:00',
+      staff: [{ ...staffOf('m9', 'Phạm Thị Bảo Vy'), displayName: 'Bảo Vy', avatarUrl: 'https://anh.test/vy.png' }],
+    });
+    const lanes = buildStaffLanes({ staff: null, appointments: [a], readAll: true, self: { membershipId: 'chu', name: 'Chủ' } });
+    expect(lanes).toEqual([{ membershipId: 'm9', name: 'Bảo Vy', avatarUrl: 'https://anh.test/vy.png', tierName: null }]);
   });
 });

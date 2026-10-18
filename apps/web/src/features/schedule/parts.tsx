@@ -1,8 +1,17 @@
 // Mảnh dùng chung giữa các chế độ của màn Lịch: ô ca, ảnh thợ, chú thích màu.
+import { createContext, useContext } from 'react';
 import { WORK_STATUS_LABELS } from '@makeup/shared';
 import type { Appointment } from '../../api/types';
 import { Avatar, AvatarStack, Tooltip, WithTooltip } from '../../ui';
-import { isBlocking, kindText, TONE_LABELS, TONE_RULE_TIP, toneOf, UNASSIGNED, type StaffLane } from './model';
+import { isBlocking, kindText, swatchOf, UNASSIGNED, type StaffLane, type Swatch } from './model';
+
+// Danh sách nhân vật của tổ chức (thứ tự cố định) — để nhân vật tự thêm có màu ổn định. Màn cung cấp qua ngữ cảnh này.
+export const OrgSubjectsContext = createContext<readonly string[]>([]);
+
+export function useSwatchOf(): (subjectName: string | null) => Swatch {
+  const subjects = useContext(OrgSubjectsContext);
+  return (name) => swatchOf(name, subjects);
+}
 import { dayKeyOf, hhmm, type DayKey } from './time';
 
 export function cx(...parts: Array<string | false | null | undefined>): string {
@@ -22,14 +31,15 @@ export function timeRange(a: Pick<Appointment, 'startsAt' | 'endsAt'>): string {
 export function apptTip(a: Appointment): string {
   const parts = [timeRange(a), kindText(a)];
   if (a.customer) parts.push(a.customer.fullName);
+  if (a.subjectName) parts.push(a.subjectName);
   if (a.staff.length === 0) parts.push('Chưa có thợ');
   parts.push(WORK_STATUS_LABELS[a.status]);
   return parts.join(' · ');
 }
 
-export function apptClasses(a: Appointment, conflict: boolean): string {
+export function apptClasses(a: Appointment, conflict: boolean, swatch: Swatch): string {
   return cx(
-    `ws-tone-${toneOf(a.title)}`,
+    `ws-sw-${swatch}`,
     a.staff.length === 0 && 'is-na',
     !isBlocking(a) && 'is-off',
     a.kind === 'PERSONAL_BLOCK' && 'is-block',
@@ -56,9 +66,10 @@ export function ApptChip({
   conflict: boolean;
   onOpen: (a: Appointment) => void;
 }) {
+  const swatchOfName = useSwatchOf();
   return (
     <WithTooltip text={apptTip(a)} className="ws-chip-wrap">
-      <button type="button" className={cx('ws-chip', apptClasses(a, conflict))} onClick={() => onOpen(a)} data-appt={a.id}>
+      <button type="button" className={cx('ws-chip', apptClasses(a, conflict, swatchOfName(a.subjectName)))} onClick={() => onOpen(a)} data-appt={a.id}>
         <span className="ws-chip__top">
           <b className="num">{startLabel(a, day)}</b>
           <span className="ws-chip__kind">{chipKind(a)}</span>
@@ -80,13 +91,14 @@ export function LaneAvatar({ lane, size = 'md' }: { lane: StaffLane | null; size
   return <Avatar name={lane.name} initials={lane.initials} avatarUrl={lane.avatarUrl} colorKey={lane.membershipId} size={size} />;
 }
 
-export function Legend({ showUnassigned }: { showUnassigned: boolean }) {
+export function Legend({ subjects, showUnassigned }: { subjects: { name: string | null; label: string }[]; showUnassigned: boolean }) {
+  const swatchOfName = useSwatchOf();
   return (
-    <div className="ws-legend">
-      {(['bride', 'engagement', 'event', 'other'] as const).map((t) => (
-        <span key={t} className={cx('ws-legend__i', `ws-tone-${t}`)}>
+    <div className="ws-legend" aria-label="Chú thích màu">
+      {subjects.map((s) => (
+        <span key={s.label} className={cx('ws-legend__i', `ws-sw-${swatchOfName(s.name)}`)}>
           <i aria-hidden="true" />
-          {TONE_LABELS[t]}
+          {s.label}
         </span>
       ))}
       {showUnassigned && (
@@ -99,31 +111,26 @@ export function Legend({ showUnassigned }: { showUnassigned: boolean }) {
         <i aria-hidden="true" />
         Không chặn lịch
       </span>
-      <Tooltip text={`${TONE_RULE_TIP} Ca nháp, đã huỷ, khách không đến không giữ giờ của thợ nên vẽ mờ.`} label="Giải thích màu ca" />
+      <Tooltip
+        text="Màu theo nhân vật trên dòng hợp đồng gắn với ca. Ca không gắn nhân vật tô màu Khác. Ca nháp, đã huỷ, khách không đến không giữ giờ của thợ nên vẽ mờ."
+        label="Giải thích màu ca"
+      />
     </div>
   );
 }
 
-// Ảnh thợ của một ca: lấy ảnh/chữ viết tắt từ danh sách thợ (GET /staff) khi có, không thì từ tên trong ca.
-export function StaffAvatars({ a, lanes, size = 'sm' }: { a: Appointment; lanes: readonly StaffLane[]; size?: 'md' | 'sm' | 'xs' }) {
+// Ảnh thợ của một ca: tên hiển thị và ảnh lấy thẳng từ ca (máy chủ gửi displayName, avatarUrl ký hạn 10 phút).
+export function StaffAvatars({ a, size = 'sm' }: { a: Appointment; size?: 'md' | 'sm' | 'xs' }) {
   if (a.staff.length === 0) return <LaneAvatar lane={null} size={size} />;
-  const people = a.staff.map((s) => {
-    const lane = lanes.find((l) => l.membershipId === s.membershipId);
-    return { membershipId: s.membershipId, displayName: lane?.name ?? s.fullName, initials: lane?.initials, avatarUrl: lane?.avatarUrl ?? null };
-  });
+  const people = a.staff.map((s) => ({ membershipId: s.membershipId, displayName: s.displayName, avatarUrl: s.avatarUrl }));
   return <AvatarStack people={people} size={size} max={2} />;
 }
 
 // Tên thợ của ca: "Thu Hà", nhiều thợ thì "Thu Hà (chính), Bảo Vy".
-export function staffNames(a: Appointment, lanes: readonly StaffLane[]): string {
+export function staffNames(a: Appointment): string {
   if (a.staff.length === 0) return 'Chưa có thợ';
   const many = a.staff.length > 1;
-  return a.staff
-    .map((s) => {
-      const name = lanes.find((l) => l.membershipId === s.membershipId)?.name ?? s.fullName;
-      return many && s.role === 'PRIMARY' ? `${name} (chính)` : name;
-    })
-    .join(', ');
+  return a.staff.map((s) => (many && s.role === 'PRIMARY' ? `${s.displayName} (chính)` : s.displayName)).join(', ');
 }
 
 export const LOCATION_LABELS = { STUDIO: 'Tại studio', CUSTOMER_HOME: 'Tại nhà khách', OTHER: 'Nơi khác' } as const;

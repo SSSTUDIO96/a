@@ -117,7 +117,7 @@ async function multi(org = orgA, u = ownerA, extra: Body = {}) {
   return createCourse(u, org, { mode: 'MULTI_CLASS', ...extra });
 }
 
-async function openClass(courseId: string, extra: Body = {}, org = orgA, u = ownerA) {
+function openClass(courseId: string, extra: Body = {}, org = orgA, u = ownerA) {
   return call(u, 'post', url(org, `/courses/${courseId}/classes`), { name: `Lớp ${uniq()}`, ...firstClass(), ...extra });
 }
 

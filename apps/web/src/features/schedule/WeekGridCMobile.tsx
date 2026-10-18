@@ -5,7 +5,7 @@ import { useState, type CSSProperties } from 'react';
 import type { Appointment } from '../../api/types';
 import { StatusTag } from '../../ui';
 import { appointmentsOfDay, cellKey, countByDay, indexByCell, kindText, UNASSIGNED, type ConflictMarks, type StaffLane } from './model';
-import { apptClasses, apptTip, cx, LaneAvatar, StaffAvatars, startLabel } from './parts';
+import { apptClasses, apptTip, cx, LaneAvatar, StaffAvatars, startLabel, useSwatchOf } from './parts';
 import { dayKeyOf, dayNumber, ddmm, hhmm, isWeekend, weekDays, weekdayLong, weekdayShort, type DayKey } from './time';
 
 const MAX_TIMES = 3;
@@ -35,6 +35,7 @@ export function WeekGridCMobile({
   onOpen: (a: Appointment) => void;
 }) {
   const [expandedDay, setExpandedDay] = useState<DayKey | null>(null);
+  const swatchOfName = useSwatchOf();
   const days = weekDays(day);
   const cells = indexByCell(appointments);
   const perDay = countByDay(appointments, days);
@@ -83,7 +84,7 @@ export function WeekGridCMobile({
                     <button
                       type="button"
                       key={a.id}
-                      className={cx('ws-pt', apptClasses(a, marks.appointmentIds.has(a.id)))}
+                      className={cx('ws-pt', apptClasses(a, marks.appointmentIds.has(a.id), swatchOfName(a.subjectName)))}
                       title={apptTip(a)}
                       aria-label={apptTip(a)}
                       onClick={() => onOpen(a)}
@@ -117,7 +118,7 @@ export function WeekGridCMobile({
         ) : (
           <div className="ws-cm-day__list">
             {shown.map((a) => (
-              <MobileAgendaRow key={a.id} a={a} day={day} lanes={lanes} conflict={marks.appointmentIds.has(a.id)} onOpen={onOpen} />
+              <MobileAgendaRow key={a.id} a={a} day={day} conflict={marks.appointmentIds.has(a.id)} onOpen={onOpen} />
             ))}
             {dayList.length > MAX_LIST && (
               <button type="button" className="ws-cm-day__all" onClick={() => setExpandedDay(expanded ? null : day)}>
@@ -134,18 +135,17 @@ export function WeekGridCMobile({
 function MobileAgendaRow({
   a,
   day,
-  lanes,
   conflict,
   onOpen,
 }: {
   a: Appointment;
   day: DayKey;
-  lanes: StaffLane[];
   conflict: boolean;
   onOpen: (a: Appointment) => void;
 }) {
+  const swatchOfName = useSwatchOf();
   return (
-    <button type="button" className={cx('ws-ag', apptClasses(a, conflict))} onClick={() => onOpen(a)}>
+    <button type="button" className={cx('ws-ag', apptClasses(a, conflict, swatchOfName(a.subjectName)))} onClick={() => onOpen(a)}>
       <span className="ws-ag__tm num">
         {startLabel(a, day)}
         <small>{hhmm(a.endsAt)}</small>
@@ -158,7 +158,7 @@ function MobileAgendaRow({
         <span className="ws-ag__kh">{a.customer?.fullName ?? (a.staff.length === 0 ? 'Chưa có thợ' : '')}</span>
       </span>
       <span className="ws-ag__who">
-        <StaffAvatars a={a} lanes={lanes} size="sm" />
+        <StaffAvatars a={a} size="sm" />
       </span>
     </button>
   );

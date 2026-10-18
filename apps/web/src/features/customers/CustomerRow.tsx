@@ -1,7 +1,7 @@
 import { Link } from 'react-router';
 import type { Customer } from '../../api/types';
 import { Avatar, ListRow } from '../../ui';
-import { highlightPhone } from './logic';
+import { highlightPhone, initialsOf } from './logic';
 
 // Một dòng khách (C2 2.2): ảnh chữ viết tắt (màu theo id) · họ tên (xuống dòng, không cắt) · số điện thoại. Đúng 3 thông tin.
 export function CustomerRow({ slug, c, q, selected }: { slug: string; c: Customer; q: string; selected: boolean }) {
@@ -9,7 +9,7 @@ export function CustomerRow({ slug, c, q, selected }: { slug: string; c: Custome
     <ListRow
       as={Link}
       linkProps={{ to: `/${slug}/khach-hang/${c.id}` }}
-      leading={<Avatar name={c.fullName} colorKey={c.id} />}
+      leading={<Avatar name={c.fullName} initials={initialsOf(c.fullName)} colorKey={c.id} />}
       title={c.fullName}
       trailing={
         c.phone ? (

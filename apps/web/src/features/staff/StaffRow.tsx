@@ -28,7 +28,6 @@ export function StaffRow({ row, tiers, roleText, canSeeSelect, lockReason, savin
   } else {
     const select = (
       <Select
-        size="sm"
         aria-label={selectLabel}
         options={tierOptions(tiers, row.tier)}
         value={row.tier?.id ?? ''}

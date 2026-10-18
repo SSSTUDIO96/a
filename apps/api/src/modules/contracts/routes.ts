@@ -3,6 +3,7 @@ import {
   canTransitionContract,
   computeContractTotals,
   CONTRACT_STATUS_LABELS,
+  formatVnd,
   normalizeVnPhone,
   vndFromBigInt,
   WORK_STATUS_LABELS,
@@ -19,13 +20,18 @@ import {
   LineInputSchema,
   LineParams,
   ListQuery,
+  QuoteBodySchema,
   StatusBodySchema,
   VoidBodySchema,
   type ContractBody,
+  type ContractKindKey,
 } from './schemas';
 import { buildSheet, insertLines, money, planLines } from './sheet';
 import { contractSummarySelect, loadContractDetail, loadStaffMap, presentSheet, presentSummary, sheetWarnings } from './present';
+import { classSeats, enrollContractLines, releaseEnrollments } from './enroll';
+import { checkChosenText, contractTextRoutes, snapshotTexts } from './texts';
 import { cancelAppointmentsOfContractTx, createAppointmentTx, type TxCtx } from '../schedule/service';
+import { contractSummary as paymentSummary } from '../payments/common';
 
 type Tx = Prisma.TransactionClient;
 
@@ -58,15 +64,80 @@ function assertCanCreateCustomer(o: OrgContext): void {
   }
 }
 
-// Mã HD-000001 tuần tự theo tổ chức; câu lệnh khoá dòng bộ đếm nên gửi đồng thời không trùng mã.
-async function nextContractCode(tx: Tx, orgId: string): Promise<string> {
+// Mã tuần tự theo tổ chức; câu lệnh khoá dòng bộ đếm nên gửi đồng thời không trùng mã.
+// Hợp đồng dịch vụ: HD-000001 (bộ đếm 'contract'). Hợp đồng khoá học: HĐKH-000001 (bộ đếm riêng 'contract_course').
+const CODE_FORMAT: Record<ContractKindKey, { key: string; prefix: string }> = {
+  SERVICE: { key: 'contract', prefix: 'HD-' },
+  COURSE: { key: 'contract_course', prefix: 'HĐKH-' },
+};
+
+async function nextContractCode(tx: Tx, orgId: string, kind: ContractKindKey): Promise<string> {
+  const { key, prefix } = CODE_FORMAT[kind];
   const rows = await tx.$queryRaw<{ value: number }[]>`
-    INSERT INTO org_counters (organization_id, key, value) VALUES (${orgId}::uuid, 'contract', 1)
+    INSERT INTO org_counters (organization_id, key, value) VALUES (${orgId}::uuid, ${key}, 1)
     ON CONFLICT (organization_id, key) DO UPDATE SET value = org_counters.value + 1
     RETURNING value`;
   const value = rows[0]?.value;
   if (value === undefined) throw new Error('Bộ đếm mã hợp đồng không trả giá trị');
-  return `HD-${String(value).padStart(6, '0')}`;
+  return `${prefix}${String(value).padStart(6, '0')}`;
+}
+
+// Hợp đồng khoá học chỉ ở tổ chức đã bật đào tạo (Organization.kind = ACADEMY) — BAN-VE-C3 mục 1.0.
+async function assertKindEnabled(db: Tx, orgId: string, kind: ContractKindKey): Promise<void> {
+  if (kind !== 'COURSE') return;
+  const org = await db.organization.findUniqueOrThrow({ where: { id: orgId }, select: { kind: true } });
+  if (org.kind !== 'ACADEMY') throw new AppError('FORBIDDEN', 'Tổ chức chưa bật đào tạo', { reason: 'ACADEMY_REQUIRED' });
+}
+
+// Người phụ trách: thành viên ĐANG HOẠT ĐỘNG của tổ chức. Mã của tổ chức khác trả đúng lời như mã bịa.
+async function checkOwner(db: Tx, orgId: string, membershipId: string): Promise<string> {
+  const m = await db.membership.findFirst({ where: { id: membershipId, organizationId: orgId }, select: { id: true, status: true } });
+  if (!m) throw new AppError('NOT_FOUND', 'Không tìm thấy người phụ trách');
+  if (m.status !== 'ACTIVE') throw new AppError('VALIDATION_FAILED', 'Người phụ trách không còn hoạt động trong tổ chức');
+  return m.id;
+}
+
+// Mẫu điều khoản / nội quy chọn cho hợp đồng nháp: lưu id + phiên bản lúc chọn; lúc xác nhận chụp bản mới nhất.
+async function chooseTexts(
+  db: Tx,
+  orgId: string,
+  kind: ContractKindKey,
+  input: { termsTemplateId?: string | null; rulesTemplateId?: string | null },
+) {
+  const out: {
+    termsTemplateId?: string | null;
+    termsTemplateVersion?: number | null;
+    rulesTemplateId?: string | null;
+    rulesTemplateVersion?: number | null;
+  } = {};
+  if (input.termsTemplateId === null) Object.assign(out, { termsTemplateId: null, termsTemplateVersion: null });
+  else if (input.termsTemplateId) {
+    const t = await checkChosenText(db, orgId, input.termsTemplateId, 'TERMS', kind);
+    Object.assign(out, { termsTemplateId: t.id, termsTemplateVersion: t.version });
+  }
+  if (input.rulesTemplateId === null) Object.assign(out, { rulesTemplateId: null, rulesTemplateVersion: null });
+  else if (input.rulesTemplateId) {
+    const r = await checkChosenText(db, orgId, input.rulesTemplateId, 'RULES', kind);
+    Object.assign(out, { rulesTemplateId: r.id, rulesTemplateVersion: r.version });
+  }
+  return out;
+}
+
+// Sửa nháp HẠ TỔNG xuống dưới số đã thu → 409 (biên bản máy chủ lát 2, N7). Trước đây máy chủ lặng lẽ ghi khách
+// "trả thừa", lách luật "thu vượt phải có allowOverpay + ghi chú". Tiền đã thu ra khỏi sổ phải đi qua phiếu hoàn tiền
+// (quyền huỷ phiếu / hoàn tiền) hoặc huỷ dòng có lý do — không đi qua lệnh sửa nháp không có lý do.
+async function assertNotBelowPaid(tx: Tx, orgId: string, c: { id: string; total: bigint; depositRequired: bigint }, newTotal: Vnd) {
+  const oldTotal = vnd(c.total, 'tổng');
+  if (newTotal >= oldTotal) return;
+  const { paid } = await paymentSummary(tx, orgId, c);
+  if (newTotal < paid) {
+    throw new AppError(
+      'CONFLICT',
+      `Hợp đồng đã thu ${formatVnd(paid)} — tổng mới ${formatVnd(newTotal)} thấp hơn số đã thu. ` +
+        'Ghi phiếu hoàn tiền phần chênh trước, hoặc giữ tổng không thấp hơn số đã thu',
+      { reason: 'TOTAL_BELOW_PAID', paid, newTotal, total: oldTotal },
+    );
+  }
 }
 
 // Khoá dòng hợp đồng: các thay đổi cùng hợp đồng xếp hàng nên tổng tiền không bị ghi đè lẫn nhau.
@@ -153,6 +224,7 @@ function vnd(v: bigint, field: string): Vnd {
 }
 
 export const contractRoutes: AnyRoute[] = [
+  ...contractTextRoutes,
   defineRoute({
     method: 'post',
     path: '/orgs/:orgId/contracts/quote',
@@ -160,13 +232,35 @@ export const contractRoutes: AnyRoute[] = [
     permission: 'contracts.read',
     tag: TAG,
     summary: 'Xem trước bảng tính hợp đồng (không ghi gì) — cùng công thức với lệnh tạo',
-    body: ContractBodySchema,
+    body: QuoteBodySchema,
     handler: async ({ deps, org, body }) => {
       const o = mustOrg(org);
+      await assertKindEnabled(deps.db, o.id, body.kind);
       await checkCustomer(deps.db, o.id, body);
-      const sheet = await buildSheet(deps.db, o.id, body, new Date());
-      const [staff, warnings] = await Promise.all([loadStaffMap(deps.db, o.id, sheet), sheetWarnings(deps.db, o.id, sheet)]);
-      return { body: presentSheet(sheet, staff, warnings) };
+      if (body.ownerMembershipId) await checkOwner(deps.db, o.id, body.ownerMembershipId);
+      await chooseTexts(deps.db, o.id, body.kind, body);
+      // Hợp đồng đang sửa: giữ chỗ nháp và lịch của CHÍNH nó không tính là cảnh báo thợ.
+      let exclude: { contractId?: string; appointmentIds?: string[] } = {};
+      if (body.excludeContractId) {
+        const self = await deps.db.contract.findFirst({
+          where: { id: body.excludeContractId, organizationId: o.id },
+          select: { id: true, appointments: { where: { organizationId: o.id }, select: { id: true } } },
+        });
+        if (!self) throw new AppError('NOT_FOUND', 'Không tìm thấy hợp đồng đang sửa');
+        exclude = { contractId: self.id, appointmentIds: self.appointments.map((a) => a.id) };
+      }
+      // Xem trước không chặn lớp hết chỗ: trả classes[] để web báo lớp vừa đầy (chốt thật ở bước xác nhận).
+      const sheet = await buildSheet(deps.db, o.id, body, new Date(), { kind: body.kind, seatCheck: false });
+      const [staff, warnings, classes] = await Promise.all([
+        loadStaffMap(deps.db, o.id, sheet),
+        sheetWarnings(deps.db, o.id, sheet, exclude),
+        classSeats(
+          deps.db,
+          o.id,
+          sheet.lines.flatMap((l) => (l.courseClassId ? [l.courseClassId] : [])),
+        ),
+      ]);
+      return { body: { ...presentSheet(sheet, staff, warnings), kind: body.kind, classes } };
     },
   }),
 
@@ -185,17 +279,23 @@ export const contractRoutes: AnyRoute[] = [
       if (body.newCustomer) assertCanCreateCustomer(o);
       const at = new Date();
       const detail = await deps.db.$transaction(async (tx) => {
+        await assertKindEnabled(tx, o.id, body.kind);
         const choice = await checkCustomer(tx, o.id, body);
-        const sheet = await buildSheet(tx, o.id, body, at);
+        const ownerMembershipId = body.ownerMembershipId ? await checkOwner(tx, o.id, body.ownerMembershipId) : null;
+        const texts = await chooseTexts(tx, o.id, body.kind, body);
+        const sheet = await buildSheet(tx, o.id, body, at, { kind: body.kind, seatCheck: true });
         const customerId =
           'existingId' in choice
             ? choice.existingId
             : (await tx.customer.create({ data: { organizationId: o.id, fullName: choice.fullName, phone: choice.phone } })).id;
-        const code = await nextContractCode(tx, o.id);
+        const code = await nextContractCode(tx, o.id, body.kind);
         const contract = await tx.contract.create({
           data: {
             organizationId: o.id,
             code,
+            kind: body.kind,
+            ownerMembershipId,
+            ...texts,
             customerId,
             eventDate: body.eventDate ? new Date(body.eventDate) : null,
             notes: body.notes ?? null,
@@ -216,7 +316,11 @@ export const contractRoutes: AnyRoute[] = [
           entityId: contract.id,
           data: {
             code,
+            kind: body.kind,
             customerId,
+            ownerMembershipId,
+            termsTemplateId: texts.termsTemplateId ?? null,
+            rulesTemplateId: texts.rulesTemplateId ?? null,
             newCustomer: !('existingId' in choice),
             lineCount: sheet.lines.length,
             subtotal: sheet.subtotal,
@@ -246,6 +350,7 @@ export const contractRoutes: AnyRoute[] = [
       const phone = q ? normalizeVnPhone(q) : null;
       const where: Prisma.ContractWhereInput = {
         organizationId: o.id,
+        ...(query.kind ? { kind: query.kind } : {}),
         ...(query.status ? { status: query.status } : {}),
         ...(query.customerId ? { customerId: query.customerId } : {}),
         ...(query.eventFrom || query.eventTo
@@ -321,8 +426,11 @@ export const contractRoutes: AnyRoute[] = [
           ...(body.terms !== undefined ? { terms: body.terms } : {}),
         };
         let nextMoney: { subtotal: Vnd; discount: Vnd; total: Vnd; depositRequired: Vnd } | null = null;
+        let textChoice: Awaited<ReturnType<typeof chooseTexts>> = {};
         if (c.status === 'CONFIRMED') {
-          const others = (['lines', 'discount', 'depositRequired', 'eventDate', 'terms'] as const).filter((k) => body[k] !== undefined);
+          const others = (['lines', 'discount', 'depositRequired', 'eventDate', 'terms', 'termsTemplateId', 'rulesTemplateId'] as const).filter(
+            (k) => body[k] !== undefined,
+          );
           if (others.length > 0) {
             throw new AppError(
               'CONFLICT',
@@ -331,6 +439,12 @@ export const contractRoutes: AnyRoute[] = [
             );
           }
         } else {
+          textChoice = await chooseTexts(tx, o.id, c.kind, body);
+          // Thao tác sau thắng: chọn mẫu điều khoản thì bỏ lời tự nhập; tự nhập điều khoản thì bỏ mẫu đã chọn.
+          if (typeof body.termsTemplateId === 'string' && body.terms === undefined) Object.assign(textChanges, { terms: null });
+          if (typeof body.terms === 'string' && body.termsTemplateId === undefined) {
+            Object.assign(textChoice, { termsTemplateId: null, termsTemplateVersion: null });
+          }
           const discount = body.discount ?? before.discount;
           if (body.lines) {
             const linked = await tx.appointment.count({
@@ -339,7 +453,13 @@ export const contractRoutes: AnyRoute[] = [
             if (linked > 0) {
               throw new AppError('CONFLICT', 'Đã có lịch gắn vào dòng của hợp đồng — huỷ từng dòng thay vì thay toàn bộ');
             }
-            const sheet = await buildSheet(tx, o.id, { lines: body.lines, discount, depositRequired: body.depositRequired }, new Date());
+            const sheet = await buildSheet(
+              tx,
+              o.id,
+              { lines: body.lines, discount, depositRequired: body.depositRequired },
+              new Date(),
+              { kind: c.kind, seatCheck: true },
+            );
             // Hợp đồng nháp chưa hứa với khách: thay dòng là xoá dòng cũ (dòng con trước, dòng cha sau).
             await tx.contractLine.deleteMany({ where: { contractId: c.id, organizationId: o.id, parentLineId: { not: null } } });
             await tx.contractLine.deleteMany({ where: { contractId: c.id, organizationId: o.id } });
@@ -358,11 +478,13 @@ export const contractRoutes: AnyRoute[] = [
             }
             nextMoney = { subtotal, discount, total, depositRequired };
           }
+          if (nextMoney) await assertNotBelowPaid(tx, o.id, c, nextMoney.total);
         }
         await tx.contract.update({
           where: { id: c.id },
           data: {
             ...textChanges,
+            ...textChoice,
             ...(body.eventDate !== undefined ? { eventDate: body.eventDate === null ? null : new Date(body.eventDate) } : {}),
             ...(nextMoney
               ? {
@@ -382,7 +504,7 @@ export const contractRoutes: AnyRoute[] = [
           entityId: c.id,
           data: {
             before,
-            after: { ...nextMoney, eventDate: body.eventDate, ...textChanges },
+            after: { ...nextMoney, eventDate: body.eventDate, ...textChanges, ...textChoice },
             linesReplaced: body.lines !== undefined,
           },
           requestId,
@@ -412,7 +534,17 @@ export const contractRoutes: AnyRoute[] = [
         if ((body.kind === 'PACKAGE' || body.kind === 'SERVICE') && (body.lineDiscount ?? 0) > 0) {
           assertCanAdjust(o, c.status, 'giảm giá dòng phát sinh');
         }
-        const planned = await planLines(tx, o.id, [body], new Date());
+        const planned = await planLines(tx, o.id, [body], new Date(), { kind: c.kind, seatCheck: true });
+        const newClassIds = planned.flatMap((l) => (l.courseClassId ? [l.courseClassId] : []));
+        if (newClassIds.length > 0) {
+          const same = await tx.contractLine.findFirst({
+            where: { contractId: c.id, organizationId: o.id, voidedAt: null, courseClassId: { in: newClassIds } },
+            select: { name: true },
+          });
+          if (same) {
+            throw new AppError('VALIDATION_FAILED', `Hợp đồng đã có dòng "${same.name}" — mỗi lớp chỉ một dòng`, { line: 0 });
+          }
+        }
         const last = await tx.contractLine.aggregate({
           where: { contractId: c.id, organizationId: o.id },
           _max: { sortOrder: true },
@@ -428,6 +560,15 @@ export const contractRoutes: AnyRoute[] = [
         });
         const { subtotal, total } = await recompute(tx, o.id, c.id, vnd(c.discount, 'giảm giá'));
         await tx.contract.update({ where: { id: c.id }, data: { subtotal: BigInt(subtotal), total: BigInt(total) } });
+        // Dòng khoá học thêm vào hợp đồng ĐÃ xác nhận → giữ chỗ + ghi danh ngay, cùng transaction (nháp không giữ chỗ).
+        const enrollmentIds = addedAfterConfirm
+          ? await enrollContractLines(
+              tx,
+              o.id,
+              c,
+              planned.map((l) => l.id),
+            )
+          : [];
         // Dòng phát sinh sau xác nhận có thợ + giờ → lên lịch ngay.
         const createdAppointmentIds = addedAfterConfirm
           ? await createLineAppointments(
@@ -447,6 +588,7 @@ export const contractRoutes: AnyRoute[] = [
             lineIds: planned.map((l) => l.id),
             addedAfterConfirm,
             createdAppointmentIds,
+            enrollmentIds,
             actorRoles: o.roleKeys,
             amount: planned.reduce((s, l) => s + l.lineTotal, 0),
             before: { subtotal: vnd(c.subtotal, 'tạm tính'), total: vnd(c.total, 'tổng') },
@@ -492,6 +634,8 @@ export const contractRoutes: AnyRoute[] = [
           where: { id: { in: voidedIds }, organizationId: o.id },
           data: { voidedAt: new Date(), voidReason: body.reason },
         });
+        // Huỷ dòng khoá học của hợp đồng đã xác nhận → huỷ ghi danh, trả chỗ (cùng transaction).
+        const released = await releaseEnrollments(tx, o.id, { contractId: c.id, lineIds: voidedIds }, body.reason);
         // Huỷ dòng làm tổng giảm: giảm giá và cọc không được vượt tổng mới → hạ xuống và ghi nhật ký.
         const oldDiscount = vnd(c.discount, 'giảm giá');
         const oldDeposit = vnd(c.depositRequired, 'tiền cọc');
@@ -522,6 +666,7 @@ export const contractRoutes: AnyRoute[] = [
           data: {
             lineId: line.id,
             voidedLineIds: voidedIds,
+            releasedEnrollmentIds: released.map((e) => e.id),
             reason: body.reason,
             contractStatus: c.status,
             actorRoles: o.roleKeys,
@@ -564,9 +709,15 @@ export const contractRoutes: AnyRoute[] = [
           const active = await tx.contractLine.count({ where: { contractId: c.id, organizationId: o.id, voidedAt: null } });
           if (active === 0) throw new AppError('CONFLICT', 'Hợp đồng chưa có dòng nào còn hiệu lực — không xác nhận được');
         }
+        // Xác nhận hợp đồng khoá học = giữ chỗ + ghi danh từng dòng COURSE + giới hạn học viên; chụp điều khoản / nội quy.
+        // Mọi bước cùng transaction: một lớp vừa đầy → 409, hợp đồng giữ nguyên nháp, không lớp nào bị trừ chỗ.
+        const enrollmentIds = body.to === 'CONFIRMED' ? await enrollContractLines(tx, o.id, c) : [];
+        const snapshot = body.to === 'CONFIRMED' ? await snapshotTexts(tx, o.id, c) : {};
         // Xác nhận hợp đồng = lên lịch cho các dòng có thợ, trong cùng transaction.
         const createdAppointmentIds =
           body.to === 'CONFIRMED' ? await createLineAppointments(tx, { orgId: o.id, userId: uid, requestId }, c) : [];
+        // Huỷ hợp đồng → huỷ ghi danh, trả chỗ.
+        const released = body.to === 'CANCELLED' && body.reason ? await releaseEnrollments(tx, o.id, { contractId: c.id }, body.reason) : [];
         // Huỷ hợp đồng thì huỷ luôn các lịch đã gắn, trong cùng transaction; còn lịch đang làm thì không huỷ gì cả.
         let cancelledIds: string[] = [];
         if (body.to === 'CANCELLED' && body.reason) {
@@ -589,6 +740,7 @@ export const contractRoutes: AnyRoute[] = [
           where: { id: c.id },
           data: {
             status: body.to,
+            ...snapshot,
             ...(body.to === 'CONFIRMED' ? { confirmedAt: new Date() } : {}),
             ...(body.to === 'CANCELLED' ? { cancelReason: body.reason } : {}),
           },
@@ -605,6 +757,14 @@ export const contractRoutes: AnyRoute[] = [
             reason: body.reason ?? null,
             cancelledAppointmentIds: cancelledIds,
             createdAppointmentIds,
+            enrollmentIds,
+            releasedEnrollmentIds: released.map((e) => e.id),
+            snapshot: {
+              termsTemplateId: snapshot.termsTemplateId ?? null,
+              termsTemplateVersion: snapshot.termsTemplateVersion ?? null,
+              rulesTemplateId: snapshot.rulesTemplateId ?? null,
+              rulesTemplateVersion: snapshot.rulesTemplateVersion ?? null,
+            },
           },
           requestId,
         });

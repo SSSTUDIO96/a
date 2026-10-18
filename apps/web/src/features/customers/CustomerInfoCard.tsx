@@ -1,13 +1,13 @@
 import type { Customer } from '../../api/types';
 import { Avatar, Button } from '../../ui';
-import { formatDateIn, formatPhone } from './logic';
+import { formatDateIn, formatPhone, initialsOf } from './logic';
 
 // Thẻ "Thông tin khách" (C2 2.2): ảnh 32 · họ tên 20/700 · "Sửa"; bảng nhãn – giá trị. Trống hiện "—".
 export function CustomerInfoCard({ c, timezone, canWrite, onEdit }: { c: Customer; timezone: string; canWrite: boolean; onEdit: () => void }) {
   return (
     <section className="ui-card kh-info" aria-label="Thông tin khách">
       <header className="kh-info__head">
-        <Avatar name={c.fullName} colorKey={c.id} />
+        <Avatar name={c.fullName} initials={initialsOf(c.fullName)} colorKey={c.id} />
         <h2 className="kh-info__name">{c.fullName}</h2>
         {canWrite && (
           <Button size="sm" onClick={onEdit}>

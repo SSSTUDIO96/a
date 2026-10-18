@@ -19,6 +19,16 @@ export function customerPerms(has: (p: Permission) => boolean): CustomerPerms {
   };
 }
 
+// Chữ viết tắt như máy chủ làm cho thợ (staff/common.ts initialsOf): chữ đầu của từ đầu và từ cuối
+// ("Nguyễn Thị Mai" → "NM"), để ảnh chữ của khách và của thợ theo cùng một luật.
+export function initialsOf(name: string): string {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  const first = words[0];
+  if (!first) return '?';
+  const last = words.length > 1 ? words[words.length - 1] : undefined;
+  return `${[...first][0] ?? ''}${last ? ([...last][0] ?? '') : ''}`.toLocaleUpperCase('vi-VN');
+}
+
 // ---------------- Số điện thoại ----------------
 // Máy chủ lưu 0xxxxxxxxx (10 số) → hiện "0912 345 678". Số lạ để nguyên.
 export function formatPhone(phone: string): string {

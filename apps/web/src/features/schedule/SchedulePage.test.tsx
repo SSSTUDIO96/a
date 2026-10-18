@@ -39,6 +39,7 @@ function a(id: string, code: string, start: string, end: string, staff: string[]
     customer: { id: `c-${id}`, fullName: `Khách ${code}`, phone: '0912345678' },
     contract: null,
     contractLineId: null,
+    subjectName: null,
     startsAt: start,
     endsAt: end,
     travelBeforeMin: 0,
@@ -52,6 +53,8 @@ function a(id: string, code: string, start: string, end: string, staff: string[]
     staff: staff.map((m, i) => ({
       membershipId: m,
       fullName: STAFF.find((s) => s.membershipId === m)?.displayName ?? m,
+      displayName: STAFF.find((s) => s.membershipId === m)?.displayName ?? m,
+      avatarUrl: null,
       role: i === 0 ? 'PRIMARY' : 'ASSIST',
       blockStart: start,
       blockEnd: end,
@@ -64,12 +67,13 @@ function a(id: string, code: string, start: string, end: string, staff: string[]
 }
 
 const APPTS: Appointment[] = [
-  a('a1', 'L-0001', '2026-10-24T06:00:00+07:00', '2026-10-24T07:30:00+07:00', ['m-ha']),
+  a('a1', 'L-0001', '2026-10-24T06:00:00+07:00', '2026-10-24T07:30:00+07:00', ['m-ha'], { subjectName: 'Cô dâu' }),
   a('a2', 'L-0002', '2026-10-24T05:00:00+07:00', '2026-10-24T06:30:00+07:00', ['m-anh'], { title: 'Makeup ăn hỏi' }),
   a('a3', 'L-0003', '2026-10-24T15:00:00+07:00', '2026-10-24T16:00:00+07:00', [], { title: 'Makeup tiệc' }),
   a('a4', 'L-0004', '2026-10-21T09:00:00+07:00', '2026-10-21T15:00:00+07:00', ['m-vy'], {
     contract: { id: 'hd-9', code: 'HD-0009', status: 'CONFIRMED' },
     contractLineId: 'line-1',
+    subjectName: 'Phù dâu',
   }),
 ];
 
@@ -111,8 +115,8 @@ function setupServer(opts: { items?: Appointment[]; ownOnly?: string } = {}) {
   );
 }
 
-const OWNER: ScheduleAccess = { readAll: true, write: true, staffRead: true, customersRead: true, customersWrite: true, contractsRead: true };
-const ARTIST: ScheduleAccess = { readAll: false, write: false, staffRead: true, customersRead: false, customersWrite: false, contractsRead: false };
+const OWNER: ScheduleAccess = { readAll: true, write: true, staffRead: true, customersRead: true, customersWrite: true, contractsRead: true, catalogRead: false };
+const ARTIST: ScheduleAccess = { readAll: false, write: false, staffRead: true, customersRead: false, customersWrite: false, contractsRead: false, catalogRead: false };
 
 function renderScreen(access: ScheduleAccess, self = { membershipId: 'm-chu', name: 'Nguyễn Trọng Chiến' }) {
   const router = createMemoryRouter(
@@ -188,6 +192,27 @@ describe('mặc định chế độ C, đổi chế độ', () => {
     expect(document.querySelector('[data-cell="chua-co-tho|2026-10-24"]')?.textContent).toContain('15:00');
     const sat = screen.getAllByRole('columnheader').find((h) => h.textContent?.includes('24/10'));
     expect(sat?.textContent).toBe('Thứ Bảy24/103 ca');
+  });
+});
+
+describe('màu ca theo nhân vật', () => {
+  it('ô ca tô theo subjectName, ca không có nhân vật là "Khác" (dù tên ca có chữ "ăn hỏi"); chú thích liệt kê nhân vật thật trong tuần', async () => {
+    setupServer();
+    renderScreen(OWNER);
+    await screen.findByTestId('che-do-C');
+    expect(document.querySelector('[data-appt="a1"]')?.className).toContain('ws-sw-rose');
+    expect(document.querySelector('[data-appt="a4"]')?.className).toContain('ws-sw-amber');
+    // a2 tên "Makeup ăn hỏi" nhưng subjectName null → Khác.
+    expect(document.querySelector('[data-appt="a2"]')?.className).toContain('ws-sw-other');
+    const legend = screen.getByLabelText('Chú thích màu');
+    expect([...legend.querySelectorAll('.ws-legend__i')].map((x) => x.textContent)).toEqual([
+      'Cô dâu',
+      'Phù dâu',
+      'Khác',
+      'Chưa có thợ',
+      'Không chặn lịch',
+    ]);
+    expect(legend.textContent).not.toMatch(/Ăn hỏi|Tiệc & sự kiện/);
   });
 });
 

@@ -466,8 +466,8 @@ function ViewBody({
         </InfoRow>
         <InfoRow label="Thợ">
           <span className="ws-info__staff">
-            <StaffAvatars a={appt} lanes={lanes} size="sm" />
-            <span className={cx(appt.staff.length === 0 && 'ws-warn-text')}>{staffNames(appt, lanes)}</span>
+            <StaffAvatars a={appt} size="sm" />
+            <span className={cx(appt.staff.length === 0 && 'ws-warn-text')}>{staffNames(appt)}</span>
           </span>
         </InfoRow>
         {(appt.locationType || appt.address) && (

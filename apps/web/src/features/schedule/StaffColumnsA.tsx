@@ -5,7 +5,7 @@ import type { CSSProperties } from 'react';
 import type { Appointment } from '../../api/types';
 import { StatusTag } from '../../ui';
 import { appointmentsOfDay, axisHours, blockSpan, dayLoad, kindText, laneIdsOf, layoutLanes, UNASSIGNED, type ConflictMarks, type StaffLane } from './model';
-import { apptClasses, apptTip, cx, LaneAvatar, placeText, timeRange } from './parts';
+import { apptClasses, apptTip, cx, LaneAvatar, placeText, timeRange, useSwatchOf } from './parts';
 import { formatHours, minutesFromDayStart, type DayKey } from './time';
 
 export function StaffColumnsA({
@@ -25,6 +25,7 @@ export function StaffColumnsA({
   hourPx: number;
   onOpen: (a: Appointment) => void;
 }) {
+  const swatchOfName = useSwatchOf();
   const dayItems = appointmentsOfDay(appointments, day);
   const [fromH, toH] = axisHours(dayItems.map(blockSpan), day);
   const hours = Array.from({ length: toH - fromH }, (_, i) => fromH + i);
@@ -91,7 +92,7 @@ export function StaffColumnsA({
                   <button
                     type="button"
                     key={a.id}
-                    className={cx('ws-ev', apptClasses(a, conflict))}
+                    className={cx('ws-ev', apptClasses(a, conflict, swatchOfName(a.subjectName)))}
                     style={box}
                     title={apptTip(a)}
                     onClick={() => onOpen(a)}

@@ -125,6 +125,17 @@ export function OrgList({ stats, plans, filter, planCode, q, onFilter, onPlan, o
   }, [q]);
 
   const remaining = pages.total - pages.items.length;
+  const chipsRef = useRef<HTMLDivElement>(null);
+  // Chip đang chọn có thể nằm ngoài khung cuộn ngang (vd mở thẳng ?loc=dang-khoa): cuộn hàng chip tới nó.
+  useEffect(() => {
+    const row = chipsRef.current;
+    const on = row?.querySelector<HTMLElement>('[aria-pressed="true"]');
+    if (!row || !on) return;
+    const left = on.getBoundingClientRect().left - row.getBoundingClientRect().left + row.scrollLeft;
+    if (left < row.scrollLeft || left + on.offsetWidth > row.scrollLeft + row.clientWidth) {
+      row.scrollLeft = Math.max(0, left - 8);
+    }
+  }, [filter]);
 
   return (
     <div className="ui-card pf-list">
@@ -141,7 +152,7 @@ export function OrgList({ stats, plans, filter, planCode, q, onFilter, onPlan, o
             onChange={(e) => setText(e.target.value)}
           />
         </label>
-        <div className="pf-chips" role="group" aria-label="Lọc tổ chức">
+        <div ref={chipsRef} className="pf-chips" role="group" aria-label="Lọc tổ chức">
           {FILTERS.map((f) => (
             <Chip key={f.key} selected={filter === f.key} count={f.count(stats)} onClick={() => onFilter(f.key)}>
               {f.label}

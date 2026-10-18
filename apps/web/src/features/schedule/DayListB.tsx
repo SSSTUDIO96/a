@@ -17,7 +17,7 @@ import {
   type DayPart,
   type StaffLane,
 } from './model';
-import { apptClasses, cx, LaneAvatar, placeText, StaffAvatars, staffNames, startLabel, timeRange } from './parts';
+import { apptClasses, cx, LaneAvatar, placeText, StaffAvatars, staffNames, startLabel, timeRange, useSwatchOf } from './parts';
 import { dayKeyOf, dayNumber, ddmm, formatHours, hhmm, isWeekend, weekDays, weekdayLong, weekdayShort, type DayKey } from './time';
 
 const AXIS_FROM = 4;
@@ -47,6 +47,7 @@ export function DayListB({
   onAssign: (a: Appointment) => void;
 }) {
   const [laneFilter, setLaneFilter] = useState<string | null>(null);
+  const swatchOfName = useSwatchOf();
   const days = weekDays(day);
   const perDay = countByDay(appointments, days);
   const all = appointmentsOfDay(appointments, day);
@@ -135,7 +136,7 @@ export function DayListB({
                 {g.items.map((a) => {
                   const conflict = marks.appointmentIds.has(a.id);
                   return (
-                    <button type="button" key={a.id} className={cx('ws-item', apptClasses(a, conflict))} onClick={() => onOpen(a)}>
+                    <button type="button" key={a.id} className={cx('ws-item', apptClasses(a, conflict, swatchOfName(a.subjectName)))} onClick={() => onOpen(a)}>
                       <span className="ws-item__tm num">
                         {startLabel(a, day)}
                         <small>{hhmm(a.endsAt)}</small>
@@ -154,8 +155,8 @@ export function DayListB({
                         )}
                       </span>
                       <span className="ws-item__who">
-                        <StaffAvatars a={a} lanes={lanes} size="sm" />
-                        <span className="ws-item__wn">{staffNames(a, lanes)}</span>
+                        <StaffAvatars a={a} size="sm" />
+                        <span className="ws-item__wn">{staffNames(a)}</span>
                       </span>
                     </button>
                   );
@@ -193,7 +194,7 @@ export function DayListB({
                       return (
                         <i
                           key={b.id}
-                          className={cx(`ws-tone-${b.tone}`, !b.blocking && 'is-off', marks.appointmentIds.has(b.id) && 'is-x')}
+                          className={cx(`ws-sw-${swatchOfName(b.subjectName)}`, !b.blocking && 'is-off', marks.appointmentIds.has(b.id) && 'is-x')}
                           style={{ left: `${((from - AXIS_FROM * 60) / span) * 100}%`, width: `${((to - from) / span) * 100}%` }}
                         />
                       );

@@ -16,27 +16,61 @@ export const MODE_OPTIONS: readonly { value: ScheduleMode; label: string; short:
   { value: 'A', label: 'Cột thợ', short: 'Cột thợ', tip: 'Một ngày, mỗi thợ một cột theo trục giờ.' },
 ];
 
-// ---------------- Màu loại ca ----------------
-// Máy chủ chưa trả nhân vật/loại dịch vụ của ca (phiếu vướng P2). Lịch sinh từ hợp đồng có title "{tên gói} — {nhân vật}",
-// nên màu tạm suy từ chữ trong tên ca. Luật này ghi rõ trong tooltip "?" của chú thích màu, không đoán ngầm.
-export type Tone = 'bride' | 'engagement' | 'event' | 'other';
+// ---------------- Màu ca theo NHÂN VẬT ----------------
+// Quyết định của điều phối (thay anh Chiến): tô màu theo subjectName (nhân vật trên dòng hợp đồng gắn với ca),
+// KHÔNG đoán theo chữ trong tên ca. Ca không có nhân vật → "Khác". Bảng nhân vật → màu chỉ nằm ở đây.
+export const SWATCHES = ['rose', 'violet', 'amber', 'green', 'blue', 'taupe'] as const;
+export type Swatch = (typeof SWATCHES)[number] | 'other';
+export const OTHER_SUBJECT_LABEL = 'Khác';
 
-export const TONE_LABELS: Record<Tone, string> = {
-  bride: 'Cô dâu',
-  engagement: 'Ăn hỏi',
-  event: 'Tiệc & sự kiện',
-  other: 'Khác',
+// Nhân vật cài sẵn (DEFAULT_MAKEUP_SUBJECTS ở packages/shared) có màu cố định.
+const FIXED_SWATCH: Record<string, Swatch> = {
+  'cô dâu': 'rose',
+  'mẹ cô dâu': 'violet',
+  'phù dâu': 'amber',
+  'mẹ chú rể': 'green',
+  'chú rể': 'blue',
+  'khách mời': 'taupe',
 };
 
-export const TONE_RULE_TIP =
-  'Màu tạm đoán theo tên ca (máy chủ chưa gửi nhân vật của ca): có "ăn hỏi" → Ăn hỏi; có "tiệc", "sự kiện" hoặc "kỷ yếu" → Tiệc & sự kiện; có "cô dâu" hoặc "cưới" → Cô dâu; còn lại → Khác.';
+const norm = (s: string) => s.trim().toLocaleLowerCase('vi');
 
-export function toneOf(title: string | null | undefined): Tone {
-  const t = (title ?? '').toLocaleLowerCase('vi');
-  if (t.includes('ăn hỏi')) return 'engagement';
-  if (t.includes('tiệc') || t.includes('sự kiện') || t.includes('kỷ yếu')) return 'event';
-  if (t.includes('cô dâu') || t.includes('cưới')) return 'bride';
-  return 'other';
+function hashIndex(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i += 1) h = (Math.imul(h, 31) + s.charCodeAt(i)) >>> 0;
+  return h % SWATCHES.length;
+}
+
+/**
+ * Màu của một nhân vật. `orgSubjects`: tên nhân vật của tổ chức theo thứ tự cố định (sortOrder, GET /makeup-subjects).
+ * - null / rỗng → 'other' ("Khác").
+ * - Nhân vật cài sẵn → màu cố định ở FIXED_SWATCH.
+ * - Nhân vật tổ chức tự thêm → màu theo vị trí trong danh sách nhân vật của tổ chức (xoay vòng 6 màu).
+ * - Không có trong danh sách (không có quyền xem danh sách, hoặc nhân vật đã bị xoá) → theo băm tên, luôn ra cùng một màu.
+ */
+export function swatchOf(subjectName: string | null | undefined, orgSubjects: readonly string[] = []): Swatch {
+  if (!subjectName || !subjectName.trim()) return 'other';
+  const key = norm(subjectName);
+  const fixed = FIXED_SWATCH[key];
+  if (fixed) return fixed;
+  const idx = orgSubjects.findIndex((n) => norm(n) === key);
+  return SWATCHES[(idx >= 0 ? idx : hashIndex(key)) % SWATCHES.length] ?? 'other';
+}
+
+// Chú thích màu: các nhân vật thật có trong tuần (theo thứ tự danh sách của tổ chức, rồi theo tên), cuối cùng là "Khác".
+export function legendSubjects(appointments: readonly Pick<Appointment, 'subjectName'>[], orgSubjects: readonly string[] = []): { name: string | null; label: string }[] {
+  const names = new Map<string, string>();
+  let hasOther = false;
+  for (const a of appointments) {
+    if (a.subjectName && a.subjectName.trim()) names.set(norm(a.subjectName), a.subjectName.trim());
+    else hasOther = true;
+  }
+  const order = (n: string) => {
+    const i = orgSubjects.findIndex((x) => norm(x) === norm(n));
+    return i < 0 ? Number.MAX_SAFE_INTEGER : i;
+  };
+  const list = [...names.values()].sort((x, y) => order(x) - order(y) || x.localeCompare(y, 'vi'));
+  return [...list.map((n) => ({ name: n, label: n })), ...(hasOther ? [{ name: null, label: OTHER_SUBJECT_LABEL }] : [])];
 }
 
 export const KIND_LABELS: Record<Appointment['kind'], string> = {
@@ -65,6 +99,7 @@ export interface ScheduleAccess {
   customersRead: boolean;
   customersWrite: boolean;
   contractsRead: boolean;
+  catalogRead: boolean;
 }
 
 export function accessFrom(has: (p: Permission) => boolean): ScheduleAccess {
@@ -75,6 +110,7 @@ export function accessFrom(has: (p: Permission) => boolean): ScheduleAccess {
     customersRead: has('customers.read'),
     customersWrite: has('customers.write'),
     contractsRead: has('contracts.read'),
+    catalogRead: has('catalog.read'),
   };
 }
 
@@ -116,13 +152,19 @@ export function buildStaffLanes(input: {
     avatarUrl: m.avatarUrl,
     tierName: m.tier?.name ?? null,
   });
-  const fromAppointments = new Map<string, string>();
-  for (const a of appointments) for (const s of a.staff) if (!fromAppointments.has(s.membershipId)) fromAppointments.set(s.membershipId, s.fullName);
+  // Thợ đang có ca: tên hiển thị và ảnh lấy thẳng từ ca (máy chủ gửi displayName, avatarUrl).
+  const fromAppointments = new Map<string, { name: string; avatarUrl: string | null }>();
+  for (const a of appointments) {
+    for (const s of a.staff) {
+      if (!fromAppointments.has(s.membershipId)) fromAppointments.set(s.membershipId, { name: s.displayName, avatarUrl: s.avatarUrl });
+    }
+  }
 
   if (!readAll) {
     const me = staff?.find((m) => m.membershipId === self.membershipId);
     if (me) return [fromStaff(me)];
-    return [{ membershipId: self.membershipId, name: fromAppointments.get(self.membershipId) ?? self.name, avatarUrl: null, tierName: null }];
+    const mine = fromAppointments.get(self.membershipId);
+    return [{ membershipId: self.membershipId, name: mine?.name ?? self.name, avatarUrl: mine?.avatarUrl ?? null, tierName: null }];
   }
 
   const lanes: StaffLane[] = [];
@@ -133,8 +175,8 @@ export function buildStaffLanes(input: {
       seen.add(m.membershipId);
     }
   }
-  for (const [membershipId, name] of fromAppointments) {
-    if (!seen.has(membershipId)) lanes.push({ membershipId, name, avatarUrl: null, tierName: null });
+  for (const [membershipId, p] of fromAppointments) {
+    if (!seen.has(membershipId)) lanes.push({ membershipId, name: p.name, avatarUrl: p.avatarUrl, tierName: null });
   }
   return lanes;
 }
@@ -329,7 +371,7 @@ export const TRANSITION_LABELS: Record<WorkStatus, string> = {
 export interface DayLoad {
   count: number;
   minutes: number;
-  bars: { id: string; startMin: number; endMin: number; tone: Tone; blocking: boolean }[];
+  bars: { id: string; startMin: number; endMin: number; subjectName: string | null; blocking: boolean }[];
 }
 
 export function dayLoad(appointments: readonly Appointment[], laneId: string, day: DayKey): DayLoad {
@@ -343,7 +385,7 @@ export function dayLoad(appointments: readonly Appointment[], laneId: string, da
     const workStart = Math.max(0, minutesFromDayStart(a.startsAt, day));
     const workEnd = Math.min(24 * 60, minutesFromDayStart(a.endsAt, day));
     minutes += Math.max(0, workEnd - workStart);
-    bars.push({ id: a.id, startMin: start, endMin: end, tone: toneOf(a.title), blocking: s ? s.isBlocking : isBlocking(a) });
+    bars.push({ id: a.id, startMin: start, endMin: end, subjectName: a.subjectName, blocking: s ? s.isBlocking : isBlocking(a) });
   }
   return { count: mine.length, minutes, bars };
 }

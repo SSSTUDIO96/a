@@ -16,7 +16,8 @@ import {
 import { AppError } from '../../lib/errors';
 import { resolveCurrentPrice, type PriceRef } from '../catalog/prices';
 import { assertActiveStaff, assertBookable, type StaffAssignment } from '../schedule/service';
-import type { LineInput, PlacedLineInput, TravelInput } from './schemas';
+import type { ContractKindKey, CourseLineInput, LineInput, PlacedLineInput, TravelInput } from './schemas';
+import { seatConflict } from './enroll';
 
 type Tx = Prisma.TransactionClient;
 // Lấy thẳng từ database (một nguồn): thêm loại dòng mới (COURSE) không phải sửa chỗ này.
@@ -53,6 +54,8 @@ export interface PlannedLine {
   packageDeposit: Vnd;
   // Thợ phụ trách dự kiến (chỉ dòng gói/dịch vụ chính).
   staff: StaffAssignment[];
+  // Lớp của dòng khoá học (chỉ dòng COURSE).
+  courseClassId: string | null;
   // Số liệu để in dòng công thức phí di chuyển (chỉ dòng TRAVEL, chỉ có ở bảng tính — database chưa có cột lưu).
   travelBreakdown: TravelBreakdown | null;
 }
@@ -113,6 +116,7 @@ function blank(): Omit<PlannedLine, 'kind' | 'name' | 'quantity' | 'unitPrice' |
     note: null,
     packageDeposit: 0,
     staff: [],
+    courseClassId: null,
     travelBreakdown: null,
   };
 }
@@ -172,6 +176,54 @@ interface Ctx {
   orgId: string;
   at: Date;
   policy: () => Promise<TravelPolicy>;
+  kind: ContractKindKey;
+  // true: lớp hết chỗ / ngừng nhận → 409 ngay (tạo, sửa, thêm dòng). false: xem trước — không chặn, báo ở classes[].
+  seatCheck: boolean;
+}
+
+// Luật trộn dòng (BAN-VE-C3 mục 1.1): hợp đồng khoá học chỉ nhận dòng COURSE + CUSTOM; hợp đồng dịch vụ không nhận COURSE.
+function assertLineKindAllowed(kind: ContractKindKey, input: LineInput, line: number): void {
+  if (kind === 'COURSE' && input.kind !== 'COURSE' && input.kind !== 'CUSTOM') {
+    throw bad('Hợp đồng khoá học không thêm được gói dịch vụ — chỉ nhận dòng khoá học và dòng tự nhập (giáo trình, dụng cụ…)', line);
+  }
+  if (kind === 'SERVICE' && input.kind === 'COURSE') {
+    throw bad('Hợp đồng dịch vụ không thêm được dòng khoá học — lập hợp đồng khoá học riêng', line);
+  }
+}
+
+// Dòng khoá học: tên = tên khoá · tên lớp (khoá Một lớp: chỉ tên khoá — tên lớp tự đặt bằng tên khoá, người dùng không
+// thấy), đơn giá = học phí LÚC THÊM, số lượng 1. Cọc gợi ý lấy cọc mặc định của khoá.
+async function planCourse(ctx: Ctx, input: CourseLineInput, line: number): Promise<PlannedLine> {
+  const cls = await ctx.tx.courseClass.findFirst({
+    where: { id: input.courseClassId, organizationId: ctx.orgId },
+    select: {
+      id: true,
+      name: true,
+      status: true,
+      capacity: true,
+      enrolledCount: true,
+      course: { select: { name: true, mode: true, tuitionFee: true, depositAmount: true, archivedAt: true } },
+    },
+  });
+  if (!cls) throw missing('lớp học', line);
+  if (cls.course.archivedAt) throw bad(`Khoá "${cls.course.name}" đã lưu trữ — không nhận ghi danh mới`, line);
+  if (ctx.seatCheck) {
+    const conflict = seatConflict(cls);
+    if (conflict) throw new AppError('CONFLICT', conflict.message, { line, ...conflict.details });
+  }
+  const unitPrice = vndFromBigInt(cls.course.tuitionFee, 'học phí');
+  return {
+    ...blank(),
+    kind: 'COURSE',
+    courseClassId: cls.id,
+    name: cls.course.mode === 'SINGLE_CLASS' ? cls.course.name : `${cls.course.name} · ${cls.name}`,
+    quantity: 1,
+    unitPrice,
+    lineDiscount: 0,
+    lineTotal: unitPrice,
+    packageDeposit: vndFromBigInt(cls.course.depositAmount, 'cọc khoá học'),
+    note: input.note ?? null,
+  };
 }
 
 async function planPlaced(ctx: Ctx, input: PlacedLineInput, line: number): Promise<PlannedLine[]> {
@@ -382,7 +434,10 @@ async function planTravel(
 }
 
 async function planOne(ctx: Ctx, input: LineInput, line: number): Promise<PlannedLine[]> {
+  assertLineKindAllowed(ctx.kind, input, line);
   switch (input.kind) {
+    case 'COURSE':
+      return [await planCourse(ctx, input, line)];
     case 'PACKAGE':
     case 'SERVICE':
       return planPlaced(ctx, input, line);
@@ -425,16 +480,31 @@ async function planOne(ctx: Ctx, input: LineInput, line: number): Promise<Planne
 
 // Tính các dòng từ dữ liệu nhập: kiểm tham chiếu thuộc tổ chức, chốt giá hiện hành, sinh dòng dịch vụ phụ và phí di chuyển.
 // `line` trong lỗi là vị trí dòng (bắt đầu từ 0) trong mảng gửi lên.
-export async function planLines(tx: Tx, orgId: string, inputs: LineInput[], at: Date, firstIndex = 0): Promise<PlannedLine[]> {
+export interface PlanOptions {
+  kind: ContractKindKey;
+  seatCheck: boolean;
+  firstIndex?: number;
+}
+
+export async function planLines(tx: Tx, orgId: string, inputs: LineInput[], at: Date, opts: PlanOptions): Promise<PlannedLine[]> {
   let cached: TravelPolicy | null = null;
   const ctx: Ctx = {
     tx,
     orgId,
     at,
     policy: async () => (cached ??= await loadTravelPolicy(tx, orgId)),
+    kind: opts.kind,
+    seatCheck: opts.seatCheck,
   };
   const out: PlannedLine[] = [];
-  for (const [i, input] of inputs.entries()) out.push(...(await planOne(ctx, input, firstIndex + i)));
+  for (const [i, input] of inputs.entries()) out.push(...(await planOne(ctx, input, (opts.firstIndex ?? 0) + i)));
+  // Một lớp chỉ một dòng trong cùng hợp đồng (một hợp đồng = một học viên; ghi danh trùng bị chặn lúc xác nhận).
+  const seen = new Set<string>();
+  for (const l of out) {
+    if (!l.courseClassId) continue;
+    if (seen.has(l.courseClassId)) throw bad(`Lớp "${l.name}" có hai dòng trong cùng hợp đồng — mỗi lớp chỉ một dòng`, opts.firstIndex ?? 0);
+    seen.add(l.courseClassId);
+  }
   return out;
 }
 
@@ -454,8 +524,9 @@ export async function buildSheet(
   orgId: string,
   input: { lines: LineInput[]; discount: Vnd; depositRequired?: Vnd },
   at: Date,
+  opts: PlanOptions,
 ): Promise<Sheet> {
-  const lines = await planLines(tx, orgId, input.lines, at);
+  const lines = await planLines(tx, orgId, input.lines, at, opts);
   const { subtotal, total } = money(() =>
     computeContractTotals(
       lines.map((l) => ({ lineTotal: l.lineTotal, voided: false })),
@@ -480,6 +551,23 @@ export async function buildSheet(
     total,
     depositRequired: input.depositRequired ?? suggestedDeposit,
     suggestedDeposit,
+  };
+}
+
+const km = (v: number | null, digits = 2) => (v === null ? null : new Prisma.Decimal(v.toFixed(digits)));
+
+// Số liệu phí di chuyển CHỤP vào dòng TRAVEL lúc lưu (migration 20261018240000): dựng lại dòng công thức km cho hợp đồng
+// đã lưu mà không tính lại theo cài đặt hiện hành. Dòng khác: mọi cột để trống (CHECK chỉ dòng TRAVEL mới có giá trị).
+function travelSnapshot(b: TravelBreakdown | null) {
+  return {
+    includedKm: b ? km(b.includedKm) : null,
+    includedFrom: b?.includedFrom ?? null,
+    excessKm: b ? km(b.excessKm) : null,
+    chargedKm: b ? km(b.chargedKm) : null,
+    roundTrip: b ? b.roundTrip : null,
+    tierFromKm: b?.tier ? km(b.tier.fromKm) : null,
+    tierToKm: b?.tier ? km(b.tier.toKm) : null,
+    tierAmount: b?.tier ? BigInt(b.tier.amount) : null,
   };
 }
 
@@ -516,6 +604,8 @@ export async function insertLines(
       travelMode: l.travelMode,
       distanceKm: l.distanceKm === null ? null : new Prisma.Decimal(l.distanceKm.toFixed(2)),
       perKmAmount: l.perKmAmount === null ? null : BigInt(l.perKmAmount),
+      courseClassId: l.courseClassId,
+      ...travelSnapshot(l.travelBreakdown),
       note: l.note,
       sortOrder: args.firstSort + i,
       addedAfterConfirm: args.addedAfterConfirm,

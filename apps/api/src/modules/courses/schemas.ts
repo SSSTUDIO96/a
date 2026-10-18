@@ -170,6 +170,7 @@ export const ListClassesQuery = z.object({
   instructorId: z.uuid().optional(),
   // Mặc định ẩn lớp đã huỷ và lớp của khoá đã lưu trữ.
   includeCancelled: BoolQuery.optional(),
+  includeArchived: BoolQuery.optional(),
 });
 
 export type CreateCourseInput = z.infer<typeof CreateCourseBody>;

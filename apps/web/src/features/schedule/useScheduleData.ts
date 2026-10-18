@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { WorkStatus } from '@makeup/shared';
+import { listMakeupSubjects } from '../../api/catalog';
 import { listAppointments } from '../../api/schedule';
 import { listStaff } from '../../api/staff';
 import type { Appointment, StaffMember } from '../../api/types';
@@ -57,4 +58,30 @@ export function useStaffList(orgId: string, enabled: boolean): StaffMember[] | n
     return () => controller.abort();
   }, [orgId, enabled]);
   return staff;
+}
+
+// Tên nhân vật của tổ chức theo thứ tự cố định (sortOrder, rồi tên) — để nhân vật tự thêm có màu ổn định.
+// Chỉ gọi khi có catalog.read; không có hoặc lỗi thì màu nhân vật lạ theo băm tên (model.ts swatchOf).
+export function useOrgSubjects(orgId: string, enabled: boolean): readonly string[] {
+  const [names, setNames] = useState<readonly string[]>([]);
+  useEffect(() => {
+    if (!enabled) {
+      setNames([]);
+      return undefined;
+    }
+    const controller = new AbortController();
+    listMakeupSubjects(orgId, undefined, controller.signal)
+      .then((res) =>
+        setNames(
+          [...res.items]
+            .sort((x, y) => x.sortOrder - y.sortOrder || x.name.localeCompare(y.name, 'vi'))
+            .map((x) => x.name),
+        ),
+      )
+      .catch(() => {
+        if (!controller.signal.aborted) setNames([]);
+      });
+    return () => controller.abort();
+  }, [orgId, enabled]);
+  return names;
 }

@@ -718,6 +718,17 @@ model ContractLine {
   travelMode        TravelFeeMode?   @map("travel_mode")
   distanceKm        Decimal?         @map("distance_km") @db.Decimal(7, 2)
   perKmAmount       BigInt?          @map("per_km_amount")
+  // Số liệu phí di chuyển CHỤP lúc lưu (chỉ dòng TRAVEL, CHECK contract_lines_travel_snapshot_only_travel) để dựng lại
+  // dòng công thức km của hợp đồng đã lưu. Dòng TRAVEL lưu trước migration 20261018240000 để trống (không đoán lại).
+  includedKm        Decimal?         @map("included_km") @db.Decimal(7, 2)
+  // 'PACKAGE' (bán kính của gói) | 'ORGANIZATION' (mức chung của tổ chức).
+  includedFrom      String?          @map("included_from")
+  excessKm          Decimal?         @map("excess_km") @db.Decimal(7, 2)
+  chargedKm         Decimal?         @map("charged_km") @db.Decimal(8, 2)
+  roundTrip         Boolean?         @map("round_trip")
+  tierFromKm        Decimal?         @map("tier_from_km") @db.Decimal(7, 2)
+  tierToKm          Decimal?         @map("tier_to_km") @db.Decimal(7, 2)
+  tierAmount        BigInt?          @map("tier_amount")
   // Chỉ dòng COURSE: lớp học viên vào (CHECK: kind = COURSE ⇔ có lớp).
   courseClassId     String?          @map("course_class_id") @db.Uuid
   note              String?

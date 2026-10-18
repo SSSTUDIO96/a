@@ -218,6 +218,8 @@
   .pf-tbl td.pf-t-hide { display: block; }
   .pf-tbl td.pf-t-hide.pf-faint { display: none; }
 
+  /* Hộp sm trên điện thoại là ngăn đáy cao tự do (src/ui): hộp dài của trang này bị đẩy mất đầu → giới hạn cao, thân tự cuộn. */
+  .ui-dialog.pf-dlg { max-height: 100vh; max-height: 100dvh; }
   .pf-dlg .ui-row.pf-row-wide { grid-template-columns: minmax(0, 1fr); gap: 6px; }
   .pf-dlg .ui-row.pf-row-wide .ui-row__ctl { justify-content: flex-start; }
   .pf-lim { grid-template-columns: minmax(0, 1fr); }

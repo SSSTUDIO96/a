@@ -147,6 +147,7 @@ export function OrgDetailPanel({ organizationId, onChanged, onLoaded }: OrgDetai
               </dt>
               <dd data-testid="ghi-du-lieu">
                 {sub.inGrace ? `Còn ân hạn đến ${fmtDate(sub.graceEndsAt)}` : sub.writable ? 'Được' : 'Chỉ xem'}
+                {suspended ? <span className="pf-fx"> · tổ chức đang khoá: thành viên chưa vào được</span> : null}
               </dd>
               <dt>Ghi chú</dt>
               <dd>{sub.note ?? <span className="pf-faint">—</span>}</dd>

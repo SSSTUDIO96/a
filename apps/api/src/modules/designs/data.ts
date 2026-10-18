@@ -405,7 +405,7 @@ export async function presentCards(db: Tx, organizationId: string, rows: CardRow
       snapshot: r.snapshot,
       photos: r.photos.map((p) => {
         const s = sign(p.fileId);
-        return { sortOrder: p.sortOrder, fileId: p.fileId, url: s?.url ?? null, expiresAt: s?.expiresAt ?? null };
+        return { sortOrder: p.sortOrder, fileId: p.fileId, signedUrl: s?.url ?? null, signedUrlExpiresAt: s?.expiresAt ?? null };
       }),
       outputFileId: r.outputFileId,
       outputUrl: out?.url ?? null,

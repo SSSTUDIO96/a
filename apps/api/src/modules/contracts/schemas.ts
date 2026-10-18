@@ -97,24 +97,23 @@ const contractBodyShape = {
 };
 
 type BodyLike = { customerId?: string; newCustomer?: unknown; terms?: string | null; termsTemplateId?: string | null };
-const oneCustomer = [
-  (b: BodyLike) => (b.customerId === undefined) !== (b.newCustomer === undefined),
-  { message: 'Chọn đúng một trong hai: customerId (khách có sẵn) hoặc newCustomer (khách mới)', path: ['customerId'] },
-] as const;
-const termsOrTemplate = [
-  (b: BodyLike) => !(typeof b.terms === 'string' && typeof b.termsTemplateId === 'string'),
-  { message: 'Chọn mẫu điều khoản (termsTemplateId) hoặc tự nhập điều khoản (terms), không gửi cả hai', path: ['termsTemplateId'] },
-] as const;
+const oneCustomer = (b: BodyLike) => (b.customerId === undefined) !== (b.newCustomer === undefined);
+const ONE_CUSTOMER = { message: 'Chọn đúng một trong hai: customerId (khách có sẵn) hoặc newCustomer (khách mới)', path: ['customerId'] };
+const termsOrTemplate = (b: BodyLike) => !(typeof b.terms === 'string' && typeof b.termsTemplateId === 'string');
+const TERMS_OR_TEMPLATE = {
+  message: 'Chọn mẫu điều khoản (termsTemplateId) hoặc tự nhập điều khoản (terms), không gửi cả hai',
+  path: ['termsTemplateId'],
+};
 
-export const ContractBodySchema = strict(contractBodyShape).refine(...oneCustomer).refine(...termsOrTemplate);
+export const ContractBodySchema = strict(contractBodyShape).refine(oneCustomer, ONE_CUSTOMER).refine(termsOrTemplate, TERMS_OR_TEMPLATE);
 
 export type ContractBody = z.infer<typeof ContractBodySchema>;
 
 // Xem trước: như thân tạo, thêm excludeContractId = hợp đồng đang sửa (giữ chỗ nháp và lịch của CHÍNH hợp đồng đó
 // không tính là cảnh báo thợ).
 export const QuoteBodySchema = strict({ ...contractBodyShape, excludeContractId: z.uuid().optional() })
-  .refine(...oneCustomer)
-  .refine(...termsOrTemplate);
+  .refine(oneCustomer, ONE_CUSTOMER)
+  .refine(termsOrTemplate, TERMS_OR_TEMPLATE);
 
 export const ContractPatchSchema = strict({
   lines: Lines.optional(),
@@ -128,7 +127,7 @@ export const ContractPatchSchema = strict({
   rulesTemplateId: z.uuid().nullable().optional(),
 })
   .refine((b) => Object.values(b).some((v) => v !== undefined), 'Không có gì để sửa')
-  .refine(...termsOrTemplate);
+  .refine(termsOrTemplate, TERMS_OR_TEMPLATE);
 
 export const VoidBodySchema = strict({ reason: z.string().trim().min(1, 'Phải nêu lý do huỷ dòng').max(1000) });
 
