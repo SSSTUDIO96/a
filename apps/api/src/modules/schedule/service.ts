@@ -117,7 +117,7 @@ export function presentAppointment(a: AppointmentRow, avatarOf: AvatarOf, histor
     contract: a.contract,
     contractLineId: a.contractLineId,
     // Ca không gắn dòng hợp đồng → null (không đoán theo tên ca).
-    subjectName: a.contractLine?.subjectName ?? null,
+    subjectName: null,
     startsAt: a.startsAt.toISOString(),
     endsAt: a.endsAt.toISOString(),
     travelBeforeMin: a.travelBeforeMin,

@@ -560,7 +560,9 @@ export function ContractEditor({ orgId, slug, tz, has, contractId }: ContractEdi
   return (
     <div className="ct-page">
       {/* h1 máy tính "Lập hợp đồng" (bản mẫu); điện thoại ẩn h1, thanh trên ghi đủ "Lập hợp đồng {mã}". */}
-      <PageHeader title={phone ? title : draftMode ? 'Lập hợp đồng' : 'Hợp đồng'} backTo={`/${slug}/hop-dong`} phoneAction={statusTag} />
+      <PageHeader title={phone ? title : draftMode ? 'Lập hợp đồng' : 'Hợp đồng'} backTo={`/${slug}/hop-dong`}
+        phoneAction={<StatusTag tone={status === 'CANCELLED' ? 'danger' : status === null || status === 'DRAFT' ? 'draft' : 'ok'}>{CONTRACT_STATUS_LABELS[status ?? 'DRAFT']}</StatusTag>}
+      />
       <div className="ct-grid" style={ab.showCatalog ? undefined : { gridTemplateColumns: 'minmax(0, 1fr)' }}>
         {catalogCard}
         <div className="ct-col">
