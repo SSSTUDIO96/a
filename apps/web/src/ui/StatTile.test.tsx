@@ -17,17 +17,17 @@ describe('StatTile', () => {
     const grid = screen.getByRole('group', { name: 'Số liệu tháng 10' });
     expect(grid.style.getPropertyValue('--stat-cols')).toBe('4');
     expect(screen.getByText('5.300.000 ₫').className).toBe('ui-stat__value');
-    expect(screen.getByText('12 hợp đồng')).toBeInTheDocument();
+    expect(screen.getByText('12 hợp đồng')).toBeTruthy();
     expect(screen.getByText('còn thiếu 200.000 ₫').className).toContain('ui-stat__note--warn');
     expect(screen.getByText('4.300.000 ₫').closest('.ui-stat')?.className).toContain('ui-stat--highlight');
     expect(screen.getByText('2').closest('.ui-stat')?.className).toContain('ui-stat--danger');
     await user.tab();
     const tip = screen.getByRole('button', { name: 'Giải thích' });
-    expect(tip).toHaveFocus();
-    expect(tip).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByText('Tổng giá trị hợp đồng có ngày sự kiện trong kỳ.')).toBeInTheDocument();
+    expect(document.activeElement).toBe(tip);
+    expect(tip.getAttribute('aria-expanded')).toBe('true');
+    expect(screen.getByText('Tổng giá trị hợp đồng có ngày sự kiện trong kỳ.')).toBeTruthy();
     await user.keyboard('{Escape}');
-    expect(tip).toHaveAttribute('aria-expanded', 'false');
+    expect(tip.getAttribute('aria-expanded')).toBe('false');
   });
 
   it('đang tải: aria-busy, không hiện số; lỗi: "—" và lý do role alert', () => {
@@ -39,9 +39,9 @@ describe('StatTile', () => {
     );
     expect(screen.queryByText('9.000.000 ₫')).toBeNull();
     expect(screen.queryByText('3 phiếu')).toBeNull();
-    expect(screen.getByText('Đang tải').closest('.ui-stat')).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByText('Đang tải').closest('.ui-stat').getAttribute('aria-busy')).toBe('true');
     expect(screen.queryByText('1 ₫')).toBeNull();
-    expect(screen.getByText('—')).toBeInTheDocument();
-    expect(screen.getByRole('alert')).toHaveTextContent('Không tải được số liệu');
+    expect(screen.getByText('—')).toBeTruthy();
+    expect(screen.getByRole('alert').textContent).toBe('Không tải được số liệu');
   });
 });

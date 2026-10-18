@@ -16,8 +16,8 @@ describe('ListDetail', () => {
     expect(root.className).toContain('ui-ld--narrow');
     expect(root.className).toContain('ui-ld--sticky');
     expect(root.dataset.mobile).toBe('list');
-    expect(screen.getByRole('region', { name: 'Danh sách khách' })).toHaveTextContent('Trái');
-    expect(screen.getByRole('region', { name: 'Hồ sơ khách' })).toHaveTextContent('Phải');
+    expect(screen.getByRole('region', { name: 'Danh sách khách' }).textContent).toBe('Trái');
+    expect(screen.getByRole('region', { name: 'Hồ sơ khách' }).textContent).toBe('Phải');
     rerender(<ListDetail list={<p>Trái</p>} detail={<p>Phải</p>} mobileView="detail" sticky={false} />);
     expect(root.dataset.mobile).toBe('detail');
     expect(root.className).not.toContain('ui-ld--narrow');
@@ -36,7 +36,7 @@ describe('ListGroupHeader', () => {
       </>,
     );
     const h = screen.getByRole('heading', { level: 3 });
-    expect(h).toHaveTextContent('Sự kiện 7 ngày tới3');
+    expect(h.textContent).toBe('Sự kiện 7 ngày tới3');
     expect(h.className).toBe('ui-lgh');
     expect(screen.getByRole('heading', { level: 4, name: 'Quá hạn' }).className).toContain('ui-lgh--danger');
   });
@@ -57,11 +57,11 @@ describe('ListRow', () => {
       />,
     );
     const row = screen.getByRole('button', { name: /Phương Thảo/ });
-    expect(row).toHaveAttribute('aria-current', 'true');
+    expect(row.getAttribute('aria-current')).toBe('true');
     expect(row.className).toContain('ui-lrow--sel');
     expect(row.className).toContain('ui-lrow--noav');
     await user.tab();
-    expect(row).toHaveFocus();
+    expect(document.activeElement).toBe(row);
     await user.keyboard('{Enter}');
     await user.keyboard(' ');
     expect(onClick).toHaveBeenCalledTimes(2);
@@ -77,11 +77,11 @@ describe('ListRow', () => {
       </>,
     );
     const row = screen.getByRole('button', { name: 'Bậc đang ẩn' });
-    expect(row).toBeDisabled();
+    expect((row as HTMLButtonElement).disabled).toBe(true);
     await user.click(row);
     expect(onClick).not.toHaveBeenCalled();
     await user.tab();
-    expect(screen.getByRole('button', { name: 'Sau' })).toHaveFocus();
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Sau' }));
   });
 
   it('href → liên kết; as + linkProps cho Link của router; dòng tĩnh không có vai trò bấm', () => {
@@ -95,10 +95,10 @@ describe('ListRow', () => {
         <ListRow title="Chỉ xem" subtitle="không bấm" />
       </>,
     );
-    expect(screen.getByRole('link', { name: /Phạm Thu Trang/ })).toHaveAttribute('href', '/khach-hang/k1');
+    expect(screen.getByRole('link', { name: /Phạm Thu Trang/ }).getAttribute('href')).toBe('/khach-hang/k1');
     const l2 = screen.getByRole('link', { name: /Nguyễn Thị Mai/ });
-    expect(l2).toHaveAttribute('href', '#/khach-hang/k2');
-    expect(l2).toHaveAttribute('aria-current', 'true');
+    expect(l2.getAttribute('href')).toBe('#/khach-hang/k2');
+    expect(l2.getAttribute('aria-current')).toBe('true');
     expect(screen.queryByRole('button')).toBeNull();
     expect(screen.getByText('Chỉ xem').closest('.ui-lrow')?.className).not.toContain('ui-lrow--action');
   });
@@ -108,23 +108,23 @@ describe('ListRow', () => {
     const onClick = vi.fn();
     render(<ListRow title="Khoá" href="/x" disabled onClick={onClick} />);
     const el = screen.getByText('Khoá').closest('a')!;
-    expect(el).not.toHaveAttribute('href');
-    expect(el).toHaveAttribute('aria-disabled', 'true');
-    expect(el).toHaveAttribute('tabindex', '-1');
+    expect(el.hasAttribute('href')).toBe(false);
+    expect(el.getAttribute('aria-disabled')).toBe('true');
+    expect(el.getAttribute('tabindex')).toBe('-1');
     await user.click(el);
     expect(onClick).not.toHaveBeenCalled();
   });
 
   it('lỗi thay dòng phụ và được đọc ngay; tone warn', () => {
     render(<ListRow title="Chưa gán bậc" subtitle="2 thợ" tone="warn" error="Không tải được" />);
-    expect(screen.getByRole('alert')).toHaveTextContent('Không tải được');
+    expect(screen.getByRole('alert').textContent).toBe('Không tải được');
     expect(screen.queryByText('2 thợ')).toBeNull();
     expect(screen.getByText('Chưa gán bậc').closest('.ui-lrow')?.className).toContain('ui-lrow--warn');
   });
 
   it('ListRowSkeleton: một vùng trạng thái đang tải, đúng số dòng', () => {
     const { container } = render(<ListRowSkeleton rows={4} avatar amount />);
-    expect(screen.getByRole('status', { name: 'Đang tải danh sách' })).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Đang tải danh sách' })).toBeTruthy();
     expect(container.querySelectorAll('.ui-lrow')).toHaveLength(4);
   });
 });
@@ -137,11 +137,11 @@ describe('PersonChip', () => {
         <PersonChip name="Lê Ngọc Trâm" colorKey="m2" disabled />
       </PersonChipList>,
     );
-    expect(screen.getByRole('group', { name: 'Thợ ở bậc Thợ chính' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Thợ ở bậc Thợ chính' })).toBeTruthy();
     const img = screen.getByRole('img', { name: 'Nguyễn Thu Hà' });
     expect(img.className).toContain('ui-av--sm');
     const off = screen.getByRole('img', { name: 'Lê Ngọc Trâm' }).closest('.ui-pchip')!;
-    expect(off).toHaveAttribute('aria-disabled', 'true');
+    expect(off.getAttribute('aria-disabled')).toBe('true');
     expect(off.className).toContain('ui-pchip--disabled');
   });
 });
