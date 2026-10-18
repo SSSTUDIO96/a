@@ -618,6 +618,22 @@ export function ContractEditor({ orgId, slug, tz, has, contractId }: ContractEdi
             </div>
           </Card>
 
+          {/* Điện thoại: tiêu đề thẻ đầu ẩn (bản mẫu) — hành động của thẻ đầu chuyển xuống hàng này. */}
+          {(ab.canCollect || ab.canCancel) && detail && (
+            <div className="ct-phone-acts">
+              {ab.canCollect && (
+                <Link className="ct-lnk" to={`/${slug}/thu-tien/${detail.id}`}>
+                  Thu tiền
+                </Link>
+              )}
+              {ab.canCancel && (
+                <Button variant="ghost" size="sm" onClick={() => setCancelOpen(true)}>
+                  Huỷ hợp đồng
+                </Button>
+              )}
+            </div>
+          )}
+
           {status === 'CONFIRMED' && (
             <div className="ct-okband" role="status">
               <IconLock />

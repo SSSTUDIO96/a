@@ -382,8 +382,9 @@ describe('liên kết "Thu tiền"', () => {
   it('đã xác nhận + payments.read → /studio/thu-tien/:id', async () => {
     api.getContract.mockResolvedValue(detail('CONFIRMED') as never);
     renderEditor(OWNER);
-    const link = await screen.findByRole('link', { name: 'Thu tiền' });
-    expect(link.getAttribute('href')).toBe('/studio/thu-tien/hd-1');
+    // Một ở đầu thẻ (máy tính, máy tính bảng), một ở hàng hành động điện thoại — CSS chọn cái hiện.
+    const links = await screen.findAllByRole('link', { name: 'Thu tiền' });
+    expect(links.map((a) => a.getAttribute('href'))).toEqual(['/studio/thu-tien/hd-1', '/studio/thu-tien/hd-1']);
   });
 
   it('không có payments.read → không hiện', async () => {

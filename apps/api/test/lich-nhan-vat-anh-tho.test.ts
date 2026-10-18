@@ -5,10 +5,11 @@
 // Cửa trả lịch phủ ở đây (5/5): GET danh sách, GET một lịch, POST tạo, PATCH sửa, POST đổi trạng thái.
 // Đo N+1: PrismaClient bật log truy vấn (emit: 'event'), đếm số câu SQL của MỘT yêu cầu GET danh sách khi khoảng xem có
 // 1 ca so với 50 ca (mỗi ca 2 thợ có ảnh tệp) — phải bằng nhau, và đúng 1 câu đọc bảng stored_files.
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import request from 'supertest';
 import { PrismaClient } from '@prisma/client';
+import { getStorage, LocalDiskDriver, verifyToken } from '../src/lib/storage';
 import { makePng } from './png';
 import { addMember, bearer, createOrg, makeApp, makeDeps, registerUser, type App, type TestUser } from './helpers';
 
@@ -39,24 +40,26 @@ function at(day: number, hhmm: string) {
   return new Date(`2032-05-${String(day).padStart(2, '0')}T${hhmm}:00+07:00`).toISOString();
 }
 
-// URL ký phải là vé của ĐÚNG tệp: phần đầu vé là base64url("<storageKey>|<hết hạn>").
+// URL ký phải là vé của ĐÚNG tệp: giải vé bằng chính khoá ký của kho tệp (vé đã mã hoá, không đọc thô được) → storageKey.
 function signedKeyOf(url: string): string {
-  const token = url.split('/').pop() ?? '';
-  return Buffer.from(token.split('.')[0] ?? '', 'base64url').toString('utf8').split('|')[0] ?? '';
+  const s = getStorage();
+  if (!(s instanceof LocalDiskDriver)) throw new Error('Bài thử cần driver đĩa cục bộ');
+  const check = verifyToken(s.signingSecret, url.split('/').pop() ?? '');
+  return check.ok ? check.key : `vé hỏng: ${check.reason}`;
 }
 
 async function storageKeyOf(fileId: string) {
   return (await db.storedFile.findUniqueOrThrow({ where: { id: fileId } })).storageKey;
 }
 
-async function upload(): Promise<string> {
+async function upload(png: Buffer): Promise<string> {
   const res = await request(app)
     .post(`/api/v1/orgs/${orgId}/files`)
     .query({ purpose: 'STAFF_AVATAR', name: 'anh.png' })
     .set(bearer(owner))
     .set('Idempotency-Key', randomUUID())
     .set('Content-Type', 'application/octet-stream')
-    .send(makePng());
+    .send(png);
   if (res.status !== 201) throw new Error(`Tải ảnh thất bại ${res.status}: ${JSON.stringify(res.body)}`);
   return res.body.id as string;
 }
@@ -95,8 +98,9 @@ beforeAll(async () => {
   const none = await registerUser(app, 'tho-nv-khong-anh');
   artistNoneName = 'Người thử tho-nv-khong-anh';
   mNone = await addMember(app, owner, orgId, none, ['artist']);
-  fileA = await upload();
-  fileB = await upload();
+  // Hai ảnh khác nội dung: tải URL về so mã băm phân biệt được tệp A với B.
+  fileA = await upload(makePng(2, 3));
+  fileB = await upload(makePng(4, 5));
   await request(app).patch(`/api/v1/orgs/${orgId}/staff/${mA}`).set(bearer(owner)).send({ avatarFileId: fileA }).expect(200);
   await request(app).patch(`/api/v1/orgs/${orgId}/staff/${mB}`).set(bearer(owner)).send({ avatarFileId: fileB }).expect(200);
   await db.staffProfile.update({ where: { membershipId: mA }, data: { displayName: DISPLAY_A } });
@@ -190,6 +194,20 @@ describe('ảnh và tên hiển thị thợ trong ca', () => {
     const none = created.body.staff.find((s: StaffOut) => s.membershipId === mNone);
     expect(none).toMatchObject({ avatarUrl: null, displayName: artistNoneName, fullName: artistNoneName });
     expect(JSON.stringify(created.body)).not.toContain('file:');
+    // URL ký mở được và phát ĐÚNG nội dung tệp của từng thợ.
+    for (const [m, f] of [
+      [mA, fileA],
+      [mB, fileB],
+    ] as const) {
+      const url = created.body.staff.find((s: StaffOut) => s.membershipId === m).avatarUrl as string;
+      const raw = await request(app).get(url).buffer(true).parse((res, cb) => {
+        const chunks: Buffer[] = [];
+        res.on('data', (c: Buffer) => chunks.push(c));
+        res.on('end', () => cb(null, Buffer.concat(chunks)));
+      });
+      expect(raw.status).toBe(200);
+      expect(createHash('sha256').update(raw.body as Buffer).digest('hex')).toBe((await db.storedFile.findUniqueOrThrow({ where: { id: f } })).sha256);
+    }
 
     const one = await request(app).get(`/api/v1/orgs/${orgId}/appointments/${created.body.id}`).set(bearer(owner)).expect(200);
     await expectStaffAvatars(one.body.staff);

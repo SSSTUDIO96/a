@@ -1,0 +1,92 @@
+/* Trang giới thiệu công khai — bản vẽ C2 mục 4.3, bản mẫu docs/rnd/v4-thuong-hieu.html (#trang).
+   Bố cục theo bề rộng KHUNG CHỨA (container query) để dùng lại trong khung xem trước của màn sửa hồ sơ. */
+.ps-site {
+  container-type: inline-size;
+  background: var(--surface);
+  color: var(--text);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.ps-ico { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+
+.ps-cover { height: 150px; background-size: cover; background-position: center; background-color: var(--line-2); }
+.ps-hdr { padding: 0 16px 14px; display: flex; flex-direction: column; gap: 6px; border-bottom: 1px solid var(--line); min-width: 0; }
+.ps-site--nocover .ps-hdr { padding-top: 18px; }
+.ps-mark {
+  width: 76px; height: 76px; border-radius: 50%; border: 3px solid var(--surface); margin-top: -38px;
+  object-fit: cover; background: var(--surface); display: block; flex: none;
+}
+.ps-site--nocover .ps-mark { margin-top: 0; border-color: var(--line); border-width: 1px; }
+.ps-hdr__tx { min-width: 0; }
+.ps-name { font-size: 21px; font-weight: 700; line-height: 1.25; margin: 0; }
+.ps-tagline { color: var(--muted); margin: 2px 0 0; }
+.ps-cta { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+.ps-cta a { text-decoration: none; }
+
+.ps-sec { padding: 16px; border-bottom: 1px solid var(--line); min-width: 0; }
+.ps-sec__title { font-size: 16px; font-weight: 700; margin: 0 0 8px; }
+.ps-group__title { font-size: 12px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .05em; margin: 12px 0 6px; }
+.ps-group:first-of-type .ps-group__title { margin-top: 4px; }
+.ps-pkgs { display: flex; flex-direction: column; gap: 10px; }
+.ps-pkg { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; min-width: 0; }
+.ps-pkg__top { display: flex; gap: 10px; align-items: baseline; }
+.ps-pkg__name { flex: 1; font-size: 15px; font-weight: 700; margin: 0; min-width: 0; }
+.ps-price { font-weight: 700; white-space: nowrap; text-align: right; }
+.ps-price del { display: block; font-weight: 400; color: var(--faint); font-size: 12px; }
+.ps-pkg__lines { list-style: none; margin: 6px 0 0; padding: 0; font-size: 13px; color: var(--muted); display: flex; flex-direction: column; gap: 2px; }
+.ps-pkg__addons { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.ps-addon { background: var(--line-2); color: var(--muted); border-radius: 999px; padding: 2px 8px; font-size: 11.5px; font-weight: 600; white-space: nowrap; }
+.ps-services { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.ps-services li { display: flex; gap: 10px; justify-content: space-between; padding: 7px 0; border-top: 1px solid var(--line-2); }
+.ps-services li:first-child { border-top: 0; }
+.ps-services__price { font-weight: 700; white-space: nowrap; }
+
+.ps-bio { margin: 0; white-space: pre-line; }
+.ps-small { font-size: 13px; margin: 0; }
+.ps-muted { color: var(--muted); }
+.ps-gap { margin-top: 6px; }
+.ps-styles { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+
+.ps-hours { display: flex; flex-direction: column; gap: 4px; margin: 0; font-size: 13.5px; }
+.ps-hours__row { display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: 12px; }
+.ps-hours dt, .ps-hours dd { margin: 0; }
+.ps-hours__off { color: var(--faint); }
+.ps-policy { font-size: 13.5px; margin-bottom: 8px; }
+.ps-policy:last-child { margin-bottom: 0; }
+.ps-policy b { display: block; }
+.ps-policy p { margin: 0; white-space: pre-line; }
+.ps-addr { display: flex; gap: 6px; align-items: flex-start; }
+.ps-addr .ps-ico { margin-top: 2px; }
+.ps-link { color: var(--text); }
+.ps-socials { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.ps-socials a { text-decoration: none; color: var(--text); }
+.ps-foot { padding: 16px; text-align: center; color: var(--faint); font-size: 12px; }
+
+@container (min-width: 760px) {
+  .ps-cover { height: 260px; }
+  .ps-hdr { padding: 0 28px 18px; flex-direction: row; align-items: flex-end; gap: 18px; }
+  .ps-site--nocover .ps-hdr { padding-top: 22px; }
+  .ps-mark { width: 104px; height: 104px; margin-top: -52px; }
+  .ps-hdr__tx { flex: 1; }
+  .ps-name { font-size: 26px; }
+  .ps-cta { margin-top: 0; flex-wrap: nowrap; }
+  .ps-body { display: grid; grid-template-columns: minmax(0, 1fr) 320px; }
+  .ps-side { border-left: 1px solid var(--line); }
+  .ps-sec { padding: 20px 28px; }
+  .ps-pkgs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+}
+
+/* ===== Trang /trang/:slug (ngoài khung app) ===== */
+.ps-page { min-height: 100vh; background: var(--bg); }
+.ps-page__inner { max-width: 1080px; margin: 0 auto; background: var(--surface); min-height: 100vh; }
+.ps-missing { min-height: 100vh; display: grid; place-items: center; padding: 16px; background: var(--surface); }
+.ps-missing__box { display: flex; flex-direction: column; gap: 6px; align-items: center; text-align: center; color: var(--muted); max-width: 420px; }
+.ps-missing__box h1 { font-size: 18px; font-weight: 700; color: var(--text); margin: 0; }
+.ps-missing__box p { margin: 0; }
+.ps-skel { padding: 0 0 24px; }
+.ps-skel__cover { height: 150px; background: var(--line-2); }
+.ps-skel__body { padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+@media (min-width: 760px) {
+  .ps-skel__cover { height: 260px; }
+  .ps-skel__body { padding: 22px 28px; }
+}

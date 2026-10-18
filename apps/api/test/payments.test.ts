@@ -537,4 +537,22 @@ describe('sửa nghiệm thu máy chủ lát 2 — thu tiền', () => {
     const summary = (await progress(o.owner, o.orgId, c.id).expect(200)).body.summary;
     expect(summary.paid).toBe(1_000_000);
   });
+
+  it('GIỮ (P3, P5, P6) — tháng báo cáo theo giờ VN; thu vượt ĐÚNG 1 đồng → 409; nhật ký phiếu có trước → sau', async () => {
+    const o = await newOrg('p356');
+    const c = await newContract(o, 1_000_000);
+    await backdateContract(c.id, 120);
+    // 31/8 17:30 UTC = 1/9 00:30 giờ VN → tháng 2026-09, không phải tháng 8.
+    await pay(o.owner, o.orgId, c.id, { method: 'CASH', amount: 100_000, receivedAt: '2026-08-31T17:30:00.000Z' }).expect(201);
+    const rep = (await request(app).get(api(o.orgId, '/reports/revenue')).query({ from: '2026-07-31T17:00:00.000Z', to: '2026-09-30T17:00:00.000Z', groupBy: 'month' }).set(bearer(o.owner)).expect(200)).body;
+    const byMonth = Object.fromEntries(rep.rows.map((r: { period: string; collected: number }) => [r.period, r.collected]));
+    console.log(`[P3] phiếu 00:30 1/9 giờ VN → ${JSON.stringify(byMonth)}`);
+    expect(byMonth).toEqual({ '2026-08': 0, '2026-09': 100_000 });
+    // P5: còn phải thu 900.000 → thu 900.001 (vượt 1 đồng) → 409; đúng 900.000 → được.
+    expect((await pay(o.owner, o.orgId, c.id, { method: 'CASH', amount: 900_001 })).status).toBe(409);
+    const exact = await pay(o.owner, o.orgId, c.id, { method: 'CASH', amount: 900_000 }).expect(201);
+    // P6: nhật ký có số đã thu trước → sau.
+    const log = await deps.db.auditLog.findFirst({ where: { entityId: exact.body.id, action: 'payment.created' } });
+    expect(log?.data).toMatchObject({ before: { paid: 100_000, remaining: 900_000 }, after: { paid: 1_000_000, remaining: 0 } });
+  });
 });

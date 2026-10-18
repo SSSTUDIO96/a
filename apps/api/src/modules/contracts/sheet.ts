@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { Prisma } from '@prisma/client';
+import { Prisma, type ContractLineKind } from '@prisma/client';
 import {
   computeContractTotals,
   computeLineTotal,
@@ -19,7 +19,8 @@ import { assertActiveStaff, assertBookable, type StaffAssignment } from '../sche
 import type { LineInput, PlacedLineInput, TravelInput } from './schemas';
 
 type Tx = Prisma.TransactionClient;
-type LineKind = 'PACKAGE' | 'SERVICE' | 'ADDON' | 'SURCHARGE' | 'TRAVEL' | 'CUSTOM';
+// Lấy thẳng từ database (một nguồn): thêm loại dòng mới (COURSE) không phải sửa chỗ này.
+type LineKind = ContractLineKind;
 type LocationType = 'STUDIO' | 'CUSTOMER_HOME' | 'OTHER';
 
 // Một dòng đã tính xong, chưa ghi. id sinh sẵn để dòng con trỏ được về dòng cha trong cùng một lần ghi.

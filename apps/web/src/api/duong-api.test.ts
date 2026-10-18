@@ -3,6 +3,7 @@ import * as catalog from './catalog';
 import { setAccessToken } from './client';
 import * as contracts from './contracts';
 import * as files from './files';
+import * as org from './org';
 import * as payments from './payments';
 import * as profile from './profile';
 import * as schedule from './schedule';
@@ -260,5 +261,26 @@ describe('mỗi hàm gọi đúng đường API', () => {
   it('thiếu orgId thì báo lỗi ngay, không gọi máy chủ', () => {
     expect(() => catalog.listPackages('')).toThrow('Thiếu orgId');
     expect(seen).toHaveLength(0);
+  });
+});
+
+// Vai trò, thành viên (org.ts — thêm cho màn Thợ makeup, C2 mục 1.9).
+describe('org.ts: vai trò và thêm thành viên', () => {
+  it('listRoles: GET /roles, không Idempotency-Key', async () => {
+    await org.listRoles(ORG);
+    expect(seen).toHaveLength(1);
+    expect(seen[0]?.method).toBe('GET');
+    expect(seen[0]?.url).toBe(`${P}/roles`);
+    expect(seen[0]?.headers['Idempotency-Key']).toBeUndefined();
+    expect(seen[0]?.headers.Authorization).toBe('Bearer tok');
+  });
+
+  it('addMember: POST /members {email, roleKeys}, không Idempotency-Key (máy chủ không đòi; gửi lại → 409)', async () => {
+    await org.addMember(ORG, { email: 'tho@gmail.com', roleKeys: ['artist'] });
+    expect(seen[0]?.method).toBe('POST');
+    expect(seen[0]?.url).toBe(`${P}/members`);
+    expect(seen[0]?.body).toEqual({ email: 'tho@gmail.com', roleKeys: ['artist'] });
+    expect(seen[0]?.headers['Content-Type']).toBe('application/json');
+    expect(seen[0]?.headers['Idempotency-Key']).toBeUndefined();
   });
 });

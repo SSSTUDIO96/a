@@ -28,6 +28,7 @@
 .ct-sp1__n { flex: 1; font-weight: 500; min-width: 0; overflow-wrap: anywhere; }
 .ct-cat__empty { padding: 12px 14px; color: var(--muted); font-size: 13px; }
 .ct-addm { display: none; }
+.ct-phone-acts { display: none; }
 
 /* ---------- Thẻ đầu: khách + ngày ---------- */
 .ct-head > .ui-card__body { padding: 6px 16px 12px; }
@@ -157,6 +158,7 @@
   .ct-grid { grid-template-columns: minmax(0, 1fr); }
   .ct-grid > .ct-pick { display: none; }
   .ct-addm { display: flex; }
+  .ct-phone-acts { display: flex; justify-content: flex-end; align-items: center; gap: 12px; }
   .ct-page { padding-bottom: 84px; }
   .ct-head > .ui-card__head { display: none; }
   .ct-set { grid-template-columns: 96px minmax(0, 1fr); }

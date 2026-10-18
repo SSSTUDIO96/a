@@ -369,4 +369,17 @@ describe('Sửa nghiệm thu máy chủ lát 2', () => {
     expect(s1.projectedMonthlyRevenue - s2.projectedMonthlyRevenue).toBe(777_777);
     expect(s2.projectedMonthlyRevenueNote).toMatch(/tạm khoá/);
   });
+
+  it('GIỮ (Q5) — ô tìm kiếm coi % và _ là chữ thường, không phải ký tự đại diện', async () => {
+    const u = randomUUID().slice(0, 6);
+    const boss = await registerUser(app, `qtnt-q5-${u}`);
+    const o = await createOrg(app, boss, `qtnt-q5-${u}`);
+    await deps.db.organization.update({ where: { id: o }, data: { name: `Studio 50AXgiam-${u}` } });
+    const find = async (q: string) =>
+      ((await request(app).get('/api/v1/platform/organizations').set(bearer(admin)).query({ q, pageSize: '100' }).expect(200)).body.items as { id: string }[]).map((i) => i.id);
+    expect(await find(`50AXgiam-${u}`)).toEqual([o]);
+    // Không thoát ký tự đại diện thì "%" khớp "A", "_" khớp "X" → tìm ra nhầm.
+    expect(await find(`50%Xgiam-${u}`)).toEqual([]);
+    expect(await find(`50A_giam-${u}`)).toEqual([]);
+  });
 });

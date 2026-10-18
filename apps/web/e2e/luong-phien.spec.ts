@@ -3,6 +3,13 @@ import { SHOTS } from './anh';
 
 const shot = (page: Page, name: string) => page.screenshot({ path: `${SHOTS}/${name}.png`, fullPage: true });
 
+// Đã vào KHUNG của tổ chức: thanh trái có mục đang chọn đúng. Không phụ thuộc nội dung màn (màn do gói khác làm).
+async function expectInShell(page: Page, activeLabel: string) {
+  const nav = page.getByRole('navigation', { name: 'Mục chính', exact: true });
+  await expect(nav.getByRole('link', { name: activeLabel, exact: true })).toHaveAttribute('aria-current', 'page');
+  await expect(page.locator('main.sh-main')).toBeVisible();
+}
+
 test('đăng ký → tạo tổ chức → khung → tải lại còn phiên → đăng xuất → tải lại về đăng nhập', async ({ page, context }) => {
   const stamp = Date.now();
   const email = `e2e-${stamp}@makeup.test`;
@@ -42,7 +49,7 @@ test('đăng ký → tạo tổ chức → khung → tải lại còn phiên →
   expect(req.headers()['idempotency-key']).toMatch(/^[0-9a-f-]{36}$/);
   expect(req.headers()['x-client']).toBe('web');
   await expect(page).toHaveURL(new RegExp(`/${slug}/lich$`));
-  await expect(page.getByText('Đang dựng')).toBeVisible();
+  await expectInShell(page, 'Lịch makeup');
   await expect(page.getByText(orgName)).toBeVisible();
   await shot(page, '04-khung-to-chuc-lich');
 
@@ -66,11 +73,12 @@ test('đăng ký → tạo tổ chức → khung → tải lại còn phiên →
   });
   await page.reload();
   await expect(page).toHaveURL(new RegExp(`/${slug}/lich$`));
-  await expect(page.getByText('Đang dựng')).toBeVisible();
+  await expectInShell(page, 'Lịch makeup');
   await expect(page.getByText(orgName)).toBeVisible();
   expect(refreshCalls).toEqual(['POST']);
-  await page.getByRole('link', { name: 'Hợp đồng' }).click();
+  await page.getByRole('navigation', { name: 'Mục chính', exact: true }).getByRole('link', { name: 'Hợp đồng', exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`/${slug}/hop-dong$`));
+  await expectInShell(page, 'Hợp đồng');
   await shot(page, '05-tai-lai-van-con-phien-hop-dong');
 
   // Đăng xuất: máy chủ thu hồi phiên, xoá cookie.
@@ -99,6 +107,6 @@ test('đăng ký → tạo tổ chức → khung → tải lại còn phiên →
   await page.getByLabel('Mật khẩu').fill(password);
   await page.getByRole('button', { name: 'Đăng nhập' }).click();
   await expect(page).toHaveURL(new RegExp(`/${slug}/lich$`));
-  await expect(page.getByText('Đang dựng')).toBeVisible();
+  await expectInShell(page, 'Lịch makeup');
   await shot(page, '09-dang-nhap-lai-vao-khung');
 });
