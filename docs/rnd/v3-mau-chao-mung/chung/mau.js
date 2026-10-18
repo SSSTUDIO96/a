@@ -34,6 +34,7 @@ Object.assign(D,{ngayD:d,thangSo:'Tháng '+(+m),nam:y,ngayCham:`${d}.${m}.${y}`,
 D.nktCham=D.nkt.split('/').join('.');
 D.conLai=D.nd.slice(D.nd.indexOf(D.cauDau)+D.cauDau.length).trim();
 document.body.classList.add(P.get('kho')==='vuong'?'vuong':'k45');
+if(P.get('ky')){const n=P.get('ky');const r=document.documentElement.style;for(let i=1;i<=4;i++){r.setProperty('--f-tay-'+i,`var(--f-ky-${n})`);r.setProperty('--tay-co-'+i,`var(--ky-co-${n})`);}}
 document.querySelectorAll('[data-f]').forEach(el=>{const v=D[el.dataset.f];if(el.tagName==='IMG')el.src=v;else el.textContent=v;});
 document.querySelectorAll('[data-chat]').forEach(el=>{const parts=D.nd.match(/[^.!?]+[.!?]*/g)||[D.nd];
   const n=+el.dataset.chat||3;const g=[];parts.forEach((s,i)=>{const k=Math.min(n-1,Math.floor(i*n/parts.length));g[k]=(g[k]||'')+s;});
@@ -50,7 +51,7 @@ function fit(){
   document.querySelectorAll('[data-fitc]').forEach(el=>{el.style.fontSize=el.dataset.fitc?(+el.dataset.fitc*(document.body.classList.contains('vuong')?.86:1))+'px':'';let s=parseFloat(getComputedStyle(el).fontSize);for(let i=0;i<90&&el.scrollHeight>el.clientHeight+1;i++){s-=1;el.style.fontSize=s+'px';}});
   document.body.dataset.ready='1';}
 const imgs=[...document.images].map(i=>i.complete?0:new Promise(r=>{i.onload=i.onerror=r}));
-const FONTS=['MP Viết tay 1','MP Viết tay 2','MP Viết tay 3','MP Viết tay 4','MP Chữ có chân','MP Chữ đậm có chân','MP Chữ không chân'].map(f=>document.fonts.load(`40px "${f}"`,'Ấỳ').catch(()=>0));
+const FONTS=['MP Viết tay 1','MP Viết tay 2','MP Viết tay 3','MP Viết tay 4','MP Chữ ký 1','MP Chữ ký 2','MP Chữ ký 3','MP Chữ ký 4','MP Chữ có chân','MP Chữ đậm có chân','MP Chữ không chân'].map(f=>document.fonts.load(`40px "${f}"`,'Ấỳ').catch(()=>0));
 Promise.all([...FONTS,document.fonts.ready,...imgs]).then(()=>requestAnimationFrame(fit));
 window.MAU_DU_LIEU=D;
 })();

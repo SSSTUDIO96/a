@@ -1,12 +1,24 @@
 // Kiểu dữ liệu gửi và nhận của các đường API thuộc tổ chức (/orgs/:orgId/...).
 // Chép đúng từ mã máy chủ: schema zod (thân, query) và hàm present*/select (trả về) trong apps/api/src/modules/*.
-// Bài thử src/api/khop-hop-dong.test.ts gọi máy chủ thật và so đủ tên trường với các kiểu ở đây.
+// Bài thử src/api/khop-hop-dong.test.ts gọi máy chủ thật và so với các kiểu ở đây: đủ tên trường VÀ kiểu giá trị
+// (string/number/boolean/null/mảng/đối tượng, giá trị liệt kê, chuỗi ISO, số nguyên đồng) — đọc thẳng khai báo
+// trong tệp này bằng trình biên dịch TypeScript (khop-kieu.ts), nên sửa kiểu ở đây là bài thử so theo kiểu mới.
 // Quy ước: tiền là số nguyên đồng (Vnd); thời điểm là chuỗi ISO 8601; toạ độ, km là số.
 
 // ---- Giá trị liệt kê: lấy từ @makeup/shared khi shared có; còn lại khớp schema.prisma (types-shared.test.ts đối chiếu) ----
-import type { ContractStatus, INITIAL_STATUSES, TravelFeeMode, Vnd, WorkStatus } from '@makeup/shared';
+import type {
+  ContractStatus,
+  INITIAL_STATUSES,
+  InstallmentStatus,
+  PaymentKind,
+  PaymentMethod,
+  PaymentSummary,
+  TravelFeeMode,
+  Vnd,
+  WorkStatus,
+} from '@makeup/shared';
 
-export type { ContractStatus, TravelFeeMode, Vnd, WorkStatus };
+export type { ContractStatus, InstallmentStatus, PaymentKind, PaymentMethod, PaymentSummary, TravelFeeMode, Vnd, WorkStatus };
 export type IsoDateTime = string;
 
 export type ServiceKind = 'MAIN' | 'ADDON' | 'SURCHARGE';
@@ -473,6 +485,9 @@ interface PlacedLineFields {
   addons?: AddonInput[];
   // Bắt buộc khi locationType là CUSTOMER_HOME hoặc OTHER.
   travel?: TravelInput;
+  // Thợ phụ trách dự kiến (role mặc định PRIMARY, tối đa 20). Xác nhận hợp đồng → máy chủ tạo lịch cho đúng thợ, đúng giờ
+  // (dòng có thợ phải có scheduledStart/scheduledEnd).
+  staff?: StaffAssignmentInput[];
 }
 
 export interface PackageLineInput extends PlacedLineFields {
@@ -581,6 +596,48 @@ export interface ContractLineView<Id extends string | null = string> {
   addedAfterConfirm: boolean;
   voidedAt: IsoDateTime | null;
   voidReason: string | null;
+  // Thợ phụ trách dự kiến, thợ chính đứng trước. Dòng không có thợ (dịch vụ phụ, phụ phí, phí di chuyển...) → [].
+  staff: ContractLineStaff[];
+  // Cảnh báo lúc tư vấn (không chặn lưu nháp); thợ rảnh thì không có mục nào.
+  staffWarnings: StaffWarning[];
+  // Chỉ dòng TRAVEL của bảng tính xem trước (quote) có; dòng đã lưu luôn null (database chưa lưu bán kính/bậc đã dùng).
+  travelBreakdown: TravelBreakdown | null;
+}
+
+// contracts/present.ts — StaffView: thợ dự kiến của một dòng.
+export interface ContractLineStaff {
+  membershipId: string;
+  role: StaffRole;
+  displayName: string;
+  // URL hiển thị được (URL ký có hạn của tệp ảnh, hoặc ảnh https cũ); null = hiện chữ viết tắt.
+  avatarUrl: string | null;
+  initials: string;
+  tier: { id: string; name: string } | null;
+}
+
+// contracts/present.ts — StaffWarning: thợ trùng giờ (OVERLAP) hoặc có lịch khác trong ngày (SAME_DAY),
+// kể cả khi chỉ đang được giữ chỗ ở hợp đồng nháp khác. Ca và giữ chỗ của chính hợp đồng này không tính.
+export interface StaffWarning {
+  membershipId: string;
+  level: Exclude<AvailabilityLevel, 'FREE'>;
+  overlaps: AvailabilityShift[];
+  sameDay: AvailabilityShift[];
+  draftHolds: DraftHold[];
+}
+
+// contracts/sheet.ts — TravelBreakdown: số liệu để in dòng công thức phí di chuyển.
+export interface TravelBreakdown {
+  // Bán kính miễn phí đã áp (km một chiều); null với nhập tay.
+  includedKm: number | null;
+  // Bán kính lấy từ gói (includedKm của gói) hay mức chung của tổ chức (freeKm).
+  includedFrom: 'PACKAGE' | 'ORGANIZATION' | null;
+  // Km vượt bán kính, một chiều.
+  excessKm: number | null;
+  // Km tính tiền của PER_KM = km vượt × (khứ hồi ? 2 : 1).
+  chargedKm: number | null;
+  roundTrip: boolean;
+  // Bậc đã áp (chỉ TIERED, khi vượt bán kính).
+  tier: TravelFeeTier | null;
 }
 
 // Dịch vụ phụ và phí di chuyển gom dưới dòng cha.
@@ -649,10 +706,18 @@ export interface ContractVoidResult extends ContractDetail {
   adjustments: ContractAdjustment[];
 }
 
+// Thêm dòng: hợp đồng đã xác nhận mà dòng mới có thợ dự kiến → máy chủ tạo lịch ngay và liệt kê ở createdAppointments
+// (nháp thì mảng rỗng).
+export interface ContractAddLineResult extends ContractDetail {
+  createdAppointments: ContractDetail['appointments'];
+}
+
 // Đổi trạng thái: huỷ hợp đồng thì máy chủ huỷ luôn các lịch đã gắn và liệt kê ở cancelledAppointments
 // (đổi sang trạng thái khác thì mảng rỗng). Còn lịch đang làm → 409, error.details = { appointments: [{id, code, status}] }.
+// Xác nhận hợp đồng: mỗi dòng có thợ dự kiến thành một lịch đã xác nhận, liệt kê ở createdAppointments.
 export interface ContractStatusResult extends ContractDetail {
   cancelledAppointments: ContractDetail['appointments'];
+  createdAppointments: ContractDetail['appointments'];
 }
 
 // ======================= Nhân sự, tiền công (staff) =======================
@@ -706,8 +771,9 @@ export interface StaffListQuery {
 
 export interface StaffUpdateInput {
   displayName?: string | null;
-  // https.
-  avatarUrl?: string | null;
+  // Ảnh đại diện = mã tệp STAFF_AVATAR đã tải lên (files.ts uploadFile). null = bỏ ảnh.
+  // Máy chủ KHÔNG còn nhận avatarUrl nhập tay (gửi lên là 400).
+  avatarFileId?: string | null;
   phone?: string | null;
   // null = bỏ bậc.
   tierId?: string | null;
