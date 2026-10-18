@@ -244,6 +244,12 @@ describe('quyền → phần nào hiện', () => {
     expect(a).toMatchObject({ canEdit: false, canConfirm: false, canEditNotes: false, showCatalog: false, canPickStaff: false, canCancel: false });
   });
 
+  it('"Thu tiền": chỉ hợp đồng đã xác nhận và có payments.read', () => {
+    expect(contractAbilities(owner, 'CONFIRMED').canCollect).toBe(true);
+    expect(contractAbilities(owner, 'DRAFT').canCollect).toBe(false);
+    expect(contractAbilities(as(SYSTEM_ROLES.artist.permissions), 'CONFIRMED').canCollect).toBe(false);
+  });
+
   it('hợp đồng đã huỷ / hoàn thành: không làm gì được', () => {
     expect(contractAbilities(owner, 'CANCELLED')).toMatchObject({ canEdit: false, canAddExtra: false, canVoidLine: false, canCancel: false, canEditNotes: false });
   });

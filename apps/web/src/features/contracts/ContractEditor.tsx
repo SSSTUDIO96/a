@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router';
+import { Link, useNavigate, useSearchParams } from 'react-router';
 import { CONTRACT_STATUS_LABELS, type Permission } from '@makeup/shared';
 import {
   addContractLine,
@@ -12,6 +12,7 @@ import {
 } from '../../api/contracts';
 import { errorKind, fieldErrors, userMessage } from '../../api/errors';
 import { newIdempotencyKey } from '../../api/idempotency';
+import { getCustomer } from '../../api/schedule';
 import { useQuote } from '../../api/useQuote';
 import type { AppointmentConflict, Service, ServicePackage } from '../../api/types';
 import { NotFoundView, useOnline } from '../../layout/ErrorStates';
@@ -135,6 +136,27 @@ export function ContractEditor({ orgId, slug, tz, has, contractId }: ContractEdi
   const [refreshed, setRefreshed] = useState<{ key: string; data: ContractQuote } | null>(null);
   const idemKey = useRef(newIdempotencyKey());
   const pickRef = useRef<HTMLDivElement>(null);
+
+  // ---- Hợp đồng mới chọn sẵn khách: /hop-dong/moi?customerId=… (màn Khách hàng dẫn sang) ----
+  const [searchParams] = useSearchParams();
+  const presetCustomerId = contractId === null ? searchParams.get('customerId') : null;
+  const [presetNote, setPresetNote] = useState<string | null>(null);
+  useEffect(() => {
+    if (!presetCustomerId) return undefined;
+    const controller = new AbortController();
+    getCustomer(orgId, presetCustomerId, controller.signal)
+      .then((c) => {
+        setDraft((d) => (d.customer ? d : { ...d, customer: { kind: 'existing', id: c.id, fullName: c.fullName, phone: c.phone, email: c.email } }));
+        setPresetNote(null);
+      })
+      .catch((err: unknown) => {
+        if (controller.signal.aborted) return;
+        // Mã lạ hoặc của tổ chức khác (404, hoặc 400 khi không phải mã hợp lệ): bỏ chọn, báo một dòng — không đoán.
+        const kind = errorKind(err);
+        setPresetNote(kind === 'not_found' || kind === 'validation' ? 'Không tìm thấy khách này trong tổ chức. Chọn lại khách.' : userMessage(err));
+      });
+    return () => controller.abort();
+  }, [orgId, presetCustomerId]);
 
   // ---- Nạp hợp đồng đã lưu ----
   useEffect(() => {
@@ -548,6 +570,11 @@ export function ContractEditor({ orgId, slug, tz, has, contractId }: ContractEdi
             actions={
               <>
                 {statusTag}
+                {ab.canCollect && detail && (
+                  <Link className="ct-lnk" to={`/${slug}/thu-tien/${detail.id}`}>
+                    Thu tiền
+                  </Link>
+                )}
                 {ab.canCancel && (
                   <Button variant="ghost" size="sm" onClick={() => setCancelOpen(true)}>
                     Huỷ hợp đồng
@@ -568,6 +595,11 @@ export function ContractEditor({ orgId, slug, tz, has, contractId }: ContractEdi
                   canCreate={ab.canCreateCustomer}
                   errors={errors}
                 />
+                {presetNote && !draft.customer && (
+                  <div className="ct-err" role="alert" style={{ gridColumn: 2 }}>
+                    {presetNote}
+                  </div>
+                )}
               </div>
               <div className="ct-set">
                 <label className="ct-set__l" htmlFor="hd-ngay">

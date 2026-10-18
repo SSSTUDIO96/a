@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SYSTEM_ROLES, type Permission } from '@makeup/shared';
 import { ApiError } from '../../api/errors';
 import * as contractsApi from '../../api/contracts';
+import * as scheduleApi from '../../api/schedule';
 import { ContractEditor } from './ContractEditor';
 
 // Màn hợp đồng với tầng API giả (vi.mock): cảnh báo thợ 3 mức, chặn xác nhận khi đỏ, lỗi 400/403/409, ẩn/khoá theo quyền.
@@ -44,7 +45,7 @@ vi.mock('../../api/staff', () => ({
   listStaffTiers: vi.fn(async () => ({ items: [] })),
 }));
 
-vi.mock('../../api/schedule', () => ({ listCustomers: vi.fn() }));
+vi.mock('../../api/schedule', () => ({ listCustomers: vi.fn(), getCustomer: vi.fn() }));
 
 const api = vi.mocked(contractsApi);
 // Quote đợi 300ms rồi mới gọi; khi cả bộ vitest chạy song song, 1 giây chờ mặc định không đủ.
@@ -160,10 +161,10 @@ const OVERLAP = {
 
 const SAME_DAY = { ...OVERLAP, level: 'SAME_DAY', overlaps: [], sameDay: OVERLAP.overlaps };
 
-function renderEditor(perms: readonly Permission[], contractId: string | null = 'hd-1') {
+function renderEditor(perms: readonly Permission[], contractId: string | null = 'hd-1', url = '/studio/hop-dong/hd-1') {
   const has = (p: Permission) => perms.includes(p);
   return render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[url]}>
       <ContractEditor orgId="org-1" slug="studio" tz={TZ} has={has} contractId={contractId} />
     </MemoryRouter>,
   );
@@ -340,5 +341,63 @@ describe('ẩn / khoá theo quyền', () => {
     await userEvent.type(within(dialog).getByLabelText(/Lý do/), 'Khách đổi ý');
     await userEvent.click(within(dialog).getByRole('button', { name: 'Huỷ dòng' }));
     await waitFor(() => expect(api.voidContractLine).toHaveBeenCalledWith('org-1', 'hd-1', 'l1', { reason: 'Khách đổi ý' }));
+  });
+});
+
+describe('mở từ màn Khách hàng: /hop-dong/moi?customerId=…', () => {
+  const sched = vi.mocked(scheduleApi);
+
+  it('khách thuộc tổ chức → chọn sẵn thẻ khách', async () => {
+    sched.getCustomer.mockResolvedValue({
+      id: 'c-9',
+      fullName: 'Tôn Nữ Hoàng Bảo Ngọc Phương Thảo',
+      phone: '0912345678',
+      email: 'phuongthao@gmail.com',
+      note: null,
+      createdAt: '',
+      updatedAt: '',
+    });
+    renderEditor(OWNER, null, '/studio/hop-dong/moi?customerId=c-9');
+    expect(await screen.findByText('Tôn Nữ Hoàng Bảo Ngọc Phương Thảo')).toBeTruthy();
+    expect(screen.getByText('0912345678 · phuongthao@gmail.com')).toBeTruthy();
+    expect(sched.getCustomer).toHaveBeenCalledWith('org-1', 'c-9', expect.anything());
+    expect(screen.queryByLabelText('Tìm khách theo tên hoặc số điện thoại')).toBeNull();
+  });
+
+  it('mã lạ / không thuộc tổ chức (404) → bỏ chọn, báo một dòng, vẫn tìm khách được', async () => {
+    sched.getCustomer.mockRejectedValue(new ApiError('NOT_FOUND', 'Không tìm thấy khách hàng', 404, 'r'));
+    renderEditor(OWNER, null, '/studio/hop-dong/moi?customerId=khong-co');
+    expect(await screen.findByText('Không tìm thấy khách này trong tổ chức. Chọn lại khách.')).toBeTruthy();
+    expect(screen.getByLabelText('Tìm khách theo tên hoặc số điện thoại')).toBeTruthy();
+  });
+
+  it('không có customerId → không gọi máy chủ tìm khách', async () => {
+    renderEditor(OWNER, null, '/studio/hop-dong/moi');
+    await screen.findByText('Lập hợp đồng mới');
+    expect(sched.getCustomer).not.toHaveBeenCalled();
+  });
+});
+
+describe('liên kết "Thu tiền"', () => {
+  it('đã xác nhận + payments.read → /studio/thu-tien/:id', async () => {
+    api.getContract.mockResolvedValue(detail('CONFIRMED') as never);
+    renderEditor(OWNER);
+    const link = await screen.findByRole('link', { name: 'Thu tiền' });
+    expect(link.getAttribute('href')).toBe('/studio/thu-tien/hd-1');
+  });
+
+  it('không có payments.read → không hiện', async () => {
+    api.getContract.mockResolvedValue(detail('CONFIRMED') as never);
+    renderEditor(OWNER.filter((p) => p !== 'payments.read'));
+    await screen.findByText('Dòng đã chốt. Chỉ thêm phát sinh hoặc huỷ dòng kèm lý do.');
+    expect(screen.queryByRole('link', { name: 'Thu tiền' })).toBeNull();
+  });
+
+  it('hợp đồng nháp → không hiện', async () => {
+    api.getContract.mockResolvedValue(detail('DRAFT') as never);
+    api.quoteContract.mockResolvedValue(quote([]) as never);
+    renderEditor(OWNER);
+    await screen.findByText('Lập hợp đồng HĐ-2026-0142');
+    expect(screen.queryByRole('link', { name: 'Thu tiền' })).toBeNull();
   });
 });

@@ -368,3 +368,68 @@ describe('xuất bản và trang công khai', () => {
     expect(text).not.toMatch(/organizationId|membershipId|createdById|priceVersionId|storageKey|depositAmount/);
   });
 });
+
+describe('sửa nghiệm thu máy chủ lát 2 — trang công khai', () => {
+  const DAY = 24 * 60 * 60 * 1000;
+  const stripId = (r: request.Response) => JSON.stringify({ ...r.body, error: { ...r.body.error, requestId: undefined } });
+
+  it('N11 — thuê bao HUỶ, hoặc hết hạn QUÁ ân hạn → trang công khai 404 giống hệt slug bịa; còn ân hạn / chưa có thuê bao / đang hạn → 200', async () => {
+    const plan = await deps.db.subscriptionPlan.create({ data: { code: `hs_${randomUUID().slice(0, 8)}`, name: 'Gói HS', priceMonthly: 0n, features: [] } });
+    const fake = await site(`khong-co-${randomUUID().slice(0, 8)}`);
+    const cases: [string, { status: 'ACTIVE' | 'CANCELLED' | 'EXPIRED'; startsAt: Date; endsAt: Date | null } | null, number][] = [
+      ['chưa có thuê bao', null, 200],
+      ['đang hạn', { status: 'ACTIVE', startsAt: new Date(Date.now() - DAY), endsAt: new Date(Date.now() + 30 * DAY) }, 200],
+      ['hết hạn, còn ân hạn', { status: 'ACTIVE', startsAt: new Date(Date.now() - 40 * DAY), endsAt: new Date(Date.now() - 2 * DAY) }, 200],
+      ['hết hạn quá ân hạn', { status: 'ACTIVE', startsAt: new Date(Date.now() - 60 * DAY), endsAt: new Date(Date.now() - 30 * DAY) }, 404],
+      ['huỷ từ 30 ngày trước', { status: 'CANCELLED', startsAt: new Date(Date.now() - 30 * DAY), endsAt: null }, 404],
+      ['EXPIRED ghi tay', { status: 'EXPIRED', startsAt: new Date(Date.now() - DAY), endsAt: null }, 404],
+    ];
+    const got: string[] = [];
+    for (const [label, sub, want] of cases) {
+      const { org, slug } = await freshPublishedOrg(`n11-${randomUUID().slice(0, 4)}`);
+      if (sub) await deps.db.organizationSubscription.create({ data: { organizationId: org, planId: plan.id, ...sub } });
+      const r = await site(slug);
+      got.push(`${label} → ${r.status}`);
+      expect(r.status, label).toBe(want);
+      if (want === 404) expect(stripId(r)).toBe(stripId(fake));
+    }
+    console.log(`[N11] ${got.join('; ')}`);
+  });
+
+  it('GIỮ (A1) — ảnh logo/ảnh bìa đã XOÁ không còn hiện trên trang công khai (không URL ký, không mã tệp)', async () => {
+    const { owner, org, slug } = await freshPublishedOrg(`a1-${randomUUID().slice(0, 4)}`);
+    const logo = await makeFile(org, owner, { purpose: 'ORG_LOGO' });
+    const cover = await makeFile(org, owner, { purpose: 'ALBUM_IMAGE' });
+    await putProfile(owner, org, { brandName: 'Có ảnh', logoFileId: logo, coverFileId: cover }).expect(200);
+    const before = (await site(slug).expect(200)).body.profile;
+    expect(before.logo?.url).toBeTruthy();
+    expect(before.cover?.url).toBeTruthy();
+    await request(app).delete(url(org, `/files/${logo}`)).set(bearer(owner)).expect(204);
+    const after = await site(slug).expect(200);
+    console.log(`[A1] logo trước xoá: ${before.logo ? 'có' : 'không'}; sau xoá: ${after.body.profile.logo ? 'CÒN HIỆN' : 'đã ẩn'}; ảnh bìa (chưa xoá): ${after.body.profile.cover ? 'có' : 'không'}`);
+    expect(after.body.profile.logo).toBeNull();
+    expect(JSON.stringify(after.body)).not.toContain(logo);
+    expect(after.body.profile.cover?.url).toBeTruthy();
+  });
+
+  it('GIỮ (A4, A6) — dịch vụ đã ngừng không hiện trong "gồm trong gói"; nhân vật đã ẩn không hiện', async () => {
+    const { owner, org, slug } = await freshPublishedOrg(`a4-${randomUUID().slice(0, 4)}`);
+    const keep = await newService(owner, org, { name: 'Dịch vụ còn bán' });
+    const stop = await newService(owner, org, { name: 'Dịch vụ sắp ngừng' });
+    const pkg = await request(app)
+      .post(url(org, '/packages'))
+      .set(bearer(owner))
+      .set(idem())
+      .send({ code: `G-${uniq()}`, name: 'Gói A4', durationMinutes: 120, listPrice: 2_000_000, isPublic: true, items: [{ serviceId: keep.id }, { serviceId: stop.id }] })
+      .expect(201);
+    const subj = await request(app).post(url(org, '/makeup-subjects')).set(bearer(owner)).set(idem()).send({ name: 'Nhân vật sắp ẩn' }).expect(201);
+    const s1 = (await site(slug).expect(200)).body;
+    expect(s1.packages.find((p: { id: string }) => p.id === pkg.body.id).included.map((i: { name: string }) => i.name).sort()).toEqual(['Dịch vụ còn bán', 'Dịch vụ sắp ngừng']);
+    expect(s1.subjects.map((x: { name: string }) => x.name)).toContain('Nhân vật sắp ẩn');
+    await request(app).patch(url(org, `/services/${stop.id}`)).set(bearer(owner)).send({ isActive: false }).expect(200);
+    await request(app).patch(url(org, `/makeup-subjects/${subj.body.id}`)).set(bearer(owner)).send({ isActive: false }).expect(200);
+    const s2 = (await site(slug).expect(200)).body;
+    expect(s2.packages.find((p: { id: string }) => p.id === pkg.body.id).included.map((i: { name: string }) => i.name)).toEqual(['Dịch vụ còn bán']);
+    expect(s2.subjects.map((x: { name: string }) => x.name)).not.toContain('Nhân vật sắp ẩn');
+  });
+});

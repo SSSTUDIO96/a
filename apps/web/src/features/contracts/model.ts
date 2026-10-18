@@ -493,6 +493,8 @@ export interface ContractAbilities {
   canPickStaff: boolean;
   canSearchCustomers: boolean;
   canCreateCustomer: boolean;
+  // Liên kết "Thu tiền" (/:orgSlug/thu-tien/:id): hợp đồng đã xác nhận + quyền payments.read.
+  canCollect: boolean;
 }
 
 export function contractAbilities(has: (p: Permission) => boolean, status: ContractStatus | null): ContractAbilities {
@@ -511,6 +513,7 @@ export function contractAbilities(has: (p: Permission) => boolean, status: Contr
     canPickStaff: has('staff.read') && write && draft,
     canSearchCustomers: has('customers.read'),
     canCreateCustomer: has('customers.write'),
+    canCollect: confirmed && has('payments.read'),
   };
 }
 
