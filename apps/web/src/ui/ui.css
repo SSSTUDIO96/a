@@ -153,6 +153,7 @@
 .ui-check__label { min-width: 0; overflow-wrap: anywhere; display: inline-flex; align-items: center; }
 .ui-check__trail { margin-left: auto; color: var(--muted); font-weight: 400; padding-left: 12px; }
 .ui-check--disabled { color: var(--muted); cursor: not-allowed; }
+.ui-check--mute-off:has(input:not(:checked)) { color: var(--faint); }
 .ui-check input[data-demo='focus'] { outline: var(--focus-ring); outline-offset: var(--focus-offset); }
 
 /* ===== CheckChip ===== */

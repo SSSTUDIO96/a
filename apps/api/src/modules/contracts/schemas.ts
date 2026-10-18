@@ -30,6 +30,9 @@ export const TravelInputSchema = strict({
 
 const AddonInput = strict({ serviceId: z.uuid(), quantity: Quantity });
 
+// Thợ phụ trách dự kiến của dòng; lúc xác nhận hợp đồng thành thợ của lịch.
+const StaffInput = strict({ membershipId: z.uuid(), role: z.enum(['PRIMARY', 'ASSIST']).default('PRIMARY') });
+
 const placement = {
   subjectId: z.uuid().optional(),
   quantity: Quantity,
@@ -44,6 +47,7 @@ const placement = {
   note: Note.optional(),
   addons: z.array(AddonInput).max(30).optional(),
   travel: TravelInputSchema.optional(),
+  staff: z.array(StaffInput).max(20).optional(),
 };
 
 export const LineInputSchema = z.discriminatedUnion('kind', [

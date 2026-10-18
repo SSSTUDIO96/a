@@ -535,11 +535,12 @@ describe('mức rảnh của thợ (trùng giờ / cùng ngày / rảnh)', () =>
   beforeAll(async () => {
     owner = await registerUser(app, 'chu-ranh');
     org = await createOrg(app, owner, 'ranh');
-    [t1, t2, t3, t4, t5] = await Promise.all(
-      ['tho-ranh-1', 'tho-ranh-2', 'tho-ranh-3', 'tho-ranh-4', 'tho-ranh-5'].map(async (l) =>
-        addMember(app, owner, org, await registerUser(app, l), ['artist']),
-      ),
-    );
+    const artist = async (label: string) => addMember(app, owner, org, await registerUser(app, label), ['artist']);
+    t1 = await artist('tho-ranh-1');
+    t2 = await artist('tho-ranh-2');
+    t3 = await artist('tho-ranh-3');
+    t4 = await artist('tho-ranh-4');
+    t5 = await artist('tho-ranh-5');
     // t1: 8–10h + đi 60 phút → bận tới 11h.
     apptT1 = (await appt(t1, D, '08:00', '10:00', { travelAfterMin: 60 })).id;
     // t2: ca chiều cùng ngày.

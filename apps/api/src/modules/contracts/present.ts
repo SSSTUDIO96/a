@@ -1,7 +1,105 @@
 import type { Prisma } from '@prisma/client';
 import { vndFromBigInt, type Vnd } from '@makeup/shared';
 import { AppError } from '../../lib/errors';
+import { initialsOf } from '../staff/common';
+import { staffAvailabilityTx, type AvailabilityShift, type DraftHold } from '../staff/availability';
 import type { PlannedLine, Sheet } from './sheet';
+
+// Thợ phụ trách dự kiến của dòng, đủ để giao diện hiện ảnh/chữ viết tắt và bậc.
+export interface StaffView {
+  membershipId: string;
+  role: 'PRIMARY' | 'ASSIST';
+  displayName: string;
+  avatarUrl: string | null;
+  initials: string;
+  tier: { id: string; name: string } | null;
+}
+
+const staffMemberSelect = {
+  id: true,
+  user: { select: { fullName: true } },
+  staffProfile: { select: { displayName: true, avatarUrl: true, tier: { select: { id: true, name: true } } } },
+} satisfies Prisma.MembershipSelect;
+
+type StaffMember = Prisma.MembershipGetPayload<{ select: typeof staffMemberSelect }>;
+export type StaffMap = Map<string, StaffMember>;
+
+function staffView(m: StaffMember, role: StaffView['role']): StaffView {
+  const displayName = m.staffProfile?.displayName ?? m.user.fullName;
+  return {
+    membershipId: m.id,
+    role,
+    displayName,
+    avatarUrl: m.staffProfile?.avatarUrl ?? null,
+    initials: initialsOf(displayName),
+    tier: m.staffProfile?.tier ?? null,
+  };
+}
+
+const byRole = (a: StaffView, b: StaffView) => (a.role === b.role ? 0 : a.role === 'PRIMARY' ? -1 : 1);
+
+// Thông tin hiển thị cho các thợ của bảng tính chưa ghi (xem trước).
+export async function loadStaffMap(db: Prisma.TransactionClient, orgId: string, sheet: Sheet): Promise<StaffMap> {
+  const ids = [...new Set(sheet.lines.flatMap((l) => l.staff.map((s) => s.membershipId)))];
+  if (ids.length === 0) return new Map();
+  const rows = await db.membership.findMany({ where: { id: { in: ids }, organizationId: orgId }, select: staffMemberSelect });
+  return new Map(rows.map((r) => [r.id, r]));
+}
+
+// Cảnh báo lúc tư vấn (không chặn lưu nháp): thợ đã có ca trùng giờ, có ca khác trong ngày, hoặc đang được giữ ở hợp đồng nháp khác.
+export interface StaffWarning {
+  membershipId: string;
+  level: 'OVERLAP' | 'SAME_DAY';
+  overlaps: AvailabilityShift[];
+  sameDay: AvailabilityShift[];
+  draftHolds: DraftHold[];
+}
+
+export type WarningMap = Map<string, StaffWarning[]>;
+
+interface WarnTarget {
+  key: string;
+  start: Date | null;
+  end: Date | null;
+  membershipIds: string[];
+}
+
+export async function staffWarnings(
+  db: Prisma.TransactionClient,
+  orgId: string,
+  targets: WarnTarget[],
+  exclude: { contractId?: string; appointmentIds?: string[] },
+): Promise<WarningMap> {
+  const out: WarningMap = new Map();
+  for (const t of targets) {
+    if (!t.start || !t.end || t.membershipIds.length === 0) continue;
+    const items = await staffAvailabilityTx(db, orgId, {
+      startsAt: t.start,
+      endsAt: t.end,
+      membershipIds: t.membershipIds,
+      excludeContractId: exclude.contractId,
+      excludeAppointmentIds: exclude.appointmentIds,
+    });
+    const warnings: StaffWarning[] = [];
+    for (const a of items) {
+      // Chỉ bị giữ chỗ ở hợp đồng nháp khác cũng cảnh báo: trùng giờ → OVERLAP, cùng ngày → SAME_DAY.
+      const level =
+        a.level !== 'FREE' ? a.level : a.draftHolds.some((h) => h.overlaps) ? 'OVERLAP' : a.draftHolds.length > 0 ? 'SAME_DAY' : null;
+      if (level) warnings.push({ membershipId: a.membershipId, level, overlaps: a.overlaps, sameDay: a.sameDay, draftHolds: a.draftHolds });
+    }
+    out.set(t.key, warnings);
+  }
+  return out;
+}
+
+export function sheetWarnings(db: Prisma.TransactionClient, orgId: string, sheet: Sheet): Promise<WarningMap> {
+  return staffWarnings(
+    db,
+    orgId,
+    sheet.lines.map((l) => ({ key: l.id, start: l.scheduledStart, end: l.scheduledEnd, membershipIds: l.staff.map((s) => s.membershipId) })),
+    {},
+  );
+}
 
 // Một dòng trả ra JSON: tiền là số nguyên đồng, km và toạ độ là số — không để BigInt/Decimal lọt ra.
 export interface LineView {
@@ -31,6 +129,8 @@ export interface LineView {
   addedAfterConfirm: boolean;
   voidedAt: Date | null;
   voidReason: string | null;
+  staff: StaffView[];
+  staffWarnings: StaffWarning[];
 }
 
 export interface GroupedLine extends LineView {
@@ -63,14 +163,28 @@ function group(items: Keyed[]): GroupedLine[] {
   return [...roots.values()];
 }
 
-function plannedView(l: PlannedLine): LineView {
-  const { id: _id, parentLineId: _p, packageDeposit: _d, ...rest } = l;
-  return { ...rest, id: null, addedAfterConfirm: false, voidedAt: null, voidReason: null };
+function plannedView(l: PlannedLine, staff: StaffMap, warnings: WarningMap): LineView {
+  const { id: _id, parentLineId: _p, packageDeposit: _d, staff: assigned, ...rest } = l;
+  const views = assigned.map((s) => {
+    const m = staff.get(s.membershipId);
+    // Thợ đã qua kiểm ở bảng tính; thiếu ở đây là lỗi lắp ráp, không đoán.
+    if (!m) throw new Error(`Thiếu thông tin thợ ${s.membershipId} khi trình bày bảng tính`);
+    return staffView(m, s.role);
+  });
+  return {
+    ...rest,
+    id: null,
+    addedAfterConfirm: false,
+    voidedAt: null,
+    voidReason: null,
+    staff: views.sort(byRole),
+    staffWarnings: warnings.get(l.id) ?? [],
+  };
 }
 
-export function presentSheet(sheet: Sheet) {
+export function presentSheet(sheet: Sheet, staff: StaffMap, warnings: WarningMap) {
   return {
-    lines: group(sheet.lines.map((l) => ({ key: l.id, parentKey: l.parentLineId, view: plannedView(l) }))),
+    lines: group(sheet.lines.map((l) => ({ key: l.id, parentKey: l.parentLineId, view: plannedView(l, staff, warnings) }))),
     travelTotal: sheet.travelTotal,
     subtotal: sheet.subtotal,
     discount: sheet.discount,
@@ -80,9 +194,13 @@ export function presentSheet(sheet: Sheet) {
   };
 }
 
-type LineRow = Prisma.ContractLineGetPayload<object>;
+const lineInclude = {
+  plannedStaff: { select: { role: true, membership: { select: staffMemberSelect } } },
+} satisfies Prisma.ContractLineInclude;
 
-function rowView(r: LineRow): LineView {
+type LineRow = Prisma.ContractLineGetPayload<{ include: typeof lineInclude }>;
+
+function rowView(r: LineRow, warnings: WarningMap): LineView {
   return {
     id: r.id,
     kind: r.kind,
@@ -110,6 +228,8 @@ function rowView(r: LineRow): LineView {
     addedAfterConfirm: r.addedAfterConfirm,
     voidedAt: r.voidedAt,
     voidReason: r.voidReason,
+    staff: r.plannedStaff.map((s) => staffView(s.membership, s.role)).sort(byRole),
+    staffWarnings: warnings.get(r.id) ?? [],
   };
 }
 
@@ -145,7 +265,7 @@ export async function loadContractDetail(db: Prisma.TransactionClient, orgId: st
     where: { id: contractId, organizationId: orgId },
     include: {
       customer: { select: { id: true, fullName: true, phone: true, email: true } },
-      lines: { orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }] },
+      lines: { include: lineInclude, orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }] },
       appointments: {
         where: { organizationId: orgId },
         select: { id: true, code: true, startsAt: true, status: true, contractLineId: true },
@@ -154,7 +274,16 @@ export async function loadContractDetail(db: Prisma.TransactionClient, orgId: st
     },
   });
   if (!c) throw new AppError('NOT_FOUND', 'Không tìm thấy hợp đồng');
-  const lines = group(c.lines.map((r) => ({ key: r.id, parentKey: r.parentLineId, view: rowView(r) })));
+  // Ca và giữ chỗ của CHÍNH hợp đồng này không tính là cảnh báo.
+  const warnings = await staffWarnings(
+    db,
+    orgId,
+    c.lines
+      .filter((r) => r.voidedAt === null)
+      .map((r) => ({ key: r.id, start: r.scheduledStart, end: r.scheduledEnd, membershipIds: r.plannedStaff.map((s) => s.membership.id) })),
+    { contractId: c.id, appointmentIds: c.appointments.map((a) => a.id) },
+  );
+  const lines = group(c.lines.map((r) => ({ key: r.id, parentKey: r.parentLineId, view: rowView(r, warnings) })));
   const travelTotal = c.lines
     .filter((l) => l.kind === 'TRAVEL' && l.voidedAt === null)
     .reduce((s, l) => s + vndFromBigInt(l.lineTotal, 'phí di chuyển'), 0);

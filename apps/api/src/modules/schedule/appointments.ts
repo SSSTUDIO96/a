@@ -29,7 +29,7 @@ import {
 
 const MAX_RANGE_DAYS = 62;
 
-const IsoTime = z.iso.datetime({ offset: true }).transform((s) => new Date(s));
+export const IsoTime = z.iso.datetime({ offset: true }).transform((s) => new Date(s));
 const OrgParams = z.object({ orgId: z.uuid() });
 const AppointmentParams = OrgParams.extend({ appointmentId: z.uuid() });
 const TravelMin = z.number().int().min(0).max(MAX_TRAVEL_MIN);

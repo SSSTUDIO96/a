@@ -668,6 +668,232 @@ describe('huỷ hợp đồng kéo theo lịch đã gắn', () => {
   });
 });
 
+describe('thợ phụ trách, cảnh báo trùng giờ, lên lịch khi xác nhận', () => {
+  let m1: string;
+  let m2: string;
+  const at = (iso: string) => new Date(iso).toISOString();
+
+  beforeAll(async () => {
+    m1 = await addMember(app, A.owner, A.orgId, await registerUser(app, 'hd-tho-1'), ['artist']);
+    m2 = await addMember(app, A.owner, A.orgId, await registerUser(app, 'hd-tho-2'), ['artist']);
+  });
+
+  const staffLine = (start: string | null, end: string | null, staff: { membershipId: string; role: string }[], extra: object = {}) => ({
+    kind: 'SERVICE',
+    serviceId: A.party,
+    subjectId: A.bridesmaid,
+    quantity: 1,
+    locationType: 'STUDIO',
+    ...(start ? { scheduledStart: start } : {}),
+    ...(end ? { scheduledEnd: end } : {}),
+    staff,
+    ...extra,
+  });
+
+  const book = (membershipId: string, startsAt: string, endsAt: string) =>
+    request(app)
+      .post(`/api/v1/orgs/${A.orgId}/appointments`)
+      .set(bearer(A.owner))
+      .set('idempotency-key', idem())
+      .send({ customerId: customerA, startsAt: at(startsAt), endsAt: at(endsAt), status: 'CONFIRMED', staff: [{ membershipId, role: 'PRIMARY' }] })
+      .expect(201);
+
+  const confirm = (id: string) => request(app).post(url(A.orgId, `/${id}/status`)).set(bearer(A.owner)).send({ to: 'CONFIRMED' });
+
+  it('gán thợ chính + thợ phụ cho dòng; xem hợp đồng trả thợ kèm tên hiển thị, chữ viết tắt, bậc', async () => {
+    const c = (
+      await create(A.owner, A.orgId, {
+        customerId: customerA,
+        lines: [staffLine('2027-05-01T01:00:00Z', '2027-05-01T03:00:00Z', [{ membershipId: m2, role: 'ASSIST' }, { membershipId: m1, role: 'PRIMARY' }])],
+      }).expect(201)
+    ).body;
+    const staff = c.lines[0].staff as { membershipId: string; role: string; displayName: string; initials: string; avatarUrl: null; tier: null }[];
+    expect(staff.map((x) => [x.membershipId, x.role])).toEqual([
+      [m1, 'PRIMARY'],
+      [m2, 'ASSIST'],
+    ]);
+    expect(staff[0]).toMatchObject({ displayName: expect.stringContaining('hd-tho-1'), avatarUrl: null, tier: null });
+    expect(staff[0]!.initials.length).toBeGreaterThan(0);
+    expect(await deps.db.contractLineStaff.count({ where: { lineId: c.lines[0].id } })).toBe(2);
+    const detail = (await request(app).get(url(A.orgId, `/${c.id}`)).set(bearer(A.owner)).expect(200)).body;
+    expect(detail.lines[0].staff).toEqual(c.lines[0].staff);
+  });
+
+  it('thợ sai → 400: thiếu giờ, thợ tổ chức khác, mã bịa, hai thợ chính, quá số thợ, thợ tắt nhận lịch', async () => {
+    const outsider = await deps.db.membership.findFirstOrThrow({ where: { organizationId: B.orgId } });
+    const off = await addMember(app, A.owner, A.orgId, await registerUser(app, 'hd-tho-nghi'), ['artist']);
+    await deps.db.staffProfile.create({ data: { organizationId: A.orgId, membershipId: off, isBookable: false } });
+    const s = '2027-05-02T01:00:00Z';
+    const e = '2027-05-02T03:00:00Z';
+    const cases: [string, object, RegExp][] = [
+      ['thiếu giờ', staffLine(null, null, [{ membershipId: m1, role: 'PRIMARY' }]), /phải có giờ bắt đầu và giờ kết thúc/],
+      ['thợ tổ chức khác', staffLine(s, e, [{ membershipId: outsider.id, role: 'PRIMARY' }]), /không thuộc tổ chức/],
+      ['mã bịa', staffLine(s, e, [{ membershipId: randomUUID(), role: 'PRIMARY' }]), /không thuộc tổ chức/],
+      ['hai thợ chính', staffLine(s, e, [{ membershipId: m1, role: 'PRIMARY' }, { membershipId: m2, role: 'PRIMARY' }]), /tối đa một thợ chính/],
+      [
+        'quá số thợ (dịch vụ lẻ: 1 + 3)',
+        staffLine(s, e, [m1, m2, off, A.studio, randomUUID()].map((membershipId) => ({ membershipId, role: 'ASSIST' }))),
+        /tối đa 4 thợ/,
+      ],
+      ['thợ tắt nhận lịch', staffLine(s, e, [{ membershipId: off, role: 'PRIMARY' }]), /tắt nhận lịch/],
+    ];
+    const before = await contractCount(A.orgId);
+    for (const [name, line, msg] of cases) {
+      const body = { customerId: customerA, lines: [line] };
+      const r = await create(A.owner, A.orgId, body);
+      expect(r.status, `${name}: ${JSON.stringify(r.body)}`).toBe(400);
+      expect(r.body.error.message, name).toMatch(msg);
+      expect((await quote(A.owner, A.orgId, body)).status, name).toBe(400);
+    }
+    expect(await contractCount(A.orgId)).toBe(before);
+  });
+
+  it('xem trước cảnh báo OVERLAP / SAME_DAY / giữ chỗ ở hợp đồng nháp khác — không chặn lưu nháp', async () => {
+    const appt = (await book(m1, '2027-05-10T01:00:00Z', '2027-05-10T03:00:00Z')).body;
+    const q = async (start: string, end: string, membershipId: string) =>
+      (
+        await quote(A.owner, A.orgId, { customerId: customerA, lines: [staffLine(start, end, [{ membershipId, role: 'PRIMARY' }])] }).expect(200)
+      ).body.lines[0].staffWarnings as { membershipId: string; level: string; overlaps: { code: string }[]; sameDay: { code: string }[]; draftHolds: unknown[] }[];
+
+    const overlap = await q('2027-05-10T02:00:00Z', '2027-05-10T04:00:00Z', m1);
+    expect(overlap).toHaveLength(1);
+    expect(overlap[0]).toMatchObject({ membershipId: m1, level: 'OVERLAP' });
+    expect(overlap[0]!.overlaps.map((x) => x.code)).toEqual([appt.code]);
+    // 13:00–14:00 giờ Việt Nam cùng ngày với ca 08:00–10:00
+    const sameDay = await q('2027-05-10T06:00:00Z', '2027-05-10T07:00:00Z', m1);
+    expect(sameDay[0]).toMatchObject({ level: 'SAME_DAY' });
+    expect(sameDay[0]!.sameDay.map((x) => x.code)).toEqual([appt.code]);
+    expect(await q('2027-05-11T06:00:00Z', '2027-05-11T07:00:00Z', m1)).toEqual([]);
+    expect(await q('2027-05-10T06:00:00Z', '2027-05-10T07:00:00Z', m2)).toEqual([]);
+
+    // Lưu nháp trùng giờ vẫn được (chỉ cảnh báo); nháp đó giữ chỗ m2 → báo cho hợp đồng khác.
+    const draft = (
+      await create(A.owner, A.orgId, {
+        customerId: customerA,
+        lines: [staffLine('2027-05-10T02:00:00Z', '2027-05-10T04:00:00Z', [{ membershipId: m1, role: 'PRIMARY' }, { membershipId: m2, role: 'ASSIST' }])],
+      }).expect(201)
+    ).body;
+    const w = draft.lines[0].staffWarnings as { membershipId: string; level: string }[];
+    expect(w.map((x) => [x.membershipId, x.level])).toEqual([[m1, 'OVERLAP']]);
+    const hold = await q('2027-05-10T03:00:00Z', '2027-05-10T05:00:00Z', m2);
+    expect(hold[0]).toMatchObject({ membershipId: m2, level: 'OVERLAP' });
+    expect(hold[0]!.draftHolds).toEqual([expect.objectContaining({ contractId: draft.id, overlaps: true })]);
+  });
+
+  it('xác nhận tạo đúng số lịch, đúng thợ, đúng giờ, đúng nơi; dòng không có thợ thì không tạo lịch', async () => {
+    const c = (
+      await create(A.owner, A.orgId, {
+        customerId: customerA,
+        lines: [
+          staffLine('2027-06-01T01:00:00Z', '2027-06-01T03:00:00Z', [{ membershipId: m1, role: 'PRIMARY' }, { membershipId: m2, role: 'ASSIST' }]),
+          staffLine('2027-06-01T04:00:00Z', '2027-06-01T05:00:00Z', [{ membershipId: m2, role: 'PRIMARY' }], {
+            locationType: 'CUSTOMER_HOME',
+            address: '5 Hai Bà Trưng',
+            travel: { mode: 'MANUAL', amount: 0 },
+            subjectId: A.guest,
+          }),
+          { kind: 'SERVICE', serviceId: A.party, quantity: 1, scheduledStart: '2027-06-01T06:00:00Z', scheduledEnd: '2027-06-01T07:00:00Z' },
+        ],
+      }).expect(201)
+    ).body;
+    const res = await confirm(c.id).expect(200);
+    expect(res.body.status).toBe('CONFIRMED');
+    expect(res.body.createdAppointments).toHaveLength(2);
+    const appts = await deps.db.appointment.findMany({
+      where: { contractId: c.id },
+      include: { staff: { select: { membershipId: true, role: true, isBlocking: true } } },
+      orderBy: { startsAt: 'asc' },
+    });
+    expect(appts).toHaveLength(2);
+    expect(appts[0]).toMatchObject({
+      status: 'CONFIRMED',
+      kind: 'MAKEUP',
+      customerId: customerA,
+      contractLineId: c.lines[0].id,
+      title: 'Makeup tiệc — Phù dâu',
+      locationType: 'STUDIO',
+    });
+    expect(appts[0]!.startsAt.toISOString()).toBe('2027-06-01T01:00:00.000Z');
+    expect(appts[0]!.staff.map((x) => [x.membershipId, x.role, x.isBlocking]).sort()).toEqual(
+      [
+        [m1, 'PRIMARY', true],
+        [m2, 'ASSIST', true],
+      ].sort(),
+    );
+    expect(appts[1]).toMatchObject({ contractLineId: c.lines[1].id, title: 'Makeup tiệc — Khách mời', locationType: 'CUSTOMER_HOME', address: '5 Hai Bà Trưng' });
+    expect(appts[1]!.staff.map((x) => x.membershipId)).toEqual([m2]);
+    // Lịch của chính hợp đồng không bị coi là trùng khi xem lại hợp đồng.
+    const detail = (await request(app).get(url(A.orgId, `/${c.id}`)).set(bearer(A.owner)).expect(200)).body;
+    expect(detail.lines[0].staffWarnings).toEqual([]);
+    expect(detail.appointments).toHaveLength(2);
+  });
+
+  it('trùng giờ khi xác nhận → 409 kèm danh sách; hợp đồng vẫn nháp, không lịch nào được tạo', async () => {
+    const busy = (await book(m1, '2027-06-10T01:00:00Z', '2027-06-10T03:00:00Z')).body;
+    const c = (
+      await create(A.owner, A.orgId, {
+        customerId: customerA,
+        lines: [
+          staffLine('2027-06-10T05:00:00Z', '2027-06-10T06:00:00Z', [{ membershipId: m2, role: 'PRIMARY' }]),
+          staffLine('2027-06-10T02:00:00Z', '2027-06-10T04:00:00Z', [{ membershipId: m1, role: 'PRIMARY' }]),
+        ],
+      }).expect(201)
+    ).body;
+    const r = await confirm(c.id);
+    expect(r.status).toBe(409);
+    expect(r.body.error.message).toMatch(/Trùng lịch/);
+    expect(r.body.error.details.conflicts).toEqual([expect.objectContaining({ code: busy.code, membershipId: m1 })]);
+    expect((await deps.db.contract.findUniqueOrThrow({ where: { id: c.id } })).status).toBe('DRAFT');
+    expect(await deps.db.appointment.count({ where: { contractId: c.id } })).toBe(0);
+  });
+
+  it('dòng có thợ mà thiếu giờ (dữ liệu ghi thẳng) → xác nhận 400 nêu tên dòng', async () => {
+    const c = (
+      await create(A.owner, A.orgId, { customerId: customerA, lines: [{ kind: 'SERVICE', serviceId: A.party, quantity: 1 }] }).expect(201)
+    ).body;
+    await deps.db.contractLineStaff.create({ data: { organizationId: A.orgId, lineId: c.lines[0].id, membershipId: m1, role: 'PRIMARY' } });
+    const r = await confirm(c.id);
+    expect(r.status).toBe(400);
+    expect(r.body.error.message).toMatch(/Dòng "Makeup tiệc" có thợ phụ trách nhưng chưa có giờ làm/);
+    expect((await deps.db.contract.findUniqueOrThrow({ where: { id: c.id } })).status).toBe('DRAFT');
+  });
+
+  it('dòng phát sinh sau xác nhận có thợ + giờ → lên lịch ngay; sửa thợ dự kiến của dòng đã chốt bị database chặn', async () => {
+    const c = (
+      await create(A.owner, A.orgId, {
+        customerId: customerA,
+        lines: [staffLine('2027-07-01T01:00:00Z', '2027-07-01T02:00:00Z', [{ membershipId: m1, role: 'PRIMARY' }])],
+      }).expect(201)
+    ).body;
+    await confirm(c.id).expect(200);
+    const added = await request(app)
+      .post(url(A.orgId, `/${c.id}/lines`))
+      .set(bearer(A.owner))
+      .set('idempotency-key', idem())
+      .send(staffLine('2027-07-01T03:00:00Z', '2027-07-01T04:00:00Z', [{ membershipId: m2, role: 'PRIMARY' }]))
+      .expect(201);
+    expect(added.body.createdAppointments).toHaveLength(1);
+    const newLine = (added.body.lines as Line[]).at(-1)!;
+    expect(newLine.addedAfterConfirm).toBe(true);
+    const appt = await deps.db.appointment.findFirstOrThrow({ where: { contractLineId: newLine.id }, include: { staff: true } });
+    expect(appt.status).toBe('CONFIRMED');
+    expect(appt.staff.map((x) => x.membershipId)).toEqual([m2]);
+
+    // Dòng đã chốt: đổi/xoá/thêm thợ dự kiến ghi thẳng database → trigger chặn.
+    const lineId = c.lines[0].id as string;
+    const del = await deps.db.contractLineStaff.deleteMany({ where: { lineId } }).catch((e: unknown) => e);
+    expect(String((del as Error).message)).toMatch(/đổi thợ ở màn Lịch/);
+    const ins = await deps.db.contractLineStaff
+      .create({ data: { organizationId: A.orgId, lineId, membershipId: m2, role: 'ASSIST' } })
+      .catch((e: unknown) => e);
+    expect(String((ins as Error).message)).toMatch(/đổi thợ ở màn Lịch/);
+    const upd = await deps.db.contractLineStaff
+      .update({ where: { lineId_membershipId: { lineId, membershipId: m1 } }, data: { role: 'ASSIST' } })
+      .catch((e: unknown) => e);
+    expect(String((upd as Error).message)).toMatch(/đổi thợ ở màn Lịch/);
+  });
+});
+
 describe('danh sách hợp đồng', () => {
   it('lọc theo trạng thái, khách, mã, tên, số điện thoại, ngày sự kiện; tiền là số', async () => {
     const cust = await newCustomer(A.orgId, 'Phạm Lọc Thử', '0977000111');

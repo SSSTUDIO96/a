@@ -24,8 +24,8 @@ import {
   type ContractBody,
 } from './schemas';
 import { buildSheet, insertLines, money, planLines } from './sheet';
-import { contractSummarySelect, loadContractDetail, presentSheet, presentSummary } from './present';
-import { cancelAppointmentsOfContractTx } from '../schedule/service';
+import { contractSummarySelect, loadContractDetail, loadStaffMap, presentSheet, presentSummary, sheetWarnings } from './present';
+import { cancelAppointmentsOfContractTx, createAppointmentTx, type TxCtx } from '../schedule/service';
 
 type Tx = Prisma.TransactionClient;
 
@@ -92,6 +92,54 @@ function assertCanAdjust(o: OrgContext, status: ContractStatus, action: string):
   }
 }
 
+// Dòng chưa huỷ có thợ dự kiến → một lịch đã xác nhận cho đúng thợ, đúng giờ, đúng nơi. Trùng giờ thì module lịch
+// ném 409 kèm danh sách và cả transaction quay lui (hợp đồng giữ nguyên trạng thái cũ).
+async function createLineAppointments(tx: Tx, ctx: TxCtx, contract: { id: string; customerId: string }, onlyLineIds?: string[]) {
+  const lines = await tx.contractLine.findMany({
+    where: {
+      contractId: contract.id,
+      organizationId: ctx.orgId,
+      voidedAt: null,
+      plannedStaff: { some: {} },
+      ...(onlyLineIds ? { id: { in: onlyLineIds } } : {}),
+    },
+    include: { plannedStaff: { select: { membershipId: true, role: true } } },
+    orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+  });
+  const created: string[] = [];
+  for (const l of lines) {
+    if (!l.scheduledStart || !l.scheduledEnd) {
+      throw new AppError('VALIDATION_FAILED', `Dòng "${l.name}" có thợ phụ trách nhưng chưa có giờ làm — thêm giờ trước khi xác nhận`, {
+        lineId: l.id,
+      });
+    }
+    const appt = await createAppointmentTx(tx, ctx, {
+      kind: 'MAKEUP',
+      title: l.subjectName ? `${l.name} — ${l.subjectName}` : l.name,
+      customerId: contract.customerId,
+      contractId: contract.id,
+      contractLineId: l.id,
+      startsAt: l.scheduledStart,
+      endsAt: l.scheduledEnd,
+      travelBeforeMin: 0,
+      travelAfterMin: 0,
+      locationType: l.locationType,
+      address: l.address,
+      latitude: l.latitude === null ? null : l.latitude.toNumber(),
+      longitude: l.longitude === null ? null : l.longitude.toNumber(),
+      staff: l.plannedStaff,
+      status: 'CONFIRMED',
+    });
+    created.push(appt.id);
+  }
+  return created;
+}
+
+function pickAppointments<T extends { id: string }>(all: T[], ids: string[]): T[] {
+  const set = new Set(ids);
+  return all.filter((a) => set.has(a.id));
+}
+
 async function lineTotals(tx: Tx, orgId: string, contractId: string) {
   const rows = await tx.contractLine.findMany({
     where: { contractId, organizationId: orgId },
@@ -117,7 +165,8 @@ export const contractRoutes: AnyRoute[] = [
       const o = mustOrg(org);
       await checkCustomer(deps.db, o.id, body);
       const sheet = await buildSheet(deps.db, o.id, body, new Date());
-      return { body: presentSheet(sheet) };
+      const [staff, warnings] = await Promise.all([loadStaffMap(deps.db, o.id, sheet), sheetWarnings(deps.db, o.id, sheet)]);
+      return { body: presentSheet(sheet, staff, warnings) };
     },
   }),
 
@@ -379,6 +428,15 @@ export const contractRoutes: AnyRoute[] = [
         });
         const { subtotal, total } = await recompute(tx, o.id, c.id, vnd(c.discount, 'giảm giá'));
         await tx.contract.update({ where: { id: c.id }, data: { subtotal: BigInt(subtotal), total: BigInt(total) } });
+        // Dòng phát sinh sau xác nhận có thợ + giờ → lên lịch ngay.
+        const createdAppointmentIds = addedAfterConfirm
+          ? await createLineAppointments(
+              tx,
+              { orgId: o.id, userId: uid, requestId },
+              c,
+              planned.map((l) => l.id),
+            )
+          : [];
         await writeAudit(tx, {
           organizationId: o.id,
           actorUserId: uid,
@@ -388,6 +446,7 @@ export const contractRoutes: AnyRoute[] = [
           data: {
             lineIds: planned.map((l) => l.id),
             addedAfterConfirm,
+            createdAppointmentIds,
             actorRoles: o.roleKeys,
             amount: planned.reduce((s, l) => s + l.lineTotal, 0),
             before: { subtotal: vnd(c.subtotal, 'tạm tính'), total: vnd(c.total, 'tổng') },
@@ -395,7 +454,8 @@ export const contractRoutes: AnyRoute[] = [
           },
           requestId,
         });
-        return loadContractDetail(tx, o.id, c.id);
+        const full = await loadContractDetail(tx, o.id, c.id);
+        return { ...full, createdAppointments: pickAppointments(full.appointments, createdAppointmentIds) };
       }, TX_OPTS);
       return { status: 201, body: detail };
     },
@@ -504,6 +564,9 @@ export const contractRoutes: AnyRoute[] = [
           const active = await tx.contractLine.count({ where: { contractId: c.id, organizationId: o.id, voidedAt: null } });
           if (active === 0) throw new AppError('CONFLICT', 'Hợp đồng chưa có dòng nào còn hiệu lực — không xác nhận được');
         }
+        // Xác nhận hợp đồng = lên lịch cho các dòng có thợ, trong cùng transaction.
+        const createdAppointmentIds =
+          body.to === 'CONFIRMED' ? await createLineAppointments(tx, { orgId: o.id, userId: uid, requestId }, c) : [];
         // Huỷ hợp đồng thì huỷ luôn các lịch đã gắn, trong cùng transaction; còn lịch đang làm thì không huỷ gì cả.
         let cancelledIds: string[] = [];
         if (body.to === 'CANCELLED' && body.reason) {
@@ -536,12 +599,21 @@ export const contractRoutes: AnyRoute[] = [
           action: 'contract.status_changed',
           entityType: 'contract',
           entityId: c.id,
-          data: { from: c.status, to: body.to, reason: body.reason ?? null, cancelledAppointmentIds: cancelledIds },
+          data: {
+            from: c.status,
+            to: body.to,
+            reason: body.reason ?? null,
+            cancelledAppointmentIds: cancelledIds,
+            createdAppointmentIds,
+          },
           requestId,
         });
         const full = await loadContractDetail(tx, o.id, c.id);
-        const cancelled = new Set(cancelledIds);
-        return { ...full, cancelledAppointments: full.appointments.filter((a) => cancelled.has(a.id)) };
+        return {
+          ...full,
+          cancelledAppointments: pickAppointments(full.appointments, cancelledIds),
+          createdAppointments: pickAppointments(full.appointments, createdAppointmentIds),
+        };
       }, TX_OPTS);
       return { body: detail };
     },

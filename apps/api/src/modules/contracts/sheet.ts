@@ -13,6 +13,7 @@ import {
 } from '@makeup/shared';
 import { AppError } from '../../lib/errors';
 import { resolveCurrentPrice, type PriceRef } from '../catalog/prices';
+import { assertActiveStaff, assertBookable, type StaffAssignment } from '../schedule/service';
 import type { LineInput, PlacedLineInput, TravelInput } from './schemas';
 
 type Tx = Prisma.TransactionClient;
@@ -47,6 +48,8 @@ export interface PlannedLine {
   note: string | null;
   // Cọc mặc định của gói × số lượng (chỉ dòng gói), dùng cho cọc gợi ý.
   packageDeposit: Vnd;
+  // Thợ phụ trách dự kiến (chỉ dòng gói/dịch vụ chính).
+  staff: StaffAssignment[];
 }
 
 // Đổi lỗi tính tiền của @makeup/shared thành 400 có lời rõ; lỗi khác ném nguyên.
@@ -94,6 +97,7 @@ function blank(): Omit<PlannedLine, 'kind' | 'name' | 'quantity' | 'unitPrice' |
     perKmAmount: null,
     note: null,
     packageDeposit: 0,
+    staff: [],
   };
 }
 
@@ -160,6 +164,8 @@ async function planPlaced(ctx: Ctx, input: PlacedLineInput, line: number): Promi
   let allowedLocations: LocationType[] = [];
   let includedServiceIds = new Set<string>();
   let pkgSubject: { id: string } | null = null;
+  // Số thợ tối đa của dòng = số thợ của gói + 3 (dịch vụ lẻ tính như gói 1 thợ).
+  let staffCount = 1;
 
   if (input.kind === 'PACKAGE') {
     const pkg = await tx.servicePackage.findFirst({
@@ -171,6 +177,7 @@ async function planPlaced(ctx: Ctx, input: PlacedLineInput, line: number): Promi
         depositAmount: true,
         subjectId: true,
         locationTypes: true,
+        staffCount: true,
         items: { where: { isOptional: false }, select: { serviceId: true } },
       },
     });
@@ -192,6 +199,7 @@ async function planPlaced(ctx: Ctx, input: PlacedLineInput, line: number): Promi
     allowedLocations = pkg.locationTypes;
     includedServiceIds = new Set(pkg.items.map((i) => i.serviceId));
     pkgSubject = pkg.subjectId ? { id: pkg.subjectId } : null;
+    staffCount = pkg.staffCount;
     if (pkg.subjectId && input.subjectId && input.subjectId !== pkg.subjectId) {
       const want = await tx.makeupSubject.findFirst({
         where: { id: pkg.subjectId, organizationId: orgId },
@@ -267,6 +275,7 @@ async function planPlaced(ctx: Ctx, input: PlacedLineInput, line: number): Promi
     throw bad('Giờ kết thúc phải sau giờ bắt đầu', line);
   }
   main.note = input.note ?? null;
+  main.staff = await checkStaff(ctx, main, input.staff ?? [], staffCount + 3, line);
 
   const out: PlannedLine[] = [main];
   for (const a of input.addons ?? []) {
@@ -289,6 +298,31 @@ async function planPlaced(ctx: Ctx, input: PlacedLineInput, line: number): Promi
   }
   if (input.travel) out.push(await planTravel(ctx, main, input.travel, line));
   return out;
+}
+
+// Thợ dự kiến: phải có giờ làm; kiểm thuộc tổ chức, còn hoạt động, đang nhận lịch bằng đúng hàm của module lịch.
+async function checkStaff(ctx: Ctx, main: PlannedLine, staff: StaffAssignment[], max: number, line: number) {
+  if (staff.length === 0) return [];
+  if (!main.scheduledStart || !main.scheduledEnd) {
+    throw bad(`Dòng "${main.name}" có thợ phụ trách thì phải có giờ bắt đầu và giờ kết thúc (scheduledStart, scheduledEnd)`, line);
+  }
+  if (staff.length > max) throw bad(`Dòng "${main.name}" tối đa ${max} thợ`, line);
+  try {
+    await assertActiveStaff(ctx.tx, ctx.orgId, staff);
+    await assertBookable(
+      ctx.tx,
+      ctx.orgId,
+      staff.map((s) => s.membershipId),
+    );
+  } catch (err) {
+    // Giữ nguyên mã lỗi của module lịch, thêm tên và vị trí dòng để người tư vấn biết sửa chỗ nào.
+    if (err instanceof AppError) {
+      const details = typeof err.details === 'object' && err.details !== null ? err.details : {};
+      throw new AppError(err.code, `Dòng "${main.name}": ${err.message}`, { ...details, line });
+    }
+    throw err;
+  }
+  return staff.map((s) => ({ membershipId: s.membershipId, role: s.role }));
 }
 
 async function planTravel(ctx: Ctx, parent: PlannedLine, travel: TravelInput, line: number): Promise<PlannedLine> {
@@ -451,4 +485,6 @@ export async function insertLines(
       createdById: args.userId,
     })),
   });
+  const staff = args.lines.flatMap((l) => l.staff.map((s) => ({ organizationId: args.orgId, lineId: l.id, ...s })));
+  if (staff.length > 0) await tx.contractLineStaff.createMany({ data: staff });
 }

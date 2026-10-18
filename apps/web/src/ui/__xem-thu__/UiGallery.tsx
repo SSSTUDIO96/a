@@ -91,6 +91,19 @@ const STUDIOS = [
   { value: 's2', label: 'Cửa hàng Long Biên', address: '90 Nguyễn Văn Cừ, Long Biên, Hà Nội' },
 ];
 
+// Gói G-CD01 trong bản mẫu: địa điểm cho phép (locationTypes) và dịch vụ phụ ADDON.
+const PKG_LOCATIONS = [
+  { value: 'STUDIO', label: 'Tại studio / cửa hàng' },
+  { value: 'CUSTOMER_HOME', label: 'Tại nhà khách' },
+  { value: 'OTHER', label: 'Địa điểm khác' },
+];
+const PKG_ADDONS = [
+  { id: 'toc', name: 'Làm tóc', price: 300_000 },
+  { id: 'nail', name: 'Làm nail', price: 250_000 },
+  { id: 'lens', name: 'Lens', price: 100_000 },
+  { id: 'mi', name: 'Kẹp mi', price: 80_000 },
+];
+
 const TIP_DC =
   'Theo km: số km × 2 chiều − số km miễn phí, nhân đơn giá, làm tròn lên 1.000 ₫. Nhập tay: ghi số tiền đã thoả thuận (miễn phí = 0).';
 
@@ -117,6 +130,12 @@ export function UiGallery() {
   const [salePrice, setSalePrice] = useState<Vnd | null>(2_700_000);
   const [deposit, setDeposit] = useState<Vnd | null>(1_000_000);
   const [tierPay, setTierPay] = useState<Vnd | null>(null);
+  const [pkgLocs, setPkgLocs] = useState<string[]>(PKG_LOCATIONS.map((l) => l.value));
+  const [pkgAddons, setPkgAddons] = useState<string[]>(['nail', 'lens', 'mi']);
+  const [included, setIncluded] = useState<Array<{ name: string; qty: number | null }>>([
+    { name: 'Makeup cô dâu', qty: 1 },
+    { name: 'Làm tóc', qty: 1 },
+  ]);
 
   const studioAddr = STUDIOS.find((s) => s.value === studio)?.address;
 
@@ -127,6 +146,7 @@ export function UiGallery() {
         <Button variant="primary" icon={<IconPlus />} onClick={() => setDialog('lg')}>
           Mở hộp thoại
         </Button>
+        <Button onClick={() => setDialog('sm')}>Mở hộp nhỏ</Button>
         <Button onClick={() => setSheet(true)}>Mở ngăn kéo đáy</Button>
       </div>
 
@@ -789,10 +809,17 @@ export function UiGallery() {
             <SettingRow label="Thời lượng" controlWidth={180}>
               <UnitInput aria-label="Thời lượng" unit="phút" value={minutes} onChange={setMinutes} />
             </SettingRow>
+            <SettingRow label="Số thợ" htmlFor="xt-so-tho" controlWidth={180}>
+              <TextInput id="xt-so-tho" align="right" inputMode="numeric" defaultValue="1" />
+            </SettingRow>
             <SettingRow label="Giá niêm yết" controlWidth={180}>
               <MoneyInput aria-label="Giá niêm yết" value={listPrice} onChange={setListPrice} />
             </SettingRow>
-            <SettingRow label="Giá bán" tip="Bỏ trống nếu không giảm. Hợp đồng dùng giá bán khi có." controlWidth={180}>
+            <SettingRow
+              label="Giá bán"
+              tip="Bỏ trống nếu không giảm. Hợp đồng dùng giá bán khi có. Đổi giá = thêm bản giá mới có ngày áp dụng; hợp đồng cũ giữ giá đã chốt."
+              controlWidth={180}
+            >
               <MoneyInput
                 aria-label="Giá bán"
                 value={salePrice}
@@ -804,52 +831,84 @@ export function UiGallery() {
             <SettingRow label="Cọc mặc định" controlWidth={180}>
               <MoneyInput aria-label="Cọc mặc định" value={deposit} onChange={setDeposit} />
             </SettingRow>
+
+            <h3 className="xt-ng-gap">Địa điểm cho phép</h3>
+            {PKG_LOCATIONS.map((l) => (
+              <Checkbox
+                key={l.value}
+                label={l.label}
+                checked={pkgLocs.includes(l.value)}
+                onChange={(e) =>
+                  setPkgLocs(e.target.checked ? [...pkgLocs, l.value] : pkgLocs.filter((x) => x !== l.value))
+                }
+                tip={l.value === 'STUDIO' ? undefined : <Tooltip text="Lập hợp đồng ở đây sẽ bắt buộc có phí di chuyển." />}
+              />
+            ))}
           </div>
           <div className="xt-ng">
-            <h3>
+            <h3>Đã gồm trong gói</h3>
+            {included.map((it, i) => (
+              <SettingRow key={it.name} label={it.name} controlWidth={180}>
+                <UnitInput
+                  aria-label={`Số lần ${it.name.toLowerCase()}`}
+                  unit="lần"
+                  min={1}
+                  value={it.qty}
+                  onChange={(v) => setIncluded(included.map((x, j) => (j === i ? { ...x, qty: v } : x)))}
+                />
+              </SettingRow>
+            ))}
+            <Button variant="ghost" size="sm" icon={<IconPlus />} className="xt-add">
+              Thêm dịch vụ
+            </Button>
+
+            <h3 className="xt-ng-gap">
               Dịch vụ phụ cho tick
               <Tooltip text="Khi lập hợp đồng, các dịch vụ được chọn ở đây hiện thành ô tick dưới gói." />
             </h3>
-            <Checkbox label="Làm tóc" trailing={formatVnd(300_000)} disabled />
-            <Checkbox label="Làm nail" trailing={formatVnd(250_000)} defaultChecked />
-            <Checkbox label="Lens" trailing={formatVnd(100_000)} defaultChecked />
-            <h3>
+            {PKG_ADDONS.map((a) => (
+              <Checkbox
+                key={a.id}
+                label={a.name}
+                trailing={formatVnd(a.price)}
+                muteWhenOff
+                checked={pkgAddons.includes(a.id)}
+                onChange={(e) =>
+                  setPkgAddons(e.target.checked ? [...pkgAddons, a.id] : pkgAddons.filter((x) => x !== a.id))
+                }
+              />
+            ))}
+
+            <h3 className="xt-ng-gap">
               Tiền công thợ theo bậc
               <Tooltip text="Số tiền trả cho thợ mỗi lần làm gói này, theo bậc lương của thợ. Bỏ trống = chưa đặt." />
             </h3>
-            <SettingRow
-              label={
-                <span className="xt-tier">
-                  <AvatarStack people={STAFF.slice(0, 2)} />
-                  <span>
-                    <b>Thợ chính bậc 1</b>
-                    <span className="xt-out">Nguyễn Thu Hà, Trần Minh Anh</span>
+            {[
+              { name: 'Thợ chính bậc 1', people: STAFF.slice(0, 2), value: 700_000 as Vnd | null },
+              { name: 'Thợ chính bậc 2', people: STAFF.slice(2, 3), value: 550_000 as Vnd | null },
+              { name: 'Thợ phụ', people: STAFF.slice(3), value: tierPay },
+            ].map((t) => (
+              <SettingRow
+                key={t.name}
+                label={
+                  <span className="xt-tier">
+                    <AvatarStack people={t.people} />
+                    <span>
+                      <b>{t.name}</b>
+                      <span className="xt-out">{t.people.map((p) => p.displayName).join(', ')}</span>
+                    </span>
                   </span>
-                </span>
-              }
-              controlWidth={150}
-            >
-              <MoneyInput aria-label="Tiền công thợ chính bậc 1" value={700_000} onChange={() => {}} />
-            </SettingRow>
-            <SettingRow
-              label={
-                <span className="xt-tier">
-                  <AvatarStack people={STAFF.slice(3)} />
-                  <span>
-                    <b>Thợ phụ</b>
-                    <span className="xt-out">Phạm Bảo Vy, Đỗ Khánh Linh</span>
-                  </span>
-                </span>
-              }
-              controlWidth={150}
-            >
-              <MoneyInput aria-label="Tiền công thợ phụ" value={tierPay} onChange={setTierPay} placeholder="Chưa đặt" />
-            </SettingRow>
-            <div className="xt-row" style={{ paddingTop: 8 }}>
-              <Button variant="ghost" size="sm" onClick={() => setDialog('sm')}>
-                Mở hộp nhỏ chồng lên (huỷ dòng)
-              </Button>
-            </div>
+                }
+                controlWidth={150}
+              >
+                <MoneyInput
+                  aria-label={`Tiền công ${t.name.toLowerCase()}`}
+                  value={t.value}
+                  onChange={t.name === 'Thợ phụ' ? setTierPay : () => {}}
+                  placeholder="Chưa đặt"
+                />
+              </SettingRow>
+            ))}
           </div>
         </div>
       </Dialog>
@@ -857,11 +916,11 @@ export function UiGallery() {
       <Dialog
         open={dialog === 'sm'}
         size="sm"
-        onClose={() => setDialog('lg')}
+        onClose={() => setDialog(null)}
         title="Huỷ dòng Phù dâu"
         primaryLabel="Huỷ dòng"
         primaryDisabled={reason.trim() === ''}
-        onPrimary={() => setDialog('lg')}
+        onPrimary={() => setDialog(null)}
         cancelLabel="Thôi"
       >
         <SettingRow label="Lý do" required stack>

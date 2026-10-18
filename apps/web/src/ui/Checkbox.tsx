@@ -10,6 +10,8 @@ export interface CheckboxProps extends Omit<ComponentPropsWithRef<'input'>, 'typ
   /** Tooltip "?" đặt ngay sau nhãn — đặt ngoài <label> để bấm "?" không đổi ô tick. */
   tip?: ReactNode;
   error?: string | null;
+  /** Dòng trong danh sách tick: chưa tick thì nhãn mờ --faint (bản mẫu .ckl label.off). */
+  muteWhenOff?: boolean;
   className?: string;
 }
 
@@ -19,6 +21,7 @@ export function Checkbox({
   trailing,
   tip,
   error,
+  muteWhenOff,
   className,
   disabled,
   'aria-describedby': describedByProp,
@@ -28,7 +31,7 @@ export function Checkbox({
   return (
     <FieldShell error={error} errorId={f.errorId} hintId={f.hintId} className={className}>
       <span className="ui-check-row">
-        <label className={cx('ui-check', disabled && 'ui-check--disabled', trailing !== undefined && 'ui-check--grow')}>
+        <label className={cx('ui-check', disabled && 'ui-check--disabled', trailing !== undefined && 'ui-check--grow', muteWhenOff && 'ui-check--mute-off')}>
           <input
             type="checkbox"
             disabled={disabled}
