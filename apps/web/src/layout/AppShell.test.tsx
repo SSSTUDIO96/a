@@ -196,7 +196,8 @@ describe('menu con theo quyền (C2 mục 1.1, 3.1, 4.1)', () => {
     setupServer(['org.read', 'schedule.read_own', 'contracts.read']);
     const router = renderAt('/hoa-dao/hop-dong');
     await waitFor(async () => expect(await subMenuLinks()).toEqual(['Danh sách hợp đồng']));
-    expect(activeMenu()).toEqual(['Hợp đồng', 'Danh sách hợp đồng']);
+    // Menu đang chọn tính lại sau khi đường đổi xong — chờ, đừng đọc ngay (bài chập chờn khi máy bận, báo cáo Y3).
+    await waitFor(() => expect(activeMenu()).toEqual(['Hợp đồng', 'Danh sách hợp đồng']));
     await act(() => router.navigate('/hoa-dao/hop-dong/moi'));
     expect((await screen.findByRole('alert')).textContent).toBe('Bạn không có quyền lập hợp đồng.');
     await act(() => router.navigate('/hoa-dao/thu-tien'));
@@ -210,7 +211,8 @@ describe('menu con theo quyền (C2 mục 1.1, 3.1, 4.1)', () => {
     expect(await mainMenuLinks()).toContain('Báo cáo');
     expect(menuLink('Báo cáo').getAttribute('href')).toBe('/hoa-dao/bao-cao/so-thu');
     expect(await subMenuLinks()).toEqual(['Sổ thu']);
-    expect(activeMenu()).toEqual(['Báo cáo', 'Sổ thu']);
+    // Menu đang chọn tính lại sau khi đường đổi xong — chờ, đừng đọc ngay (bài chập chờn khi máy bận, báo cáo Y3).
+    await waitFor(() => expect(activeMenu()).toEqual(['Báo cáo', 'Sổ thu']));
     await act(() => router.navigate('/hoa-dao/bao-cao/doanh-thu'));
     expect((await screen.findByRole('alert')).textContent).toBe('Bạn không có quyền xem doanh thu.');
   });
