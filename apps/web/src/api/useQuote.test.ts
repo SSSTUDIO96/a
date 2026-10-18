@@ -100,10 +100,19 @@ describe('useQuote — lõi đợi 300ms và huỷ yêu cầu cũ', () => {
     runner.request(body(2));
     await vi.advanceTimersByTimeAsync(300);
     calls[1]?.reject(
-      new ApiError('VALIDATION_FAILED', 'Dữ liệu gửi lên không hợp lệ', 400, 'r1', { formErrors: [], fieldErrors: { discount: ['Số tiền không được âm'] } }),
+      new ApiError('VALIDATION_FAILED', 'Dữ liệu gửi lên không hợp lệ', 400, 'r1', {
+        formErrors: [],
+        fieldErrors: { lines: ['Số tiền không được âm'] },
+        issues: [{ path: 'lines.0.travel.amount', message: 'Số tiền không được âm' }],
+      }),
     );
     await vi.advanceTimersByTimeAsync(0);
-    expect(last()).toMatchObject({ data: quote(1), loading: false, fieldErrors: { discount: 'Số tiền không được âm' }, errorLine: null });
+    expect(last()).toMatchObject({
+      data: quote(1),
+      loading: false,
+      fieldErrors: { 'lines.0.travel.amount': 'Số tiền không được âm', lines: 'Số tiền không được âm' },
+      errorLine: null,
+    });
     expect(last()?.error).toBeInstanceOf(ApiError);
 
     runner.request(body(3));

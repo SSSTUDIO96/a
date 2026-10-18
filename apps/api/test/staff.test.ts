@@ -34,6 +34,7 @@ async function makeTier(orgId: string, owner: TestUser, name: string, sortOrder?
   const res = await request(app)
     .post(`/api/v1/orgs/${orgId}/staff-tiers`)
     .set(bearer(owner))
+    .set('Idempotency-Key', randomUUID())
     .send({ name, ...(sortOrder === undefined ? {} : { sortOrder }) });
   if (res.status !== 201) throw new Error(`Tạo bậc thất bại ${res.status}: ${JSON.stringify(res.body)}`);
   return res.body.id as string;
@@ -72,13 +73,13 @@ afterAll(async () => {
 describe('bậc lương', () => {
   it('thêm, xếp cuối khi không gửi thứ tự, đổi tên, trùng tên → 409', async () => {
     const org = await createOrg(app, ownerA, 'bac-crud');
-    const t1 = await request(app).post(`/api/v1/orgs/${org}/staff-tiers`).set(bearer(ownerA)).send({ name: 'Thợ chính' }).expect(201);
-    const t2 = await request(app).post(`/api/v1/orgs/${org}/staff-tiers`).set(bearer(ownerA)).send({ name: 'Thợ phụ' }).expect(201);
+    const t1 = await request(app).post(`/api/v1/orgs/${org}/staff-tiers`).set(bearer(ownerA)).set('Idempotency-Key', randomUUID()).send({ name: 'Thợ chính' }).expect(201);
+    const t2 = await request(app).post(`/api/v1/orgs/${org}/staff-tiers`).set(bearer(ownerA)).set('Idempotency-Key', randomUUID()).send({ name: 'Thợ phụ' }).expect(201);
     expect(t1.body.sortOrder).toBe(0);
     expect(t2.body.sortOrder).toBe(1);
     expect(t1.body.staffCount).toBe(0);
 
-    const dup = await request(app).post(`/api/v1/orgs/${org}/staff-tiers`).set(bearer(ownerA)).send({ name: 'thợ chính' });
+    const dup = await request(app).post(`/api/v1/orgs/${org}/staff-tiers`).set(bearer(ownerA)).set('Idempotency-Key', randomUUID()).send({ name: 'thợ chính' });
     expect(dup.status).toBe(409);
     const renameDup = await request(app).patch(`/api/v1/orgs/${org}/staff-tiers/${t2.body.id}`).set(bearer(ownerA)).send({ name: 'Thợ chính' });
     expect(renameDup.status).toBe(409);
@@ -96,9 +97,23 @@ describe('bậc lương', () => {
     expect(audit).toBe(3);
   });
 
+  it('chống gửi trùng: cùng khoá + cùng thân → cùng kết quả, 1 bậc; thiếu khoá → 400', async () => {
+    const org = await createOrg(app, ownerA, 'bac-trung');
+    const key = randomUUID();
+    const first = await request(app).post(`/api/v1/orgs/${org}/staff-tiers`).set(bearer(ownerA)).set('Idempotency-Key', key).send({ name: 'Bậc A' });
+    const again = await request(app).post(`/api/v1/orgs/${org}/staff-tiers`).set(bearer(ownerA)).set('Idempotency-Key', key).send({ name: 'Bậc A' });
+    expect(first.status).toBe(201);
+    expect(again.status).toBe(201);
+    expect(again.body).toEqual(first.body);
+    expect(await deps.db.staffTier.count({ where: { organizationId: org } })).toBe(1);
+    const noKey = await request(app).post(`/api/v1/orgs/${org}/staff-tiers`).set(bearer(ownerA)).send({ name: 'Bậc B' });
+    expect(noKey.status).toBe(400);
+    expect(await deps.db.staffTier.count({ where: { organizationId: org } })).toBe(1);
+  });
+
   it('thợ (chỉ staff.read) xem được bậc nhưng không thêm được → 403', async () => {
     expect((await request(app).get(`/api/v1/orgs/${orgA}/staff-tiers`).set(bearer(artistA))).status).toBe(200);
-    expect((await request(app).post(`/api/v1/orgs/${orgA}/staff-tiers`).set(bearer(artistA)).send({ name: 'Lén' })).status).toBe(403);
+    expect((await request(app).post(`/api/v1/orgs/${orgA}/staff-tiers`).set(bearer(artistA)).set('Idempotency-Key', randomUUID()).send({ name: 'Lén' })).status).toBe(403);
   });
 });
 
@@ -478,5 +493,151 @@ describe('G5: số điện thoại thợ chỉ hiện cho người có staff.wri
       const probe = await request(app).get(`/api/v1/orgs/${org}/staff`).query({ q: '987654' }).set(bearer(viewer)).expect(200);
       expect(probe.body.items).toEqual([]);
     }
+  });
+});
+
+describe('mức rảnh của thợ (trùng giờ / cùng ngày / rảnh)', () => {
+  let org: string;
+  let owner: TestUser;
+  let t1: string;
+  let t2: string;
+  let t3: string;
+  let t4: string;
+  let t5: string;
+  let apptT1: string;
+  let draftContract: string;
+
+  // Giờ Việt Nam (+07:00) — ngày D là 10/04/2031.
+  const vn = (date: string, hhmm: string) => new Date(`${date}T${hhmm}:00+07:00`).toISOString();
+  const D = '2031-04-10';
+
+  async function appt(membershipId: string, date: string, from: string, to: string, extra: Record<string, unknown> = {}) {
+    const res = await request(app)
+      .post(`/api/v1/orgs/${org}/appointments`)
+      .set(bearer(owner))
+      .set('Idempotency-Key', randomUUID())
+      .send({ startsAt: vn(date, from), endsAt: vn(date, to), status: 'CONFIRMED', staff: [{ membershipId }], ...extra });
+    if (res.status !== 201) throw new Error(`Tạo lịch thất bại ${res.status}: ${JSON.stringify(res.body)}`);
+    return res.body as { id: string; code: string };
+  }
+
+  function availability(user: TestUser, orgId: string, query: Record<string, string>) {
+    return request(app).get(`/api/v1/orgs/${orgId}/staff/availability`).query(query).set(bearer(user));
+  }
+
+  type Item = { membershipId: string; level: string; overlaps: { code: string }[]; sameDay: { code: string }[]; draftHolds: { contractId: string; overlaps: boolean }[] };
+  const byId = (items: Item[], id: string) => {
+    const found = items.find((i) => i.membershipId === id);
+    if (!found) throw new Error(`Không thấy thợ ${id} trong kết quả`);
+    return found;
+  };
+
+  beforeAll(async () => {
+    owner = await registerUser(app, 'chu-ranh');
+    org = await createOrg(app, owner, 'ranh');
+    [t1, t2, t3, t4, t5] = await Promise.all(
+      ['tho-ranh-1', 'tho-ranh-2', 'tho-ranh-3', 'tho-ranh-4', 'tho-ranh-5'].map(async (l) =>
+        addMember(app, owner, org, await registerUser(app, l), ['artist']),
+      ),
+    );
+    // t1: 8–10h + đi 60 phút → bận tới 11h.
+    apptT1 = (await appt(t1, D, '08:00', '10:00', { travelAfterMin: 60 })).id;
+    // t2: ca chiều cùng ngày.
+    await appt(t2, D, '14:00', '15:00');
+    // t3: 23:30 hôm trước và 01:00 hôm sau — theo giờ UTC hai ca này lại rơi vào "ngày khác"/"cùng ngày" nếu tính sai múi giờ.
+    await appt(t3, '2031-04-09', '23:30', '23:59');
+    await appt(t3, '2031-04-11', '01:00', '02:00');
+    // t4: 06:00 sáng ngày D (theo UTC là 23:00 hôm trước) → vẫn cùng ngày theo giờ Việt Nam.
+    await appt(t4, D, '06:00', '07:00');
+    // t5: lịch nháp và lịch đã huỷ chồng giờ — không tính.
+    await appt(t5, D, '10:00', '12:00', { status: 'DRAFT' });
+    const cancelled = await appt(t5, D, '10:30', '11:30');
+    await request(app)
+      .post(`/api/v1/orgs/${org}/appointments/${cancelled.id}/status`)
+      .set(bearer(owner))
+      .send({ to: 'CANCELLED', reason: 'Khách huỷ' })
+      .expect(200);
+    // t5 đang được giữ chỗ ở một hợp đồng NHÁP khác, dòng 10–12h ngày D.
+    const customer = await deps.db.customer.create({ data: { organizationId: org, fullName: 'Khách giữ chỗ' } });
+    const contract = await deps.db.contract.create({
+      data: { organizationId: org, code: `HD-${randomUUID().slice(0, 8)}`, customerId: customer.id, createdById: owner.id },
+    });
+    draftContract = contract.id;
+    const line = await deps.db.contractLine.create({
+      data: {
+        organizationId: org,
+        contractId: contract.id,
+        kind: 'CUSTOM',
+        name: 'Makeup cô dâu (giữ chỗ)',
+        unitPrice: 0n,
+        lineTotal: 0n,
+        scheduledStart: new Date(vn(D, '10:00')),
+        scheduledEnd: new Date(vn(D, '12:00')),
+        createdById: owner.id,
+      },
+    });
+    await deps.db.contractLineStaff.create({ data: { organizationId: org, lineId: line.id, membershipId: t5, role: 'PRIMARY' } });
+  });
+
+  it('trùng do thời gian di chuyển → OVERLAP kèm ca; cùng ngày khác giờ → SAME_DAY; ranh giới ngày theo giờ Việt Nam', async () => {
+    const res = await availability(owner, org, { startsAt: vn(D, '10:30'), endsAt: vn(D, '11:30') });
+    expect(res.status).toBe(200);
+    expect(res.body.timezone).toBe('Asia/Ho_Chi_Minh');
+    expect(res.body.dayStart).toBe(vn(D, '00:00'));
+    const items = res.body.items as Item[];
+    expect(byId(items, t1).level).toBe('OVERLAP');
+    expect(byId(items, t1).overlaps).toHaveLength(1);
+    expect(byId(items, t2).level).toBe('SAME_DAY');
+    expect(byId(items, t2).sameDay).toHaveLength(1);
+    expect(byId(items, t3).level).toBe('FREE');
+    expect(byId(items, t3).sameDay).toEqual([]);
+    expect(byId(items, t4).level).toBe('SAME_DAY');
+  });
+
+  it('lịch nháp/đã huỷ không tính; giữ chỗ ở hợp đồng nháp khác hiện trong draftHolds, không đổi mức', async () => {
+    const res = await availability(owner, org, { startsAt: vn(D, '10:30'), endsAt: vn(D, '11:30') });
+    const e = byId(res.body.items as Item[], t5);
+    expect(e.level).toBe('FREE');
+    expect(e.overlaps).toEqual([]);
+    expect(e.draftHolds).toEqual([expect.objectContaining({ contractId: draftContract, overlaps: true, lineName: 'Makeup cô dâu (giữ chỗ)' })]);
+    const own = await availability(owner, org, { startsAt: vn(D, '10:30'), endsAt: vn(D, '11:30'), excludeContractId: draftContract });
+    expect(byId(own.body.items as Item[], t5).draftHolds).toEqual([]);
+  });
+
+  it('lọc theo thợ; bỏ qua chính lịch đang sửa (excludeAppointmentIds)', async () => {
+    const res = await availability(owner, org, {
+      startsAt: vn(D, '09:00'),
+      endsAt: vn(D, '09:30'),
+      membershipIds: `${t1},${t2}`,
+      excludeAppointmentIds: apptT1,
+    });
+    expect(res.status).toBe(200);
+    const items = res.body.items as Item[];
+    expect(items.map((i) => i.membershipId).sort()).toEqual([t1, t2].sort());
+    expect(byId(items, t1).level).toBe('FREE');
+  });
+
+  it('khung giờ sai → 400 (thiếu, kết thúc trước bắt đầu, quá 24 giờ, mã thợ sai)', async () => {
+    expect((await availability(owner, org, { startsAt: vn(D, '10:00') })).status).toBe(400);
+    expect((await availability(owner, org, { startsAt: vn(D, '10:00'), endsAt: vn(D, '09:00') })).status).toBe(400);
+    expect((await availability(owner, org, { startsAt: vn(D, '10:00'), endsAt: vn('2031-04-11', '10:01') })).status).toBe(400);
+    expect((await availability(owner, org, { startsAt: vn(D, '10:00'), endsAt: vn(D, '11:00'), membershipIds: 'abc' })).status).toBe(400);
+  });
+
+  it('tổ chức khác không thấy thợ và ca của tổ chức này', async () => {
+    const q = { startsAt: vn(D, '10:30'), endsAt: vn(D, '11:30') };
+    expect((await availability(ownerB, org, q)).status).toBe(404);
+    const res = await availability(ownerB, orgB, { ...q, membershipIds: `${t1},${t5}`, excludeContractId: draftContract });
+    expect(res.status).toBe(200);
+    expect(res.body.items).toEqual([]);
+    const all = await availability(ownerB, orgB, q);
+    const text = JSON.stringify(all.body);
+    for (const id of [t1, t2, t3, t4, t5, apptT1, draftContract]) expect(text).not.toContain(id);
+  });
+
+  it('thợ (staff.read) xem được mức rảnh', async () => {
+    const tho = await registerUser(app, 'tho-xem-ranh');
+    await addMember(app, owner, org, tho, ['artist']);
+    expect((await availability(tho, org, { startsAt: vn(D, '10:30'), endsAt: vn(D, '11:30') })).status).toBe(200);
   });
 });

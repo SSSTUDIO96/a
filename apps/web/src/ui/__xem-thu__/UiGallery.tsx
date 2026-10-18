@@ -398,6 +398,7 @@ export function UiGallery() {
               <Segmented aria-label="Cách tính" size="sm" options={TRAVEL_OPTIONS} value="PER_KM" onChange={() => {}} disabled />
             </Cell>
             <Cell cap="Ô khoá, tooltip mở">
+              <span className="xt-tip-room-sm" style={{ display: 'block' }}>
               <span className="xt-row">
                 <WithTooltip text="Gói này không làm tại nhà" open>
                   <Segmented
@@ -413,9 +414,10 @@ export function UiGallery() {
                   />
                 </WithTooltip>
               </span>
+              </span>
             </Cell>
           </Set>
-          <Set name="Chia đều">
+          <Set name="Chia đều" fill>
             <Cell cap="Nhóm 4 ô (điện thoại)">
               <Segmented
                 aria-label="Nhóm bảng giá"
@@ -442,7 +444,7 @@ export function UiGallery() {
               <SettingRow label="Phí tối thiểu" tip="Tính ra thấp hơn mức này thì lấy mức này." controlWidth={160}>
                 <MoneyInput aria-label="Phí tối thiểu" value={100_000} onChange={() => {}} />
               </SettingRow>
-              <SettingRow label="Tooltip đang mở (ép)" controlWidth={160}>
+              <SettingRow label="Tooltip đang mở (ép)" controlWidth={160} className="xt-tip-room">
                 <span className="xt-row">
                   <span className="xt-out">Giá bán</span>
                   <Tooltip open text="Bỏ trống nếu không giảm. Hợp đồng dùng giá bán khi có. Đổi giá = thêm bản giá mới có ngày áp dụng." />
@@ -743,7 +745,7 @@ export function UiGallery() {
               }
             />
           </Card>
-          <Card title="Đang tải lần đầu">
+          <Card title="Đang tải lần đầu" flush>
             <div className="xt-skel-row">
               <SkeletonText lines={2} widths={['70%', '40%']} />
               <Skeleton width={92} height={14} />

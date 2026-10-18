@@ -40,7 +40,7 @@ function slot(day: number, from: string, to: string, staff: { membershipId: stri
 }
 
 async function makeCustomer(orgId: string, owner: TestUser, fullName = 'Khách thử') {
-  const res = await request(app).post(`/api/v1/orgs/${orgId}/customers`).set(bearer(owner)).send({ fullName }).expect(201);
+  const res = await request(app).post(`/api/v1/orgs/${orgId}/customers`).set(bearer(owner)).set('Idempotency-Key', newKey()).send({ fullName }).expect(201);
   return res.body.id as string;
 }
 
@@ -89,6 +89,7 @@ describe('khách hàng', () => {
     const created = await request(app)
       .post(`/api/v1/orgs/${orgA}/customers`)
       .set(bearer(ownerA))
+      .set('Idempotency-Key', newKey())
       .send({ fullName: 'Nguyễn Thị Hoa', phone: '+84 912 345 678' })
       .expect(201);
     expect(created.body.phone).toBe('0912345678');
@@ -111,8 +112,22 @@ describe('khách hàng', () => {
   });
 
   it('số điện thoại sai định dạng → 400', async () => {
-    const res = await request(app).post(`/api/v1/orgs/${orgA}/customers`).set(bearer(ownerA)).send({ fullName: 'X', phone: '12345' });
+    const res = await request(app).post(`/api/v1/orgs/${orgA}/customers`).set(bearer(ownerA)).set('Idempotency-Key', newKey()).send({ fullName: 'X', phone: '12345' });
     expect(res.status).toBe(400);
+  });
+
+  it('chống gửi trùng: cùng khoá + cùng thân → cùng kết quả, 1 khách; thiếu khoá → 400', async () => {
+    const key = newKey();
+    const body = { fullName: `Khách gửi trùng ${randomUUID().slice(0, 8)}` };
+    const first = await request(app).post(`/api/v1/orgs/${orgA}/customers`).set(bearer(ownerA)).set('Idempotency-Key', key).send(body);
+    const again = await request(app).post(`/api/v1/orgs/${orgA}/customers`).set(bearer(ownerA)).set('Idempotency-Key', key).send(body);
+    expect(first.status).toBe(201);
+    expect(again.status).toBe(201);
+    expect(again.body.id).toBe(first.body.id);
+    expect(await deps.db.customer.count({ where: { organizationId: orgA, fullName: body.fullName } })).toBe(1);
+    const noKey = await request(app).post(`/api/v1/orgs/${orgA}/customers`).set(bearer(ownerA)).send({ fullName: 'Không khoá' });
+    expect(noKey.status).toBe(400);
+    expect(await deps.db.customer.count({ where: { organizationId: orgA, fullName: 'Không khoá' } })).toBe(0);
   });
 
   it('tổ chức B không xem/sửa được khách của A', async () => {

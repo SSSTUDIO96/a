@@ -34,7 +34,8 @@ function place(anchor: HTMLElement, bubble: HTMLElement | null): Position {
   let top = r.bottom + GAP;
   const h = bubble?.offsetHeight ?? 0;
   // Luôn hiện phía dưới; chỉ lật lên khi phía dưới không đủ chỗ mà phía trên đủ.
-  if (h > 0 && top + h > vh - EDGE && r.top - GAP - h >= EDGE) top = r.top - GAP - h;
+  const anchorVisible = r.bottom > 0 && r.bottom <= vh;
+  if (anchorVisible && h > 0 && top + h > vh - EDGE && r.top - GAP - h >= EDGE) top = r.top - GAP - h;
   // Toạ độ trong trang (position: absolute trên body) để cuộn trang không làm lệch.
   return { top: top + window.scrollY, left: left + window.scrollX, width };
 }

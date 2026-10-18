@@ -85,7 +85,8 @@ export const customerRoutes = [
     scope: 'org',
     permission: 'customers.write',
     tag: 'Khách hàng',
-    summary: 'Thêm khách hàng',
+    summary: 'Thêm khách hàng. Bắt buộc header Idempotency-Key',
+    idempotent: true,
     body: z.object({
       fullName: FullName,
       phone: Phone.nullable().optional(),

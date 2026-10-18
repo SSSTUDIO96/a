@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ApiError, conflictFields, errorKind, fieldErrors, userMessage } from './errors';
+import { ApiError, conflictFields, errorKind, fieldErrors, userMessage, validationIssues } from './errors';
 
 const e = (code: string, status: number, details?: unknown) => new ApiError(code, `lời ${code}`, status, 'req-1', details);
 
@@ -26,6 +26,27 @@ describe('ánh xạ lỗi theo bản vẽ mục 5', () => {
       email: 'Email không hợp lệ',
     });
     expect(fieldErrors(e('CONFLICT', 409))).toEqual({});
+  });
+
+  it('đọc details.issues: lỗi theo đường dẫn lồng, vẫn giữ khoá gốc của fieldErrors', () => {
+    const err = e('VALIDATION_FAILED', 400, {
+      formErrors: ['Chọn đúng một khách'],
+      fieldErrors: { lines: ['Số tiền không được âm'], discount: ['Số tiền phải là số'] },
+      issues: [
+        { path: 'lines.0.travel.amount', message: 'Số tiền không được âm' },
+        { path: 'lines.0.travel.amount', message: 'lời thứ hai bị bỏ' },
+        { path: 'discount', message: 'Số tiền phải là số' },
+        { path: '', message: 'Chọn đúng một khách' },
+        { path: 3, message: 'sai dạng — bỏ qua' },
+      ],
+    });
+    expect(fieldErrors(err)).toEqual({
+      'lines.0.travel.amount': 'Số tiền không được âm',
+      lines: 'Số tiền không được âm',
+      discount: 'Số tiền phải là số',
+    });
+    expect(validationIssues(err)).toHaveLength(4);
+    expect(validationIssues(e('CONFLICT', 409, { issues: [{ path: 'a', message: 'b' }] }))).toEqual([]);
     expect(conflictFields(e('CONFLICT', 409, { fields: ['slug'] }))).toEqual(['slug']);
   });
 });

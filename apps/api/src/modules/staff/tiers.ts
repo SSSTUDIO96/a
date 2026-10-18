@@ -63,7 +63,8 @@ export const tierRoutes = [
     scope: 'org',
     permission: 'staff.write',
     tag: 'Nhân sự',
-    summary: 'Thêm bậc lương; không gửi sortOrder thì xếp cuối',
+    summary: 'Thêm bậc lương; không gửi sortOrder thì xếp cuối. Bắt buộc header Idempotency-Key',
+    idempotent: true,
     body: z.object({ name: TierName, sortOrder: SortOrder.optional() }),
     handler: async ({ deps, org, body, userId, requestId }) => {
       const o = mustOrg(org);

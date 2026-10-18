@@ -142,7 +142,8 @@
   align-items: center;
   gap: 8px;
   font-weight: 500;
-  min-height: 24px;
+  min-height: 32px; /* dòng danh sách tick như .ckl bản mẫu (đệm 7–8 trên dưới) */
+  padding: 6px 0;
   cursor: pointer;
   min-width: 0;
 }
@@ -224,6 +225,7 @@
   background: var(--surface);
   flex: none;
   max-width: 100%;
+  align-self: flex-start; /* trong cột flex không bị kéo giãn hết hàng */
 }
 .ui-seg__opt {
   border: 0;
@@ -256,8 +258,8 @@
 }
 .ui-seg--disabled .ui-seg__opt[aria-checked='true'] { cursor: default; }
 .ui-seg--sm .ui-seg__opt { height: 28px; padding: 0 9px; font-size: 12.5px; }
-.ui-seg--block { display: flex; width: 100%; }
-.ui-seg--block .ui-seg__opt { flex: 1 1 0; }
+.ui-seg--block { display: flex; width: 100%; align-self: stretch; }
+.ui-seg--block .ui-seg__opt { flex: 1 1 auto; padding: 0 8px; }
 
 /* ===== Qty ===== */
 .ui-qty {
@@ -302,8 +304,8 @@
   border-bottom: 1px solid var(--line);
   min-width: 0;
 }
-.ui-card__title { font-size: var(--fs-h2); font-weight: 700; flex: 1; min-width: 0; display: flex; align-items: center; }
-.ui-card__sub { color: var(--faint); font-weight: 400; font-size: 13px; margin-left: 8px; white-space: nowrap; }
+.ui-card__title { font-size: var(--fs-h2); font-weight: 700; flex: 1; min-width: 0; display: flex; align-items: center; flex-wrap: wrap; column-gap: 8px; }
+.ui-card__sub { color: var(--faint); font-weight: 400; font-size: 13px; white-space: nowrap; }
 .ui-card__body { padding: 10px 18px; }
 .ui-card__body--flush { padding: 0; }
 .ui-card__foot {
@@ -482,6 +484,7 @@
   padding: 14px 18px;
 }
 .ui-empty__text { color: var(--muted); flex: 1 1 220px; min-width: 0; }
+.ui-card__body > .ui-empty { padding: 4px 0; }
 
 /* ===== Skeleton ===== */
 .ui-skel {

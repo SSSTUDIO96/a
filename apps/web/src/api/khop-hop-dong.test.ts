@@ -6,6 +6,7 @@ import { createOrganization, getMe, register } from './auth';
 import * as catalog from './catalog';
 import { setAccessToken } from './client';
 import * as contracts from './contracts';
+import { errorKind, fieldErrors } from './errors';
 import { newIdempotencyKey } from './idempotency';
 import * as schedule from './schedule';
 import * as staff from './staff';
@@ -399,6 +400,14 @@ describe('types.ts khớp đúng dữ liệu máy chủ thật trả về', () =
         { kind: 'SURCHARGE', serviceId: surcharge.id, quantity: 1 },
       ],
     };
+    // Lỗi kiểm dữ liệu lồng: máy chủ trả đường dẫn đầy đủ trong details.issues.
+    const badLine = body.lines[0];
+    if (badLine?.kind !== 'PACKAGE') throw new Error('Dòng đầu phải là gói');
+    const bad: ContractBody = { ...body, lines: [{ ...badLine, travel: { mode: 'MANUAL', amount: -1 } }] };
+    const badErr: unknown = await contracts.quoteContract(orgId, bad).catch((e: unknown) => e);
+    expect(errorKind(badErr)).toBe('validation');
+    expect(fieldErrors(badErr)['lines.0.travel.amount']).toBe('Số tiền không được âm');
+
     const q = await contracts.quoteContract(orgId, body);
     expectKeys(q, K.quote, 'quoteContract');
     const ql = first(q.lines, 'dòng quote');
