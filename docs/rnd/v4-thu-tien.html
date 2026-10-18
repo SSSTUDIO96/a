@@ -39,7 +39,7 @@
 .bars .g:hover{background:var(--soft)}
 .bars .gl{position:absolute;left:36px;right:0;border-top:1px dashed var(--line-2)}
 .xl{display:grid;grid-template-columns:36px repeat(6,minmax(0,1fr));font-size:12px;color:var(--muted);text-align:center;margin-top:6px}
-.tt{position:absolute;bottom:calc(100% + 6px);right:0;background:#2A2220;color:#fff;font-size:12px;padding:6px 8px;border-radius:6px;white-space:nowrap;z-index:5}
+.ctt{position:absolute;bottom:calc(100% + 6px);right:0;background:#2A2220;color:#fff;font-size:12px;padding:6px 8px;border-radius:6px;white-space:nowrap;z-index:5}
 .tbl .muted td{color:var(--muted)}
 .wrapx{overflow-x:auto}
 @media (max-width:1180px){
@@ -102,7 +102,7 @@ function form(hoan){
   return `<div class="card"><div class="ch2"><h2>${hoan?'Ghi phiếu hoàn tiền':'Ghi phiếu thu'}</h2></div><div class="cb">
    <div class="set"><label>Loại phiếu ${tip('Phiếu hoàn tiền cần quyền "Huỷ phiếu thu, ghi phiếu hoàn tiền". Không có quyền thì ô này ẩn.')}</label><span class="r"><span class="seg"${f('kind RECEIPT/REFUND')}><button class="${hoan?'':'on'}">Thu</button><button class="${hoan?'on':''}">Hoàn tiền</button></span></span></div>
    <div class="set"><label>Số tiền<span class="req">*</span> ${tip('Điền sẵn số còn thiếu của đợt chưa thu đủ gần nhất. Tiền tự đổ vào đợt có hạn sớm nhất.')}</label><input class="ctl money"${f('amount')} value="${hoan?'500.000 ₫':'4.300.000 ₫'}"></div>
-   <div class="set"><label>Cách trả<span class="req">*</span></label><span class="r"><span class="seg"${f('method')}><button>Tiền mặt</button><button class="on">Chuyển khoản</button><button>Quẹt thẻ</button><button>Khác</button></span></span></div>
+   <div class="set wide"><label>Cách trả<span class="req">*</span></label><span class="r"><span class="seg"${f('method')}><button>Tiền mặt</button><button class="on">Chuyển khoản</button><button>Quẹt thẻ</button><button>Khác</button></span></span></div>
    <div class="set"><label>Ngày thu</label><input class="ctl" type="text"${f('receivedAt (trống = bây giờ)')} value="18/10/2026"></div>
    <div class="set"><label>Ghi chú${hoan?'<span class="req">*</span>':''}</label><input class="ctl"${f('note')} placeholder="${hoan?'Lý do hoàn, ví dụ: bớt 1 phù dâu':'Ví dụ: nội dung chuyển khoản'}"></div></div>
    <div class="cf"><button class="btn pri"${f('POST /contracts/:id/payments + Idempotency-Key')}>${hoan?'Lưu phiếu hoàn':'Lưu phiếu thu'}</button></div></div>`;
@@ -162,7 +162,7 @@ const LOC=(extra)=>`<div class="card left"><div class="ch2"><h2>Bộ lọc</h2><
  <div class="grp">Kỳ</div><div class="seg sm" style="width:100%;margin:8px 0"${f('from, to (tối đa 366 ngày)')}><button class="on" style="flex:1">Tháng</button><button style="flex:1">Quý</button><button style="flex:1">Năm</button></div>
  <select class="ctl"><option>Tháng 10/2026</option></select>${extra||''}</div></div>`;
 const SO=[['18/10/2026','PT-000091','HD-000149','Nguyễn Thị Mai','Tiền mặt',500000,'RECEIPT','Lương Hà My'],['17/10/2026','PT-000090','HD-000138','Phạm Thu Trang','Chuyển khoản',2000000,'RECEIPT','Lương Hà My'],['15/10/2026','PT-000089','HD-000120','Vũ Thanh Hương','Chuyển khoản',300000,'REFUND','Nguyễn Trọng Chiến'],['12/10/2026','PT-000087','HD-000142','Tôn Nữ Hoàng Bảo Ngọc Phương Thảo','Chuyển khoản',1000000,'RECEIPT','Lương Hà My'],['10/10/2026','PT-000085','HD-000142','Tôn Nữ Hoàng Bảo Ngọc Phương Thảo','Tiền mặt',500000,'VOID','Lương Hà My']];
-man('so-thu',{nav:'bao-cao',kid:'Sổ thu',title:'Sổ thu',mobile:'list'},`<div class="ph"><h1>Sổ thu</h1><span class="sub">Tháng 10/2026 · theo ngày thu</span><span class="sp"></span><button class="btn">Tải CSV</button></div>
+man('so-thu',{nav:'bao-cao',kid:'Sổ thu',title:'Sổ thu',mobile:'both'},`<div class="ph"><h1>Sổ thu</h1><span class="sub">Tháng 10/2026 · theo ngày thu</span><span class="sp"></span><button class="btn">Tải CSV</button></div>
 <div class="c2 narrow">${LOC(`<div class="grp">Cách trả</div><div class="chips" style="margin-top:8px"${f('method')}><a class="chip on">Tất cả</a><a class="chip">Tiền mặt</a><a class="chip">Chuyển khoản</a><a class="chip">Quẹt thẻ</a><a class="chip">Khác</a></div><div class="grp">Loại phiếu</div><div class="chips" style="margin-top:8px"${f('kind')}><a class="chip on">Tất cả</a><a class="chip">Phiếu thu</a><a class="chip">Phiếu hoàn</a></div>`)}
 <div class="right"><div class="so4" style="grid-template-columns:repeat(3,minmax(0,1fr))"><div class="so"${f('totals.received · receiptCount')}><span>Tổng thu</span><b>${vnd(28500000)}</b><small>42 phiếu</small></div><div class="so"${f('totals.refunded · refundCount')}><span>Tổng hoàn</span><b>${vnd(300000)}</b><small>1 phiếu</small></div><div class="so hl"${f('totals.net')}><span>Thực thu ${tip('Thu trừ hoàn, không tính phiếu đã huỷ.')}</span><b>${vnd(28200000)}</b></div></div>
 <div class="card"><table class="tbl m-cards"><thead><tr><th>Ngày thu</th><th>Phiếu</th><th>Hợp đồng · khách</th><th class="t-hide">Cách trả</th><th class="r">Số tiền</th></tr></thead><tbody>
@@ -175,11 +175,11 @@ function chart(){
   return `<div class="card"><div class="ch2"><h2>Doanh số và thực thu 6 tháng</h2><small>triệu đồng</small></div><div class="chart">
    <div class="lg"><span><i style="background:#A63D62"></i>Doanh số</span><span><i style="background:#5B45A0"></i>Thực thu</span></div>
    <div class="bars">${[0,20,40,60].map(v=>`<span class="gl" style="bottom:${v/max*100}%"></span>`).join('')}<div class="ax"><span>80</span><span>60</span><span>40</span><span>20</span><span>0</span></div>
-   ${TH.map(([m,a,b],i)=>`<div class="g" title="${m}/2026 — Doanh số ${a} triệu · Thực thu ${b} triệu"${f('rows[].sales · rows[].collected (groupBy=month)')}>${i===5?`<span class="tt">Tháng 10 · Doanh số ${a} tr · Thực thu ${String(b).replace('.',',')} tr</span>`:''}<i style="height:${a/max*100}%;background:#A63D62"></i><i style="height:${b/max*100}%;background:#5B45A0"></i></div>`).join('')}</div>
+   ${TH.map(([m,a,b],i)=>`<div class="g" title="${m}/2026 — Doanh số ${a} triệu · Thực thu ${b} triệu"${f('rows[].sales · rows[].collected (groupBy=month)')}>${i===5?`<span class="ctt">Tháng 10 · Doanh số ${a} tr · Thực thu ${String(b).replace('.',',')} tr</span>`:''}<i style="height:${a/max*100}%;background:#A63D62"></i><i style="height:${b/max*100}%;background:#5B45A0"></i></div>`).join('')}</div>
    <div class="xl"><span></span>${TH.map(([m])=>`<span>${m}</span>`).join('')}</div></div></div>`;
 }
 const HDT=[['HD-000142','Tôn Nữ Hoàng Bảo Ngọc Phương Thảo','12/10',5300000,1000000,1000000,1000000,4300000,1],['HD-000138','Phạm Thu Trang','03/10',3200000,1000000,3200000,2000000,0,1],['HD-000149','Nguyễn Thị Mai','11/10',2450000,500000,500000,500000,1950000,1],['HD-000120','Vũ Thanh Hương','22/09',1900000,500000,1600000,-300000,300000,0]];
-man('doanh-thu',{nav:'bao-cao',kid:'Doanh thu',title:'Doanh thu',mobile:'list'},`<div class="ph"><h1>Doanh thu</h1><span class="sub">Tháng 10/2026 · mốc tính: ngày xác nhận hợp đồng</span></div>
+man('doanh-thu',{nav:'bao-cao',kid:'Doanh thu',title:'Doanh thu',mobile:'both'},`<div class="ph"><h1>Doanh thu</h1><span class="sub">Tháng 10/2026 · mốc tính: ngày xác nhận hợp đồng</span></div>
 <div class="c2 narrow">${LOC()}<div class="right">
 <div class="so4"><div class="so"${f('totals.sales')}><span>Doanh số ${tip('Tổng tiền các hợp đồng đã xác nhận hoặc hoàn thành có ngày xác nhận trong kỳ.')}</span><b>${vnd(58000000)}</b><small>14 hợp đồng</small></div>
 <div class="so"${f('totals.depositRequired · depositOutstanding')}><span>Cọc phải thu ${tip('Tổng tiền cọc của chính các hợp đồng đó.')}</span><b>${vnd(12500000)}</b><small style="color:var(--warn)">còn thiếu ${vnd(2000000)}</small></div>

@@ -1,5 +1,5 @@
 import { Button, IconPlus, StatusTag, formatVnd } from '../../ui';
-import type { LineViewExt } from './model';
+import type { ContractLineView } from './model';
 
 // Thẻ "Phụ phí & khoản khác" (bản vẽ 4.3). Phụ phí không gắn dưới gói (API không có dòng cha cho SURCHARGE).
 export interface ExtraRow {
@@ -8,7 +8,7 @@ export interface ExtraRow {
   name: string;
   quantity: number;
   note: string | null;
-  view: LineViewExt<string | null> | null;
+  view: ContractLineView<string | null> | null;
   // "Phát sinh 23/10/2026" khi máy chủ trả addedAfterConfirm.
   addedLabel: string | null;
   error: string | null;

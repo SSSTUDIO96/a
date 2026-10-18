@@ -1,6 +1,6 @@
 import { MoneyInput, Segmented, UnitInput, formatVnd, type SegmentedOption } from '../../ui';
 import type { TravelFeeMode } from '../../api/types';
-import { TRAVEL_MODE_LABEL, travelFormula, type LineViewExt, type TravelDraft } from './model';
+import { TRAVEL_MODE_LABEL, travelFormula, type ContractLineView, type TravelDraft } from './model';
 
 // Hàng "Di chuyển *" của dòng làm tại nhà / nơi khác (bản vẽ 4.3). Số tiền bên phải và dòng công thức lấy từ quote.
 export interface TravelControlProps {
@@ -10,7 +10,7 @@ export interface TravelControlProps {
   hasTiers: boolean;
   // Bán kính miễn phí > 0: cách Cố định cũng cần số km để xét.
   fixedNeedsKm: boolean;
-  quoteTravel: LineViewExt<string | null> | null;
+  quoteTravel: ContractLineView<string | null> | null;
   disabled: boolean;
   errors: { distanceKm?: string; amount?: string; line?: string };
   idPrefix: string;

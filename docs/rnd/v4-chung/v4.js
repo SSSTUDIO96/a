@@ -118,7 +118,7 @@
     const top = document.getElementById('topbar');
     const bn = document.getElementById('bnavwrap');
     const main = document.getElementById('main');
-    document.body.classList.toggle('m-list', d.mobile !== 'detail');
+    document.body.classList.toggle('m-list', d.mobile === 'list');
     document.body.classList.toggle('m-detail', d.mobile === 'detail');
     if (shell === 'none') {
       app.style.display = 'block';

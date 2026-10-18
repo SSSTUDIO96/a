@@ -10,6 +10,8 @@ import type {
   ContractLineInput,
   ContractLineView,
   ContractQuote,
+  GroupedContractLine,
+  StaffWarning,
   ContractStatus,
   ContractUpdateInput,
   DraftHold,
@@ -20,51 +22,14 @@ import type {
   Vnd,
 } from '../../api/types';
 
-// ---------------------------------------------------------------------------------------------
-// Trường máy chủ đã trả nhưng src/api/types.ts chưa khai (phiếu vướng gửi thợ L): thợ dự kiến của dòng,
-// cảnh báo thợ trong quote, số liệu dòng công thức phí di chuyển. Tên trường chép đúng apps/api/src/modules/contracts/present.ts.
+// Kiểu chuẩn của lớp API, gom lại để các thẻ trong thư mục này nhập một chỗ.
+export type { ContractDetail, ContractLineView, ContractQuote, GroupedContractLine, StaffWarning } from '../../api/types';
+
+// Thợ dự kiến của dòng trong nháp (role luôn có, khác StaffAssignmentInput của API là role tuỳ chọn).
 export interface StaffAssignment {
   membershipId: string;
   role: StaffRole;
 }
-
-export interface LineStaffView extends StaffAssignment {
-  displayName: string;
-  avatarUrl: string | null;
-  initials: string;
-  tier: { id: string; name: string } | null;
-}
-
-export interface StaffWarning {
-  membershipId: string;
-  level: 'OVERLAP' | 'SAME_DAY';
-  overlaps: AvailabilityShift[];
-  sameDay: AvailabilityShift[];
-  draftHolds: DraftHold[];
-}
-
-export interface TravelBreakdown {
-  includedKm: number | null;
-  includedFrom: 'PACKAGE' | 'ORGANIZATION' | null;
-  excessKm: number | null;
-  chargedKm: number | null;
-  roundTrip: boolean;
-  tier: { fromKm: number; toKm: number | null; amount: Vnd } | null;
-}
-
-export type LineViewExt<Id extends string | null = string> = ContractLineView<Id> & {
-  staff?: LineStaffView[];
-  staffWarnings?: StaffWarning[];
-  travelBreakdown?: TravelBreakdown | null;
-};
-
-export type GroupedLineExt<Id extends string | null = string> = LineViewExt<Id> & {
-  addons: LineViewExt<Id>[];
-  travel: LineViewExt<Id> | null;
-};
-
-export type QuoteExt = Omit<ContractQuote, 'lines'> & { lines: GroupedLineExt<null>[] };
-export type DetailExt = Omit<ContractDetail, 'lines'> & { lines: GroupedLineExt[] };
 
 // ---------------------------------------------------------------------------------------------
 // Nhãn
@@ -320,7 +285,7 @@ export function patchBody(draft: ContractDraft, tz: string): ContractUpdateInput
 
 // ---------------------------------------------------------------------------------------------
 // Hợp đồng đã lưu → nháp đang sửa.
-export function placedFromView(l: GroupedLineExt<string | null>, tz: string): PlacedDraft {
+export function placedFromView(l: GroupedContractLine<string | null>, tz: string): PlacedDraft {
   const t = l.travel;
   return {
     key: l.id ?? newLineKey(),
@@ -342,7 +307,7 @@ export function placedFromView(l: GroupedLineExt<string | null>, tz: string): Pl
   };
 }
 
-export function draftFromDetail(d: DetailExt, tz: string): ContractDraft {
+export function draftFromDetail(d: ContractDetail, tz: string): ContractDraft {
   const lines: DraftLine[] = [];
   for (const l of d.lines) {
     if (l.voidedAt) continue;
@@ -375,7 +340,7 @@ export function draftFromDetail(d: DetailExt, tz: string): ContractDraft {
 
 // Kết quả quote chỉ dùng khi khớp đúng các dòng đang nhập (cùng số dòng, cùng loại, cùng gói/dịch vụ).
 // Lệch (vừa thêm/bỏ dòng, quote chưa về) → coi như đang chờ, không gán nhầm số tiền sang dòng khác.
-export function matchQuote(draft: ContractDraft, quote: QuoteExt | null): (GroupedLineExt<null> | null)[] {
+export function matchQuote(draft: ContractDraft, quote: ContractQuote | null): (GroupedContractLine<null> | null)[] {
   const none = draft.lines.map(() => null);
   if (!quote || quote.lines.length !== draft.lines.length) return none;
   const ok = draft.lines.every((l, i) => {
@@ -390,8 +355,8 @@ export function matchQuote(draft: ContractDraft, quote: QuoteExt | null): (Group
 }
 
 // Cộng dòng (gói + dịch vụ phụ + phí di chuyển) — bản vẽ: "tổng lineTotal của dòng gói + addons + travel lấy từ quote".
-export function groupTotal(l: GroupedLineExt<string | null>): Vnd {
-  const live = (x: LineViewExt<string | null>) => (x.voidedAt ? 0 : x.lineTotal);
+export function groupTotal(l: GroupedContractLine<string | null>): Vnd {
+  const live = (x: ContractLineView<string | null>) => (x.voidedAt ? 0 : x.lineTotal);
   return live(l) + l.addons.reduce((s, a) => s + live(a), 0) + (l.travel ? live(l.travel) : 0);
 }
 
@@ -570,7 +535,7 @@ function km(x: number): string {
   return x.toLocaleString('vi-VN', { maximumFractionDigits: 2 });
 }
 
-export function travelFormula(t: LineViewExt<string | null> | null): string | null {
+export function travelFormula(t: ContractLineView<string | null> | null): string | null {
   if (!t || t.travelMode === 'MANUAL' || !t.travelBreakdown) return null;
   const b = t.travelBreakdown;
   const inc = b.includedKm ?? 0;

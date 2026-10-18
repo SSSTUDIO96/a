@@ -64,12 +64,12 @@ import {
   zonedIso,
   type ContractDraft,
   type CustomDraft,
-  type DetailExt,
+  type ContractDetail,
   type DraftLine,
-  type GroupedLineExt,
+  type GroupedContractLine,
   type LineWarning,
   type PlacedDraft,
-  type QuoteExt,
+  type ContractQuote,
   type SurchargeDraft,
 } from './model';
 import { PackageLineCard } from './PackageLineCard';
@@ -112,7 +112,7 @@ export function ContractEditor({ orgId, slug, tz, has, contractId }: ContractEdi
   const cat = catalogState.status === 'ready' ? catalogState.data : null;
 
   const [load, setLoad] = useState<LoadState>(contractId ? { status: 'loading' } : { status: 'ready' });
-  const [detail, setDetail] = useState<DetailExt | null>(null);
+  const [detail, setDetail] = useState<ContractDetail | null>(null);
   const [draft, setDraft] = useState<ContractDraft>(EMPTY_DRAFT);
   const [savedSig, setSavedSig] = useState<string | null>(null);
   const [showErrors, setShowErrors] = useState(false);
@@ -130,7 +130,7 @@ export function ContractEditor({ orgId, slug, tz, has, contractId }: ContractEdi
   const [voidTarget, setVoidTarget] = useState<{ id: string; name: string } | null>(null);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [refreshed, setRefreshed] = useState<{ key: string; data: QuoteExt } | null>(null);
+  const [refreshed, setRefreshed] = useState<{ key: string; data: ContractQuote } | null>(null);
   const idemKey = useRef(newIdempotencyKey());
   const pickRef = useRef<HTMLDivElement>(null);
 
@@ -154,7 +154,7 @@ export function ContractEditor({ orgId, slug, tz, has, contractId }: ContractEdi
     setLoad({ status: 'loading' });
     getContract(orgId, contractId, controller.signal)
       .then((d) => {
-        const dx = d as DetailExt;
+        const dx = d as ContractDetail;
         const dr = draftFromDetail(dx, tz);
         setDetail(dx);
         setDraft(dr);
@@ -188,10 +188,10 @@ export function ContractEditor({ orgId, slug, tz, has, contractId }: ContractEdi
   const quoteBody = draftMode && Object.keys(localErrors).length === 0 ? buildBody(draft, tz) : null;
   const quote = useQuote(draftMode ? orgId : null, quoteBody);
   const quoteKey = quoteBody ? JSON.stringify(quoteBody) : null;
-  const quoteData: QuoteExt | null = quoteBody
+  const quoteData: ContractQuote | null = quoteBody
     ? refreshed && refreshed.key === quoteKey
       ? refreshed.data
-      : (quote.data as QuoteExt | null)
+      : (quote.data as ContractQuote | null)
     : null;
   const views = matchQuote(draft, quoteData);
   const pending = quote.loading;
@@ -286,7 +286,7 @@ export function ContractEditor({ orgId, slug, tz, has, contractId }: ContractEdi
     scrollToFirstError();
   };
 
-  async function save(): Promise<DetailExt | null> {
+  async function save(): Promise<ContractDetail | null> {
     setShowErrors(true);
     setAlert(null);
     if (Object.keys(localErrors).length > 0) {
@@ -296,14 +296,14 @@ export function ContractEditor({ orgId, slug, tz, has, contractId }: ContractEdi
     const body = buildBody(draft, tz);
     if (!body) return null;
     try {
-      let d: DetailExt;
+      let d: ContractDetail;
       if (!detail) {
-        d = (await createContract(orgId, body, idemKey.current)) as DetailExt;
+        d = (await createContract(orgId, body, idemKey.current)) as ContractDetail;
         setDetail(d);
         setSavedSig(sig(draft, tz));
         void navigate(`/${slug}/hop-dong/${d.id}`, { replace: true });
       } else {
-        d = (await updateContract(orgId, detail.id, patchBody(draft, tz))) as DetailExt;
+        d = (await updateContract(orgId, detail.id, patchBody(draft, tz))) as ContractDetail;
         setDetail(d);
         setSavedSig(sig(draft, tz));
       }
@@ -328,7 +328,7 @@ export function ContractEditor({ orgId, slug, tz, has, contractId }: ContractEdi
       const d = dirty || !detail ? await save() : detail;
       if (!d) return;
       try {
-        const res = (await changeContractStatus(orgId, d.id, { to: 'CONFIRMED' })) as unknown as DetailExt;
+        const res = (await changeContractStatus(orgId, d.id, { to: 'CONFIRMED' })) as unknown as ContractDetail;
         setDetail(res);
         setAlert(null);
       } catch (err) {
@@ -336,7 +336,7 @@ export function ContractEditor({ orgId, slug, tz, has, contractId }: ContractEdi
         // 409 trùng giờ: hợp đồng vẫn là nháp. Gọi lại quote để dải đỏ hiện đúng dòng.
         if (conflictsOf(err).length > 0 && quoteBody && quoteKey) {
           try {
-            const fresh = (await quoteContract(orgId, quoteBody)) as QuoteExt;
+            const fresh = (await quoteContract(orgId, quoteBody)) as ContractQuote;
             setRefreshed({ key: quoteKey, data: fresh });
           } catch {
             // Không gọi lại được: dải trùng lịch vẫn hiện danh sách ca của máy chủ.
@@ -351,7 +351,7 @@ export function ContractEditor({ orgId, slug, tz, has, contractId }: ContractEdi
   async function saveNotes() {
     if (!detail || status !== 'CONFIRMED' || (detail.notes ?? '') === draft.notes) return;
     try {
-      const d = (await updateContract(orgId, detail.id, { notes: draft.notes.trim() ? draft.notes : null })) as DetailExt;
+      const d = (await updateContract(orgId, detail.id, { notes: draft.notes.trim() ? draft.notes : null })) as ContractDetail;
       setDetail(d);
       setServerErrors({ fields: {}, line: null, message: null });
     } catch (err) {
@@ -368,7 +368,7 @@ export function ContractEditor({ orgId, slug, tz, has, contractId }: ContractEdi
     }
     if (!detail) return null;
     try {
-      const d = (await addContractLine(orgId, detail.id, lineInput(line, draft.eventDate, tz), newIdempotencyKey())) as DetailExt;
+      const d = (await addContractLine(orgId, detail.id, lineInput(line, draft.eventDate, tz), newIdempotencyKey())) as ContractDetail;
       setDetail(d);
       setExtraTarget(null);
       return null;
@@ -413,11 +413,11 @@ export function ContractEditor({ orgId, slug, tz, has, contractId }: ContractEdi
 
   // Dòng hiện trên màn: nháp → các dòng đang nhập; đã xác nhận → dòng máy chủ (kể cả dòng đã huỷ, phát sinh).
   const placedCards = draftMode
-    ? draft.lines.map((l, i) => ({ l, i, view: views[i] ?? null })).filter((x): x is { l: PlacedDraft; i: number; view: GroupedLineExt<null> | null } => isPlaced(x.l))
+    ? draft.lines.map((l, i) => ({ l, i, view: views[i] ?? null })).filter((x): x is { l: PlacedDraft; i: number; view: GroupedContractLine<null> | null } => isPlaced(x.l))
     : (detail?.lines ?? [])
         .map((v, i) => ({ v, i }))
         .filter(({ v }) => v.kind === 'PACKAGE' || v.kind === 'SERVICE')
-        .map(({ v, i }) => ({ l: placedFromView(v, tz), i, view: v as GroupedLineExt<string | null> }));
+        .map(({ v, i }) => ({ l: placedFromView(v, tz), i, view: v as GroupedContractLine<string | null> }));
 
   const extraRows: ExtraRow[] = draftMode
     ? draft.lines.flatMap((l, i): ExtraRow[] =>
@@ -775,7 +775,7 @@ export function ContractEditor({ orgId, slug, tz, has, contractId }: ContractEdi
           if (!detail || !voidTarget) return null;
           try {
             const res = await voidContractLine(orgId, detail.id, voidTarget.id, { reason });
-            setDetail(res as unknown as DetailExt);
+            setDetail(res as unknown as ContractDetail);
             setVoidTarget(null);
             const adj = res.adjustments
               .map((a) => `${a.field === 'discount' ? 'giảm giá' : 'cọc'} từ ${formatVnd(a.from)} xuống ${formatVnd(a.to)}`)
@@ -798,7 +798,7 @@ export function ContractEditor({ orgId, slug, tz, has, contractId }: ContractEdi
           if (!detail) return null;
           try {
             const res = await changeContractStatus(orgId, detail.id, { to: 'CANCELLED', reason });
-            setDetail(res as unknown as DetailExt);
+            setDetail(res as unknown as ContractDetail);
             setCancelOpen(false);
             return null;
           } catch (err) {

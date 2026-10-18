@@ -19,7 +19,7 @@ import {
   groupTotal,
   lineKey,
   needsTravel,
-  type GroupedLineExt,
+  type GroupedContractLine,
   type LineWarning,
   type PlacedDraft,
 } from './model';
@@ -40,7 +40,7 @@ export interface PackageLineCardProps {
   studios: StudioLocation[];
   policy: TravelFeePolicy | null;
   // Bảng tính máy chủ của dòng (quote khi nháp, hợp đồng đã lưu khi đã xác nhận). null = chưa có.
-  view: GroupedLineExt<string | null> | null;
+  view: GroupedContractLine<string | null> | null;
   pending: boolean;
   locked: boolean;
   errors: Record<string, string>;

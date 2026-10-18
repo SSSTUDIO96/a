@@ -17,9 +17,9 @@ import {
   weekdayShort,
   zonedIso,
   type ContractDraft,
-  type DetailExt,
+  type ContractDetail,
   type PlacedDraft,
-  type QuoteExt,
+  type ContractQuote,
 } from './model';
 import { PackageLineCard } from './PackageLineCard';
 import { StaffPicker } from './StaffPicker';
@@ -32,12 +32,12 @@ export interface ExtraPackageDialogProps {
   pkg: ServicePackage | null;
   orgId: string;
   tz: string;
-  detail: DetailExt;
+  detail: ContractDetail;
   catalog: ContractCatalog;
   canPickStaff: boolean;
   phone: boolean;
   onClose: () => void;
-  onAdded: (d: DetailExt) => void;
+  onAdded: (d: ContractDetail) => void;
 }
 
 export function ExtraPackageDialog(p: ExtraPackageDialogProps) {
@@ -70,7 +70,7 @@ export function ExtraPackageDialog(p: ExtraPackageDialogProps) {
   const body: ContractBody | null =
     line && Object.keys(local).length === 0 ? { customerId: detail.customer.id, lines: [lineInput(line, eventDate, tz)] } : null;
   const quote = useQuote(pkg ? p.orgId : null, body);
-  const view = body ? (matchQuote(draft, quote.data as QuoteExt | null)[0] ?? null) : null;
+  const view = body ? (matchQuote(draft, quote.data as ContractQuote | null)[0] ?? null) : null;
   if (!pkg || !line) return null;
 
   const errors = { ...(showErrors ? local : {}), ...quote.fieldErrors, ...saveError.fields };
@@ -86,7 +86,7 @@ export function ExtraPackageDialog(p: ExtraPackageDialogProps) {
     setBusy(true);
     try {
       const d = await addContractLine(p.orgId, detail.id, lineInput(line, eventDate, tz), newIdempotencyKey());
-      p.onAdded(d as DetailExt);
+      p.onAdded(d as ContractDetail);
     } catch (err) {
       // Thân gửi là MỘT dòng: đường dẫn lỗi không có tiền tố "lines.0." — thêm vào để hiện đúng ô của thẻ.
       const fields = Object.fromEntries(Object.entries(fieldErrors(err)).map(([k, v]) => [`lines.0.${k}`, v]));
