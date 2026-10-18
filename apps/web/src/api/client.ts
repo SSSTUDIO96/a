@@ -29,6 +29,10 @@ export type Method = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
 
 export interface RequestOptions {
   body?: unknown;
+  // Thân nhị phân (tải tệp): gửi nguyên nội dung, không JSON. Không dùng cùng body.
+  rawBody?: Blob | ArrayBuffer;
+  // Header thêm (vd. X-Content-SHA256 khi tải tệp).
+  headers?: Record<string, string>;
   // Khoá chống gửi trùng — sinh MỘT lần cho mỗi lần bấm, giữ nguyên khi tự thử lại sau refresh.
   idempotencyKey?: string;
   // false: đường đăng nhập/đăng ký/refresh — 401 là câu trả lời thật, không tự refresh.
@@ -37,15 +41,18 @@ export interface RequestOptions {
 }
 
 async function send(method: Method, path: string, opts: RequestOptions, token: string | null): Promise<Response> {
-  const headers: Record<string, string> = { 'X-Client': 'web', Accept: 'application/json' };
+  if (opts.body !== undefined && opts.rawBody !== undefined) throw new Error('Chỉ gửi một trong hai: body (JSON) hoặc rawBody (nhị phân)');
+  const headers: Record<string, string> = { ...opts.headers, 'X-Client': 'web', Accept: 'application/json' };
   if (opts.body !== undefined) headers['Content-Type'] = 'application/json';
+  // Máy chủ chỉ đọc JSON khi Content-Type là application/json; thân nhị phân để handler tự đọc luồng.
+  if (opts.rawBody !== undefined) headers['Content-Type'] = 'application/octet-stream';
   if (token) headers.Authorization = `Bearer ${token}`;
   if (opts.idempotencyKey) headers['Idempotency-Key'] = opts.idempotencyKey;
   try {
     return await fetch(`${API_BASE}${path}`, {
       method,
       headers,
-      body: opts.body === undefined ? undefined : JSON.stringify(opts.body),
+      body: opts.rawBody ?? (opts.body === undefined ? undefined : JSON.stringify(opts.body)),
       credentials: 'same-origin',
       signal: opts.signal,
     });

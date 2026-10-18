@@ -1,9 +1,9 @@
 import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router';
 import { fieldErrors } from '../../api/errors';
-import { newIdempotencyKey } from '../../api/idempotency';
 import { ErrorNotice, FieldError } from '../../app/ErrorNotice';
 import { useSession } from '../../app/session';
+import { useRetainedIdempotencyKey } from './useRetainedIdempotencyKey';
 import { checkEmail, checkNewPassword, checkRequired, hasErrors, type FieldErrors } from './validate';
 
 type Field = 'fullName' | 'email' | 'password';
@@ -16,6 +16,8 @@ export function RegisterPage() {
   const [errors, setErrors] = useState<FieldErrors<Field>>({});
   const [submitError, setSubmitError] = useState<unknown>(null);
   const [pending, setPending] = useState(false);
+  // Bấm lại cùng họ tên/email/mật khẩu sau lỗi → cùng khoá: máy chủ trả lại đúng tài khoản vừa tạo, không báo trùng email.
+  const idempotency = useRetainedIdempotencyKey();
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -29,8 +31,10 @@ export function RegisterPage() {
     setSubmitError(null);
     if (hasErrors(next)) return;
     setPending(true);
+    const input = { fullName: fullName.trim(), email: email.trim(), password };
     try {
-      await register({ fullName: fullName.trim(), email: email.trim(), password }, newIdempotencyKey());
+      await register(input, idempotency.keyFor(input));
+      idempotency.reset();
     } catch (err) {
       setErrors(fieldErrors(err));
       setSubmitError(err);

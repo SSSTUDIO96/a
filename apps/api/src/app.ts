@@ -62,13 +62,13 @@ export function createApp(deps: Deps, routes: AnyRoute[] = ALL_ROUTES) {
   // Đổi thẻ (/auth/refresh) có bộ đếm RIÊNG — web gọi nó MỖI LẦN tải trang, cả studio chung một IP
   // (biên bản nghiệm thu web 1, T3: dùng chung bộ đếm đăng nhập thì tải lại ~10 lần/phút là tự khoá mình).
   // Refresh token là chuỗi ngẫu nhiên dài, dò mò không ra; cái cần chặn là dò hàng loạt và dội tải:
-  // 1) Chống dò: chỉ đếm lần THẤT BẠI có kèm thẻ, 3× mức đăng nhập (mặc định 30 lần sai/phút/IP).
+  // 1) Chống dò: chỉ đếm lần THẤT BẠI có kèm thẻ — REFRESH_PROBE_LIMIT_PER_MINUTE (mặc định 3× mức đăng nhập = 30 lần sai/phút/IP).
   //    Tải lại trang bình thường (thẻ đúng) và trang chưa đăng nhập (không có cookie) không bị đếm.
-  // 2) Trần tổng: 30× mức đăng nhập (mặc định 300 lần/phút/IP ≈ 30 máy cùng mạng, mỗi máy tải lại 10 lần/phút).
-  // Hai mức đi theo AUTH_RATE_LIMIT_PER_MINUTE để chỉ có một núm chỉnh (env.ts chưa có biến riêng — xem phiếu vướng).
+  // 2) Trần tổng: REFRESH_RATE_LIMIT_PER_MINUTE (mặc định 30× mức đăng nhập = 300 lần/phút/IP ≈ 30 máy cùng mạng,
+  //    mỗi máy tải lại 10 lần/phút). Hai biến bỏ trống thì tính theo AUTH_RATE_LIMIT_PER_MINUTE (env.ts).
   const refreshProbeLimiter = rateLimit({
     windowMs: 60_000,
-    limit: deps.env.AUTH_RATE_LIMIT_PER_MINUTE * 3,
+    limit: deps.env.REFRESH_PROBE_LIMIT_PER_MINUTE,
     standardHeaders: false,
     legacyHeaders: false,
     skip: (req) => !hasPresentedRefreshToken(req),
@@ -77,7 +77,7 @@ export function createApp(deps: Deps, routes: AnyRoute[] = ALL_ROUTES) {
   });
   const refreshCeilingLimiter = rateLimit({
     windowMs: 60_000,
-    limit: deps.env.AUTH_RATE_LIMIT_PER_MINUTE * 30,
+    limit: deps.env.REFRESH_RATE_LIMIT_PER_MINUTE,
     standardHeaders: 'draft-8',
     legacyHeaders: false,
     handler: limited,

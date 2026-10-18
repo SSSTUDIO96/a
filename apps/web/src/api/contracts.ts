@@ -1,6 +1,7 @@
 import { api } from './client';
 import { idSeg, orgPath, withQuery } from './org';
 import type {
+  ContractAddLineResult,
   ContractBody,
   ContractDetail,
   ContractLineInput,
@@ -39,9 +40,9 @@ export function updateContract(orgId: string, contractId: string, input: Contrac
   return api.patch<ContractDetail>(orgPath(orgId, `/contracts/${idSeg(contractId)}`), input);
 }
 
-// Thêm MỘT dòng; hợp đồng đã xác nhận thì là dòng phát sinh.
+// Thêm MỘT dòng; hợp đồng đã xác nhận thì là dòng phát sinh (dòng có thợ dự kiến → lịch tạo ngay, xem createdAppointments).
 export function addContractLine(orgId: string, contractId: string, line: ContractLineInput, idempotencyKey: string) {
-  return api.create<ContractDetail>(orgPath(orgId, `/contracts/${idSeg(contractId)}/lines`), line, idempotencyKey);
+  return api.create<ContractAddLineResult>(orgPath(orgId, `/contracts/${idSeg(contractId)}/lines`), line, idempotencyKey);
 }
 
 // Huỷ dòng (kéo theo dịch vụ phụ, phí di chuyển của dòng). Không xoá; bắt buộc lý do.
@@ -49,7 +50,7 @@ export function voidContractLine(orgId: string, contractId: string, lineId: stri
   return api.post<ContractVoidResult>(orgPath(orgId, `/contracts/${idSeg(contractId)}/lines/${idSeg(lineId)}/void`), input);
 }
 
-// Huỷ (bắt buộc reason) kéo theo huỷ các lịch đã gắn.
+// Huỷ (bắt buộc reason) kéo theo huỷ các lịch đã gắn; xác nhận tạo lịch cho các dòng có thợ dự kiến.
 export function changeContractStatus(orgId: string, contractId: string, input: ContractStatusInput) {
   return api.post<ContractStatusResult>(orgPath(orgId, `/contracts/${idSeg(contractId)}/status`), input);
 }

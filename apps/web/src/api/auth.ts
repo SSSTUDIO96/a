@@ -42,11 +42,17 @@ export interface CreateOrgInput {
   kind: OrgKind;
 }
 
+// POST /orgs trả nguyên dòng tổ chức vừa tạo.
 export interface CreatedOrganization {
   id: string;
   name: string;
   slug: string;
   kind: OrgKind;
+  timezone: string;
+  currency: string;
+  status: 'ACTIVE' | 'SUSPENDED';
+  createdAt: string;
+  updatedAt: string;
 }
 
 export { refreshSession } from './client';

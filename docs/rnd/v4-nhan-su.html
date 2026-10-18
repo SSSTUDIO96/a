@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="ten" content="Nhân sự & trả lương — R&D v4">
+<title>Nhân sự & trả lương — R&D v4</title>
+<link rel="stylesheet" href="v4-chung/v4.css">
+<style>
+/* Riêng màn Nhân sự */
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:16px;overflow-x:auto;scrollbar-width:none}
+.tabs a{padding:10px 14px;color:var(--muted);text-decoration:none;font-weight:500;border-bottom:2px solid transparent;white-space:nowrap}
+.tabs a.on{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
+/* Hàng tiền công theo bậc — đúng lời anh: cấp bậc + ảnh + tên rồi nhập số tiền */
+.pr{display:grid;grid-template-columns:minmax(0,1fr) 200px;gap:10px 16px;align-items:center;padding:14px 18px;border-top:1px solid var(--line-2)}
+.pr:first-child{border-top:0}
+.pr .tn{font-weight:700;font-size:15px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pr .ppl{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:8px}
+.pr .pp{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:500}
+.pr .in{display:flex;flex-direction:column;gap:4px;align-items:stretch}
+.pr .in small{color:var(--faint);font-size:12px;text-align:right}
+.pr.unset .ctl{border-style:dashed}
+.ctxh{display:flex;gap:12px;align-items:center;padding:14px 18px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.ctxh h2{font-size:17px;font-weight:700}
+.ctxh .sp{flex:1}
+/* B: cột theo bậc */
+.kb{display:grid;grid-template-columns:repeat(5,minmax(200px,1fr));gap:12px;overflow-x:auto;padding-bottom:6px}
+.kb .col{background:var(--soft);border:1px solid var(--line);border-radius:12px;min-width:0}
+.kb .col h3{font-size:13px;font-weight:700;padding:12px 12px 8px;display:flex;gap:6px;align-items:center}
+.kb .col h3 .k{color:var(--faint);font-weight:500;margin-left:auto}
+.kb .it{display:flex;gap:10px;align-items:center;background:#fff;border:1px solid var(--line);border-radius:10px;margin:0 8px 8px;padding:8px 10px}
+.kb .it b{font-weight:600;flex:1;min-width:0;font-size:13.5px}
+.mx{overflow-x:auto}
+.mx table{border-collapse:collapse;width:100%;min-width:760px}
+.mx th,.mx td{padding:10px 12px;border-bottom:1px solid var(--line-2);text-align:left;vertical-align:middle}
+.mx thead th{background:var(--soft);font-size:12px;font-weight:700;color:var(--muted);vertical-align:bottom}
+.mx thead th .avs{margin-top:6px}
+.mx td .ctl{width:130px}
+.mx td.n{font-weight:600}
+.mx tr.gh td{background:var(--soft);font-size:11.5px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.05em;padding:8px 12px}
+.segm{display:flex;background:#fff;border:1px solid var(--line);border-radius:10px;padding:3px;margin-bottom:12px}
+.segm a{flex:1;text-align:center;padding:8px 2px;border-radius:7px;color:var(--muted);text-decoration:none;font-weight:500;font-size:13px;white-space:nowrap}
+.segm a.on{background:var(--accent-soft);color:var(--accent);font-weight:600}
+/* C: danh sách bậc bên trái */
+.tl{display:flex;align-items:center;gap:10px;padding:11px 16px;border-bottom:1px solid var(--line-2);text-decoration:none;color:var(--text)}
+.tl .n{flex:1;font-weight:600;min-width:0}
+.tl .k{color:var(--faint);font-size:13px}
+.tl.sel{background:var(--accent-soft);box-shadow:inset 3px 0 0 var(--accent)}
+.tl.sel .n{color:var(--accent)}
+.tl.off .n{color:var(--faint)}
+.st{display:grid;grid-template-columns:auto minmax(0,1fr) 210px auto;gap:4px 12px;align-items:center;padding:12px 18px;border-top:1px solid var(--line-2)}
+.st:first-child{border-top:0}
+.st .n{font-weight:600}
+.st .d{font-size:12.5px;color:var(--muted)}
+.st>.av{grid-row:span 2}
+.st .sel{grid-row:span 2}
+.st .ac{grid-row:span 2}
+.pf{display:flex;gap:16px;align-items:center;padding:12px 0}
+.mb{display:flex;gap:8px;align-items:center;padding:10px 0;border-top:1px solid var(--line-2)}
+.mb:first-child{border-top:0}
+.mb .n{flex:1;font-weight:600}
+@media (max-width:1180px){
+  .pr{grid-template-columns:minmax(0,1fr) 170px}
+  .st{grid-template-columns:auto minmax(0,1fr) 160px auto}
+  .kb{grid-template-columns:repeat(5,minmax(190px,1fr))}
+}
+@media (max-width:640px){
+  .pr{grid-template-columns:minmax(0,1fr);padding:12px 14px}
+  .pr .in small{text-align:left}
+  .ctxh{padding:12px 14px}
+  .st{grid-template-columns:auto minmax(0,1fr) auto;padding:12px 14px}
+  .st .sel{grid-column:2 / span 2;grid-row:auto}
+  .st .ac{grid-row:1}
+  .kb{grid-template-columns:minmax(0,1fr);overflow:visible}
+  .tl{padding:11px 14px}
+}
+</style>
+</head>
+<body>
+<script src="v4-chung/v4.js"></script>
+<script>
+const {icon,av,vnd,tip,man,mucLuc}=V4;
+/* ===== Dữ liệu minh hoạ. Mỗi giá trị ứng với một trường máy chủ trả về (ghi ở data-f). ===== */
+// GET /orgs/:orgId/staff-tiers → items[{id,name,sortOrder,isActive,staffCount}]
+const BAC=[
+ {id:'t1',name:'Thợ chính cao cấp',isActive:true},
+ {id:'t2',name:'Thợ chính',isActive:true},
+ {id:'t3',name:'Thợ phụ',isActive:true},
+ {id:'t4',name:'Học việc',isActive:true},
+ {id:'t5',name:'Cộng tác viên (cũ)',isActive:false},
+];
+// GET /orgs/:orgId/staff → items[{membershipId,displayName,initials,avatarUrl,phone,tier,isBookable,roleKeys}]
+const THO=[
+ {ten:'Lương Hà My',anh:true,bac:'t1',sdt:'0903 112 233',nhan:true,vt:'Thợ makeup'},
+ {ten:'Nguyễn Thu Hà',anh:true,bac:'t2',sdt:'0912 445 667',nhan:true,vt:'Thợ makeup'},
+ {ten:'Trần Ngọc Anh',anh:false,bac:'t2',sdt:'0988 120 451',nhan:true,vt:'Thợ makeup'},
+ {ten:'Hoàng Mai Phương',anh:true,bac:'t2',sdt:'0977 300 812',nhan:false,vt:'Thợ makeup'},
+ {ten:'Phạm Minh Thư',anh:false,bac:'t3',sdt:'0934 556 190',nhan:true,vt:'Thợ phụ'},
+ {ten:'Đỗ Khánh Linh',anh:true,bac:'t3',sdt:'0965 781 004',nhan:true,vt:'Thợ phụ'},
+ {ten:'Vũ Quỳnh Chi',anh:false,bac:'t4',sdt:'0356 220 918',nhan:true,vt:'Thợ phụ'},
+ {ten:'Bùi Lan Hương',anh:false,bac:null,sdt:'0868 090 117',nhan:true,vt:'Thợ makeup'},
+];
+// GET /packages?isActive=true (tên, nhân vật, giá hiện hành) và GET /services?kind=ADDON
+const GOI=[
+ ['CÔ DÂU',[['Cô dâu – Ngày cưới',2700000],['Cô dâu – Ăn hỏi',1800000],['Cô dâu – Chụp ảnh cưới',1500000]]],
+ ['MẸ CÔ DÂU',[['Mẹ – Trang điểm nhẹ nhàng',600000]]],
+ ['PHÙ DÂU',[['Phù dâu',400000]]],
+ ['MỌI NHÂN VẬT',[['Khách dự tiệc',450000]]],
+];
+const DVP=[['Làm tóc',300000],['Làm nail',250000],['Kẹp mi',80000],['Lens',100000]];
+// GET /packages/:id/pay-rates → items[{tier,amount|null,updatedAt,staff[]}] (chỉ bậc đang dùng)
+const MUC={t1:900000,t2:700000,t3:300000,t4:null};
+const CAPNHAT={t1:'12/10/2026',t2:'12/10/2026',t3:'15/10/2026',t4:null};
+const bacTen=id=>BAC.find(b=>b.id===id)?.name;
+const thoBac=id=>THO.filter(t=>t.bac===id);
+const BAC_ON=BAC.filter(b=>b.isActive);
+const f=(s)=>` data-f="${s}"`;
+const segm=(on)=>`<div class="segm m-only"><a href="#c" class="${on==='tho'?'on':''}">Thợ & bậc lương</a><a href="#c-tien-cong" class="${on==='tien'?'on':''}">Tiền công theo gói</a></div>`;
+
+/* Hàng tiền công theo bậc (dùng chung cho cả A, C) */
+function hangTien(b,opt={}){
+  const ds=thoBac(b.id);const m=MUC[b.id];
+  return `<div class="pr ${m==null?'unset':''}"${f('items[].tier.name + staff[]')}>
+    <div><div class="tn">${b.name} <span class="fx">${ds.length} thợ</span></div>
+      <div class="ppl">${ds.map(t=>`<span class="pp">${av(t.ten,t.anh,'sm')}${t.ten}</span>`).join('')||'<span class="faint small">Chưa có thợ ở bậc này</span>'}</div></div>
+    <div class="in"${f('items[].amount → PUT rates[].amount')}><input class="ctl money" value="${m==null?'':vnd(m)}" placeholder="Chưa đặt" ${opt.ro?'disabled':''}>
+      <small${f('items[].updatedAt')}>${m==null?'Chưa đặt mức':'Cập nhật '+CAPNHAT[b.id]}</small></div>
+  </div>`;
+}
+function bangTien(ten,gia,opt={}){
+  return `<div class="card">
+    <div class="ctxh"><div><div class="fx"${f('GET /packages → subject.name')}>Gói · Cô dâu</div><h2${f('owner.name')}>${ten}</h2></div><span class="sp"></span>
+      <span class="muted small"${f('packages[].currentPrice.unitPrice (chỉ đọc)')}>Giá bán <b class="num">${vnd(gia)}</b></span></div>
+    ${opt.bn||''}
+    <div>${BAC_ON.map(b=>hangTien(b,opt)).join('')}</div>
+    <div class="cf"><span class="fx" style="flex:1;align-self:center">Để trống = chưa đặt mức cho bậc đó ${tip('Gửi amount = null thì xoá mức cũ. Bậc đang ẩn không hiện ở đây. Thợ chưa gán bậc không nhận tiền công theo gói.')}</span><button class="btn">Huỷ</button><button class="btn pri"${f('PUT /packages/:id/pay-rates')}>Lưu tiền công</button></div>
+  </div>`;
+}
+
+/* ===================== PHƯƠNG ÁN A — Bảng nhân sự, các tab ===================== */
+const tabsA=(on)=>`<div class="tabs">${['Thợ','Bậc lương','Tiền công theo gói'].map(t=>`<a href="#${t==='Thợ'?'a':t==='Bậc lương'?'a':'a-tien-cong'}" class="${t===on?'on':''}">${t}</a>`).join('')}</div>`;
+man('a',{nav:'tho',kids:'',title:'Thợ makeup',act:'+'},`
+<div class="ph"><h1>Thợ makeup</h1><span class="sp"></span><button class="btn pri">${icon('plus','s')}Thêm thợ</button></div>
+${tabsA('Thợ')}
+<div class="card">
+  <div class="sch" style="flex-direction:row;flex-wrap:wrap"><div class="srch" style="flex:1;min-width:200px">${icon('search','s')}<input class="ctl" placeholder="Tìm theo tên"${f('GET /staff?q')}></div>
+   <select class="ctl" style="width:200px"${f('GET /staff?tierId')}><option>Mọi bậc lương</option>${BAC_ON.map(b=>`<option>${b.name}</option>`).join('')}</select></div>
+  <table class="tbl m-cards"><thead><tr><th>Thợ</th><th>Bậc lương</th><th class="t-hide">Số điện thoại</th><th>Nhận lịch</th></tr></thead><tbody>
+  ${THO.map((t,i)=>`<tr class="${i===1?'sel':''}"><td><div class="who">${av(t.ten,t.anh)}<div><b${f('displayName')}>${t.ten}</b><div class="fx">${t.vt}</div></div></div></td>
+   <td data-l="Bậc"${f('tier.name')}>${t.bac?bacTen(t.bac):'<span class="faint">Chưa gán bậc</span>'}</td><td class="t-hide num"${f('phone')}>${t.sdt}</td>
+   <td data-l="Nhận lịch"${f('isBookable')}><span class="sw ${t.nhan?'on':''}"></span></td></tr>`).join('')}
+  </tbody></table>
+</div>`);
+man('a-ho-so',{nav:'tho',kids:'',title:'Thợ makeup',act:'+'},`
+<div class="ph"><h1>Thợ makeup</h1><span class="sp"></span><button class="btn pri">${icon('plus','s')}Thêm thợ</button></div>
+${tabsA('Thợ')}
+<div class="card" style="opacity:.6"><div style="height:420px"></div></div>
+<div class="drawer-bg"></div>
+<aside class="drawer"><div class="dh">${av('Nguyễn Thu Hà',true)}<h2>Nguyễn Thu Hà</h2><button class="btn icon ghost">${icon('x')}</button></div>
+ <div class="db">
+  <div class="pf"><span${f('avatarUrl ← POST /files?purpose=STAFF_AVATAR → avatarFileId')}>${av('Nguyễn Thu Hà',true,'lg')}</span><div class="row"><button class="btn sm">${icon('up','s')}Đổi ảnh</button><button class="btn sm ghost">Bỏ ảnh</button></div></div>
+  <div class="set"><label>Tên hiển thị</label><input class="ctl"${f('displayName')} value="Nguyễn Thu Hà"></div>
+  <div class="set"><label>Số điện thoại</label><input class="ctl"${f('phone')} value="0912 445 667"></div>
+  <div class="set"><label>Bậc lương ${tip('Bậc quyết định tiền công theo gói. Đổi bậc cần quyền đặt tiền công.')}</label><select class="ctl"${f('tierId')}><option>Không có bậc</option>${BAC_ON.map(b=>`<option ${b.id==='t2'?'selected':''}>${b.name}</option>`).join('')}</select></div>
+  <div class="set"><label>Nhận lịch ${tip('Tắt thì thợ không hiện trong ô chọn thợ khi lập hợp đồng.')}</label><span class="r"><span class="sw on"${f('isBookable')}></span></span></div>
+ </div>
+ <footer><button class="btn">Huỷ</button><button class="btn pri"${f('PATCH /staff/:membershipId')}>Lưu</button></footer>
+</aside>`);
+man('a-tien-cong',{nav:'tho',kids:'',title:'Tiền công theo gói'},`
+<div class="ph"><h1>Thợ makeup</h1></div>
+${tabsA('Tiền công theo gói')}
+<div class="card" style="margin-bottom:12px;padding:12px 18px"><div class="set" style="border:0"><label>Gói hoặc dịch vụ</label><select class="ctl"${f('GET /packages + GET /services?kind=ADDON')}><option>Cô dâu – Ngày cưới · 2.700.000 ₫</option></select></div></div>
+${bangTien('Cô dâu – Ngày cưới',2700000)}`);
+
+/* ===================== PHƯƠNG ÁN B — Cột theo bậc + ma trận ===================== */
+man('b',{nav:'tho',title:'Thợ makeup',act:'+'},`
+<div class="ph"><h1>Thợ & bậc lương</h1><span class="sp"></span><button class="btn">Sửa danh sách bậc</button><button class="btn pri">${icon('plus','s')}Thêm thợ</button></div>
+<div class="kb">
+ ${BAC_ON.map(b=>`<div class="col"><h3${f('staff-tiers[].name · staffCount')}>${b.name}<span class="k">${thoBac(b.id).length}</span></h3>${thoBac(b.id).map(t=>`<div class="it">${av(t.ten,t.anh,'sm')}<b>${t.ten}</b><button class="btn icon ghost sm" title="Chuyển bậc">${icon('more','s')}</button></div>`).join('')}</div>`).join('')}
+ <div class="col"><h3>Chưa gán bậc<span class="k">1</span></h3>${THO.filter(t=>!t.bac).map(t=>`<div class="it">${av(t.ten,t.anh,'sm')}<b>${t.ten}</b><button class="btn icon ghost sm">${icon('more','s')}</button></div>`).join('')}</div>
+</div>
+<p class="fx" style="margin-top:10px">Bấm ⋯ trên thẻ thợ → "Chuyển sang bậc…". Trên điện thoại các cột xếp chồng dọc.</p>`);
+man('b-tien-cong',{nav:'tho',title:'Tiền công theo gói'},`
+<div class="ph"><h1>Tiền công theo gói</h1><span class="sub">mỗi ô là tiền công 1 lần làm của 1 thợ</span><span class="sp"></span><button class="btn pri">Lưu thay đổi</button></div>
+<div class="card mx"><table><thead><tr><th>Gói / dịch vụ</th>${BAC_ON.map(b=>`<th${f('items[].tier + staff[]')}>${b.name}<div class="avs">${thoBac(b.id).slice(0,3).map(t=>av(t.ten,t.anh,'xs')).join('')}${thoBac(b.id).length>3?`<span class="more">+${thoBac(b.id).length-3}</span>`:''}</div></th>`).join('')}</tr></thead><tbody>
+ ${GOI.map(([nv,ds])=>`<tr class="gh"><td colspan="5">${nv}</td></tr>`+ds.map(([t,g],i)=>`<tr><td class="n">${t}<div class="fx num">${vnd(g)}</div></td>${BAC_ON.map((b,j)=>`<td><input class="ctl money sm" value="${i===0&&nv==='CÔ DÂU'?(MUC[b.id]==null?'':vnd(MUC[b.id])):j<3?vnd(Math.round(g*[.33,.26,.11][j]/10000)*10000):''}" placeholder="Chưa đặt"></td>`).join('')}</tr>`).join('')).join('')}
+ <tr class="gh"><td colspan="5">DỊCH VỤ PHỤ</td></tr>${DVP.map(([t,g])=>`<tr><td class="n">${t}<div class="fx num">${vnd(g)}</div></td>${BAC_ON.map(()=>`<td><input class="ctl money sm" placeholder="Chưa đặt"></td>`).join('')}</tr>`).join('')}
+</tbody></table></div>
+<p class="fx" style="margin-top:10px">Máy chủ chưa có đường đọc/ghi cả ma trận: phải gọi GET + PUT pay-rates cho TỪNG gói (10 gói = 10 lần đọc khi mở màn).</p>`);
+
+/* ===================== PHƯƠNG ÁN C — Hai cột như Hợp đồng C (ĐỀ XUẤT) ===================== */
+function listGoi(sel){
+  return `<div class="card left"><div class="sch"><div class="srch">${icon('search','s')}<input class="ctl" placeholder="Tìm gói, dịch vụ phụ"></div></div>
+  <div class="ls">${GOI.map(([nv,ds])=>`<div class="lh"${f('GET /makeup-subjects → name')}>Gói · ${nv.toLowerCase().replace(/^./,c=>c.toUpperCase())}</div>`+ds.map(([t,g])=>`<a href="#c-tien-cong-ct" class="lr noav ${t===sel?'sel':''}"><span class="n"${f('packages[].name')}>${t}</span><span class="p num"${f('packages[].currentPrice.unitPrice')}>${vnd(g)}</span></a>`).join('')).join('')}
+   <div class="lh">Dịch vụ phụ</div>${DVP.map(([t,g])=>`<a href="#c-tien-cong-ct" class="lr noav"><span class="n"${f('services[kind=ADDON].name')}>${t}</span><span class="p num">${vnd(g)}</span></a>`).join('')}
+  </div></div>`;
+}
+man('c-tien-cong',{nav:'tho',kid:'Tiền công theo gói',title:'Tiền công theo gói',mobile:'list'},`
+<div class="ph"><h1>Tiền công theo gói</h1><span class="sub">chọn gói bên trái, nhập tiền công cho từng bậc bên phải</span></div>
+${segm('tien')}<div class="c2">${listGoi('Cô dâu – Ngày cưới')}<div class="right">${bangTien('Cô dâu – Ngày cưới',2700000)}</div></div>`);
+man('c-tien-cong-ct',{nav:'tho',kid:'Tiền công theo gói',title:'Cô dâu – Ngày cưới',back:'#c-tien-cong',mobile:'detail'},`
+<div class="ph"><h1>Tiền công theo gói</h1></div>
+<div class="c2">${listGoi('Cô dâu – Ngày cưới')}<div class="right has-sum">${bangTien('Cô dâu – Ngày cưới',2700000)}</div></div>`);
+man('c-tien-cong-xem',{nav:'tho',kid:'Tiền công theo gói',title:'Cô dâu – Ngày cưới',back:'#c-tien-cong',mobile:'detail'},`
+<div class="ph"><h1>Tiền công theo gói</h1><span class="sub">người có quyền xem (kế toán)</span></div>
+<div class="c2">${listGoi('Cô dâu – Ngày cưới')}<div class="right">${bangTien('Cô dâu – Ngày cưới',2700000,{ro:true,bn:'<div style="padding:10px 18px 0"><div class="bn grey">'+icon('lock','s')+'<span>Bạn chỉ được xem tiền công. Chủ studio hoặc quản trị đặt mức (quyền "Đặt tiền công theo gói, theo bậc").</span></div></div>'})}</div></div>`);
+
+function listBac(sel){
+  return `<div class="card left"><div class="ch2"><h2>Bậc lương</h2><a class="btn sm ghost" href="#c-bac">Sửa</a></div>
+   <div class="ls">
+    <a href="#c" class="tl ${sel==='all'?'sel':''}"><span class="n">Tất cả thợ</span><span class="k">${THO.length}</span></a>
+    ${BAC.map(b=>`<a href="#c" class="tl ${b.id===sel?'sel':''} ${b.isActive?'':'off'}"><span class="n"${f('staff-tiers[].name')}>${b.name}${b.isActive?'':' · đang ẩn'}</span><span class="k"${f('staffCount')}>${thoBac(b.id).length}</span></a>`).join('')}
+    <a href="#c" class="tl"><span class="n" style="color:var(--warn)">Chưa gán bậc</span><span class="k">${THO.filter(t=>!t.bac).length}</span></a>
+   </div>
+   <div style="padding:12px 14px;border-top:1px solid var(--line)"><a class="btn dashed" style="width:100%" href="#c-bac">${icon('plus','s')}Thêm bậc lương</a></div></div>`;
+}
+function hangTho(t){
+  return `<div class="st">${av(t.ten,t.anh)}<span class="n"${f('displayName')}>${t.ten}</span>
+   <select class="ctl sel"${f('tierId → PATCH /staff/:id')}><option>Không có bậc</option>${BAC_ON.map(b=>`<option ${b.id===t.bac?'selected':''}>${b.name}</option>`).join('')}</select>
+   <a class="btn sm ac" href="#c-ho-so">Hồ sơ</a>
+   <span class="d"${f('roleKeys · isBookable')}>${t.vt}${t.nhan?'':' · <b style="color:var(--warn)">tắt nhận lịch</b>'}</span></div>`;
+}
+man('c',{nav:'tho',kid:'Thợ & bậc lương',title:'Thợ & bậc lương',act:'+',mobile:'list'},`
+<div class="ph"><h1>Thợ & bậc lương</h1><span class="sp"></span><a class="btn pri" href="#c-them">${icon('plus','s')}Thêm thợ</a></div>
+${segm('tho')}<div class="c2 narrow">${listBac('all')}
+ <div class="right"><div class="card"><div class="ch2"><h2>Tất cả thợ</h2><small>${THO.length} người đang làm</small><div class="srch m-hide" style="width:220px">${icon('search','s')}<input class="ctl sm" placeholder="Tìm theo tên"${f('GET /staff?q')}></div></div>
+  <div>${THO.map(hangTho).join('')}</div></div>
+  <p class="fx">Đổi bậc ở ô chọn là lưu ngay (PATCH tierId) và hiện dòng "Đã chuyển Trần Ngọc Anh sang Thợ chính cao cấp · Hoàn tác".</p></div></div>`);
+man('c-m-tho',{nav:'tho',kid:'Thợ & bậc lương',title:'Thợ chính',back:'#c',act:'+',mobile:'detail'},`
+<div class="ph"><h1>Thợ & bậc lương</h1></div>
+<div class="c2 narrow">${listBac('t2')}
+ <div class="right"><div class="card"><div class="ch2"><h2>Thợ chính</h2><small>3 thợ</small></div><div>${thoBac('t2').map(hangTho).join('')}</div></div></div></div>`);
+man('c-ho-so',{nav:'tho',kid:'Thợ & bậc lương',title:'Hồ sơ thợ',back:'#c',mobile:'detail'},`
+<div class="ph"><h1>Thợ & bậc lương</h1></div>
+<div class="c2 narrow">${listBac('all')}<div class="right"><div class="card" style="height:300px"></div></div></div>
+<div class="dlg-bg"><div class="dlg" role="dialog" aria-label="Hồ sơ thợ">
+ <div class="dh"><div style="flex:1"><div class="fx">Thợ makeup · tham gia 03/2025</div><h2>Hồ sơ thợ</h2></div><button class="btn icon ghost">${icon('x')}</button></div>
+ <div class="db">
+  <div class="pf"><span${f('avatarUrl ← POST /files?purpose=STAFF_AVATAR')}>${av('Nguyễn Thu Hà',true,'lg')}</span><div><div class="b">Nguyễn Thu Hà</div><div class="fx" style="margin:2px 0 8px"${f('fullName (tên tài khoản, chỉ đọc)')}>Tên tài khoản: Nguyễn Thị Thu Hà</div><div class="row"><button class="btn sm">${icon('up','s')}Đổi ảnh</button><button class="btn sm ghost">Bỏ ảnh</button></div></div></div>
+  <div class="grp">Thông tin</div>
+  <div class="set"><label>Tên hiển thị ${tip('Tên hiện trên lịch, hợp đồng, màn tiền công. Trống = dùng tên tài khoản.')}</label><input class="ctl"${f('displayName')} value="Nguyễn Thu Hà"></div>
+  <div class="set"><label>Số điện thoại ${tip('Chỉ người có quyền sửa hồ sơ thợ mới thấy số này.')}</label><input class="ctl"${f('phone')} value="0912 445 667"></div>
+  <div class="grp">Lương & lịch</div>
+  <div class="set"><label>Bậc lương</label><select class="ctl"${f('tierId')}><option>Không có bậc</option>${BAC_ON.map(b=>`<option ${b.id==='t2'?'selected':''}>${b.name}</option>`).join('')}</select></div>
+  <div class="set"><label>Nhận lịch ${tip('Tắt thì thợ hiện mờ, không chọn được trong ô chọn thợ khi lập hợp đồng.')}</label><span class="r"><span class="sw on"${f('isBookable')}></span></span></div>
+ </div>
+ <footer><button class="btn">Huỷ</button><button class="btn pri"${f('PATCH /staff/:membershipId')}>Lưu</button></footer></div></div>`);
+man('c-bac',{nav:'tho',kid:'Thợ & bậc lương',title:'Danh sách bậc lương',back:'#c',mobile:'detail'},`
+<div class="ph"><h1>Thợ & bậc lương</h1></div>
+<div class="c2 narrow">${listBac('all')}<div class="right"><div class="card" style="height:300px"></div></div></div>
+<div class="dlg-bg"><div class="dlg" role="dialog" aria-label="Bậc lương">
+ <div class="dh"><div style="flex:1"><h2>Bậc lương</h2><div class="fx">Kéo để đổi thứ tự. Thứ tự này là thứ tự hàng trên màn tiền công.</div></div><button class="btn icon ghost">${icon('x')}</button></div>
+ <div class="db">
+  ${BAC.map(b=>`<div class="mb">${icon('drag','s')}<input class="ctl" style="flex:1" value="${b.name}"${f('name')}><span class="fx" style="width:52px;text-align:right"${f('staffCount')}>${thoBac(b.id).length} thợ</span><span title="Đang dùng"${f('isActive')} class="sw ${b.isActive?'on':''}"></span></div>`).join('')}
+  <div class="bn red" style="margin-top:8px">${icon('warn','s')}<span>Còn 3 thợ đang thuộc bậc "Thợ chính", hãy chuyển họ sang bậc khác trước khi ẩn.</span></div>
+  <div class="mb"><input class="ctl" style="flex:1" placeholder="Tên bậc mới, ví dụ: Thợ chính bậc 2"${f('POST /staff-tiers {name}')}><button class="btn">${icon('plus','s')}Thêm</button></div>
+ </div>
+ <footer><button class="btn">Đóng</button><button class="btn pri"${f('PATCH /staff-tiers/:id {name,sortOrder,isActive}')}>Lưu</button></footer></div></div>`);
+man('c-them',{nav:'tho',kid:'Thợ & bậc lương',title:'Thêm thợ',back:'#c',mobile:'detail'},`
+<div class="ph"><h1>Thợ & bậc lương</h1></div>
+<div class="c2 narrow">${listBac('all')}<div class="right"><div class="card" style="height:300px"></div></div></div>
+<div class="dlg-bg"><div class="dlg" role="dialog" aria-label="Thêm thợ">
+ <div class="dh"><div style="flex:1"><h2>Thêm thợ vào studio</h2><div class="fx">Thợ phải tự đăng ký tài khoản Makeup Pro trước, rồi đưa email cho anh.</div></div><button class="btn icon ghost">${icon('x')}</button></div>
+ <div class="db">
+  <div class="set wide"><label>Email tài khoản<span class="req">*</span></label><input class="ctl"${f('POST /members {email}')} placeholder="tho@gmail.com"></div>
+  <div class="set wide"><label>Vai trò<span class="req">*</span></label><select class="ctl"${f('roleKeys ← GET /roles')}><option>Thợ makeup</option><option>Thợ phụ</option><option>Lễ tân</option><option>Kế toán</option></select></div>
+  <div class="bn grey" style="margin-top:8px">${icon('clock','s')}<span>Thêm xong, mở "Hồ sơ" để gán bậc lương và tải ảnh đại diện.</span></div>
+ </div>
+ <footer><button class="btn">Huỷ</button><button class="btn pri">Thêm</button></footer></div></div>`);
+man('c-trang-thai',{nav:'tho',kid:'Tiền công theo gói',title:'Trạng thái'},`
+<div class="ph"><h1>Trạng thái của màn Tiền công</h1></div>
+<div class="states">
+ <div class="card"><h4>Đang tải</h4>${[1,2,3].map(()=>`<div style="display:flex;gap:10px;align-items:center;padding:10px 0"><span class="sk" style="width:28px;height:28px;border-radius:50%"></span><span class="sk" style="flex:1"></span><span class="sk" style="width:90px;height:30px"></span></div>`).join('')}</div>
+ <div class="card"><h4>Rỗng: chưa có bậc</h4><div class="empty"><span>Chưa có bậc lương nào. Tạo bậc trước rồi mới đặt tiền công.</span><a class="btn pri sm" href="#c-bac">Thêm bậc lương</a></div></div>
+ <div class="card"><h4>Lỗi tải</h4><div class="bn red">${icon('warn','s')}<span>Không kết nối được máy chủ. Vui lòng kiểm tra mạng rồi thử lại.</span></div><div style="margin-top:10px"><button class="btn sm">Thử lại</button></div></div>
+ <div class="card"><h4>403 / 409</h4><div class="bn red">${icon('lock','s')}<span>Đổi bậc lương cần quyền đặt tiền công.</span></div><div class="bn red" style="margin-top:8px">${icon('warn','s')}<span>Có bậc lương đang ẩn, không đặt tiền công được.</span></div></div>
+</div>`);
+
+mucLuc('Nhân sự & trả lương — R&D vòng 4','Ba phương án cùng họ C. Bấm "Hiện trường dữ liệu" (góc phải dưới) để thấy mỗi ô đọc/ghi trường nào.',[
+ ['Phương án A — Bảng nhân sự, chia tab',[['a','Danh sách thợ (bảng)'],['a-ho-so','Hồ sơ thợ mở ngăn kéo phải'],['a-tien-cong','Tab Tiền công: chọn gói ở ô chọn']]],
+ ['Phương án B — Cột theo bậc + ma trận tiền công',[['b','Thợ xếp theo cột bậc'],['b-tien-cong','Ma trận gói × bậc']]],
+ ['Phương án C — Hai cột như Hợp đồng C (đề xuất, đã chọn thay)',[['c','Thợ & bậc lương'],['c-m-tho','Một bậc (điện thoại: màn con)'],['c-ho-so','Hồ sơ thợ'],['c-bac','Sửa danh sách bậc'],['c-them','Thêm thợ'],['c-tien-cong','Tiền công theo gói'],['c-tien-cong-ct','Tiền công một gói (điện thoại: màn con)'],['c-tien-cong-xem','Chỉ xem (kế toán)'],['c-trang-thai','Trạng thái tải / rỗng / lỗi / 403 / 409']]],
+]);
+V4.boot();
+</script>
+</body>
+</html>

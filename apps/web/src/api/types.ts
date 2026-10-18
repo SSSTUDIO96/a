@@ -866,3 +866,340 @@ export interface PayRatesInput {
   // amount null = xoá mức công của bậc; bậc không gửi giữ nguyên.
   rates: { tierId: string; amount: Vnd | null }[];
 }
+
+// ======================= Tệp (files) =======================
+
+// Giá trị liệt kê khớp schema.prisma (FilePurpose, FileStatus).
+export type FilePurpose =
+  | 'STAFF_AVATAR'
+  | 'CUSTOMER_AVATAR'
+  | 'ORG_LOGO'
+  | 'ALBUM_IMAGE'
+  | 'COURSE_RESOURCE'
+  | 'SUBMISSION'
+  | 'WELCOME_CARD'
+  | 'OTHER';
+export type FileStatus = 'UPLOADING' | 'READY' | 'DELETED';
+
+// files/service.ts — presentFile.
+export interface StoredFileView {
+  id: string;
+  purpose: FilePurpose;
+  status: FileStatus;
+  // Tên tệp chỉ để hiển thị (máy chủ đã thay ký tự điều khiển và dấu gạch đường dẫn bằng "_").
+  originalName: string;
+  // Máy chủ nhận diện bằng chữ ký đầu tệp: image/jpeg, image/png, image/webp hoặc application/pdf.
+  mimeType: string;
+  sizeBytes: number;
+  sha256: string | null;
+  // Chỉ ảnh có kích thước; PDF → null.
+  width: number | null;
+  height: number | null;
+  createdAt: IsoDateTime;
+  // URL đọc có hạn 10 phút (chỉ tệp READY). Hết hạn thì gọi lại getFile để lấy URL mới.
+  signedUrl: string | null;
+  signedUrlExpiresAt: IsoDateTime | null;
+}
+
+// POST /files: thân là NỘI DUNG NHỊ PHÂN của tệp (không multipart). Dung lượng tối đa theo mục đích
+// (ảnh đại diện 5 MB, logo 2 MB, album 15 MB, tài liệu 25 MB...); chỉ JPEG, PNG, WebP (và PDF cho tài liệu).
+export interface FileUploadInput {
+  purpose: FilePurpose;
+  // Tên hiển thị, 1–200 ký tự.
+  name: string;
+  data: Blob | ArrayBuffer;
+}
+
+// ======================= Thu tiền (payments) =======================
+
+// payments/common.ts — presentPayment: phiếu thu / phiếu hoàn. Chỉ ghi thêm: ghi sai thì huỷ có lý do.
+export interface Payment {
+  id: string;
+  // PT-000001 theo tổ chức.
+  code: string;
+  contractId: string;
+  kind: PaymentKind;
+  method: PaymentMethod;
+  amount: Vnd;
+  receivedAt: IsoDateTime;
+  note: string | null;
+  voidedAt: IsoDateTime | null;
+  voidReason: string | null;
+  createdAt: IsoDateTime;
+  createdBy: { id: string; fullName: string };
+}
+
+// Một đợt của tiến độ thanh toán kèm phần đã thu (tiền đổ vào đợt có hạn sớm nhất trước).
+export interface PaymentInstallment {
+  id: string;
+  name: string;
+  dueDate: IsoDateTime;
+  amount: Vnd;
+  isDeposit: boolean;
+  sortOrder: number;
+  paidAmount: Vnd;
+  outstanding: Vnd;
+  status: InstallmentStatus;
+}
+
+// payments/common.ts — loadProgress: GET /contracts/:id/payments và PUT /contracts/:id/installments.
+export interface ContractPayments {
+  contract: {
+    id: string;
+    code: string;
+    status: ContractStatus;
+    eventDate: IsoDateTime | null;
+    confirmedAt: IsoDateTime | null;
+    customer: { id: string; fullName: string; phone: string | null };
+  };
+  summary: PaymentSummary;
+  installments: PaymentInstallment[];
+  installmentsTotal: Vnd;
+  // null = chưa lập tiến độ. Khác 0 khi tổng hợp đồng đổi sau khi lập tiến độ — nhắc lập lại tiến độ.
+  scheduleDifference: Vnd | null;
+  // Mới nhất trước, kể cả phiếu đã huỷ.
+  payments: Payment[];
+}
+
+export interface InstallmentInput {
+  name: string;
+  dueDate: IsoDateTime;
+  amount: Vnd;
+  isDeposit?: boolean;
+}
+
+// PUT thay toàn bộ tiến độ: tổng các đợt phải bằng ĐÚNG tổng hợp đồng, tối đa 1 đợt cọc, tối đa 24 đợt. [] = xoá tiến độ.
+export interface InstallmentsInput {
+  installments: InstallmentInput[];
+}
+
+export interface PaymentCreateInput {
+  // Mặc định RECEIPT. REFUND cần quyền payments.void và không vượt số đã thu.
+  kind?: PaymentKind;
+  method: PaymentMethod;
+  amount: Vnd;
+  // Bỏ trống = bây giờ; không được ở tương lai.
+  receivedAt?: IsoDateTime;
+  note?: string;
+  // Cho thu vượt tổng hợp đồng (khách trả thừa) — bắt buộc kèm note. Không gửi mà vượt → 409.
+  allowOverpay?: boolean;
+}
+
+export interface VoidPaymentInput {
+  reason: string;
+}
+
+// Ghi phiếu / huỷ phiếu: phiếu kèm hợp đồng và tóm tắt tiền SAU thao tác.
+export interface PaymentResult extends Payment {
+  contract: { id: string; code: string; status: ContractStatus };
+  summary: PaymentSummary;
+}
+
+// Sổ thu theo kỳ [from, to), tối đa 366 ngày.
+export interface PaymentLedgerQuery extends PagingQuery {
+  from: IsoDateTime;
+  to: IsoDateTime;
+  method?: PaymentMethod;
+  kind?: PaymentKind;
+  contractId?: string;
+}
+
+export interface PaymentLedgerEntry extends Payment {
+  contract: { id: string; code: string; customer: { id: string; fullName: string } };
+}
+
+export interface PaymentLedger extends Page<PaymentLedgerEntry> {
+  // Trả nguyên chuỗi from/to đã gửi.
+  from: IsoDateTime;
+  to: IsoDateTime;
+  // Tổng chỉ tính phiếu còn hiệu lực; danh sách vẫn có phiếu đã huỷ (voidedAt) để đối soát.
+  totals: { received: Vnd; receiptCount: number; refunded: Vnd; refundCount: number; net: Vnd };
+}
+
+// payments/reports.ts — báo cáo doanh số theo kỳ [from, to).
+export type RevenueGroupBy = 'month' | 'contract';
+
+export interface RevenueQuery {
+  from: IsoDateTime;
+  to: IsoDateTime;
+  // Mặc định month.
+  groupBy?: RevenueGroupBy;
+}
+
+export interface RevenueBucket {
+  contractCount: number;
+  sales: Vnd;
+  depositRequired: Vnd;
+  depositOutstanding: Vnd;
+  outstanding: Vnd;
+  received: Vnd;
+  refunded: Vnd;
+  collected: Vnd;
+}
+
+// Lời giải thích cách tính từng chỉ số (máy chủ soạn, giao diện hiện nguyên văn).
+export interface RevenueBasis {
+  sales: string;
+  depositRequired: string;
+  collected: string;
+  outstanding: string;
+}
+
+export interface RevenueMonthRow extends RevenueBucket {
+  // YYYY-MM theo giờ Việt Nam.
+  period: string;
+}
+
+export interface RevenueContractRow {
+  contractId: string;
+  code: string;
+  status: ContractStatus;
+  customer: { id: string; fullName: string };
+  confirmedAt: IsoDateTime | null;
+  eventDate: IsoDateTime | null;
+  // true = tính vào doanh số của kỳ; false = chỉ có tiền thu/hoàn trong kỳ.
+  bookedInPeriod: boolean;
+  total: Vnd;
+  depositRequired: Vnd;
+  paid: Vnd;
+  paidInPeriod: Vnd;
+  // Hợp đồng đã huỷ → null (không còn phải thu).
+  remaining: Vnd | null;
+  depositOutstanding: Vnd | null;
+}
+
+interface RevenueReportBase {
+  from: IsoDateTime;
+  to: IsoDateTime;
+  basis: RevenueBasis;
+  totals: RevenueBucket;
+}
+
+export type RevenueReport =
+  | (RevenueReportBase & { groupBy: 'month'; rows: RevenueMonthRow[] })
+  | (RevenueReportBase & { groupBy: 'contract'; rows: RevenueContractRow[] });
+
+// ======================= Hồ sơ thương hiệu (profile) =======================
+
+// Một ca làm việc: weekday 1 (thứ Hai) … 7 (Chủ nhật); giờ HH:mm. Mỗi thứ tối đa 2 ca, không chồng nhau.
+export interface WorkingShift {
+  weekday: number;
+  open: string;
+  close: string;
+}
+
+// profile/images.ts — URL ảnh ký có hạn (10 phút).
+export interface SignedImage {
+  url: string;
+  expiresAt: IsoDateTime;
+}
+
+// profile/routes.ts — presentProfile.
+export interface BrandProfile {
+  brandName: string;
+  tagline: string | null;
+  bio: string | null;
+  experience: string | null;
+  styles: string[];
+  serviceArea: string | null;
+  address: string | null;
+  // Đã chuẩn hoá về 0xxxxxxxxx.
+  phone: string | null;
+  email: string | null;
+  // Số điện thoại (đã chuẩn hoá) hoặc liên kết https://zalo.me/…
+  zalo: string | null;
+  facebook: string | null;
+  instagram: string | null;
+  tiktok: string | null;
+  website: string | null;
+  logoFileId: string | null;
+  avatarFileId: string | null;
+  coverFileId: string | null;
+  // Đã xếp theo thứ, giờ mở.
+  workingHours: WorkingShift[];
+  bookingPolicy: string | null;
+  cancellationPolicy: string | null;
+  depositPolicy: string | null;
+  isPublished: boolean;
+  publishedAt: IsoDateTime | null;
+  updatedAt: IsoDateTime;
+  // Tệp chưa sẵn sàng / đã xoá → null.
+  logo: SignedImage | null;
+  avatar: SignedImage | null;
+  cover: SignedImage | null;
+}
+
+export type BrandProfileResult = { hasProfile: false; profile: null } | { hasProfile: true; profile: BrandProfile };
+
+// PUT ghi TOÀN BỘ hồ sơ: trường không gửi = để trống. Liên kết mạng xã hội/website chỉ nhận https://.
+// Xuất bản/gỡ dùng publishBrandProfile/unpublishBrandProfile (gửi isPublished ở đây là 400).
+export interface BrandProfileInput {
+  brandName: string;
+  tagline?: string | null;
+  bio?: string | null;
+  experience?: string | null;
+  styles?: string[];
+  serviceArea?: string | null;
+  address?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  zalo?: string | null;
+  facebook?: string | null;
+  instagram?: string | null;
+  tiktok?: string | null;
+  website?: string | null;
+  // Tệp ảnh đã tải lên của tổ chức: logo = ORG_LOGO; avatar = ORG_LOGO/STAFF_AVATAR/ALBUM_IMAGE; cover = ORG_LOGO/ALBUM_IMAGE.
+  logoFileId?: string | null;
+  avatarFileId?: string | null;
+  coverFileId?: string | null;
+  workingHours?: WorkingShift[];
+  bookingPolicy?: string | null;
+  cancellationPolicy?: string | null;
+  depositPolicy?: string | null;
+}
+
+// profile/public.ts — GET /public/sites/:slug (không cần đăng nhập): trang giới thiệu đã xuất bản.
+export type PublicProfile = Omit<BrandProfile, 'logoFileId' | 'avatarFileId' | 'coverFileId' | 'isPublished' | 'updatedAt'>;
+
+// Giá công khai: chỉ số tiền, không có mã phiên bản giá.
+export interface PublicPrice {
+  listPrice: Vnd;
+  salePrice: Vnd | null;
+  unitPrice: Vnd;
+}
+
+export interface PublicService {
+  id: string;
+  kind: ServiceKind;
+  name: string;
+  description: string | null;
+  durationMinutes: number;
+  // Tên danh mục.
+  category: string | null;
+  price: PublicPrice | null;
+}
+
+export interface PublicPackage {
+  id: string;
+  name: string;
+  description: string | null;
+  durationMinutes: number;
+  staffCount: number;
+  subject: { id: string; name: string } | null;
+  locationTypes: LocationType[];
+  // Km miễn phí: riêng của gói, không có thì theo tổ chức; null = tổ chức chưa đặt chính sách phí di chuyển.
+  includedKm: number | null;
+  terms: string | null;
+  price: PublicPrice | null;
+  included: { name: string; quantity: number }[];
+  addons: { serviceId: string; name: string; durationMinutes: number; quantity: number; price: PublicPrice | null }[];
+}
+
+export interface PublicSite {
+  site: { name: string; slug: string; timezone: string };
+  profile: PublicProfile;
+  services: PublicService[];
+  packages: PublicPackage[];
+  subjects: { id: string; name: string }[];
+  travel: { freeKm: number | null };
+}

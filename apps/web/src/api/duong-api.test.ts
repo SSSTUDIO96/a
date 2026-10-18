@@ -2,6 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as catalog from './catalog';
 import { setAccessToken } from './client';
 import * as contracts from './contracts';
+import * as files from './files';
+import * as payments from './payments';
+import * as profile from './profile';
 import * as schedule from './schedule';
 import * as staff from './staff';
 import type { ContractBody } from './types';
@@ -13,6 +16,7 @@ interface Seen {
   method: string;
   headers: Record<string, string>;
   body: unknown;
+  raw: unknown;
 }
 
 let seen: Seen[] = [];
@@ -28,6 +32,7 @@ beforeEach(() => {
         method: init?.method ?? 'GET',
         headers: { ...(init?.headers as Record<string, string>) },
         body: typeof init?.body === 'string' ? JSON.parse(init.body) : undefined,
+        raw: init?.body,
       });
       return new Response(JSON.stringify({ ok: true }), { status: 200, headers: { 'content-type': 'application/json' } });
     }),
@@ -46,11 +51,15 @@ const KEY = 'khoa-bam-nut-0001';
 interface Case {
   name: string;
   call: () => Promise<unknown>;
-  method: 'GET' | 'POST' | 'PATCH' | 'PUT';
+  method: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
   url: string;
   body?: unknown;
   idem?: boolean;
+  // Đường công khai: không gửi Authorization.
+  noAuth?: boolean;
 }
+
+const PNG_BYTES = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);
 
 const contractBody: ContractBody = {
   newCustomer: { fullName: 'Lan', phone: '0912345678' },
@@ -160,6 +169,52 @@ const cases: Case[] = [
   { name: 'putPackagePayRates', call: () => staff.putPackagePayRates(ORG, 'p1', { rates: [{ tierId: 't1', amount: 500_000 }] }), method: 'PUT', url: `${P}/packages/p1/pay-rates`, body: { rates: [{ tierId: 't1', amount: 500_000 }] } },
   { name: 'getServicePayRates', call: () => staff.getServicePayRates(ORG, 'sv1'), method: 'GET', url: `${P}/services/sv1/pay-rates` },
   { name: 'putServicePayRates', call: () => staff.putServicePayRates(ORG, 'sv1', { rates: [{ tierId: 't1', amount: null }] }), method: 'PUT', url: `${P}/services/sv1/pay-rates`, body: { rates: [{ tierId: 't1', amount: null }] } },
+  // ---- payments ----
+  { name: 'getContractPayments', call: () => payments.getContractPayments(ORG, 'h1'), method: 'GET', url: `${P}/contracts/h1/payments` },
+  {
+    name: 'putInstallments',
+    call: () => payments.putInstallments(ORG, 'h1', { installments: [{ name: 'Đặt cọc', dueDate: '2026-11-01T00:00:00+07:00', amount: 500_000, isDeposit: true }] }),
+    method: 'PUT',
+    url: `${P}/contracts/h1/installments`,
+    body: { installments: [{ name: 'Đặt cọc', dueDate: '2026-11-01T00:00:00+07:00', amount: 500_000, isDeposit: true }] },
+  },
+  {
+    name: 'createPayment',
+    call: () => payments.createPayment(ORG, 'h1', { method: 'CASH', amount: 500_000 }, KEY),
+    method: 'POST',
+    url: `${P}/contracts/h1/payments`,
+    body: { method: 'CASH', amount: 500_000 },
+    idem: true,
+  },
+  { name: 'voidPayment', call: () => payments.voidPayment(ORG, 'pt1', { reason: 'Ghi nhầm' }), method: 'POST', url: `${P}/payments/pt1/void`, body: { reason: 'Ghi nhầm' } },
+  {
+    name: 'listPayments',
+    call: () => payments.listPayments(ORG, { from: '2026-11-01T00:00:00Z', to: '2026-12-01T00:00:00Z', method: 'CASH', page: 2 }),
+    method: 'GET',
+    url: `${P}/payments?from=2026-11-01T00%3A00%3A00Z&to=2026-12-01T00%3A00%3A00Z&method=CASH&page=2`,
+  },
+  {
+    name: 'getRevenueReport',
+    call: () => payments.getRevenueReport(ORG, { from: '2026-11-01T00:00:00Z', to: '2026-12-01T00:00:00Z', groupBy: 'contract' }),
+    method: 'GET',
+    url: `${P}/reports/revenue?from=2026-11-01T00%3A00%3A00Z&to=2026-12-01T00%3A00%3A00Z&groupBy=contract`,
+  },
+  // ---- files ----
+  {
+    name: 'uploadFile',
+    call: () => files.uploadFile(ORG, { purpose: 'STAFF_AVATAR', name: 'ảnh hoa.png', data: new Blob([PNG_BYTES]) }, KEY),
+    method: 'POST',
+    url: `${P}/files?purpose=STAFF_AVATAR&name=%E1%BA%A3nh+hoa.png`,
+    idem: true,
+  },
+  { name: 'getFile', call: () => files.getFile(ORG, 'f1'), method: 'GET', url: `${P}/files/f1` },
+  { name: 'deleteFile', call: () => files.deleteFile(ORG, 'f1'), method: 'DELETE', url: `${P}/files/f1` },
+  // ---- profile ----
+  { name: 'getBrandProfile', call: () => profile.getBrandProfile(ORG), method: 'GET', url: `${P}/profile` },
+  { name: 'putBrandProfile', call: () => profile.putBrandProfile(ORG, { brandName: 'Hoa', styles: [] }), method: 'PUT', url: `${P}/profile`, body: { brandName: 'Hoa', styles: [] } },
+  { name: 'publishBrandProfile', call: () => profile.publishBrandProfile(ORG), method: 'POST', url: `${P}/profile/publish` },
+  { name: 'unpublishBrandProfile', call: () => profile.unpublishBrandProfile(ORG), method: 'POST', url: `${P}/profile/unpublish` },
+  { name: 'getPublicSite', call: () => profile.getPublicSite('hoa-makeup'), method: 'GET', url: '/api/v1/public/sites/hoa-makeup', noAuth: true },
 ];
 
 describe('mỗi hàm gọi đúng đường API', () => {
@@ -170,15 +225,31 @@ describe('mỗi hàm gọi đúng đường API', () => {
     expect(s?.method).toBe(c.method);
     expect(s?.url).toBe(c.url);
     expect(s?.body).toEqual(c.body);
-    expect(s?.headers.Authorization).toBe('Bearer tok');
+    expect(s?.headers.Authorization).toBe(c.noAuth ? undefined : 'Bearer tok');
     expect(s?.headers['X-Client']).toBe('web');
     if (c.idem) expect(s?.headers['Idempotency-Key']).toBe(KEY);
     else expect(s?.headers['Idempotency-Key']).toBeUndefined();
   });
 
-  it('đủ mọi hàm xuất ra của catalog/contracts/schedule/staff đều có bài thử', () => {
-    const exported = [catalog, contracts, schedule, staff].flatMap((m) => Object.keys(m)).sort();
+  it('đủ mọi hàm xuất ra của catalog/contracts/schedule/staff/payments/files/profile đều có bài thử', () => {
+    const exported = [catalog, contracts, schedule, staff, payments, files, profile].flatMap((m) => Object.keys(m)).sort();
     expect(cases.map((c) => c.name).sort()).toEqual(exported);
+  });
+
+  it('tải tệp: thân nhị phân nguyên vẹn, Content-Type octet-stream, kèm X-Content-SHA256', async () => {
+    const blob = new Blob([PNG_BYTES]);
+    await files.uploadFile(ORG, { purpose: 'ORG_LOGO', name: 'logo.png', data: blob }, KEY);
+    const s = seen[0];
+    expect(s?.raw).toBe(blob);
+    expect(s?.headers['Content-Type']).toBe('application/octet-stream');
+    // sha256 của 4 byte 89 50 4E 47.
+    expect(s?.headers['X-Content-SHA256']).toBe('0f4636c78f65d3639ece5a064b5ae753e3408614a14fb18ab4d7540d2c248543');
+  });
+
+  it('POST không thân (xuất bản hồ sơ) không gửi Content-Type JSON', async () => {
+    await profile.publishBrandProfile(ORG);
+    expect(seen[0]?.raw).toBeUndefined();
+    expect(seen[0]?.headers['Content-Type']).toBeUndefined();
   });
 
   it('id có ký tự lạ được mã hoá trong đường dẫn', async () => {

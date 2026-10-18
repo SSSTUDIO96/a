@@ -2,10 +2,10 @@ import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { createOrganization, type CreatedOrganization, type OrgKind } from '../../api/auth';
 import { ApiError, conflictFields, fieldErrors } from '../../api/errors';
-import { newIdempotencyKey } from '../../api/idempotency';
 import { ErrorNotice, FieldError } from '../../app/ErrorNotice';
 import { LogoutButton } from '../../app/LogoutButton';
 import { useSession } from '../../app/session';
+import { useRetainedIdempotencyKey } from './useRetainedIdempotencyKey';
 import { checkRequired, checkSlug, hasErrors, slugify, type FieldErrors } from './validate';
 
 type Field = 'name' | 'slug' | 'kind';
@@ -30,6 +30,8 @@ export function CreateOrgPage() {
   const [errors, setErrors] = useState<FieldErrors<Field>>({});
   const [submitError, setSubmitError] = useState<unknown>(null);
   const [pending, setPending] = useState(false);
+  // Giữ khoá qua các lần bấm lại (lỗi mạng, hay đã tạo mà tải lại danh sách hỏng) — máy chủ trả lại đúng tổ chức cũ.
+  const idempotency = useRetainedIdempotencyKey();
 
   function onNameChange(v: string) {
     setName(v);
@@ -48,10 +50,10 @@ export function CreateOrgPage() {
     setSubmitError(null);
     if (hasErrors(next) || !kind) return;
     setPending(true);
-    const idempotencyKey = newIdempotencyKey();
+    const input = { name: name.trim(), slug: slug.trim().toLowerCase(), kind };
     let created: CreatedOrganization;
     try {
-      created = await createOrganization({ name: name.trim(), slug: slug.trim().toLowerCase(), kind }, idempotencyKey);
+      created = await createOrganization(input, idempotency.keyFor(input));
     } catch (err) {
       const fe = fieldErrors(err);
       setErrors({ ...fe, slug: slugTakenError(err) ?? fe.slug });
@@ -73,6 +75,7 @@ export function CreateOrgPage() {
       setPending(false);
       return;
     }
+    idempotency.reset();
     selectOrg(created.id);
     void navigate(`/${created.slug}/lich`, { replace: true });
   }

@@ -18,6 +18,10 @@ const EnvSchema = z
     REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().default(30),
     CORS_ORIGINS: z.string().default(''),
     AUTH_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().positive().default(10),
+    // Đổi thẻ (/auth/refresh) có bộ đếm riêng, theo IP mỗi phút (xem app.ts). Bỏ trống → mặc định theo AUTH_RATE_LIMIT_PER_MINUTE:
+    // số lần đổi thẻ SAI (chống dò) = 3 × AUTH…; trần tổng mọi lần đổi thẻ = 30 × AUTH….
+    REFRESH_PROBE_LIMIT_PER_MINUTE: optional(z.coerce.number().int().positive()),
+    REFRESH_RATE_LIMIT_PER_MINUTE: optional(z.coerce.number().int().positive()),
     // Số tầng proxy đứng trước máy chủ (Railway: 1). 0 = không tin header X-Forwarded-For —
     // tránh bị lách giới hạn tốc độ bằng cách tự đổi IP trong header (biên bản mốc 2, L7).
     TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(5).default(0),
@@ -49,7 +53,12 @@ const EnvSchema = z
         ctx.addIssue({ code: 'custom', path: ['STORAGE_SIGNING_SECRET'], message: 'STORAGE_SIGNING_SECRET phải khác JWT_ACCESS_SECRET' });
       }
     }
-  });
+  })
+  .transform((e) => ({
+    ...e,
+    REFRESH_PROBE_LIMIT_PER_MINUTE: e.REFRESH_PROBE_LIMIT_PER_MINUTE ?? e.AUTH_RATE_LIMIT_PER_MINUTE * 3,
+    REFRESH_RATE_LIMIT_PER_MINUTE: e.REFRESH_RATE_LIMIT_PER_MINUTE ?? e.AUTH_RATE_LIMIT_PER_MINUTE * 30,
+  }));
 
 export type Env = z.infer<typeof EnvSchema>;
 
