@@ -12,7 +12,7 @@ import {
   matchQuote,
   newPackageLine,
   serverWarnings,
-  mergeWarnings,
+  displayWarnings,
   validateDraft,
   weekdayShort,
   zonedIso,
@@ -75,7 +75,8 @@ export function ExtraPackageDialog(p: ExtraPackageDialogProps) {
 
   const errors = { ...(showErrors ? local : {}), ...quote.fieldErrors, ...saveError.fields };
   const subjectName = (id: string | null) => catalog.subjects.find((s) => s.id === id)?.name ?? null;
-  const warnings = mergeWarnings(serverWarnings(view?.staffWarnings, null), [], tz).filter((w) =>
+  // Dòng phát sinh của hợp đồng ĐÃ xác nhận: KHÔNG gửi excludeContractId — lịch đã có của chính hợp đồng vẫn phải tính trùng.
+  const warnings = displayWarnings(serverWarnings(view?.staffWarnings), tz).filter((w) =>
     line.staff.some((s) => s.membershipId === w.membershipId),
   );
 

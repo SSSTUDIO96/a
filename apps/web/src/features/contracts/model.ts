@@ -273,7 +273,10 @@ export function buildBody(draft: ContractDraft, tz: string): ContractBody | null
 }
 
 // Sửa nháp: gửi lại toàn bộ lines cùng discount, depositRequired, eventDate, notes (bản vẽ 4.3).
-export function patchBody(draft: ContractDraft, tz: string): ContractUpdateInput {
+// expectedUpdatedAt ghép lúc gửi (ContractEditor withVersion) — chữ ký nháp không phụ thuộc phiên bản.
+export type ContractPatchFields = Omit<ContractUpdateInput, 'expectedUpdatedAt'>;
+
+export function patchBody(draft: ContractDraft, tz: string): ContractPatchFields {
   return {
     lines: draft.lines.map((l) => lineInput(l, draft.eventDate, tz)),
     discount: draft.discount,
@@ -398,22 +401,35 @@ function holdRange(h: DraftHold): WarnRange | null {
 }
 
 /**
- * Cảnh báo máy chủ trả trong quote, bỏ phần giữ chỗ của CHÍNH hợp đồng đang sửa (quote chưa nhận excludeContractId nên
- * hợp đồng nháp đã lưu tự thấy mình là "giữ chỗ nháp"), rồi xếp mức theo quyết định 15:14:
- * trùng ca đã chặn giờ → OVERLAP; chỉ chồng giờ với giữ chỗ nháp → DRAFT_HOLD; cùng ngày → SAME_DAY.
- * KHÔNG dùng `w.level` của máy chủ: máy chủ gán OVERLAP cả khi chỉ có giữ chỗ nháp (present.ts) — xem T1.
+ * Cảnh báo máy chủ trả trong quote (quote gửi excludeContractId nên máy chủ đã bỏ giữ chỗ / lịch của CHÍNH hợp đồng
+ * đang sửa), xếp mức theo quyết định 15:14:
+ * - OVERLAP: trùng ca đã chặn giờ (overlaps) hoặc trùng giữa các dòng của chính hợp đồng này (sameContract, máy chủ so);
+ * - DRAFT_HOLD: chỉ chồng giờ với giữ chỗ của hợp đồng NHÁP khác — nhãn để biết, không chặn;
+ * - SAME_DAY: có ca / giữ chỗ khác cùng ngày.
+ * KHÔNG dùng `w.level` của máy chủ (máy chủ từng gán OVERLAP cả khi chỉ có giữ chỗ nháp — T1).
+ * `lineLabel(i, tên)`: nhãn của dòng thứ i để ghi "Dòng {nhân vật} của hợp đồng này".
  */
-export function serverWarnings(list: StaffWarning[] | undefined, selfContractId: string | null): LineWarning[] {
+export function serverWarnings(list: StaffWarning[] | undefined, lineLabel: (index: number, name: string) => string = (_, n) => n): LineWarning[] {
   const out: LineWarning[] = [];
   for (const w of list ?? []) {
-    const holds = w.draftHolds.filter((h) => h.contractId !== selfContractId);
+    const same = w.sameContract ?? [];
+    const holds = w.draftHolds;
     const overlapHolds = holds.filter((h) => h.overlaps);
     const level: WarnLevel | null =
-      w.overlaps.length > 0 ? 'OVERLAP' : overlapHolds.length > 0 ? 'DRAFT_HOLD' : w.sameDay.length > 0 || holds.length > 0 ? 'SAME_DAY' : null;
+      w.overlaps.length > 0 || same.length > 0
+        ? 'OVERLAP'
+        : overlapHolds.length > 0
+          ? 'DRAFT_HOLD'
+          : w.sameDay.length > 0 || holds.length > 0
+            ? 'SAME_DAY'
+            : null;
     if (!level) continue;
     const ranges =
       level === 'OVERLAP'
-        ? w.overlaps.map((s) => ({ start: s.startsAt, end: s.endsAt, label: shiftLabel(s) }))
+        ? [
+            ...w.overlaps.map((s) => ({ start: s.startsAt, end: s.endsAt, label: shiftLabel(s) })),
+            ...same.map((h) => ({ start: h.scheduledStart, end: h.scheduledEnd, label: `Dòng ${lineLabel(h.lineIndex, h.lineName)} của hợp đồng này` })),
+          ]
         : level === 'DRAFT_HOLD'
           ? overlapHolds.map(holdRange).filter((r): r is WarnRange => r !== null)
           : [...w.sameDay.map((s) => ({ start: s.startsAt, end: s.endsAt, label: shiftLabel(s) })), ...holds.map(holdRange).filter((r): r is WarnRange => r !== null)];
@@ -428,54 +444,15 @@ export function serverWarnings(list: StaffWarning[] | undefined, selfContractId:
   return out;
 }
 
-export interface LocalOverlap {
-  membershipId: string;
-  otherKey: string;
-  otherLabel: string;
-  start: string;
-  end: string;
-}
-
 function placedLabel(l: PlacedDraft, subjectName: (id: string | null) => string | null): string {
   return subjectName(l.subjectId) ?? l.name;
 }
 
-/**
- * Thợ bị gán cho hai dòng chồng giờ TRONG CHÍNH hợp đồng này (vd cô dâu 04:30–07:00 và mẹ 05:00–05:45).
- * Máy chủ chỉ phát hiện lúc xác nhận (409), quote chưa báo — giao diện tự so khoảng giờ (không liên quan tiền).
- * Trả về theo khoá dòng; start/end là "HH:mm" của dòng kia.
- */
-export function localOverlaps(draft: ContractDraft, subjectName: (id: string | null) => string | null): Map<string, LocalOverlap[]> {
-  const out = new Map<string, LocalOverlap[]>();
-  const placed = draft.lines.filter(isPlaced).filter((l) => l.start && l.end && minutes(l.end) > minutes(l.start));
-  for (const a of placed) {
-    for (const b of placed) {
-      if (a === b) continue;
-      if (!(minutes(a.start) < minutes(b.end) && minutes(b.start) < minutes(a.end))) continue;
-      for (const s of a.staff) {
-        if (!b.staff.some((x) => x.membershipId === s.membershipId)) continue;
-        const list = out.get(a.key) ?? [];
-        list.push({ membershipId: s.membershipId, otherKey: b.key, otherLabel: `Dòng ${placedLabel(b, subjectName)} của hợp đồng này`, start: b.start, end: b.end });
-        out.set(a.key, list);
-      }
-    }
-  }
-  return out;
-}
-
-/** Gộp cảnh báo máy chủ và trùng giờ trong hợp đồng; mỗi thợ một dải, đỏ thắng giữ chỗ nháp thắng vàng. Khoảng giờ trả "HH:mm". */
-export function mergeWarnings(server: LineWarning[], local: LocalOverlap[], tz: string): LineWarning[] {
-  const byStaff = new Map<string, LineWarning>();
-  for (const w of server) {
-    byStaff.set(w.membershipId, { ...w, ranges: w.ranges.map((r) => ({ ...r, start: timeOf(r.start, tz), end: timeOf(r.end, tz) })) });
-  }
-  for (const o of local) {
-    const prev = byStaff.get(o.membershipId);
-    const range = { start: o.start, end: o.end, label: o.otherLabel };
-    if (!prev || prev.level !== 'OVERLAP') byStaff.set(o.membershipId, { membershipId: o.membershipId, level: 'OVERLAP', ranges: [range], count: 0 });
-    else prev.ranges.push(range);
-  }
-  return [...byStaff.values()].sort((a, b) => LEVEL_RANK[a.level] - LEVEL_RANK[b.level]);
+/** Cảnh báo để hiện: giờ "HH:mm" theo múi giờ tổ chức, mỗi thợ một dải, đỏ trước, rồi giữ chỗ nháp, rồi vàng. */
+export function displayWarnings(server: LineWarning[], tz: string): LineWarning[] {
+  return server
+    .map((w) => ({ ...w, ranges: w.ranges.map((r) => ({ ...r, start: timeOf(r.start, tz), end: timeOf(r.end, tz) })) }))
+    .sort((a, b) => LEVEL_RANK[a.level] - LEVEL_RANK[b.level]);
 }
 
 export function overlapLineCount(warnings: Map<string, LineWarning[]>): number {

@@ -24,7 +24,19 @@ export interface GateFixture {
 // Thân yêu cầu HỢP LỆ cho các đường sửa/tạo có tham số id — để phép thử "dùng id của tổ chức khác"
 // không bị chặn sớm vì dữ liệu sai (400) mà phải đi tới đúng câu tra cứu.
 // Với đường GET: giá trị là tham số truy vấn bắt buộc (ví dụ khoảng ngày from/to của lịch).
-export type Samples = Record<string, (o: GateOrg) => unknown>;
+// Mẫu có thể là hàm BẤT ĐỒNG BỘ nhận thêm `req` (app + đường dẫn sắp gọi) để tự đọc trạng thái hiện hành ngay trước khi gửi
+// — vd. expectedUpdatedAt của PATCH hợp đồng: `async (o, req) => ({ expectedUpdatedAt: await req.currentVersion(), … })`.
+export type Samples = Record<string, (o: GateOrg, req: SampleCtx) => unknown>;
+
+export interface SampleCtx {
+  app: App;
+  // Đường dẫn đầy đủ sắp gọi (/api/v1/orgs/…).
+  url: string;
+  // updatedAt HIỆN HÀNH của bản ghi mà đường dẫn trỏ tới (mã cuối trong đường dẫn), đọc bằng chủ của tổ chức SỞ HỮU bản ghi
+  // đó — kể cả khi đường dẫn mang mã của tổ chức kia (phép id chéo): lệnh chỉ còn bị chặn bởi điều kiện tổ chức, không phải
+  // bởi lệch phiên bản. Mã không thuộc fixture (mã bịa) → mốc 0.
+  currentVersion: () => Promise<string>;
+}
 
 export interface GateCheck {
   passed: number;
@@ -39,36 +51,36 @@ export type GateReport = Record<
 
 // Thân/tham số HỢP LỆ dùng toàn mã của CHÍNH tổ chức `self` — mỗi đường có thể có nhiều mẫu (thân dạng hợp).
 // Cửa gác thay lần lượt TỪNG trường mã bằng mã của tổ chức khác. (Biên bản nghiệm thu lát 1, lỗi T3.)
-export type RefSamples = Record<string, ((self: GateOrg) => Record<string, unknown>)[]>;
+export type RefSample = (self: GateOrg, req: SampleCtx) => Record<string, unknown> | Promise<Record<string, unknown>>;
+export type RefSamples = Record<string, RefSample[]>;
 
 // Mẫu tham chiếu chéo chạy trên MỘT BẢN GHI KHÁC trong đường dẫn (vd. :contractId trỏ hợp đồng KHOÁ HỌC thay vì hợp đồng
 // dịch vụ mặc định của fixture) — cho trường chỉ hợp lệ với loại bản ghi đó (lines[].courseClassId, rulesTemplateId…).
 // pathIds: tham số đường dẫn → mã trong CHÍNH tổ chức `self`. Trường đo ở biến thể được tính là đã có mẫu.
 export type RefVariants = Record<
   string,
-  { pathIds: (self: GateOrg) => Record<string, string>; samples: ((self: GateOrg) => Record<string, unknown>)[] }[]
+  { pathIds: (self: GateOrg) => Record<string, string>; samples: RefSample[] }[]
 >;
-
-// Dấu "phiên bản hiện hành" trong thân mẫu: đường bắt buộc expectedUpdatedAt (PATCH hợp đồng — biên bản web 2, T2) nhận
-// dấu này, cửa gác thay bằng updatedAt THẬT của bản ghi trong đường dẫn ngay trước khi gửi (đọc bằng chủ của tổ chức sở
-// hữu bản ghi) — để phép "id chéo" chỉ còn bị chặn bởi điều kiện tổ chức, không phải bởi lệch phiên bản.
-export const CURRENT_VERSION = '__PHIEN_BAN_HIEN_TAI__';
 
 const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/g;
 
-export async function resolveBody(app: App, fx: GateFixture, url: string, body: unknown): Promise<unknown> {
-  if (!body || typeof body !== 'object' || (body as { expectedUpdatedAt?: unknown }).expectedUpdatedAt !== CURRENT_VERSION) return body;
-  const id = [...url.split('?')[0]!.matchAll(UUID_RE)].pop()?.[0];
-  const owner = [fx.a, fx.b].find((o) => id && Object.values(o.ids).includes(id));
-  let version = new Date(0).toISOString();
-  if (owner) {
-    const own = url.split('?')[0]!.replace(/\/orgs\/[^/]+\//, `/orgs/${owner.orgId}/`);
-    const res = await request(app).get(own).set(bearer(owner.owner));
-    const v = (res.body as { updatedAt?: string }).updatedAt;
-    if (res.status !== 200 || !v) throw new Error(`Cửa gác: không đọc được phiên bản hiện hành ${own} → ${res.status}`);
-    version = v;
-  }
-  return { ...(body as Record<string, unknown>), expectedUpdatedAt: version };
+// Ngữ cảnh cho mẫu bất đồng bộ (dùng chung cho cửa gác cách ly và cửa gác sửa một phần).
+export function sampleCtx(app: App, fx: GateFixture, url: string): SampleCtx {
+  return {
+    app,
+    url,
+    currentVersion: async () => {
+      const bare = url.split('?')[0]!;
+      const id = [...bare.matchAll(UUID_RE)].pop()?.[0];
+      const owner = [fx.a, fx.b].find((o) => id && Object.values(o.ids).includes(id));
+      if (!owner) return new Date(0).toISOString();
+      const own = bare.replace(/\/orgs\/[^/]+\//, `/orgs/${owner.orgId}/`);
+      const res = await request(app).get(own).set(bearer(owner.owner));
+      const v = (res.body as { updatedAt?: string }).updatedAt;
+      if (res.status !== 200 || !v) throw new Error(`Cửa gác: không đọc được phiên bản hiện hành ${own} → ${res.status}`);
+      return v;
+    },
+  };
 }
 
 // Các đường dẫn trường "…Id"/"…Ids" trong thân và tham số truy vấn của một route (vd "lines[].addons[].serviceId").
@@ -345,8 +357,7 @@ function fill(route: AnyRoute, ids: Record<string, string>): string {
   })}`;
 }
 
-async function send(app: App, route: AnyRoute, path: string, headers: Record<string, string>, body: unknown, fx?: GateFixture) {
-  if (fx) body = await resolveBody(app, fx, path, body);
+async function send(app: App, route: AnyRoute, path: string, headers: Record<string, string>, body: unknown) {
   const req = request(app)[route.method](path);
   for (const [k, v] of Object.entries(headers)) req.set(k, v);
   // Luôn kèm khoá chống gửi trùng mới: đường bắt buộc khoá không bị chặn sớm ở 400 thay vì tới câu tra cứu.
@@ -436,13 +447,14 @@ export async function runIsolationGate(
       record(report.crossId, false, `${key(r)}: thiếu thân yêu cầu mẫu trong Samples`);
       continue;
     }
-    const ids = { ...fx.a.ids, orgId: fx.b.orgId };
-    const res = await send(app, r, fill(r, ids), bearer(fx.b.owner), sample ? sample(fx.b) : {}, fx);
+    const url = fill(r, { ...fx.a.ids, orgId: fx.b.orgId });
+    const res = await send(app, r, url, bearer(fx.b.owner), sample ? await sample(fx.b, sampleCtx(app, fx, url)) : {});
     record(report.crossId, res.status === 404, `${key(r)} với id của A → ${res.status}`);
   }
   // 6. Mọi đường xem của B (đúng id của B) không được chứa dữ liệu nào của A.
   for (const r of orgRoutes.filter((x) => x.method === 'get')) {
-    const res = await send(app, r, fill(r, fx.b.ids), bearer(fx.b.owner), samples[key(r)]?.(fx.b));
+    const url = fill(r, fx.b.ids);
+    const res = await send(app, r, url, bearer(fx.b.owner), await samples[key(r)]?.(fx.b, sampleCtx(app, fx, url)));
     const text = JSON.stringify(res.body ?? '');
     const leaked = secretsOfA.filter((s) => text.includes(s));
     record(report.leak, leaked.length === 0, `${key(r)} lộ ${leaked.length} giá trị của A`);
@@ -461,8 +473,11 @@ export async function runIsolationGate(
     ];
     const covered = new Set<string>();
     for (const { make, url } of bases) {
-      const base = make(fx.b);
-      const baseRes = await send(app, r, url, bearer(fx.b.owner), base, fx);
+      // Dựng lại thân TRƯỚC MỖI lần gửi: mẫu gốc thành công có thể đổi phiên bản bản ghi (updatedAt) — thân cũ sẽ bị 409 vì
+      // lệch phiên bản ở cả mã của A lẫn mã bịa, và phép này không còn đo điều kiện tổ chức nữa.
+      const build = () => Promise.resolve(make(fx.b, sampleCtx(app, fx, url)));
+      const base = await build();
+      const baseRes = await send(app, r, url, bearer(fx.b.owner), base);
       record(report.refBase, baseRes.status >= 200 && baseRes.status < 300, `${key(r)} mẫu gốc → ${baseRes.status} ${JSON.stringify(baseRes.body).slice(0, 160)}`);
       for (const path of refFieldPaths(r)) {
         const segs = splitPath(path);
@@ -472,8 +487,8 @@ export async function runIsolationGate(
         // Thay mã của B ở trường này bằng (a) mã thật của A, (b) một mã bịa không tồn tại.
         // Đúng = hai phản hồi GIỐNG HỆT nhau (cùng mã trạng thái, cùng nội dung sau khi che mã vừa gửi):
         // khác nhau nghĩa là máy chủ để lộ "A có bản ghi này" hoặc trả dữ liệu của A.
-        const swapTo = (pick: (k: string) => string) => {
-          const body = structuredClone(base);
+        const swapIn = (src: Record<string, unknown>, pick: (k: string) => string) => {
+          const body = structuredClone(src);
           setPath(body, segs, (old) => {
             if (old === undefined) return undefined;
             const k = Object.keys(fx.b.ids).find((x) => fx.b.ids[x] === old);
@@ -482,9 +497,10 @@ export async function runIsolationGate(
           });
           return body;
         };
+        const swapTo = (pick: (k: string) => string) => swapIn(base, pick);
         const fake = randomUUID();
-        const real = await send(app, r, url, bearer(fx.b.owner), swapTo((k) => fx.a.ids[k] ?? ''), fx);
-        const probe = await send(app, r, url, bearer(fx.b.owner), swapTo(() => fake), fx);
+        const real = await send(app, r, url, bearer(fx.b.owner), swapIn(await build(), (k) => fx.a.ids[k] ?? ''));
+        const probe = await send(app, r, url, bearer(fx.b.owner), swapIn(await build(), () => fake));
         const norm = (res: request.Response, sent: string[]) => {
           let t = JSON.stringify(res.body ?? '');
           for (const x of sent) t = t.split(x).join('<MÃ>');
@@ -524,7 +540,8 @@ export async function runIsolationGate(
   // 8. GIỮ: chủ A dùng thật phải được trả lời đúng nghĩa — xem: 200; gửi thân rỗng: 400 (lỗi dữ liệu,
   //    không phải 404/409/500); xoá: 2xx. Phép này chạy cuối vì có thể xoá thật.
   for (const r of orgRoutes) {
-    const body = r.method === 'get' ? samples[key(r)]?.(fx.a) : {};
+    const url = fill(r, fx.a.ids);
+    const body = r.method === 'get' ? await samples[key(r)]?.(fx.a, sampleCtx(app, fx, url)) : {};
     const res = await send(app, r, fill(r, fx.a.ids), bearer(fx.a.owner), body);
     const want = r.method === 'get' ? [200] : r.method === 'delete' ? [200, 204] : [400];
     record(report.keep, want.includes(res.status), `${key(r)} → ${res.status} (cần ${want.join('/')})`);

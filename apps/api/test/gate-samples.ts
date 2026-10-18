@@ -1,6 +1,6 @@
 // Mẫu dữ liệu cho cửa gác cách ly (dùng chung cho tenant-isolation.test.ts và gate-mutants.test.ts).
 import { randomUUID } from 'node:crypto';
-import { CURRENT_VERSION, type GateOrg, type RefSamples, type RefVariants, type Samples } from './gate';
+import type { GateOrg, RefSamples, RefVariants, Samples } from './gate';
 import type { PartialSamples } from './gate-partial';
 
 // Thân yêu cầu hợp lệ cho các đường POST/PATCH có tham số id (khoá: "METHOD /đường").
@@ -19,8 +19,9 @@ export const SAMPLES: Samples = {
   'PATCH /orgs/:orgId/customers/:customerId': () => ({ fullName: 'Đổi tên thử' }),
   'PATCH /orgs/:orgId/appointments/:appointmentId': () => ({ notes: 'Sửa thử' }),
   'POST /orgs/:orgId/appointments/:appointmentId/status': () => ({ to: 'CANCELLED', reason: 'Thử cửa gác' }),
-  // expectedUpdatedAt BẮT BUỘC: cửa gác thay dấu CURRENT_VERSION bằng updatedAt thật của hợp đồng trong đường dẫn.
-  'PATCH /orgs/:orgId/contracts/:contractId': () => ({ expectedUpdatedAt: CURRENT_VERSION, notes: 'Sửa thử' }),
+  // expectedUpdatedAt BẮT BUỘC: mẫu bất đồng bộ đọc updatedAt hiện hành của hợp đồng TRONG ĐƯỜNG DẪN ngay trước khi gửi
+  // (phép id chéo: hợp đồng của A, đọc bằng chủ A) — để chỉ còn điều kiện tổ chức chặn lệnh, không phải lệch phiên bản.
+  'PATCH /orgs/:orgId/contracts/:contractId': async (_o, req) => ({ expectedUpdatedAt: await req.currentVersion(), notes: 'Sửa thử' }),
   'POST /orgs/:orgId/contracts/:contractId/lines': () => ({
     kind: 'CUSTOM',
     name: 'Phát sinh thử',
@@ -147,8 +148,8 @@ export const REF_SAMPLES: RefSamples = {
   // Hợp đồng DỊCH VỤ của fixture; trường chỉ hợp lệ với hợp đồng khoá học (lines[].courseClassId, rulesTemplateId) đo ở
   // REF_VARIANTS (đường dẫn trỏ hợp đồng khoá học).
   'PATCH /orgs/:orgId/contracts/:contractId': [
-    (o) => ({ expectedUpdatedAt: CURRENT_VERSION, lines: [packageLine(o), serviceLine(o)] }),
-    (o) => ({ expectedUpdatedAt: CURRENT_VERSION, termsTemplateId: o.ids.textId }),
+    async (o, req) => ({ expectedUpdatedAt: await req.currentVersion(), lines: [packageLine(o), serviceLine(o)] }),
+    async (o, req) => ({ expectedUpdatedAt: await req.currentVersion(), termsTemplateId: o.ids.textId }),
   ],
   'POST /orgs/:orgId/contracts/:contractId/lines': [packageLine, serviceLine],
   'GET /orgs/:orgId/staff': [(o) => ({ tierId: o.ids.tierId })],
@@ -228,8 +229,8 @@ export const REF_VARIANTS: RefVariants = {
     {
       pathIds: onCourseContract,
       samples: [
-        (o) => ({
-          expectedUpdatedAt: CURRENT_VERSION,
+        async (o, req) => ({
+          expectedUpdatedAt: await req.currentVersion(),
           termsTemplateId: o.ids.textId,
           rulesTemplateId: o.ids.rulesTextId,
           lines: [{ kind: 'COURSE', courseClassId: o.ids.classId }, customLine],
@@ -330,8 +331,8 @@ export const PARTIAL_SAMPLES: PartialSamples = {
   },
   // Chạy trên hợp đồng KHOÁ HỌC nháp (nhận cả termsTemplateId lẫn rulesTemplateId — nội quy chỉ cho hợp đồng khoá học).
   'PATCH /orgs/:orgId/contracts/:contractId': {
-    full: (c) => ({
-      expectedUpdatedAt: CURRENT_VERSION,
+    full: async (c, req) => ({
+      expectedUpdatedAt: await req.currentVersion(),
       discount: 1000,
       depositRequired: 20000,
       eventDate: '2027-01-15T02:00:00.000Z',
@@ -339,7 +340,7 @@ export const PARTIAL_SAMPLES: PartialSamples = {
       termsTemplateId: c.o.ids.textId,
       rulesTemplateId: c.o.ids.rulesTextId,
     }),
-    one: () => ({ expectedUpdatedAt: CURRENT_VERSION, notes: 'Ghi chú đổi' }),
+    one: async (_c, req) => ({ expectedUpdatedAt: await req.currentVersion(), notes: 'Ghi chú đổi' }),
     ids: (c) => ({ contractId: c.o.ids.courseContractId ?? '' }),
     skip: {
       lines: 'gửi lines là THAY toàn bộ dòng (mã dòng mới) — không phải sửa một phần; cửa gác cách ly đã đo lines',

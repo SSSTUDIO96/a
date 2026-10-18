@@ -18,7 +18,7 @@ import type { AnyRoute } from '../src/http/route';
 import { fieldsFilledWhenMissing } from '../src/http/partial';
 import type { Db } from '../src/lib/prisma';
 import { grantPlatformAdmin } from '../src/scripts/grant-platform-admin';
-import { resolveBody, type GateCheck, type GateFixture, type GateOrg } from './gate';
+import { sampleCtx, type GateCheck, type GateFixture, type GateOrg, type SampleCtx } from './gate';
 import { bearer, registerUser, type App, type TestUser } from './helpers';
 
 export interface PartialCtx {
@@ -31,9 +31,10 @@ export interface PartialCtx {
 
 export interface PartialSample {
   // Thân đầy đủ: mọi trường của thân yêu cầu, giá trị KHÁC mặc định khi tạo.
-  full: (c: PartialCtx) => Record<string, unknown>;
+  // Có thể bất đồng bộ: `req.currentVersion()` đọc updatedAt hiện hành của bản ghi ngay trước khi gửi (PATCH hợp đồng).
+  full: (c: PartialCtx, req: SampleCtx) => Record<string, unknown> | Promise<Record<string, unknown>>;
   // Thân chỉ một trường (giá trị khác thân đầy đủ). Trường này (và chỉ nó) được phép đổi trong phản hồi.
-  one: (c: PartialCtx) => Record<string, unknown>;
+  one: (c: PartialCtx, req: SampleCtx) => Record<string, unknown> | Promise<Record<string, unknown>>;
   // Trường của thân CỐ Ý không có trong mẫu đầy đủ, kèm lý do (vd. trường chỉ để báo lỗi).
   skip?: Record<string, string>;
   // Trường trong phản hồi được phép đổi theo trường vừa gửi (giá trị suy ra), kèm lý do.
@@ -159,13 +160,6 @@ export async function runPartialPatchGate(
       record(report.partialKeep, false, `${k}: chưa có mẫu sửa một phần (PARTIAL_SAMPLES)`);
       continue;
     }
-    const full = s.full(ctx);
-    const one = s.one(ctx);
-    const missing = topFields(r).filter((f) => !(f in full) && !(s.skip && f in s.skip));
-    if (missing.length > 0) {
-      record(report.partialKeep, false, `${k}: mẫu đầy đủ thiếu trường ${missing.join(', ')} (thêm vào mẫu hoặc khai skip kèm lý do)`);
-      continue;
-    }
     const who = s.as === 'admin' ? admin : fx.b.owner;
     const missingParam = [...r.path.matchAll(/:([A-Za-z]+)/g)].map((m) => m[1] ?? '').find((n) => !ids[n as keyof typeof ids] && !s.ids?.(ctx)[n]);
     if (missingParam) {
@@ -173,12 +167,20 @@ export async function runPartialPatchGate(
       continue;
     }
     const path = fillPath(r, { ...ids, ...(s.ids?.(ctx) ?? {}) });
-    const r1 = await request(app).patch(path).set(bearer(who)).send((await resolveBody(app, fx, path, full)) as object);
+    // Mẫu dựng NGAY TRƯỚC lần gửi của nó (bước 1 đổi updatedAt; mẫu "một trường" phải đọc phiên bản sau bước 1).
+    const full = await s.full(ctx, sampleCtx(app, fx, path));
+    const missing = topFields(r).filter((f) => !(f in full) && !(s.skip && f in s.skip));
+    if (missing.length > 0) {
+      record(report.partialKeep, false, `${k}: mẫu đầy đủ thiếu trường ${missing.join(', ')} (thêm vào mẫu hoặc khai skip kèm lý do)`);
+      continue;
+    }
+    const r1 = await request(app).patch(path).set(bearer(who)).send(full);
     if (r1.status !== 200) {
       record(report.partialKeep, false, `${k}: thân đầy đủ → ${r1.status} ${JSON.stringify(r1.body).slice(0, 200)}`);
       continue;
     }
-    const r2 = await request(app).patch(path).set(bearer(who)).send((await resolveBody(app, fx, path, one)) as object);
+    const one = await s.one(ctx, sampleCtx(app, fx, path));
+    const r2 = await request(app).patch(path).set(bearer(who)).send(one);
     if (r2.status !== 200) {
       record(report.partialKeep, false, `${k}: thân một trường → ${r2.status} ${JSON.stringify(r2.body).slice(0, 200)}`);
       continue;

@@ -60,7 +60,11 @@ export async function loadStaffMap(db: Prisma.TransactionClient, orgId: string, 
 // Cảnh báo lúc tư vấn (không chặn lưu nháp): thợ đã có ca trùng giờ, có ca khác trong ngày, hoặc đang được giữ ở hợp đồng nháp khác.
 export interface StaffWarning {
   membershipId: string;
-  level: 'OVERLAP' | 'SAME_DAY';
+  // OVERLAP (đỏ, chặn xác nhận): trùng giờ với lịch ĐÃ chiếm giờ thật, hoặc với dòng khác của chính hợp đồng (sameContract).
+  // SAME_DAY (vàng): có lịch thật khác trong cùng ngày.
+  // DRAFT_HOLD (xám, KHÔNG chặn): thợ chỉ đang được giữ chỗ ở hợp đồng NHÁP khác — nháp không chiếm giờ (nhật ký quyết định
+  // 15:14, nhắc lại 22:10; biên bản nghiệm thu web 2, T1). draftHolds[].overlaps cho biết trùng giờ hay chỉ cùng ngày.
+  level: 'OVERLAP' | 'SAME_DAY' | 'DRAFT_HOLD';
   overlaps: AvailabilityShift[];
   sameDay: AvailabilityShift[];
   draftHolds: DraftHold[];
@@ -105,9 +109,8 @@ export async function staffWarnings(
     });
     const warnings: StaffWarning[] = [];
     for (const a of items) {
-      // Chỉ bị giữ chỗ ở hợp đồng nháp khác cũng cảnh báo: trùng giờ → OVERLAP, cùng ngày → SAME_DAY.
-      const level =
-        a.level !== 'FREE' ? a.level : a.draftHolds.some((h) => h.overlaps) ? 'OVERLAP' : a.draftHolds.length > 0 ? 'SAME_DAY' : null;
+      // Mức theo lịch THẬT; chỉ bị giữ chỗ ở hợp đồng nháp khác → DRAFT_HOLD (nhắc, không chặn — xác nhận vẫn được).
+      const level = a.level !== 'FREE' ? a.level : a.draftHolds.length > 0 ? 'DRAFT_HOLD' : null;
       if (level) {
         warnings.push({ membershipId: a.membershipId, level, overlaps: a.overlaps, sameDay: a.sameDay, draftHolds: a.draftHolds, sameContract: [] });
       }

@@ -4,6 +4,7 @@ import type {
   ContractAddLineResult,
   ContractBody,
   ContractDetail,
+  ContractQuoteBody,
   ContractLineInput,
   ContractListQuery,
   ContractQuote,
@@ -18,8 +19,9 @@ import type {
 
 // Hợp đồng: apps/api/src/modules/contracts/*. Giao diện không tự tính tiền — luôn lấy từ quote hoặc hợp đồng đã lưu.
 
-// Xem trước bảng tính, không ghi gì. Cùng thân với lệnh tạo. Huỷ được bằng signal (useQuote dùng).
-export function quoteContract(orgId: string, body: ContractBody, signal?: AbortSignal) {
+// Xem trước bảng tính, không ghi gì. Cùng thân với lệnh tạo (+ excludeContractId khi sửa hợp đồng đã lưu).
+// Huỷ được bằng signal (useQuote dùng).
+export function quoteContract(orgId: string, body: ContractQuoteBody, signal?: AbortSignal) {
   return api.post<ContractQuote>(orgPath(orgId, '/contracts/quote'), body, { signal });
 }
 

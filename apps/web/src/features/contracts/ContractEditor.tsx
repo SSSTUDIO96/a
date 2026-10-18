@@ -14,7 +14,7 @@ import { errorKind, fieldErrors, userMessage } from '../../api/errors';
 import { newIdempotencyKey } from '../../api/idempotency';
 import { getCustomer } from '../../api/schedule';
 import { useQuote } from '../../api/useQuote';
-import type { AppointmentConflict, ContractUpdateInput, Service, ServicePackage } from '../../api/types';
+import type { AppointmentConflict, ContractQuoteBody, ContractUpdateInput, Service, ServicePackage } from '../../api/types';
 import { NotFoundView, useOnline } from '../../layout/ErrorStates';
 import { PageHeader } from '../../layout/PageHeader';
 import { useBreakpoint } from '../../layout/useBreakpoint';
@@ -54,9 +54,8 @@ import {
   isStaleVersion,
   liveErrors,
   lineInput,
-  localOverlaps,
   matchQuote,
-  mergeWarnings,
+  displayWarnings,
   moneyFieldOf,
   newPackageLine,
   newLineKey,
@@ -72,6 +71,7 @@ import {
   weekdayShort,
   zonedIso,
   type ContractDraft,
+  type ContractPatchFields,
   type CustomDraft,
   type ContractDetail,
   type DraftLine,
@@ -227,7 +227,9 @@ export function ContractEditor({ orgId, slug, tz, has, contractId }: ContractEdi
       }),
     [draft, cat],
   );
-  const quoteBody = draftMode && Object.keys(localErrors).length === 0 ? buildBody(draft, tz) : null;
+  const baseBody = draftMode && Object.keys(localErrors).length === 0 ? buildBody(draft, tz) : null;
+  // Hợp đồng đã lưu: máy chủ bỏ giữ chỗ / lịch của CHÍNH nó khỏi cảnh báo thợ.
+  const quoteBody: ContractQuoteBody | null = baseBody && detail ? { ...baseBody, excludeContractId: detail.id } : baseBody;
   const quote = useQuote(draftMode ? orgId : null, quoteBody);
   const quoteKey = quoteBody ? JSON.stringify(quoteBody) : null;
   // Bảng tính lỗi với dữ liệu đang nhập (vd giảm giá lớn hơn tạm tính): KHÔNG hiện số của lần tính trước ở thẻ tổng /
@@ -276,16 +278,20 @@ export function ContractEditor({ orgId, slug, tz, has, contractId }: ContractEdi
   const warnings = useMemo(() => {
     const out = new Map<string, LineWarning[]>();
     if (!draftMode) return out;
-    const local = localOverlaps(draft, subjectName);
+    // Trùng giữa hai dòng của hợp đồng này: máy chủ so (staffWarnings[].sameContract) — web không tự so giờ nữa.
+    const lineLabel = (index: number, name: string) => {
+      const o = draft.lines[index];
+      return o && isPlaced(o) ? (subjectName(o.subjectId) ?? o.name) : name;
+    };
     draft.lines.forEach((l, i) => {
       if (!isPlaced(l)) return;
-      const merged = mergeWarnings(serverWarnings(views[i]?.staffWarnings, detail?.id ?? null), local.get(l.key) ?? [], tz).filter((w) =>
+      const shown = displayWarnings(serverWarnings(views[i]?.staffWarnings, lineLabel), tz).filter((w) =>
         l.staff.some((s) => s.membershipId === w.membershipId),
       );
-      out.set(l.key, merged);
+      out.set(l.key, shown);
     });
     return out;
-  }, [draft, views, detail, draftMode, tz, subjectName]);
+  }, [draft, views, draftMode, tz, subjectName]);
   const blockedReason = confirmBlockedReason(overlapLineCount(warnings));
   const gapText = draftMode && ab.canEdit ? staffGapText(staffGaps(draft)) : null;
 
@@ -378,9 +384,7 @@ export function ContractEditor({ orgId, slug, tz, has, contractId }: ContractEdi
   }
 
   // Thân PATCH: kèm updatedAt của bản đang sửa để máy chủ từ chối (409 STALE_VERSION) khi bản đã bị sửa nơi khác.
-  // Lớp API (src/api/types.ts) chưa khai expectedUpdatedAt — phiếu vướng; ghép tại đây.
-  const withVersion = (d: ContractDetail, body: ContractUpdateInput): ContractUpdateInput =>
-    ({ ...body, expectedUpdatedAt: d.updatedAt }) as ContractUpdateInput;
+  const withVersion = (d: ContractDetail, body: ContractPatchFields): ContractUpdateInput => ({ ...body, expectedUpdatedAt: d.updatedAt });
 
   async function save(): Promise<ContractDetail | null> {
     setShowErrors(true);

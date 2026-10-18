@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { MAX_INSTALLMENTS, PAYMENT_KINDS, PAYMENT_METHODS } from '@makeup/shared';
+import { CONTRACT_KIND_KEYS, MAX_INSTALLMENTS, PAYMENT_KINDS, PAYMENT_METHODS } from '@makeup/shared';
 import { MAX_MONEY_VND, MONEY_TOO_LARGE_MESSAGE } from '../../lib/money';
 
 // Không âm thầm bỏ trường lạ: gửi nhầm thì báo rõ (cùng mẫu với module hợp đồng).
@@ -78,9 +78,12 @@ export const LedgerQuery = z
   })
   .superRefine(checkPeriod);
 
+// Báo cáo doanh thu (BAN-VE-C3 mục 1.5): lọc theo loại hợp đồng; nhóm theo tháng, hợp đồng, loại, nhóm khoá, khoá.
+export const REVENUE_GROUP_BY = ['month', 'contract', 'kind', 'courseGroup', 'course'] as const;
 export const RevenueQuery = z
   .object({
     ...Period,
-    groupBy: z.enum(['month', 'contract']).default('month'),
+    kind: z.enum(CONTRACT_KIND_KEYS).optional(),
+    groupBy: z.enum(REVENUE_GROUP_BY).default('month'),
   })
   .superRefine(checkPeriod);

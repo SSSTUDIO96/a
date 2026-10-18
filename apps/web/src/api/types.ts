@@ -545,8 +545,16 @@ export type ContractBody =
   | (ContractBodyFields & { customerId: string; newCustomer?: never })
   | (ContractBodyFields & { newCustomer: NewCustomerInput; customerId?: never });
 
+// Xem trước (quote): thân như tạo, thêm excludeContractId = hợp đồng đang sửa — máy chủ bỏ giữ chỗ nháp và lịch của
+// CHÍNH hợp đồng đó khỏi cảnh báo thợ (contracts/schemas.ts QuoteBodySchema).
+export type ContractQuoteBody = ContractBody & { excludeContractId?: string };
+
 // Nháp: sửa mọi thứ (lines = thay toàn bộ). Đã xác nhận: chỉ sửa notes.
+// expectedUpdatedAt BẮT BUỘC = updatedAt của bản đang sửa; lệch bản hiện hành → 409 CONFLICT,
+// details { reason: 'STALE_VERSION', currentUpdatedAt, expectedUpdatedAt } (biên bản web 2, T2).
+// Sửa nháp hạ tổng dưới số đã thu → 409, details { reason: 'TOTAL_BELOW_PAID', paid, newTotal, total }.
 export interface ContractUpdateInput {
+  expectedUpdatedAt: IsoDateTime;
   lines?: ContractLineInput[];
   discount?: Vnd;
   depositRequired?: Vnd;
@@ -600,13 +608,15 @@ export interface ContractLineView<Id extends string | null = string> {
   perKmAmount: Vnd | null;
   note: string | null;
   addedAfterConfirm: boolean;
+  // Lúc thêm dòng (dòng đã lưu); bảng tính xem trước (quote) chưa ghi nên null.
+  createdAt: IsoDateTime | null;
   voidedAt: IsoDateTime | null;
   voidReason: string | null;
   // Thợ phụ trách dự kiến, thợ chính đứng trước. Dòng không có thợ (dịch vụ phụ, phụ phí, phí di chuyển...) → [].
   staff: ContractLineStaff[];
   // Cảnh báo lúc tư vấn (không chặn lưu nháp); thợ rảnh thì không có mục nào.
   staffWarnings: StaffWarning[];
-  // Chỉ dòng TRAVEL của bảng tính xem trước (quote) có; dòng đã lưu luôn null (database chưa lưu bán kính/bậc đã dùng).
+  // Dòng TRAVEL: bảng tính xem trước có; dòng đã lưu dựng lại từ số liệu đã chụp (dòng lưu trước khi có ảnh chụp → null).
   travelBreakdown: TravelBreakdown | null;
 }
 
@@ -629,6 +639,19 @@ export interface StaffWarning {
   overlaps: AvailabilityShift[];
   sameDay: AvailabilityShift[];
   draftHolds: DraftHold[];
+  // Trùng giờ với dòng KHÁC của CHÍNH hợp đồng này (một thợ ở hai dòng chồng giờ) — luôn mức OVERLAP.
+  sameContract: SameContractHit[];
+}
+
+// contracts/present.ts — SameContractHit.
+export interface SameContractHit {
+  // id dòng đã lưu; null ở bảng tính xem trước.
+  lineId: string | null;
+  // Vị trí dòng gốc trong mảng `lines` của phản hồi (từ 0).
+  lineIndex: number;
+  lineName: string;
+  scheduledStart: IsoDateTime;
+  scheduledEnd: IsoDateTime;
 }
 
 // contracts/sheet.ts — TravelBreakdown: số liệu để in dòng công thức phí di chuyển.

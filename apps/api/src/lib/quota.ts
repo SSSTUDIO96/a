@@ -198,7 +198,9 @@ export function bytesToMb(bytes: number | bigint): number {
 // - appointmentsPerMonth: lịch TẠO trong tháng dương lịch hiện tại theo múi giờ của tổ chức, mọi loại, kể cả đã huỷ
 //   (để tạo-rồi-huỷ không lách được giới hạn).
 // - storageMb: tổng dung lượng tệp chưa xoá (UPLOADING + READY) — tệp đang tải lên đã giữ chỗ.
-// - students / courses: CHƯA CÓ bảng — gọi tới là lỗi lắp ráp, bổ sung bộ đếm khi module học viện ra đời.
+// - courses: khoá học CHƯA LƯU TRỮ (archived_at IS NULL) — lưu trữ khoá là trả chỗ (BAN-VE-C3 mục 1.0).
+// - students: số KHÁCH KHÁC NHAU đang có ghi danh ACTIVE — một học viên học nhiều lớp chỉ tốn một chỗ; huỷ ghi danh
+//   cuối cùng của học viên là trả chỗ. Bên gọi (contracts/enroll.ts) gọi SAU khi ghi danh, adding = 0.
 export async function getUsage(
   tx: Prisma.TransactionClient,
   orgId: string,
@@ -223,9 +225,15 @@ export async function getUsage(
       });
       return bytesToMb(agg._sum.sizeBytes ?? 0n);
     }
-    case 'students':
     case 'courses':
-      throw new Error(`Chưa có bộ đếm "${kind}" — module học viện chưa có bảng; bổ sung trong lib/quota.ts khi tạo bảng`);
+      return tx.course.count({ where: { organizationId: orgId, archivedAt: null } });
+    case 'students': {
+      const rows = await tx.$queryRaw<{ n: number }[]>`
+        SELECT count(DISTINCT customer_id)::int AS n
+        FROM enrollments
+        WHERE organization_id = ${orgId}::uuid AND status = 'ACTIVE'`;
+      return rows[0]?.n ?? 0;
+    }
   }
 }
 

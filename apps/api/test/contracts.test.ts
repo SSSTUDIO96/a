@@ -879,7 +879,9 @@ describe('thợ phụ trách, cảnh báo trùng giờ, lên lịch khi xác nh�
     const w = draft.lines[0].staffWarnings as { membershipId: string; level: string }[];
     expect(w.map((x) => [x.membershipId, x.level])).toEqual([[m1, 'OVERLAP']]);
     const hold = await q('2027-05-10T03:00:00Z', '2027-05-10T05:00:00Z', m2);
-    expect(hold[0]).toMatchObject({ membershipId: m2, level: 'OVERLAP' });
+    // Giữ chỗ ở hợp đồng NHÁP khác: mức DRAFT_HOLD (không chặn) — trước đây khẳng định OVERLAP; đổi theo quyết định
+    // điều phối T1 (biên bản web 2): nháp không chiếm giờ, OVERLAP chỉ cho lịch thật và trùng giữa các dòng cùng hợp đồng.
+    expect(hold[0]).toMatchObject({ membershipId: m2, level: 'DRAFT_HOLD' });
     expect(hold[0]!.draftHolds).toEqual([expect.objectContaining({ contractId: draft.id, overlaps: true })]);
   });
 
@@ -888,7 +890,7 @@ describe('thợ phụ trách, cảnh báo trùng giờ, lên lịch khi xác nh�
     const line = staffLine('2027-07-01T01:00:00Z', '2027-07-01T03:00:00Z', [{ membershipId: m2, role: 'PRIMARY' }]);
     const draft = (await create(A.owner, A.orgId, { customerId: customerA, lines: [line] }).expect(201)).body;
     const plain = (await quote(A.owner, A.orgId, { customerId: customerA, lines: [line] }).expect(200)).body.lines[0].staffWarnings;
-    expect(plain).toEqual([expect.objectContaining({ membershipId: m2, level: 'OVERLAP', draftHolds: [expect.objectContaining({ contractId: draft.id })] })]);
+    expect(plain).toEqual([expect.objectContaining({ membershipId: m2, level: 'DRAFT_HOLD', draftHolds: [expect.objectContaining({ contractId: draft.id })] })]);
     const self = (await quote(A.owner, A.orgId, { customerId: customerA, excludeContractId: draft.id, lines: [line] }).expect(200)).body;
     expect(self.lines[0].staffWarnings).toEqual([]);
     const bad = await quote(A.owner, A.orgId, { customerId: customerA, excludeContractId: randomUUID(), lines: [line] });
@@ -897,6 +899,24 @@ describe('thợ phụ trách, cảnh báo trùng giờ, lên lịch khi xác nh�
     const other = (await create(B.owner, B.orgId, { customerId: customerB, lines: [{ kind: 'CUSTOM', name: 'X', unitPrice: 1000, quantity: 1 }] }).expect(201)).body;
     const cross = await quote(A.owner, A.orgId, { customerId: customerA, excludeContractId: other.id, lines: [line] });
     expect([cross.status, cross.body.error.message]).toEqual([404, bad.body.error.message]);
+  });
+
+  // Biên bản web 2, T1 (quyết định điều phối 22:10): giữ chỗ nháp chỉ nhắc, KHÔNG chặn — màn và máy chủ cùng một luật.
+  it('T1: hai hợp đồng NHÁP cùng thợ cùng giờ → cảnh báo DRAFT_HOLD (không phải OVERLAP); xác nhận bản thứ nhất được; sau đó bản thứ hai thành OVERLAP thật', async () => {
+    const line = staffLine('2027-09-01T23:00:00Z', '2027-09-02T00:00:00Z', [{ membershipId: m1, role: 'PRIMARY' }]);
+    const a = (await create(A.owner, A.orgId, { customerId: customerA, lines: [line] }).expect(201)).body;
+    const b = (await create(A.owner, A.orgId, { customerId: customerA, lines: [line] }).expect(201)).body;
+    const levels = (c: { lines: { staffWarnings: { level: string }[] }[] }) => c.lines[0]!.staffWarnings.map((w) => w.level);
+    const aView = (await request(app).get(url(A.orgId, `/${a.id}`)).set(bearer(A.owner)).expect(200)).body;
+    expect(levels(aView)).toEqual(['DRAFT_HOLD']);
+    expect(aView.lines[0].staffWarnings[0].draftHolds).toEqual([expect.objectContaining({ contractId: b.id, overlaps: true })]);
+    const r = await confirm(a.id);
+    console.log(`[T1 giữ chỗ nháp] mức cảnh báo = ${levels(aView).join(',')}, máy chủ xác nhận → ${r.status}`);
+    expect(r.status).toBe(200);
+    // Bản kia giờ trùng với LỊCH THẬT vừa sinh → đỏ, và xác nhận bị 409 (đúng luật chiếm giờ).
+    const bView = (await request(app).get(url(A.orgId, `/${b.id}`)).set(bearer(A.owner)).expect(200)).body;
+    expect(levels(bView)).toEqual(['OVERLAP']);
+    expect((await confirm(b.id)).status).toBe(409);
   });
 
   // Mục 2: một thợ ở hai dòng chồng giờ trong cùng hợp đồng → đỏ ngay ở xem trước (trước đây chỉ lộ khi xác nhận bị 409).
