@@ -1,6 +1,6 @@
 // Chế độ C trên điện thoại (≤ 640px) — xoay trục: hàng = 7 ngày, cột = thợ. Bản mẫu docs/rnd/v2-lich-C-mobile.html.
 // Ô ghi tối đa 3 giờ bắt đầu, thừa thì "+n". Ngày đang chọn tô nền; dưới lưới là danh sách ca của ngày đó (4 ca + "Xem cả ngày").
-// Trên 5 cột (kể cả "Chưa có"): chỉ phần cột thợ cuộn ngang, dừng đúng mép cột (scroll-snap).
+// Trên 5 cột (kể cả "Chưa có thợ"): chỉ phần cột thợ cuộn ngang, dừng đúng mép cột (scroll-snap).
 import { useState, type CSSProperties } from 'react';
 import type { Appointment } from '../../api/types';
 import { StatusTag } from '../../ui';
@@ -54,9 +54,10 @@ export function WeekGridCMobile({
         <div role="row" className="ws-cm__row">
           <div role="columnheader" className="ws-cm__corner" aria-label="Ngày" />
           {cols.map((lane) => (
-            <div role="columnheader" key={lane?.membershipId ?? UNASSIGNED} className="ws-cm__sh">
+            <div role="columnheader" key={lane?.membershipId ?? UNASSIGNED} className={cx('ws-cm__sh', !lane && 'is-na')}>
               <LaneAvatar lane={lane} size="xs" />
-              <span className="ws-cm__tn">{lane ? shortName(lane.name) : 'Chưa có'}</span>
+              {/* Cột ca chưa phân thợ ghi đủ "Chưa có thợ" (cột hẹp thì xuống 2 dòng, không cắt — biên bản L3). */}
+              <span className="ws-cm__tn">{lane ? shortName(lane.name) : 'Chưa có thợ'}</span>
             </div>
           ))}
         </div>

@@ -195,6 +195,38 @@ describe('mặc định chế độ C, đổi chế độ', () => {
   });
 });
 
+describe('chữ viết tắt ảnh đại diện: một người một kiểu trên mọi chỗ (biên bản cuối L2)', () => {
+  it('"Trần Khánh Linh": đầu hàng (chữ máy chủ "TL") và thẻ ca (web tự tính theo luật máy chủ) cùng là "TL" ở C, B và A', async () => {
+    const linh = staffRow('m-linh', 'Trần Khánh Linh', 'TL', 'Thợ chính');
+    const appt = a('a9', 'L-0009', '2026-10-21T06:00:00+07:00', '2026-10-21T07:00:00+07:00', [], {
+      subjectName: 'Cô dâu',
+      staff: [{ membershipId: 'm-linh', fullName: 'Trần Khánh Linh', displayName: 'Trần Khánh Linh', avatarUrl: null, role: 'PRIMARY', blockStart: '2026-10-21T06:00:00+07:00', blockEnd: '2026-10-21T07:00:00+07:00', isBlocking: true }],
+    });
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes('/appointments?')) return json(200, { items: [appt], from: '', to: '' });
+        if (url.endsWith(`/orgs/${ORG_ID}/staff`)) return json(200, { items: [linh] });
+        return json(404, { error: { code: 'NOT_FOUND', message: 'Không có', requestId: 'r' } });
+      }),
+    );
+    renderScreen(OWNER);
+    await screen.findByTestId('che-do-C');
+    const texts = () => screen.getAllByRole('img', { name: 'Trần Khánh Linh' }).map((el) => el.textContent);
+    expect(texts().length).toBeGreaterThan(0);
+    expect(new Set(texts())).toEqual(new Set(['TL']));
+    fireEvent.click(modeButton('Ngày'));
+    await screen.findByTestId('che-do-B');
+    // Chip lọc (chữ máy chủ) + thẻ ca (tự tính) + bảng thợ trong ngày.
+    expect(texts().length).toBeGreaterThanOrEqual(2);
+    expect(new Set(texts())).toEqual(new Set(['TL']));
+    fireEvent.click(modeButton('Cột thợ'));
+    await screen.findByTestId('che-do-A');
+    expect(new Set(texts())).toEqual(new Set(['TL']));
+  });
+});
+
 describe('màu ca theo nhân vật', () => {
   it('ô ca tô theo subjectName, ca không có nhân vật là "Khác" (dù tên ca có chữ "ăn hỏi"); chú thích liệt kê nhân vật thật trong tuần', async () => {
     setupServer();

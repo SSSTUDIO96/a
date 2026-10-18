@@ -1,8 +1,10 @@
 import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router';
 import { fieldErrors } from '../../api/errors';
-import { ErrorNotice, FieldError } from '../../app/ErrorNotice';
+import { ErrorNotice } from '../../app/ErrorNotice';
 import { useSession } from '../../app/session';
+import { Button, SettingRow, TextInput } from '../../ui';
+import { AuthLayout } from './AuthLayout';
 import { checkEmail, hasErrors, type FieldErrors } from './validate';
 
 type Field = 'email' | 'password';
@@ -34,55 +36,56 @@ export function LoginPage() {
   }
 
   return (
-    <main>
-      <h1>Đăng nhập</h1>
+    <AuthLayout
+      title="Đăng nhập"
+      footer={
+        <span>
+          Chưa có tài khoản? <Link to="/dang-ky">Đăng ký</Link>
+        </span>
+      }
+    >
       {restoreError ? (
-        <div>
-          <ErrorNotice error={restoreError} />
-          <button type="button" onClick={retryRestore}>
+        <div className="au-restore">
+          <ErrorNotice error={restoreError} className="au-alert" />
+          <Button size="sm" onClick={retryRestore}>
             Thử khôi phục phiên lại
-          </button>
+          </Button>
         </div>
       ) : null}
-      <form onSubmit={onSubmit} noValidate>
-        <p>
-          <label htmlFor="email">Email</label>
-          <br />
-          <input
+      <form className="au-form" onSubmit={onSubmit} noValidate>
+        <SettingRow label="Email" htmlFor="email" stack>
+          <TextInput
             id="email"
             name="email"
             type="email"
             autoComplete="email"
+            inputMode="email"
+            autoCapitalize="none"
+            spellCheck={false}
+            placeholder="ban@vidu.vn"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            aria-invalid={errors.email ? true : undefined}
-            aria-describedby={errors.email ? 'email-loi' : undefined}
+            error={errors.email}
           />
-          <FieldError id="email-loi" message={errors.email} />
-        </p>
-        <p>
-          <label htmlFor="password">Mật khẩu</label>
-          <br />
-          <input
+        </SettingRow>
+        <SettingRow label="Mật khẩu" htmlFor="password" stack>
+          <TextInput
             id="password"
             name="password"
             type="password"
             autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            aria-invalid={errors.password ? true : undefined}
-            aria-describedby={errors.password ? 'password-loi' : undefined}
+            error={errors.password}
           />
-          <FieldError id="password-loi" message={errors.password} />
-        </p>
-        <ErrorNotice error={submitError} />
-        <button type="submit" disabled={pending}>
-          {pending ? 'Đang đăng nhập…' : 'Đăng nhập'}
-        </button>
+        </SettingRow>
+        <ErrorNotice error={submitError} className="au-alert" />
+        <div className="au-submit">
+          <Button type="submit" variant="primary" block loading={pending}>
+            {pending ? 'Đang đăng nhập…' : 'Đăng nhập'}
+          </Button>
+        </div>
       </form>
-      <p>
-        Chưa có tài khoản? <Link to="/dang-ky">Đăng ký</Link>
-      </p>
-    </main>
+    </AuthLayout>
   );
 }

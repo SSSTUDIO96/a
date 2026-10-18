@@ -13,6 +13,7 @@ import {
   getCurrentSubscription,
   getEffectivePlan,
   getUsage,
+  PLAN_NOT_CONFIGURED_MESSAGE,
 } from '../src/lib/quota';
 import { addMember, createOrg, makeApp, makeDeps, registerUser, type App, type TestUser } from './helpers';
 
@@ -240,9 +241,10 @@ describe('assertQuota', () => {
       // Cất gói 'trial' (nếu có) đi trong transaction sẽ huỷ.
       await tx.subscriptionPlan.updateMany({ where: { code: 'trial' }, data: { code: `trial_cat_${randomUUID().slice(0, 6)}` } });
       const err = await caught(assertQuota(tx, orgId, 'staff'));
-      expect(err.code).toBe('INTERNAL');
+      // T2 (biên bản nghiệm thu cuối): trước đây 500 INTERNAL; nay lỗi vận hành có tên riêng, 503 NOT_CONFIGURED.
+      expect([err.code, err.status, err.name]).toEqual(['NOT_CONFIGURED', 503, 'PlanNotConfiguredError']);
       // N10 (biên bản máy chủ lát 2): lời cho người dùng studio KHÔNG chứa lệnh vận hành; lệnh nằm ở operatorHint (log máy chủ).
-      expect(err.message).toBe('Hệ thống chưa cấu hình gói dịch vụ cho tổ chức này. Vui lòng liên hệ bộ phận hỗ trợ.');
+      expect(err.message).toBe(PLAN_NOT_CONFIGURED_MESSAGE);
       expect(err.message).not.toMatch(/pnpm|seed|trial/);
       expect(JSON.stringify(err.details ?? null)).not.toMatch(/pnpm/);
       expect(err.operatorHint).toMatch(/pnpm --filter @makeup\/api platform:seed-plans -- --with-trial/);

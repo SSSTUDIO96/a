@@ -70,7 +70,7 @@ export function buildOpenApi(routes: AnyRoute[]) {
               properties: {
                 code: {
                   type: 'string',
-                  enum: ['VALIDATION_FAILED', 'UNAUTHENTICATED', 'FORBIDDEN', 'NOT_FOUND', 'CONFLICT', 'RATE_LIMITED', 'INTERNAL'],
+                  enum: ['VALIDATION_FAILED', 'UNAUTHENTICATED', 'FORBIDDEN', 'NOT_FOUND', 'CONFLICT', 'RATE_LIMITED', 'INTERNAL', 'NOT_CONFIGURED'],
                 },
                 message: { type: 'string' },
                 details: {},

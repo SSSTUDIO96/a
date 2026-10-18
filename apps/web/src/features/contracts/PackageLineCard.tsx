@@ -16,6 +16,7 @@ import {
 import {
   LOCATION_LABEL,
   LOCATION_ORDER,
+  autoEndTime,
   groupTotal,
   lineKey,
   needsTravel,
@@ -129,7 +130,14 @@ export function PackageLineCard(p: PackageLineCardProps) {
       </div>
 
       <div className="ct-rw">
-        <span className="ct-rw__l">Giờ</span>
+        <span className="ct-rw__l">
+          Giờ
+          {!locked && pkg && pkg.durationMinutes > 0 && (
+            <Tooltip
+              text={`Gõ giờ bắt đầu, giờ kết thúc tự điền theo thời lượng gói (${pkg.durationMinutes} phút). Đã sửa tay giờ kết thúc thì giữ nguyên giờ bạn gõ.`}
+            />
+          )}
+        </span>
         <div className="ct-dcr">
           <div className="ct-fl">
             <TimeInput
@@ -138,7 +146,8 @@ export function PackageLineCard(p: PackageLineCardProps) {
               aria-label="Giờ bắt đầu"
               value={line.start || null}
               disabled={locked}
-              onChange={(v) => p.onChange({ start: v ?? '' })}
+              // L1: giờ kết thúc tự điền = bắt đầu + thời lượng gói (chỉ khi ô kết thúc trống hoặc vẫn là giờ tự điền).
+              onChange={(v) => p.onChange({ start: v ?? '', end: autoEndTime(line.start, v ?? '', line.end, pkg?.durationMinutes) })}
               error={errors[lineKey(i, 'scheduledStart')]}
             />
             –

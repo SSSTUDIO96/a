@@ -1,8 +1,10 @@
 import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router';
 import { fieldErrors } from '../../api/errors';
-import { ErrorNotice, FieldError } from '../../app/ErrorNotice';
+import { ErrorNotice } from '../../app/ErrorNotice';
 import { useSession } from '../../app/session';
+import { Button, SettingRow, TextInput } from '../../ui';
+import { AuthLayout } from './AuthLayout';
 import { useRetainedIdempotencyKey } from './useRetainedIdempotencyKey';
 import { checkEmail, checkNewPassword, checkRequired, hasErrors, type FieldErrors } from './validate';
 
@@ -43,62 +45,71 @@ export function RegisterPage() {
   }
 
   return (
-    <main>
-      <h1>Đăng ký tài khoản</h1>
-      <form onSubmit={onSubmit} noValidate>
-        <p>
-          <label htmlFor="fullName">Họ tên</label>
-          <br />
-          <input
+    <AuthLayout
+      title="Đăng ký tài khoản"
+      footer={
+        <span>
+          Đã có tài khoản? <Link to="/dang-nhap">Đăng nhập</Link>
+        </span>
+      }
+    >
+      <form className="au-form" onSubmit={onSubmit} noValidate>
+        <SettingRow label="Họ tên" htmlFor="fullName" stack>
+          <TextInput
             id="fullName"
             name="fullName"
             autoComplete="name"
             maxLength={120}
+            placeholder="Nguyễn Thị Hoa"
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
-            aria-invalid={errors.fullName ? true : undefined}
-            aria-describedby={errors.fullName ? 'fullName-loi' : undefined}
+            error={errors.fullName}
           />
-          <FieldError id="fullName-loi" message={errors.fullName} />
-        </p>
-        <p>
-          <label htmlFor="email">Email</label>
-          <br />
-          <input
+        </SettingRow>
+        <SettingRow
+          label="Email"
+          htmlFor="email"
+          stack
+          tip="Dùng để đăng nhập. Chủ studio thêm bạn làm thợ cũng bằng email này."
+        >
+          <TextInput
             id="email"
             name="email"
             type="email"
             autoComplete="email"
+            inputMode="email"
+            autoCapitalize="none"
+            spellCheck={false}
+            placeholder="ban@vidu.vn"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            aria-invalid={errors.email ? true : undefined}
-            aria-describedby={errors.email ? 'email-loi' : undefined}
+            error={errors.email}
           />
-          <FieldError id="email-loi" message={errors.email} />
-        </p>
-        <p>
-          <label htmlFor="password">Mật khẩu (tối thiểu 10 ký tự)</label>
-          <br />
-          <input
+        </SettingRow>
+        <SettingRow
+          label="Mật khẩu"
+          htmlFor="password"
+          stack
+          tip="Ít nhất 10 ký tự, tối đa 72 byte (khoảng 24–72 ký tự tuỳ chữ có dấu). Một câu ngắn dễ nhớ là đủ, ví dụ: son-moi-mau-do."
+        >
+          <TextInput
             id="password"
             name="password"
             type="password"
             autoComplete="new-password"
+            placeholder="Tối thiểu 10 ký tự"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            aria-invalid={errors.password ? true : undefined}
-            aria-describedby={errors.password ? 'password-loi' : undefined}
+            error={errors.password}
           />
-          <FieldError id="password-loi" message={errors.password} />
-        </p>
-        <ErrorNotice error={submitError} />
-        <button type="submit" disabled={pending}>
-          {pending ? 'Đang tạo tài khoản…' : 'Đăng ký'}
-        </button>
+        </SettingRow>
+        <ErrorNotice error={submitError} className="au-alert" />
+        <div className="au-submit">
+          <Button type="submit" variant="primary" block loading={pending}>
+            {pending ? 'Đang tạo tài khoản…' : 'Đăng ký'}
+          </Button>
+        </div>
       </form>
-      <p>
-        Đã có tài khoản? <Link to="/dang-nhap">Đăng nhập</Link>
-      </p>
-    </main>
+    </AuthLayout>
   );
 }

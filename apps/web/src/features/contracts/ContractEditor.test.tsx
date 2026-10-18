@@ -1,11 +1,12 @@
 import { configure, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import { SYSTEM_ROLES, type Permission } from '@makeup/shared';
 import { ApiError } from '../../api/errors';
 import * as contractsApi from '../../api/contracts';
 import * as scheduleApi from '../../api/schedule';
+import * as catalogApi from '../../api/catalog';
 import { ContractEditor } from './ContractEditor';
 
 // Màn hợp đồng với tầng API giả (vi.mock): cảnh báo thợ 3 mức, chặn xác nhận khi đỏ, lỗi 400/403/409, ẩn/khoá theo quyền.
@@ -698,5 +699,87 @@ describe('đổi khách của hợp đồng nháp đã lưu', () => {
     await screen.findByText('Dòng đã chốt. Chỉ thêm phát sinh hoặc huỷ dòng kèm lý do.');
     expect(screen.queryByRole('button', { name: 'Đổi khách' })).toBeNull();
     expect(screen.getByText('Tôn Nữ Hoàng Bảo Ngọc Phương Thảo')).toBeTruthy();
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+describe('biên bản nghiệm thu cuối', () => {
+  const NO_TIME = detail('DRAFT', { lines: [line({ scheduledStart: null, scheduledEnd: null, staff: [] })] });
+  const noTimeQuote = { ...quote([]), lines: [line({ id: null, scheduledStart: null, scheduledEnd: null, staff: [], staffWarnings: [] })] };
+
+  it('N2: dòng chưa có giờ → khoá "Xác nhận hợp đồng", lý do ở tooltip; dải đỏ kể đúng dòng, bấm tên dòng cuộn tới ô giờ', async () => {
+    const scroll = vi.fn();
+    const before = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = scroll;
+    onTestFinished(() => {
+      Element.prototype.scrollIntoView = before;
+    });
+    api.getContract.mockResolvedValue(NO_TIME as never);
+    api.quoteContract.mockResolvedValue(noTimeQuote as never);
+    renderEditor(OWNER);
+    const reason =
+      'Còn 1 dòng chưa có giờ (Dòng 1 · Mẹ cô dâu · Mẹ – Trang điểm nhẹ nhàng). Nhập giờ bắt đầu và giờ kết thúc rồi mới xác nhận được — hợp đồng đã chốt phải có lịch.';
+    const btn = await screen.findByRole('button', { name: `Xác nhận hợp đồng — ${reason}` });
+    expect((btn as HTMLButtonElement).disabled).toBe(true);
+    const band = document.querySelector('[data-o="thieu-gio"]') as HTMLElement;
+    expect(band.textContent).toContain('1 dòng chưa có giờ — nhập giờ mới xác nhận được:');
+    const go = within(band).getByRole('button', { name: 'Dòng 1 · Mẹ cô dâu · Mẹ – Trang điểm nhẹ nhàng' });
+    expect(go.getAttribute('title')).toBe('Cuộn tới dòng này để nhập giờ');
+    await userEvent.click(go);
+    await waitFor(() => expect(scroll).toHaveBeenCalled());
+    const start = screen.getByLabelText('Giờ bắt đầu');
+    await waitFor(() => expect(document.activeElement).toBe(start));
+    expect(api.changeContractStatus).not.toHaveBeenCalled();
+
+    // Nhập đủ giờ → hết dải đỏ, nút bấm được.
+    await userEvent.type(start, '05:00');
+    await userEvent.type(screen.getByLabelText('Giờ kết thúc'), '06:00');
+    await waitFor(() => expect(document.querySelector('[data-o="thieu-gio"]')).toBeNull());
+    await waitFor(async () => expect(((await confirmButton()) as HTMLButtonElement).disabled).toBe(false));
+  });
+
+  it('N2: máy chủ vẫn chặn (4xx kèm mã dòng thiếu giờ — bản trên máy chủ đã khác) → dải đỏ kể dòng, đánh dấu thẻ dòng, mời tải bản mới', async () => {
+    api.getContract.mockResolvedValue(detail('DRAFT') as never);
+    api.quoteContract.mockResolvedValue(quote([]) as never);
+    api.changeContractStatus.mockRejectedValue(
+      new ApiError('VALIDATION_FAILED', 'Còn dòng chưa có giờ', 400, 'r', { reason: 'LINES_WITHOUT_TIME', lineIds: ['l1'] }),
+    );
+    renderEditor(OWNER);
+    await screen.findByText('600.000 ₫', { selector: '.ct-ln__ft b' });
+    const btn = await confirmButton();
+    await waitFor(() => expect((btn as HTMLButtonElement).disabled).toBe(false));
+    await userEvent.click(btn);
+    await waitFor(() => expect(api.changeContractStatus).toHaveBeenCalled());
+    expect(
+      await screen.findByText(
+        'Chưa xác nhận được: trên máy chủ còn 1 dòng chưa có giờ (Mẹ – Trang điểm nhẹ nhàng) — hợp đồng có thể vừa được sửa ở máy khác. Tải bản mới, nhập giờ cho dòng đó rồi xác nhận lại.',
+      ),
+    ).toBeTruthy();
+    const card = document.querySelector('[data-dong="0"]') as HTMLElement;
+    expect(within(card).getByRole('alert').textContent).toBe('Dòng này chưa có giờ — nhập giờ bắt đầu và giờ kết thúc rồi xác nhận lại.');
+    expect(screen.getByRole('button', { name: 'Tải bản mới' })).toBeTruthy();
+  });
+
+  it('L1: gõ giờ bắt đầu → giờ kết thúc tự điền theo thời lượng gói; giờ kết thúc tự gõ thì giữ nguyên', async () => {
+    vi.mocked(catalogApi).listPackages.mockImplementationOnce(async () => ({ items: [{ ...PKG_ME, durationMinutes: 120 }], page: 1, pageSize: 100, total: 1 }) as never);
+    api.getContract.mockResolvedValue(NO_TIME as never);
+    api.quoteContract.mockResolvedValue(noTimeQuote as never);
+    renderEditor(OWNER);
+    const start = await screen.findByLabelText('Giờ bắt đầu');
+    await screen.findByText(/thời lượng gói \(120 phút\)/);
+    const end = screen.getByLabelText('Giờ kết thúc') as HTMLInputElement;
+    await userEvent.type(start, '05:00');
+    await waitFor(() => expect(end.value).toBe('07:00'));
+    // Đổi giờ bắt đầu khi kết thúc vẫn là giờ tự điền → đi theo.
+    await userEvent.clear(start);
+    await userEvent.type(start, '06:30');
+    await waitFor(() => expect(end.value).toBe('08:30'));
+    // Người dùng tự gõ giờ kết thúc → đổi giờ bắt đầu không ghi đè.
+    await userEvent.clear(end);
+    await userEvent.type(end, '10:15');
+    await userEvent.clear(start);
+    await userEvent.type(start, '07:00');
+    await waitFor(() => expect((screen.getByLabelText('Giờ bắt đầu') as HTMLInputElement).value).toBe('07:00'));
+    expect(end.value).toBe('10:15');
   });
 });

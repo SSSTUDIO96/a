@@ -1,0 +1,12 @@
+/* Trạng thái đang tải ngoài khung (src/app/guards.tsx Loading). Chỉ dùng token ở src/styles/tokens.css. */
+.app-loading {
+  min-height: 60vh;
+  min-height: 60dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-8);
+  color: var(--muted);
+  font-size: 13px;
+}
+.app-loading .ui-spinner { color: var(--accent); }

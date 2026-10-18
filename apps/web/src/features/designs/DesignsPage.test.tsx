@@ -101,8 +101,9 @@ describe('Mẫu thiết kế — tạo thẻ', () => {
     const box = await screen.findByLabelText('Giá trị tự lấy từ hợp đồng');
     await waitFor(() => expect(box.textContent).toContain('Học viên Quỳnh Như'));
     expect(box.textContent).toContain('Khai giảng 03/11/2026');
-    // shd-01 có ô Logo nhưng hồ sơ chưa có logo → báo ô trống, không tự điền.
-    expect(box.textContent).toContain('Ô trống trên ảnh: Logo');
+    // shd-01 có ô Logo nhưng hồ sơ chưa có logo → báo ảnh bỏ ô logo (mẫu ẩn hẳn ô, không in ô trống), không tự điền.
+    expect(box.textContent).toContain('Chưa có logo: ảnh bỏ ô logo');
+    expect(box.textContent).not.toContain('Ô trống trên ảnh: Logo');
   });
 
   it('400 mẫu sai loại hợp đồng → lời máy chủ hiện ở ô chọn mẫu (không chỉ dải chung)', async () => {

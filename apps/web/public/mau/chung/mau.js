@@ -1,7 +1,8 @@
 /* Điền dữ liệu vào mẫu thẻ. Mỗi ô trên mẫu mang data-f="<khoá>" — khoá nào lấy từ trường nào ghi ở BAO-CAO-RND-03.md
    và packages/shared/src/design-templates.ts (SLOT_SOURCES).
    Bản chép từ docs/rnd/v3-mau-chao-mung/chung/mau.js, thêm chế độ DỮ LIỆU THẬT cho app (tham số ?that=1):
-   - ô không có tham số thì để TRỐNG (không lấy chữ mẫu của R&D, không bịa); ảnh trống thì ẩn khung ảnh;
+   - ô không có tham số thì để TRỐNG (không lấy chữ mẫu của R&D, không bịa); ảnh trống thì ẩn khung ảnh; logo trống thì
+     bỏ hẳn ô logo (kể cả vòng bọc .ld), body thêm lớp khong-logo;
    - dòng phụ `dv` ghép từ đúng các ô có giá trị (khoá học: khoa · Lớp lop; dịch vụ: nv · goi · nsk);
    - ngày trống thì các ô ngày suy ra (thứ, tháng, năm…) cũng trống.
    Không có ?that=1 thì chạy y như bản R&D (chữ mẫu) — trang bày mẫu vẫn dùng được.
@@ -52,8 +53,11 @@ D.nktCham=cham(D.nkt);
 D.conLai=D.nd.slice(D.nd.indexOf(D.cauDau)+D.cauDau.length).trim();
 document.body.classList.add(P.get('kho')==='vuong'?'vuong':'k45');
 if(P.get('ky')){const n=P.get('ky');const r=document.documentElement.style;for(let i=1;i<=4;i++){r.setProperty('--f-tay-'+i,`var(--f-ky-${n})`);r.setProperty('--tay-co-'+i,`var(--ky-co-${n})`);}}
+// Logo trống (học viện chưa có logo): ẩn HẲN ô logo — cả vòng tròn bọc ngoài (.ld) — để không in ra ô vuông / vòng tròn
+// trống và để chữ tên thương hiệu đứng giữa đúng chỗ; body có lớp khong-logo cho mẫu nào cần chỉnh thêm (biên bản L6).
+const anLogo=(el)=>{el.style.display='none';const w=el.closest('.ld');if(w)w.style.display='none';document.body.classList.add('khong-logo');};
 document.querySelectorAll('[data-f]').forEach(el=>{const v=D[el.dataset.f];
-  if(el.tagName==='IMG'){if(v)el.src=v;else{el.src=TRONG;el.style.visibility='hidden';}}
+  if(el.tagName==='IMG'){if(v)el.src=v;else{el.src=TRONG;if(el.dataset.f==='logo')anLogo(el);else el.style.visibility='hidden';}}
   else el.textContent=v==null?'':v;});
 document.querySelectorAll('[data-chat]').forEach(el=>{const parts=D.nd.match(/[^.!?]+[.!?]*/g)||[D.nd];
   const n=+el.dataset.chat||3;const g=[];parts.forEach((s,i)=>{const k=Math.min(n-1,Math.floor(i*n/parts.length));g[k]=(g[k]||'')+s;});

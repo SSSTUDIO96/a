@@ -11,16 +11,18 @@ export function avatarColorIndex(key: string): number {
   return h % 6;
 }
 
-/** Chữ viết tắt khi API không gửi: hai chữ đầu của hai tiếng cuối ("Nguyễn Thu Hà" → "TH"). */
+/**
+ * Chữ viết tắt khi API không gửi — CHÉP ĐÚNG luật máy chủ (apps/api/src/modules/staff/common.ts:5-11, initialsOf):
+ * chữ đầu của tiếng ĐẦU và tiếng CUỐI ("Trần Khánh Linh" → "TL"); một tiếng → một chữ ("Linh" → "L"); rỗng → "?".
+ * Một người chỉ có một kiểu chữ tắt trên mọi màn, dù chữ đến từ máy chủ (initials) hay tính ở web (biên bản cuối L2).
+ * Lấy theo điểm mã ([...w][0]) và viết hoa theo 'vi-VN' như máy chủ. features/customers/logic.ts có bản cùng luật.
+ */
 export function initialsOf(name: string): string {
   const words = name.trim().split(/\s+/).filter(Boolean);
-  if (words.length === 0) return '?';
-  if (words.length === 1) return words[0]!.slice(0, 2).toLocaleUpperCase('vi');
-  return words
-    .slice(-2)
-    .map((w) => w[0] ?? '')
-    .join('')
-    .toLocaleUpperCase('vi');
+  const first = words[0];
+  if (!first) return '?';
+  const last = words.length > 1 ? words[words.length - 1] : undefined;
+  return `${[...first][0] ?? ''}${last ? ([...last][0] ?? '') : ''}`.toLocaleUpperCase('vi-VN');
 }
 
 export interface AvatarProps {

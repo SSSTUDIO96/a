@@ -16,5 +16,14 @@ export default defineConfig({
   },
   build: {
     sourcemap: false,
+    rollupOptions: {
+      output: {
+        // Tệp của từng màn (React.lazy ở src/app/routes.tsx) mang tên gói thay vì "index-…", đọc kích thước biết ngay là màn nào.
+        chunkFileNames: (chunk) => {
+          const m = /[\\/]features[\\/]([^\\/]+)[\\/]index\.tsx?$/.exec(chunk.facadeModuleId ?? '');
+          return m ? `assets/man-${m[1]}-[hash].js` : 'assets/[name]-[hash].js';
+        },
+      },
+    },
   },
 });

@@ -2,9 +2,11 @@ import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { createOrganization, type CreatedOrganization, type OrgKind } from '../../api/auth';
 import { ApiError, conflictFields, fieldErrors } from '../../api/errors';
-import { ErrorNotice, FieldError } from '../../app/ErrorNotice';
+import { ErrorNotice } from '../../app/ErrorNotice';
 import { LogoutButton } from '../../app/LogoutButton';
 import { useSession } from '../../app/session';
+import { Button, SettingRow, TextInput, Tooltip } from '../../ui';
+import { AuthLayout } from './AuthLayout';
 import { useRetainedIdempotencyKey } from './useRetainedIdempotencyKey';
 import { checkRequired, checkSlug, hasErrors, slugify, type FieldErrors } from './validate';
 
@@ -21,7 +23,7 @@ function slugTakenError(err: unknown): string | undefined {
 }
 
 export function CreateOrgPage() {
-  const { organizations, reloadMe, selectOrg } = useSession();
+  const { organizations, reloadMe, selectOrg, user } = useSession();
   const navigate = useNavigate();
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
@@ -81,67 +83,84 @@ export function CreateOrgPage() {
   }
 
   return (
-    <main>
-      <h1>Tạo tổ chức</h1>
-      {organizations.length === 0 ? <p>Bạn chưa thuộc tổ chức nào. Tạo tổ chức đầu tiên để bắt đầu.</p> : null}
-      <form onSubmit={onSubmit} noValidate>
-        <p>
-          <label htmlFor="name">Tên tổ chức</label>
-          <br />
-          <input
+    <AuthLayout
+      title="Tạo tổ chức"
+      lead={organizations.length === 0 ? 'Bạn chưa thuộc tổ chức nào. Tạo tổ chức đầu tiên để bắt đầu.' : undefined}
+      footer={
+        organizations.length > 0 ? (
+          <Link to="/">Quay lại</Link>
+        ) : (
+          <div className="au-foot-row">
+            {user?.email ? <span className="au-email">{user.email}</span> : null}
+            <LogoutButton errorClassName="au-alert" />
+          </div>
+        )
+      }
+    >
+      <form className="au-form" onSubmit={onSubmit} noValidate>
+        <SettingRow label="Tên tổ chức" htmlFor="name" stack>
+          <TextInput
             id="name"
             name="name"
             maxLength={120}
+            placeholder="Studio Hoa Đào"
             value={name}
             onChange={(e) => onNameChange(e.target.value)}
-            aria-invalid={errors.name ? true : undefined}
-            aria-describedby={errors.name ? 'name-loi' : undefined}
+            error={errors.name}
           />
-          <FieldError id="name-loi" message={errors.name} />
-        </p>
-        <p>
-          <label htmlFor="slug">Đường dẫn (chữ thường không dấu, số, gạch ngang)</label>
-          <br />
-          <input
+        </SettingRow>
+        <SettingRow
+          label="Đường dẫn"
+          htmlFor="slug"
+          stack
+          tip="Tên ngắn của tổ chức trong địa chỉ trang, ví dụ /studio-hoa-dao/lich và trang giới thiệu /trang/studio-hoa-dao. Tự gợi ý theo tên; chỉ gồm chữ thường không dấu, số, gạch ngang, 3–48 ký tự."
+        >
+          <TextInput
             id="slug"
             name="slug"
             maxLength={48}
             autoCapitalize="none"
+            autoComplete="off"
             spellCheck={false}
+            placeholder="studio-hoa-dao"
             value={slug}
             onChange={(e) => {
               setSlugEdited(true);
               setSlug(e.target.value);
             }}
-            aria-invalid={errors.slug ? true : undefined}
-            aria-describedby={errors.slug ? 'slug-loi' : undefined}
+            error={errors.slug}
           />
-          <FieldError id="slug-loi" message={errors.slug} />
-        </p>
-        <fieldset aria-describedby={errors.kind ? 'kind-loi' : undefined}>
-          <legend>Loại tổ chức</legend>
-          {KIND_OPTIONS.map((o) => (
-            <p key={o.value}>
-              <label>
+        </SettingRow>
+        <fieldset
+          className="au-kinds"
+          aria-labelledby="kind-nhan"
+          aria-describedby={errors.kind ? 'kind-loi' : undefined}
+          data-invalid={errors.kind ? '' : undefined}
+        >
+          <legend className="au-kinds__legend">
+            <span id="kind-nhan">Loại tổ chức</span>
+            <Tooltip text="Trung tâm đào tạo có thêm mục Đào tạo (khoá học, lớp) và hợp đồng khoá học. Thợ cá nhân và Đội / studio dùng các mục còn lại: lịch, hợp đồng, bảng giá, khách, thợ, báo cáo." />
+          </legend>
+          <div className="au-kinds__list">
+            {KIND_OPTIONS.map((o) => (
+              <label key={o.value} className="au-kind">
                 <input type="radio" name="kind" value={o.value} checked={kind === o.value} onChange={() => setKind(o.value)} /> {o.label}
               </label>
-            </p>
-          ))}
-          <FieldError id="kind-loi" message={errors.kind} />
+            ))}
+          </div>
+          {errors.kind ? (
+            <div id="kind-loi" className="ui-field__error" role="alert">
+              {errors.kind}
+            </div>
+          ) : null}
         </fieldset>
-        <ErrorNotice error={submitError} />
-        <button type="submit" disabled={pending}>
-          {pending ? 'Đang tạo…' : 'Tạo tổ chức'}
-        </button>
+        <ErrorNotice error={submitError} className="au-alert" />
+        <div className="au-submit">
+          <Button type="submit" variant="primary" block loading={pending}>
+            {pending ? 'Đang tạo…' : 'Tạo tổ chức'}
+          </Button>
+        </div>
       </form>
-      {organizations.length > 0 ? (
-        <p>
-          <Link to="/">Quay lại</Link>
-        </p>
-      ) : (
-        <LogoutButton />
-      )}
-    </main>
+    </AuthLayout>
   );
 }
-

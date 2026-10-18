@@ -1,0 +1,113 @@
+/*
+ * Màn Đăng nhập / Đăng ký / Tạo tổ chức (biên bản cuối T4).
+ * Chỉ dùng token ở src/styles/tokens.css; điều khiển là ui/* (TextInput, Button, Card, SettingRow, Tooltip).
+ * Ở đây chỉ đặt bố cục: thẻ giữa màn, logo, khoảng cách giữa các ô, ô chọn loại tổ chức.
+ */
+.au {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px 16px;
+}
+.au-col {
+  width: 100%;
+  max-width: 420px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-20);
+}
+
+/* Logo: cùng biểu tượng và màu chữ với thanh trái (.sh-brand), lớn hơn một bậc. */
+.au-brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-10);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--accent);
+}
+.au-brand__mark {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--r-card);
+  background: var(--accent-soft);
+  display: grid;
+  place-items: center;
+}
+.au-brand__mark .ui-ico { width: 22px; height: 22px; }
+
+/* Thẻ: ui/Card, thân đệm rộng hơn thẻ trong app vì chỉ có một thẻ trên màn. */
+.au-card .ui-card__body { padding: 24px 28px 26px; }
+.au-card .ui-card__foot { justify-content: center; flex-wrap: wrap; padding: 12px 28px; color: var(--muted); text-align: center; }
+.au-card .ui-card__foot a { color: var(--accent); font-weight: 600; text-decoration: none; }
+.au-card .ui-card__foot a:hover { text-decoration: underline; }
+
+.au-title { font-size: var(--fs-h1); font-weight: 700; line-height: 1.25; }
+.au-lead { color: var(--muted); margin-top: var(--sp-6); }
+
+.au-form { display: flex; flex-direction: column; margin-top: var(--sp-16); }
+/* Dòng ui/SettingRow kiểu xếp chồng (nhãn trên, ô dưới); bỏ gạch ngăn giữa các dòng cho gọn. */
+.au-form .ui-row { border-top: 0; padding: 7px 0; }
+.au-form .ui-row__ctl { display: block; }
+.au-form .ui-input { height: 40px; }
+.au-submit { margin-top: var(--sp-16); }
+.au-submit .ui-btn { height: 40px; font-weight: 600; }
+
+/* Lỗi chung của máy chủ (app/ErrorNotice) và lỗi khôi phục phiên: dải đỏ như .sh-banner--danger. */
+.au-alert {
+  background: var(--danger-bg);
+  color: var(--danger);
+  border: 1px solid var(--danger-line);
+  border-radius: var(--r-ctl);
+  padding: 10px 12px;
+  font-size: 13px;
+  margin-top: var(--sp-12);
+  overflow-wrap: anywhere;
+}
+.au-alert p + p { color: var(--muted); font-size: 12px; margin-top: 2px; }
+.au-restore { display: flex; flex-direction: column; align-items: flex-start; gap: var(--sp-8); margin-top: var(--sp-12); }
+.au-restore .au-alert { margin-top: 0; align-self: stretch; }
+
+/* Loại tổ chức: ba ô chọn xếp dọc, ô đang chọn nền --accent-soft như ui/CheckChip đang bật. */
+.au-kinds { border: 0; min-width: 0; padding: 7px 0; }
+.au-kinds__legend { font-weight: 500; display: flex; align-items: center; padding: 0; margin-bottom: 6px; }
+.au-kinds__list { display: flex; flex-direction: column; gap: var(--sp-8); }
+.au-kind {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-10);
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-ctl);
+  background: var(--surface);
+  font-weight: 500;
+  cursor: pointer;
+  min-width: 0;
+}
+.au-kind:hover { border-color: var(--line-hover); }
+.au-kind:has(input:checked) { background: var(--accent-soft); border-color: var(--accent-line); color: var(--accent); }
+.au-kind:has(input:focus-visible) { outline: var(--focus-ring); outline-offset: var(--focus-offset); }
+.au-kind input { margin: 0; cursor: inherit; }
+.au-kind input:focus-visible { outline: none; }
+.au-kinds[data-invalid] .au-kind:not(:has(input:checked)) { border-color: var(--danger); }
+.au-kinds .ui-field__error { margin-top: 4px; }
+
+.au-foot-row { display: flex; align-items: center; justify-content: center; gap: var(--sp-8); flex-wrap: wrap; min-width: 0; }
+.au-foot-row .au-alert { flex-basis: 100%; margin-top: 4px; text-align: left; }
+.au-email { overflow-wrap: anywhere; }
+
+/* Điện thoại */
+@media (max-width: 640px) {
+  .au { align-items: flex-start; padding: 28px 16px; }
+  .au-col { gap: var(--sp-16); }
+  .au-title { font-size: var(--fs-h1-tablet); }
+  .au-card .ui-card__body { padding: 20px 18px 22px; }
+  .au-card .ui-card__foot { padding: 12px 18px; }
+  /* Ô nhập 16px: Safari trên iPhone không tự phóng to khi chạm vào ô. */
+  .au-form .ui-input { font-size: 16px; }
+}

@@ -5,7 +5,10 @@ export type ErrorCode =
   | 'NOT_FOUND'
   | 'CONFLICT'
   | 'RATE_LIMITED'
-  | 'INTERNAL';
+  | 'INTERNAL'
+  // Máy chủ chưa được cấu hình đủ để làm việc này (vd. chưa có gói dịch vụ mặc định) — lỗi VẬN HÀNH, không phải lỗi người
+  // dùng hay lỗi lập trình. 503: người dùng không tự sửa được, thử lại sau khi người vận hành cấu hình; giám sát 5xx vẫn báo.
+  | 'NOT_CONFIGURED';
 
 const STATUS: Record<ErrorCode, number> = {
   VALIDATION_FAILED: 400,
@@ -15,6 +18,7 @@ const STATUS: Record<ErrorCode, number> = {
   CONFLICT: 409,
   RATE_LIMITED: 429,
   INTERNAL: 500,
+  NOT_CONFIGURED: 503,
 };
 
 export class AppError extends Error {

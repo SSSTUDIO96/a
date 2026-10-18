@@ -49,6 +49,7 @@ import {
   contractAbilities,
   customerChangeText,
   draftDiffs,
+  draftIndexesOfLineIds,
   displayDate,
   displayDateTime,
   draftFromDetail,
@@ -57,11 +58,14 @@ import {
   isStaleVersion,
   liveErrors,
   lineInput,
+  linesWithoutTime,
   matchQuote,
   displayWarnings,
   moneyFieldOf,
   newPackageLine,
   newLineKey,
+  noTimeBlockedReason,
+  noTimeLineIdsOf,
   overlapLineCount,
   patchBody,
   placedFromView,
@@ -144,6 +148,8 @@ export function ContractEditor({ orgId, slug, tz, has, contractId, kindSwitch, o
     message: null,
   });
   const [alert, setAlert] = useState<Alert | null>(null);
+  // N2: dòng máy chủ báo chưa có giờ khi xác nhận (vị trí trong draft.lines) — đánh dấu ngay trên thẻ dòng.
+  const [serverNoTime, setServerNoTime] = useState<number[]>([]);
   const [busy, setBusy] = useState<'save' | 'confirm' | null>(null);
   const [pickedPeople, setPickedPeople] = useState<Map<string, StaffPerson>>(new Map());
   const [pickerFor, setPickerFor] = useState<string | null>(null);
@@ -261,6 +267,7 @@ export function ContractEditor({ orgId, slug, tz, has, contractId, kindSwitch, o
     ...serverErrors.fields,
   };
   const lineErrorAt = (i: number): string | null => {
+    if (serverNoTime.includes(i)) return 'Dòng này chưa có giờ — nhập giờ bắt đầu và giờ kết thúc rồi xác nhận lại.';
     if (serverErrors.line === i) return serverErrors.message;
     if (quoteBody && quote.errorLine === i) return prettyMoneyText(userMessage(quote.error));
     return null;
@@ -299,7 +306,9 @@ export function ContractEditor({ orgId, slug, tz, has, contractId, kindSwitch, o
     });
     return out;
   }, [draft, views, draftMode, tz, subjectName]);
-  const blockedReason = confirmBlockedReason(overlapLineCount(warnings));
+  // N2: còn dòng chưa có giờ → khoá "Xác nhận hợp đồng" (trùng giờ báo trước vì nặng hơn).
+  const noTimeLines = draftMode && ab.canEdit ? linesWithoutTime(draft, subjectName) : [];
+  const blockedReason = confirmBlockedReason(overlapLineCount(warnings)) ?? noTimeBlockedReason(noTimeLines);
   const gapText = draftMode && ab.canEdit ? staffGapText(staffGaps(draft)) : null;
 
   // ---- Sửa nháp ----
@@ -307,6 +316,7 @@ export function ContractEditor({ orgId, slug, tz, has, contractId, kindSwitch, o
   const update = (fn: (d: ContractDraft) => ContractDraft) => {
     setDraft(fn);
     setServerErrors({ fields: {}, line: null, message: null });
+    setServerNoTime([]);
   };
   const patchLine = (key: string, patch: Partial<DraftLine>) =>
     update((d) => ({ ...d, lines: d.lines.map((l) => (l.key === key ? ({ ...l, ...patch } as DraftLine) : l)) }));
@@ -340,6 +350,40 @@ export function ContractEditor({ orgId, slug, tz, has, contractId, kindSwitch, o
       const el = document.querySelector<HTMLElement>('.ct-page [aria-invalid="true"], .ct-page .ct-err, .ct-page .ct-alert');
       if (el && typeof el.scrollIntoView === 'function') el.scrollIntoView({ block: 'center' });
     });
+
+  // Cuộn tới thẻ dòng (data-dong = vị trí trong draft.lines) và đặt con trỏ vào ô giờ bắt đầu.
+  const scrollToLine = (i: number) =>
+    requestAnimationFrame(() => {
+      const el = document.querySelector<HTMLElement>(`.ct-page [data-dong="${i}"]`);
+      if (!el) return;
+      if (typeof el.scrollIntoView === 'function') el.scrollIntoView({ block: 'center' });
+      el.querySelector<HTMLInputElement>('input[aria-label="Giờ bắt đầu"]:not([disabled])')?.focus({ preventScroll: true });
+    });
+
+  // N2: máy chủ chặn xác nhận vì còn dòng chưa có giờ. Trả true nếu đã xử lý lỗi này.
+  const applyNoTimeError = (err: unknown, saved: ContractDetail): boolean => {
+    const ids = noTimeLineIdsOf(err);
+    if (!ids) return false;
+    const hits = draftIndexesOfLineIds(saved.lines, draft, ids);
+    const indexes = hits.flatMap((h) => (h.index === null ? [] : [h.index]));
+    const names = hits.map((h) => h.name ?? 'một dòng đã đổi').join('; ');
+    // Nháp trên màn đã có giờ (hoặc không thấy dòng) mà máy chủ vẫn báo thiếu: bản trên máy chủ đã khác (sửa ở máy khác).
+    const localMissing = indexes.filter((i) => {
+      const l = draft.lines[i];
+      return l !== undefined && isPlaced(l) && (!l.start || !l.end);
+    });
+    const differs = indexes.length < ids.length || localMissing.length < indexes.length;
+    setServerNoTime(indexes);
+    setAlert({
+      text: differs
+        ? `Chưa xác nhận được: trên máy chủ còn ${ids.length} dòng chưa có giờ (${names}) — hợp đồng có thể vừa được sửa ở máy khác. Tải bản mới, nhập giờ cho dòng đó rồi xác nhận lại.`
+        : `Chưa xác nhận được: còn ${ids.length} dòng chưa có giờ (${names}). Nhập giờ cho dòng được đánh dấu rồi xác nhận lại.`,
+    });
+    if (differs) setStale({ phase: 'conflict' });
+    if (indexes[0] !== undefined) scrollToLine(indexes[0]);
+    else scrollToFirstError();
+    return true;
+  };
 
   const applyError = (err: unknown) => {
     if (isStaleVersion(err)) {
@@ -379,6 +423,7 @@ export function ContractEditor({ orgId, slug, tz, has, contractId, kindSwitch, o
       setSavedSig(sig(theirs, tz));
       setResetKey((k) => k + 1);
       setServerErrors({ fields: {}, line: null, message: null });
+      setServerNoTime([]);
       setAlert(null);
       setStale({ phase: 'loaded', mine, diffs: draftDiffs(mine, theirs, tz) });
     } catch (err) {
@@ -468,6 +513,7 @@ export function ContractEditor({ orgId, slug, tz, has, contractId, kindSwitch, o
         // S1: báo đúng số lịch máy chủ đã tạo (kể cả lịch chưa có thợ).
         setAlert({ text: confirmResultText(res as unknown as ContractDetail & { createdAppointments: { contractLineId: string | null }[] }), tone: 'ok', link: (has('schedule.read_all') || has('schedule.read_own')) ? { to: `/${slug}/lich`, label: 'Xem lịch' } : undefined });
       } catch (err) {
+        if (applyNoTimeError(err, d)) return;
         applyError(err);
         // 409 trùng giờ: hợp đồng vẫn là nháp. Gọi lại quote để dải đỏ hiện đúng dòng.
         if (conflictsOf(err).length > 0 && quoteBody && quoteKey) {
@@ -935,8 +981,26 @@ export function ContractEditor({ orgId, slug, tz, has, contractId, kindSwitch, o
             </div>
           )}
 
-          {/* S1: thanh tổng kèm một dòng vàng khi còn dòng chưa có thợ / chưa có giờ — nhắc, KHÔNG chặn xác nhận. */}
-          <div className={`ct-totbar${gapText ? ' ct-totbar--note' : ''}`}>
+          {/* Thanh tổng kèm một dải trên:
+              - N2: dòng chưa có giờ CHẶN xác nhận — dải đỏ kể đúng từng dòng, bấm tên dòng thì cuộn tới ô giờ của dòng đó.
+              - S1: dòng chưa có thợ chỉ nhắc (vàng), KHÔNG chặn. */}
+          <div className={`ct-totbar${gapText || noTimeLines.length > 0 ? ' ct-totbar--note' : ''}`}>
+            {noTimeLines.length > 0 && (
+              <div className="ct-totbar__note ct-totbar__note--block" role="status" data-o="thieu-gio">
+                <IconWarn />
+                <span>
+                  {noTimeLines.length} dòng chưa có giờ — nhập giờ mới xác nhận được:{' '}
+                  {noTimeLines.map((x, k) => (
+                    <span key={x.index}>
+                      {k > 0 && ', '}
+                      <button type="button" className="ct-gapln" title="Cuộn tới dòng này để nhập giờ" onClick={() => scrollToLine(x.index)}>
+                        {x.label}
+                      </button>
+                    </span>
+                  ))}
+                </span>
+              </div>
+            )}
             {gapText && (
               <div className="ct-totbar__note" role="status" data-o="thieu-tho">
                 <IconWarn />

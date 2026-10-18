@@ -137,17 +137,29 @@ export async function getEffectivePlan(
   const current = await getCurrentSubscription(tx, orgId, now);
   if (current.hasSubscription) return { plan: current.subscription.plan, source: 'subscription', current };
   const plan = await tx.subscriptionPlan.findUnique({ where: { code: DEFAULT_PLAN_CODE } });
-  if (!plan) {
-    // Lời cho người dùng studio KHÔNG chứa lệnh vận hành (biên bản máy chủ lát 2, N10); lệnh nằm trong log máy chủ.
-    throw new AppError(
-      'INTERNAL',
-      'Hệ thống chưa cấu hình gói dịch vụ cho tổ chức này. Vui lòng liên hệ bộ phận hỗ trợ.',
+  if (!plan) throw new PlanNotConfiguredError(orgId);
+  return { plan, source: 'default', current };
+}
+
+// Lỗi VẬN HÀNH có tên riêng (biên bản nghiệm thu cuối, T2): tổ chức chưa có thuê bao và database chưa có gói mặc định.
+// Trước đây là 500 INTERNAL chung chung. Nay: mã NOT_CONFIGURED, HTTP 503 (máy chủ chưa sẵn sàng làm việc này vì thiếu
+// cấu hình — người dùng không tự sửa được, không phải lỗi lập trình; giám sát 5xx vẫn thấy). errorHandler ghi log mức error
+// kèm errorName + operatorHint (lệnh sửa) cho người vận hành.
+// Lời cho người dùng KHÔNG chứa lệnh vận hành (biên bản máy chủ lát 2, N10); lệnh chỉ nằm trong log máy chủ.
+export const PLAN_NOT_CONFIGURED_MESSAGE =
+  'Tổ chức chưa được gán gói dịch vụ nên tạm thời chưa thêm mới được. Sự cố đã được ghi lại cho bộ phận vận hành — vui lòng liên hệ hỗ trợ.';
+
+export class PlanNotConfiguredError extends AppError {
+  override readonly name = 'PlanNotConfiguredError';
+  constructor(orgId: string) {
+    super(
+      'NOT_CONFIGURED',
+      PLAN_NOT_CONFIGURED_MESSAGE,
       { reason: 'DEFAULT_PLAN_MISSING' },
       `Tổ chức ${orgId} chưa có thuê bao và hệ thống chưa có gói mặc định mã "${DEFAULT_PLAN_CODE}". ` +
         'Tạo gói: pnpm --filter @makeup/api platform:seed-plans -- --with-trial (bản build: pnpm --filter @makeup/api platform:seed-plans:prod -- --with-trial), hoặc gán thuê bao cho tổ chức.',
     );
   }
-  return { plan, source: 'default', current };
 }
 
 // ==================== CHỈ CHO ĐỌC KHI HẾT HẠN ====================
@@ -257,12 +269,28 @@ export async function assertQuota(
   if (limit === null) return;
   await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`quota:${kind}:${orgId}`}))::text`;
   const used = await getUsage(tx, orgId, kind, now);
-  if (used + adding > limit) {
-    const shown = kind === 'storageMb' ? Math.round(used * 10) / 10 : used;
-    throw new AppError(
-      'CONFLICT',
-      `Đã đạt giới hạn gói ${plan.name}: tối đa ${limit} ${LABEL[kind]} (đang dùng ${shown}). Nâng gói để thêm.`,
-      { reason: 'QUOTA_EXCEEDED', kind, planCode: plan.code, limit, used, adding },
-    );
-  }
+  if (used + adding > limit) throw quotaExceeded(plan, kind, limit, used, adding);
+}
+
+// Lời báo hết giới hạn gói (biên bản nghiệm thu cuối, T2 — quyết định 01:40: KHÔNG đổi số của gói, chỉ nói rõ).
+// - Gói không có loại này (giới hạn 0, vd. "Dùng thử" có 0 khoá học): "Gói X của tổ chức chưa có khoá học — liên hệ để nâng gói."
+// - Gói có nhưng đã dùng hết: "Đã đạt giới hạn gói X: tối đa N khoá học (đang dùng M) — liên hệ để nâng gói."
+// Nâng gói do người vận hành ghi (/quan-tri), studio không tự bấm được → "liên hệ", không "nâng gói để thêm".
+// 409 CONFLICT, details.reason 'QUOTA_EXCEEDED' như cũ; thêm limitName (tên giới hạn tiếng Việt) và planName cho giao diện.
+function quotaExceeded(plan: SubscriptionPlan, kind: QuotaKind, limit: number, used: number, adding: number): AppError {
+  const shown = kind === 'storageMb' ? Math.round(used * 10) / 10 : used;
+  const message =
+    limit === 0
+      ? `Gói ${plan.name} của tổ chức chưa có ${LABEL[kind]} — liên hệ để nâng gói.`
+      : `Đã đạt giới hạn gói ${plan.name}: tối đa ${limit} ${LABEL[kind]} (đang dùng ${shown}) — liên hệ để nâng gói.`;
+  return new AppError('CONFLICT', message, {
+    reason: 'QUOTA_EXCEEDED',
+    kind,
+    limitName: LABEL[kind],
+    planCode: plan.code,
+    planName: plan.name,
+    limit,
+    used,
+    adding,
+  });
 }

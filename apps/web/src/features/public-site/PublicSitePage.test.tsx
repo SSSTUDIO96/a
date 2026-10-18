@@ -145,8 +145,11 @@ describe('Trang giới thiệu công khai', () => {
     const seen = setup((slug) => (slug === 'studio-chien' ? json(200, FULL) : NOT_FOUND()));
     renderAt('/trang/studio-chien');
     expect(await screen.findByRole('heading', { level: 1, name: 'Studio Chiến Makeup' })).toBeTruthy();
-    expect(document.title).toBe('Studio Chiến Makeup');
-    expect(document.querySelector('meta[name="description"]')?.getAttribute('content')).toBe('Trang điểm cô dâu tự nhiên, bền đẹp suốt ngày cưới');
+    // Tiêu đề và mô tả được đặt trong useEffect, chạy SAU khi chữ đã hiện (React dồn effect sang nhịp sau) → phải chờ.
+    await waitFor(() => expect(document.title).toBe('Studio Chiến Makeup'));
+    await waitFor(() =>
+      expect(document.querySelector('meta[name="description"]')?.getAttribute('content')).toBe('Trang điểm cô dâu tự nhiên, bền đẹp suốt ngày cưới'),
+    );
     // Không gửi thẻ đăng nhập, không gọi /auth.
     expect(seen.every((s) => !s.path.startsWith('/auth'))).toBe(true);
     expect(seen[0]?.headers.Authorization).toBeUndefined();
@@ -196,7 +199,9 @@ describe('Trang giới thiệu công khai', () => {
     renderAt('/trang/khong-co-that');
     expect(await screen.findByRole('heading', { name: 'Không tìm thấy trang giới thiệu' })).toBeTruthy();
     expect(screen.getByText('Liên kết có thể sai, hoặc studio đã gỡ trang.')).toBeTruthy();
-    expect(document.title).toBe('Không tìm thấy trang giới thiệu');
+    // Từng chập chờn (biên bản cuối L10): findByRole trả về ngay khi chữ vừa vào DOM, còn useDocumentMeta đổi tiêu đề trong
+    // useEffect — React chạy effect ở nhịp sau; máy bận thì nhịp đó tới sau lần kiểm → '' . Chờ đúng điều kiện, không nới.
+    await waitFor(() => expect(document.title).toBe('Không tìm thấy trang giới thiệu'));
     // Không có nút đăng nhập hay khung app.
     expect(screen.queryByRole('navigation')).toBeNull();
   });

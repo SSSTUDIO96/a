@@ -198,7 +198,9 @@ function CustomerSearch({
         {canSearch && (
           <TextInput
             aria-label="Tìm khách theo tên hoặc số điện thoại"
-            placeholder="Tìm theo tên hoặc số điện thoại"
+            // L9: chữ gợi ý ngắn cho vừa ô ở 390 và cả 360 (trước bị cắt "Tìm theo tên h…"); câu đủ ở aria-label và tooltip.
+            placeholder="Tên, SĐT"
+            title="Tìm khách theo tên hoặc số điện thoại"
             value={q}
             onChange={(e) => setQ(e.target.value)}
             error={loadError ?? error}

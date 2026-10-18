@@ -5,6 +5,8 @@ import { errorKind, fieldErrors, userMessage } from '../../api/errors';
 import type { ContractPayments } from '../../api/types';
 import { Button, DateInput, Dialog, IconClose, IconPlus, IconWarn, MoneyInput, TextInput } from '../../ui';
 import { money } from './money';
+import { anchorNote, suggestDates } from './suggestPlan';
+import { useSuggestAnchor } from './useSuggestAnchor';
 import { daysBetween, dueDateIso, todayVn, vnDate } from './vnTime';
 
 interface Row {
@@ -26,8 +28,6 @@ export interface InstallmentsDialogProps {
   onClose: () => void;
   onSaved: (data: ContractPayments) => void;
 }
-
-const SUGGEST_INTERVAL_DAYS = 30;
 
 // "Sửa tiến độ" — PUT /contracts/:id/installments (thay toàn bộ). Kiểm trước bằng checkInstallmentPlan của @makeup/shared:
 // lệch tổng → dải đỏ đúng câu của hàm và khoá nút Lưu. Máy chủ vẫn kiểm lại.
@@ -53,18 +53,25 @@ export function InstallmentsDialog({ open, orgId, data, onClose, onSaved }: Inst
   }, [open]);
 
   const today = todayVn();
-  const eventDay = contract.eventDate ? vnDate(contract.eventDate) : null;
-  const daysToEvent = eventDay ? daysBetween(today, eventDay) : null;
-  const canSuggestEvent = daysToEvent !== null && daysToEvent >= 1 && daysToEvent <= 366;
+  // Mốc chia đợt (T1): ngày sự kiện, hoặc ngày kết thúc lớp muộn nhất của hợp đồng khoá học. Đang hỏi máy chủ → tắt nút.
+  const anchorState = useSuggestAnchor(orgId, contract, open);
+  const anchor = anchorState.status === 'ready' ? anchorState.anchor : null;
+  const anchorLoading = anchorState.status === 'loading';
+  const hasDeposit = summary.depositRequired > 0;
+  const plans = [1, 2, 3].map((n) => suggestDates(today, anchor, n, hasDeposit));
+  const canSuggestEvent = anchor?.kind === 'event' && daysBetween(today, anchor.date) >= 1;
+  const planNote = anchorNote(today, anchor) ?? plans.map((p) => (p.ok ? p.note : null)).find(Boolean) ?? null;
+  // Chỉ ghi lý do của số đợt nhỏ nhất bị tắt (không đủ chỗ cho 2 đợt thì hiển nhiên không đủ cho 3).
+  const firstBlocked = plans.find((p) => !p.ok);
+  const blockedNotes = firstBlocked && !firstBlocked.ok ? [firstBlocked.reason] : [];
 
-  function suggest(count: number, interval: number) {
+  function suggest(count: number) {
+    const dates = plans[count - 1];
+    if (!dates || !dates.ok) return;
     try {
-      // Giữa trưa hôm nay: cộng đúng n × 24 giờ không làm lệch ngày theo giờ Việt Nam.
-      const noonToday = new Date(`${today}T12:00:00+07:00`);
-      // Cọc = 0 thì hàm bắt đầu luôn đợt "còn lại" ở firstDue → đặt firstDue là ngày sự kiện cho nút "vào ngày sự kiện".
-      const first = count === 1 && summary.depositRequired === 0 && eventDay ? new Date(`${eventDay}T12:00:00+07:00`) : noonToday;
-      const out = suggestInstallments(summary.total, summary.depositRequired, count, first, interval);
-      setRows(out.map((s) => ({ key: nextKey(), name: s.name, due: vnDate(s.dueDate), amount: s.amount, isDeposit: s.isDeposit })));
+      // Tiền từng đợt: suggestInstallments (@makeup/shared) chia như cũ; ngày hạn: suggestDates (chia đều tới mốc).
+      const out = suggestInstallments(summary.total, summary.depositRequired, count, new Date(`${today}T12:00:00+07:00`), 1);
+      setRows(out.map((s, i) => ({ key: nextKey(), name: s.name, due: dates.days[i] ?? vnDate(s.dueDate), amount: s.amount, isDeposit: s.isDeposit })));
       setSuggestError(null);
       setServerError(null);
       setCellErrors({});
@@ -144,24 +151,34 @@ export function InstallmentsDialog({ open, orgId, data, onClose, onSaved }: Inst
     >
       <div className="pm-plan-suggest">
         <span className="pm-fx">Chia gợi ý:</span>
-        {canSuggestEvent && daysToEvent !== null && (
-          <Button size="sm" onClick={() => suggest(1, daysToEvent)}>
+        {canSuggestEvent && (
+          <Button size="sm" onClick={() => suggest(1)}>
             Cọc + còn lại vào ngày sự kiện
           </Button>
         )}
-        {/* Hợp đồng không có ngày sự kiện (khoá học): Cọc + 1 đợt sau 30 ngày (bản vẽ C3 mục 2.3: Cọc + 1/2/3). */}
+        {/* Không có ngày sự kiện (khoá học) hoặc ngày sự kiện đã qua: Cọc + 1 đợt (bản vẽ C3 mục 2.3: Cọc + 1/2/3). */}
         {!canSuggestEvent && (
-          <Button size="sm" onClick={() => suggest(1, SUGGEST_INTERVAL_DAYS)}>
+          <Button size="sm" disabled={anchorLoading || !plans[0]?.ok} onClick={() => suggest(1)}>
             Cọc + 1 đợt
           </Button>
         )}
-        <Button size="sm" onClick={() => suggest(2, SUGGEST_INTERVAL_DAYS)}>
+        <Button size="sm" disabled={anchorLoading || !plans[1]?.ok} onClick={() => suggest(2)}>
           Cọc + 2 đợt
         </Button>
-        <Button size="sm" onClick={() => suggest(3, SUGGEST_INTERVAL_DAYS)}>
+        <Button size="sm" disabled={anchorLoading || !plans[2]?.ok} onClick={() => suggest(3)}>
           Cọc + 3 đợt
         </Button>
       </div>
+      {!anchorLoading && (planNote || blockedNotes.length > 0) && (
+        <div className="pm-plan-note" data-o="moc-chia-dot">
+          {planNote && <p>{planNote}</p>}
+          {blockedNotes.map((m) => (
+            <p key={m} className="is-warn">
+              {m}
+            </p>
+          ))}
+        </div>
+      )}
       {suggestError && (
         <div className="pm-band pm-band--danger" role="alert">
           <IconWarn />

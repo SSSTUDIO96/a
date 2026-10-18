@@ -5,7 +5,13 @@ import type { AvailabilityShift, StaffMember } from '../../api/types';
 import { pickableStaff } from './useStaffAvailability';
 import {
   EMPTY_DRAFT,
+  autoEndTime,
   buildBody,
+  draftIndexesOfLineIds,
+  linesWithoutTime,
+  noTimeBlockedReason,
+  noTimeLineIdsOf,
+  staffGapText,
   confirmBlockedReason,
   conflictsOf,
   contractAbilities,
@@ -307,5 +313,76 @@ describe('N9: ô chọn thợ dùng cùng luật với Lịch', () => {
     const items = ['chu'].map(av);
     expect(pickableStaff(items, [mem('chu', { roleKeys: ['owner'] })], new Set()).map((s) => s.membershipId)).toEqual(['chu']);
     expect(pickableStaff(items, null, new Set())).toEqual(items);
+  });
+});
+
+describe('N2: dòng chưa có giờ chặn xác nhận hợp đồng dịch vụ', () => {
+  const subject = (id: string | null) => (id === 's-cd' ? 'Cô dâu' : null);
+  const custom = { key: 'k-x', kind: 'CUSTOM' as const, name: 'Phí gửi xe', unitPrice: 50_000, quantity: 1, note: '' };
+
+  it('kể đúng dòng gói thiếu giờ (vị trí trong nháp, số thứ tự dòng gói); khoản tự đặt tên không tính', () => {
+    const d = draftWith([pkgLine({ start: '05:00', end: '07:00' }), custom, pkgLine({ start: '06:00', end: '' }), pkgLine({ subjectId: null })]);
+    expect(linesWithoutTime(d, subject)).toEqual([
+      { index: 2, label: 'Dòng 2 · Cô dâu · Cô dâu – Ngày cưới' },
+      { index: 3, label: 'Dòng 3 · Cô dâu – Ngày cưới' },
+    ]);
+    expect(noTimeBlockedReason([])).toBeNull();
+    expect(noTimeBlockedReason(linesWithoutTime(d, subject))).toBe(
+      'Còn 2 dòng chưa có giờ (Dòng 2 · Cô dâu · Cô dâu – Ngày cưới; Dòng 3 · Cô dâu – Ngày cưới). Nhập giờ bắt đầu và giờ kết thúc rồi mới xác nhận được — hợp đồng đã chốt phải có lịch.',
+    );
+    expect(linesWithoutTime(draftWith([pkgLine({ start: '05:00', end: '07:00' })]), subject)).toEqual([]);
+  });
+
+  it('dải vàng chỉ còn phần "chưa có thợ" (chưa có giờ hiện riêng, chặn)', () => {
+    expect(staffGapText({ noStaff: 1, noTime: 2 })).toBe('1 dòng chưa có thợ — lịch sẽ nằm ở hàng Chưa có thợ');
+    expect(staffGapText({ noStaff: 0, noTime: 2 })).toBeNull();
+  });
+
+  it('đọc lỗi máy chủ: reason + lineIds (dự kiến), các khoá khác, lỗi một dòng cũ; lỗi khác → null', () => {
+    const e = (status: number, details: unknown, code = 'VALIDATION_FAILED') => new ApiError(code, 'x', status, 'r', details);
+    expect(noTimeLineIdsOf(e(400, { reason: 'LINES_WITHOUT_TIME', lineIds: ['l1', 'l2'] }))).toEqual(['l1', 'l2']);
+    expect(noTimeLineIdsOf(e(409, { reason: 'LINES_MISSING_TIME', lines: [{ id: 'l3', name: 'A' }, { lineId: 'l4' }] }, 'CONFLICT'))).toEqual(['l3', 'l4']);
+    expect(noTimeLineIdsOf(e(422, { reason: 'SCHEDULE_TIME_REQUIRED', missingTimeLineIds: ['l5'] }))).toEqual(['l5']);
+    expect(noTimeLineIdsOf(e(400, { lineId: 'l6' }))).toEqual(['l6']);
+    expect(noTimeLineIdsOf(e(409, { reason: 'STALE_VERSION', lineIds: ['l1'] }, 'CONFLICT'))).toBeNull();
+    expect(noTimeLineIdsOf(e(409, { conflicts: [], lineId: 'l1' }, 'CONFLICT'))).toBeNull();
+    expect(noTimeLineIdsOf(e(400, { reason: 'LINES_WITHOUT_TIME', lineIds: [] }))).toBeNull();
+    expect(noTimeLineIdsOf(e(500, { reason: 'LINES_WITHOUT_TIME', lineIds: ['l1'] }, 'INTERNAL'))).toBeNull();
+    expect(noTimeLineIdsOf(new Error('x'))).toBeNull();
+  });
+
+  it('mã dòng máy chủ → vị trí trong nháp theo thứ tự dòng gói; không thấy / lệch số dòng → null', () => {
+    const saved = [
+      { id: 'l1', kind: 'PACKAGE' as const, name: 'Gói A', voidedAt: null },
+      { id: 'l2', kind: 'CUSTOM' as const, name: 'Phí xe', voidedAt: null },
+      { id: 'l3', kind: 'PACKAGE' as const, name: 'Gói B', voidedAt: null },
+    ];
+    const d = draftWith([pkgLine(), custom, pkgLine()]);
+    expect(draftIndexesOfLineIds(saved, d, ['l3', 'zz'])).toEqual([
+      { id: 'l3', index: 2, name: 'Gói B' },
+      { id: 'zz', index: null, name: null },
+    ]);
+    expect(draftIndexesOfLineIds(saved, draftWith([pkgLine()]), ['l1'])).toEqual([{ id: 'l1', index: null, name: 'Gói A' }]);
+  });
+});
+
+describe('L1: giờ kết thúc tự điền theo thời lượng gói', () => {
+  it('ô kết thúc trống → bắt đầu + thời lượng', () => {
+    expect(autoEndTime('', '05:00', '', 120)).toBe('07:00');
+    expect(autoEndTime('', '05:30', '', 45)).toBe('06:15');
+  });
+  it('kết thúc vẫn là giờ tự điền → đi theo giờ bắt đầu mới (kể cả giờ đang gõ dở)', () => {
+    expect(autoEndTime('05:00', '06:00', '07:00', 120)).toBe('08:00');
+    expect(autoEndTime('00:00', '05:00', '02:00', 120)).toBe('07:00');
+  });
+  it('giờ kết thúc người dùng tự gõ → giữ nguyên', () => {
+    expect(autoEndTime('05:00', '06:00', '09:30', 120)).toBe('09:30');
+  });
+  it('không có thời lượng → không đụng; qua nửa đêm hoặc xoá giờ bắt đầu → để trống', () => {
+    expect(autoEndTime('', '05:00', '', null)).toBe('');
+    expect(autoEndTime('', '05:00', '', 0)).toBe('');
+    expect(autoEndTime('', '23:00', '', 120)).toBe('');
+    expect(autoEndTime('05:00', '', '07:00', 120)).toBe('');
+    expect(autoEndTime('05:00', '', '09:00', 120)).toBe('09:00');
   });
 });

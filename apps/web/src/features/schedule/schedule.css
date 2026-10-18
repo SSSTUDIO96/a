@@ -74,6 +74,7 @@
 .ws-c__who { display: flex; flex-direction: column; min-width: 0; }
 .ws-c__nm { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ws-c__meta { font-size: 12px; color: var(--muted); }
+.ws-nb { white-space: nowrap; }
 .ws-c__rh.is-na .ws-c__nm { color: var(--muted); }
 /* Hàng "Chưa có thợ" ở 1024: cột tên hẹp — cho xuống dòng thay vì cắt "Chưa có t…". */
 .ws-c__rh.is-na .ws-c__nm { white-space: normal; }
@@ -134,6 +135,7 @@
 .ws-cm__corner { position: sticky; left: 0; z-index: 2; }
 .ws-cm__sh { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 0 6px; min-width: 0; scroll-snap-align: start; }
 .ws-cm__tn { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; padding: 0 2px; }
+.ws-cm__sh.is-na .ws-cm__tn { white-space: normal; overflow: visible; text-align: center; line-height: 1.2; overflow-wrap: normal; }
 .ws-cm__dh {
   position: sticky; left: 0; z-index: 1; background: var(--surface);
   display: flex; flex-direction: column; align-items: center; justify-content: center;

@@ -160,7 +160,7 @@ describe('giới hạn khoá học (maxCourses) qua POST /courses', () => {
     const second = await postCourse(A, 'Khoá nâng cao');
     console.log(`[hạn mức khoá] khoá thứ 2 → ${second.status} ${second.body.error?.message}`);
     expect(second.status).toBe(409);
-    expect(second.body.error.message).toBe(`Đã đạt giới hạn gói ${A.planName}: tối đa 1 khoá học (đang dùng 1). Nâng gói để thêm.`);
+    expect(second.body.error.message).toBe(`Đã đạt giới hạn gói ${A.planName}: tối đa 1 khoá học (đang dùng 1) — liên hệ để nâng gói.`);
     expect(second.body.error.details).toMatchObject({ reason: 'QUOTA_EXCEEDED', kind: 'courses', limit: 1, used: 1, adding: 1 });
     expect(await db.course.count({ where: { organizationId: A.orgId } })).toBe(1);
     await request(app)
@@ -202,7 +202,7 @@ describe('giới hạn học viên (maxStudents) lúc xác nhận hợp đồng 
     const over = await confirm(A, c2.id);
     console.log(`[hạn mức học viên] học viên thứ 2 → ${over.status} ${over.body.error?.message}`);
     expect(over.status).toBe(409);
-    expect(over.body.error.message).toBe(`Đã đạt giới hạn gói ${A.planName}: tối đa 1 học viên (đang dùng 2). Nâng gói để thêm.`);
+    expect(over.body.error.message).toBe(`Đã đạt giới hạn gói ${A.planName}: tối đa 1 học viên (đang dùng 2) — liên hệ để nâng gói.`);
     expect(over.body.error.details).toMatchObject({ reason: 'QUOTA_EXCEEDED', kind: 'students', limit: 1 });
     const cls = await db.courseClass.findUniqueOrThrow({ where: { id: l1.id }, select: { enrolledCount: true } });
     expect(cls.enrolledCount).toBe(1);

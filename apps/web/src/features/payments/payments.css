@@ -21,7 +21,7 @@
 .pm-head__top { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; min-width: 0; }
 .pm-head__name { font-size: 18px; font-weight: 700; margin: 0; min-width: 0; overflow-wrap: anywhere; }
 .pm-head__sub { margin-top: 4px; overflow-wrap: anywhere; }
-.pm-head__sub a { color: var(--accent); }
+.pm-head__sub a { color: var(--accent); white-space: nowrap; }
 .pm-card > .ui-card__body .pm-tiles { margin: 12px 0 6px; }
 .pm-fx { display: block; font-size: var(--fs-fx); color: var(--muted); }
 .pm-num { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -95,6 +95,10 @@
 /* Hộp tiến độ */
 .pm-plan-suggest { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 0; }
 .pm-plan-suggest .pm-fx { display: inline; font-size: 13px; }
+.pm-plan-note { margin: -4px 0 10px; font-size: 12.5px; color: var(--muted); }
+.pm-plan-note p { margin: 0; }
+.pm-plan-note p + p { margin-top: 2px; }
+.pm-plan-note .is-warn { color: var(--warn); }
 .pm-plan { width: 100%; border-collapse: collapse; table-layout: fixed; }
 .pm-plan th {
   text-align: left;

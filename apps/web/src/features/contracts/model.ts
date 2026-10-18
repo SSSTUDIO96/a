@@ -493,11 +493,120 @@ export function staffGaps(draft: ContractDraft): StaffGaps {
   return { noStaff, noTime };
 }
 
+// Chỉ phần "chưa có thợ" (nhắc, không chặn). Dòng chưa có giờ CHẶN xác nhận (N2) — dải hiện riêng từng dòng, xem
+// linesWithoutTime / noTimeBlockedReason.
 export function staffGapText(g: StaffGaps): string | null {
-  const parts: string[] = [];
-  if (g.noStaff > 0) parts.push(`${g.noStaff} dòng chưa có thợ — lịch sẽ nằm ở hàng Chưa có thợ`);
-  if (g.noTime > 0) parts.push(`${g.noTime} dòng chưa có giờ — chưa lên lịch được`);
-  return parts.length > 0 ? parts.join(' · ') : null;
+  return g.noStaff > 0 ? `${g.noStaff} dòng chưa có thợ — lịch sẽ nằm ở hàng Chưa có thợ` : null;
+}
+
+// ---------------------------------------------------------------------------------------------
+// N2 (biên bản nghiệm thu cuối): hợp đồng DỊCH VỤ không xác nhận được khi còn dòng cần lên lịch (gói / dịch vụ) chưa đủ
+// giờ bắt đầu và giờ kết thúc — hợp đồng đã chốt không được vắng mặt trên Lịch, và sau khi chốt ô giờ bị khoá.
+// Máy chủ cũng chặn (thợ Y1); web chặn trước để chỉ đúng dòng. Không áp cho hợp đồng khoá học.
+export interface NoTimeLine {
+  // Vị trí trong draft.lines (trùng data-dong của thẻ dòng).
+  index: number;
+  // "Dòng 2 · Cô dâu · Trang điểm cô dâu"
+  label: string;
+}
+
+export function linesWithoutTime(draft: ContractDraft, subjectName: (id: string | null) => string | null): NoTimeLine[] {
+  const out: NoTimeLine[] = [];
+  let pos = 0;
+  draft.lines.forEach((l, i) => {
+    if (!isPlaced(l)) return;
+    pos += 1;
+    if (l.start && l.end) return;
+    const subject = subjectName(l.subjectId);
+    out.push({ index: i, label: `Dòng ${pos} · ${subject && subject !== l.name ? `${subject} · ` : ''}${l.name}` });
+  });
+  return out;
+}
+
+export function noTimeBlockedReason(lines: NoTimeLine[]): string | null {
+  if (lines.length === 0) return null;
+  return `Còn ${lines.length} dòng chưa có giờ (${lines.map((l) => l.label).join('; ')}). Nhập giờ bắt đầu và giờ kết thúc rồi mới xác nhận được — hợp đồng đã chốt phải có lịch.`;
+}
+
+// Lỗi máy chủ khi xác nhận mà còn dòng chưa có giờ (dữ liệu có thể vừa đổi ở máy khác).
+// ⚠ CẦN KHỚP LẠI khi thợ Y1 xong phần máy chủ. Hình dạng dự kiến theo lối lỗi sẵn có (AppError → ApiError
+// { status, code, details }, như TOTAL_BELOW_PAID / CUSTOMER_IN_USE):
+//   4xx (VALIDATION_FAILED 400 hoặc 409/422), details = { reason: 'LINES_WITHOUT_TIME', lineIds: string[] }.
+// Đọc nới cho tới khi có hình dạng thật: reason thuộc NO_TIME_REASONS (hoặc có chữ TIME); mã dòng lấy từ lineIds |
+// missingTimeLineIds | lines (chuỗi hoặc { id | lineId }) | lineId (lỗi một dòng cũ của createLineAppointments —
+// VALIDATION_FAILED không có reason).
+export const NO_TIME_REASONS: ReadonlySet<string> = new Set([
+  'LINES_WITHOUT_TIME',
+  'LINE_WITHOUT_TIME',
+  'LINES_MISSING_TIME',
+  'MISSING_TIME',
+  'NO_TIME',
+]);
+
+export function noTimeLineIdsOf(err: unknown): string[] | null {
+  if (!(err instanceof ApiError) || err.status < 400 || err.status >= 500) return null;
+  const d = err.details;
+  if (!d || typeof d !== 'object') return null;
+  const o = d as Record<string, unknown>;
+  const reason = typeof o.reason === 'string' ? o.reason : null;
+  if (reason !== null) {
+    if (!NO_TIME_REASONS.has(reason) && !/TIME/i.test(reason)) return null;
+  } else if (err.code !== 'VALIDATION_FAILED' || 'conflicts' in o) {
+    return null;
+  }
+  const ids: string[] = [];
+  const take = (v: unknown) => {
+    if (typeof v === 'string' && v) ids.push(v);
+    else if (v && typeof v === 'object') {
+      const x = v as { id?: unknown; lineId?: unknown };
+      if (typeof x.lineId === 'string') ids.push(x.lineId);
+      else if (typeof x.id === 'string') ids.push(x.id);
+    }
+  };
+  for (const key of ['lineIds', 'missingTimeLineIds', 'lines']) {
+    const v = o[key];
+    if (Array.isArray(v)) v.forEach(take);
+  }
+  take(o.lineId);
+  const uniq = [...new Set(ids)];
+  return uniq.length > 0 ? uniq : null;
+}
+
+/**
+ * Mã dòng máy chủ → vị trí trong draft.lines. Dòng gói/dịch vụ chưa huỷ của hợp đồng đã lưu theo đúng thứ tự của
+ * nháp (draftFromDetail / lưu xong). Không tìm thấy hoặc số dòng lệch → index null (bản trên máy chủ đã khác).
+ */
+export function draftIndexesOfLineIds(
+  saved: readonly Pick<GroupedContractLine<string | null>, 'id' | 'kind' | 'name' | 'voidedAt'>[],
+  draft: ContractDraft,
+  ids: readonly string[],
+): { id: string; index: number | null; name: string | null }[] {
+  const placedSaved = saved.filter((l) => !l.voidedAt && (l.kind === 'PACKAGE' || l.kind === 'SERVICE'));
+  const placedDraft = draft.lines.flatMap((l, i) => (isPlaced(l) ? [i] : []));
+  const aligned = placedSaved.length === placedDraft.length;
+  return ids.map((id) => {
+    const k = placedSaved.findIndex((l) => l.id === id);
+    return { id, index: aligned && k >= 0 ? (placedDraft[k] ?? null) : null, name: k >= 0 ? (placedSaved[k]?.name ?? null) : null };
+  });
+}
+
+// ---------------------------------------------------------------------------------------------
+// L1 (biên bản nghiệm thu cuối): gõ giờ bắt đầu → giờ kết thúc tự điền = bắt đầu + thời lượng gói, khi ô kết thúc
+// đang trống hoặc vẫn là giờ tự điền (bằng giờ bắt đầu CŨ + thời lượng). Giờ người dùng tự gõ khác đi thì giữ nguyên.
+// Qua nửa đêm (hợp đồng không nhận giờ kết thúc trước giờ bắt đầu) → để trống cho người dùng tự nhập.
+function plusMinutes(hhmm: string, minutes: number): string | null {
+  const m = /^(\d{2}):(\d{2})$/.exec(hhmm);
+  if (!m) return null;
+  const total = Number(m[1]) * 60 + Number(m[2]) + minutes;
+  if (total >= 24 * 60) return null;
+  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+}
+
+export function autoEndTime(prevStart: string, nextStart: string, end: string, durationMinutes: number | null | undefined): string {
+  if (!durationMinutes || durationMinutes <= 0) return end;
+  const wasAuto = end === '' || (prevStart !== '' && end === plusMinutes(prevStart, durationMinutes));
+  if (!wasAuto) return end;
+  return nextStart ? (plusMinutes(nextStart, durationMinutes) ?? '') : '';
 }
 
 /** Sau khi xác nhận: đếm lịch máy chủ đã tạo (createdAppointments) và số lịch chưa có thợ (theo dòng của lịch). */

@@ -120,6 +120,8 @@ export function Legend({ subjects, showUnassigned }: { subjects: { name: string 
 }
 
 // Ảnh thợ của một ca: tên hiển thị và ảnh lấy thẳng từ ca (máy chủ gửi displayName, avatarUrl ký hạn 10 phút).
+// Ca không mang initials → Avatar tự tính bằng initialsOf (ui/Avatar.tsx) — chép đúng luật máy chủ, và displayName của ca
+// cùng nguồn với danh sách thợ (staffProfile.displayName ?? fullName) nên thẻ ca và đầu hàng ra cùng chữ (biên bản L2).
 export function StaffAvatars({ a, size = 'sm' }: { a: Appointment; size?: 'md' | 'sm' | 'xs' }) {
   if (a.staff.length === 0) return <LaneAvatar lane={null} size={size} />;
   const people = a.staff.map((s) => ({ membershipId: s.membershipId, displayName: s.displayName, avatarUrl: s.avatarUrl }));

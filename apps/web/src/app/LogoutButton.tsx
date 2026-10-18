@@ -1,16 +1,19 @@
 import { useState } from 'react';
+import { Button } from '../ui';
 import { useSession } from './session';
 import { ErrorNotice } from './ErrorNotice';
 
-export function LogoutButton() {
+// Nút đăng xuất ở màn ngoài khung (Tạo tổ chức khi chưa thuộc tổ chức nào). Nút nhẹ, nằm ở chân thẻ.
+export function LogoutButton({ errorClassName }: { errorClassName?: string }) {
   const { logout } = useSession();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<unknown>(null);
   return (
-    <div>
-      <button
-        type="button"
-        disabled={pending}
+    <>
+      <Button
+        variant="ghost"
+        size="sm"
+        loading={pending}
         onClick={() => {
           setPending(true);
           setError(null);
@@ -21,9 +24,9 @@ export function LogoutButton() {
           });
         }}
       >
-        {pending ? 'Đang đăng xuất…' : 'Đăng xuất'}
-      </button>
-      <ErrorNotice error={error} />
-    </div>
+        Đăng xuất
+      </Button>
+      <ErrorNotice error={error} className={errorClassName} />
+    </>
   );
 }

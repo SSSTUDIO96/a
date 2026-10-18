@@ -298,6 +298,57 @@ describe('lập tiến độ', () => {
   });
 });
 
+describe('gợi ý tiến độ chia đều tới ngày sự kiện (biên bản cuối T1)', () => {
+  const putBody = () => calls.find((c) => c.method === 'PUT')?.body as { installments: { name: string; dueDate: string; amount: number }[] } | undefined;
+  const echoPut: Handler = (c) => (c.method === 'PUT' ? json(200, progress()) : undefined);
+
+  it('Cọc + 2 đợt: đợt cuối đúng ngày sự kiện 24/10, không đợt nào sau ngày sự kiện; tiền vẫn chia như cũ', async () => {
+    setupServer({ handlers: [echoPut] });
+    renderAt(`/hoa-dao/thu-tien/${HD}`);
+    fireEvent.click(await screen.findByRole('button', { name: 'Lập tiến độ' }));
+    const dlg = screen.getByRole('dialog', { name: 'Tiến độ thanh toán' });
+    expect(within(dlg).getByText('Các đợt chia đều từ hôm nay tới ngày sự kiện 24/10/2026; không đợt nào hạn sau ngày đó.')).toBeTruthy();
+    fireEvent.click(within(dlg).getByRole('button', { name: 'Cọc + 2 đợt' }));
+    await act(async () => fireEvent.click(within(dlg).getByRole('button', { name: 'Lưu tiến độ' })));
+    expect(putBody()?.installments).toEqual([
+      { name: 'Đặt cọc', dueDate: '2026-10-19T23:59:59+07:00', amount: 1_000_000, isDeposit: true },
+      { name: 'Đợt 1', dueDate: '2026-10-22T23:59:59+07:00', amount: 2_150_000, isDeposit: false },
+      { name: 'Đợt 2', dueDate: '2026-10-24T23:59:59+07:00', amount: 2_150_000, isDeposit: false },
+    ]);
+    // Hợp đồng có ngày sự kiện: không cần hỏi thêm hợp đồng / lớp.
+    expect(calls.some((c) => c.url.endsWith(`/contracts/${HD}`) || c.url.includes('/classes'))).toBe(false);
+  });
+
+  it('ngày sự kiện quá gần (còn 2 ngày): Cọc + 3 đợt tắt và nói rõ vì sao; Cọc + 2 đợt vẫn dùng được', async () => {
+    const near = progress();
+    near.contract.eventDate = '2026-10-21T01:00:00.000Z';
+    setupServer({ progress: () => near });
+    renderAt(`/hoa-dao/thu-tien/${HD}`);
+    fireEvent.click(await screen.findByRole('button', { name: 'Lập tiến độ' }));
+    const dlg = screen.getByRole('dialog', { name: 'Tiến độ thanh toán' });
+    expect((within(dlg).getByRole('button', { name: 'Cọc + 3 đợt' }) as HTMLButtonElement).disabled).toBe(true);
+    expect((within(dlg).getByRole('button', { name: 'Cọc + 2 đợt' }) as HTMLButtonElement).disabled).toBe(false);
+    expect(
+      within(dlg).getByText(
+        'Còn 2 ngày tới ngày sự kiện (21/10/2026): không đủ chỗ cho 3 đợt cách nhau ít nhất 1 ngày mà không đợt nào hạn sau ngày sự kiện. Chia ít đợt hơn hoặc sửa tay hạn từng đợt.',
+      ),
+    ).toBeTruthy();
+  });
+
+  it('ngày sự kiện đã qua: giữ 30 ngày một đợt kể từ hôm nay và ghi rõ', async () => {
+    const past = progress();
+    past.contract.eventDate = '2026-10-10T01:00:00.000Z';
+    setupServer({ progress: () => past, handlers: [echoPut] });
+    renderAt(`/hoa-dao/thu-tien/${HD}`);
+    fireEvent.click(await screen.findByRole('button', { name: 'Lập tiến độ' }));
+    const dlg = screen.getByRole('dialog', { name: 'Tiến độ thanh toán' });
+    expect(within(dlg).getByText('Ngày sự kiện (10/10/2026) đã qua — gợi ý chia 30 ngày một đợt kể từ hôm nay.')).toBeTruthy();
+    fireEvent.click(within(dlg).getByRole('button', { name: 'Cọc + 2 đợt' }));
+    await act(async () => fireEvent.click(within(dlg).getByRole('button', { name: 'Lưu tiến độ' })));
+    expect(putBody()?.installments.map((i) => i.dueDate)).toEqual(['2026-10-19T23:59:59+07:00', '2026-11-18T23:59:59+07:00', '2026-12-18T23:59:59+07:00']);
+  });
+});
+
 describe('ghi phiếu thu / hoàn / thu vượt', () => {
   it('ghi phiếu thu: POST đúng thân + Idempotency-Key; 4 ô thay bằng summary trả về; số điền sẵn lấy lại từ máy chủ', async () => {
     let paid = false;
@@ -565,6 +616,70 @@ describe('tổ chức đào tạo: chip loại hợp đồng (kind máy chủ), 
     fireEvent.click(within(chips).getByRole('button', { name: /^Dịch vụ makeup/ }));
     expect(screen.queryByRole('heading', { name: /^Hợp đồng khoá học/ })).toBeNull();
     expect(screen.getByRole('heading', { name: /^Sự kiện 7 ngày tới/ })).toBeTruthy();
+  });
+
+  it('hợp đồng khoá học: Cọc + 2 đợt chia đều tới ngày kết thúc lớp muộn nhất (lớp đã huỷ, dòng đã huỷ không tính)', async () => {
+    const classes = [
+      { id: 'cls-k12', endDate: '2026-11-30', status: 'OPEN' },
+      { id: 'cls-k13', endDate: '2026-11-20', status: 'OPEN' },
+      { id: 'cls-huy', endDate: '2027-03-01', status: 'CANCELLED' },
+      { id: 'cls-dong-huy', endDate: '2027-02-01', status: 'OPEN' },
+      { id: 'cls-khac', endDate: '2027-01-01', status: 'OPEN' },
+    ];
+    const lines = [
+      { kind: 'COURSE', name: 'Makeup chuyên nghiệp · K12', courseClassId: 'cls-k12', voidedAt: null },
+      { kind: 'COURSE', name: 'Makeup cá nhân · K13', courseClassId: 'cls-k13', voidedAt: null },
+      { kind: 'COURSE', name: 'Lớp đã huỷ', courseClassId: 'cls-huy', voidedAt: null },
+      { kind: 'COURSE', name: 'Dòng đã huỷ', courseClassId: 'cls-dong-huy', voidedAt: '2026-10-18T03:00:00.000Z' },
+      { kind: 'CUSTOM', name: 'Giáo trình', courseClassId: null, voidedAt: null },
+    ];
+    setupServer({
+      handlers: [
+        (c) => {
+          const url = decodeURIComponent(c.url);
+          if (c.method === 'GET' && url.endsWith(`/contracts/${KH}`)) return json(200, { id: KH, kind: 'COURSE', lines });
+          if (c.method === 'GET' && url.includes(`/orgs/${ORG}/classes`)) return json(200, { items: classes });
+          if (c.method === 'PUT') return json(200, progress());
+          return undefined;
+        },
+        courseHandler,
+      ],
+    });
+    renderAcademy(`/hv/thu-tien/${KH}`);
+    fireEvent.click(await screen.findByRole('button', { name: 'Lập tiến độ' }));
+    const dlg = screen.getByRole('dialog', { name: 'Tiến độ thanh toán' });
+    expect(
+      await within(dlg).findByText(
+        'Các đợt chia đều từ hôm nay tới ngày kết thúc lớp 30/11/2026 (lớp kết thúc muộn nhất trong hợp đồng); không đợt nào hạn sau ngày đó.',
+      ),
+    ).toBeTruthy();
+    fireEvent.click(within(dlg).getByRole('button', { name: 'Cọc + 2 đợt' }));
+    await act(async () => fireEvent.click(within(dlg).getByRole('button', { name: 'Lưu tiến độ' })));
+    const put = calls.find((c) => c.method === 'PUT')?.body as { installments: { dueDate: string }[] };
+    expect(put.installments.map((i) => i.dueDate)).toEqual(['2026-10-19T23:59:59+07:00', '2026-11-09T23:59:59+07:00', '2026-11-30T23:59:59+07:00']);
+  });
+
+  it('hợp đồng khoá học không đọc được lớp (403): giữ 30 ngày một đợt', async () => {
+    setupServer({
+      handlers: [
+        (c) => {
+          const url = decodeURIComponent(c.url);
+          if (c.method === 'GET' && url.endsWith(`/contracts/${KH}`)) return json(200, { id: KH, kind: 'COURSE', lines: [{ kind: 'COURSE', name: 'K12', courseClassId: 'cls-k12', voidedAt: null }] });
+          if (c.method === 'GET' && url.includes(`/orgs/${ORG}/classes`)) return err(403, 'FORBIDDEN', 'Không có quyền');
+          if (c.method === 'PUT') return json(200, progress());
+          return undefined;
+        },
+        courseHandler,
+      ],
+    });
+    renderAcademy(`/hv/thu-tien/${KH}`);
+    fireEvent.click(await screen.findByRole('button', { name: 'Lập tiến độ' }));
+    const dlg = screen.getByRole('dialog', { name: 'Tiến độ thanh toán' });
+    await waitFor(() => expect((within(dlg).getByRole('button', { name: 'Cọc + 2 đợt' }) as HTMLButtonElement).disabled).toBe(false));
+    fireEvent.click(within(dlg).getByRole('button', { name: 'Cọc + 2 đợt' }));
+    await act(async () => fireEvent.click(within(dlg).getByRole('button', { name: 'Lưu tiến độ' })));
+    const put = calls.find((c) => c.method === 'PUT')?.body as { installments: { dueDate: string }[] };
+    expect(put.installments.map((i) => i.dueDate)).toEqual(['2026-10-19T23:59:59+07:00', '2026-11-18T23:59:59+07:00', '2026-12-18T23:59:59+07:00']);
   });
 
   it('hợp đồng khoá học: dòng phụ "Khoá · Lớp" (renderSubline), 4 ô số = summary máy chủ', async () => {

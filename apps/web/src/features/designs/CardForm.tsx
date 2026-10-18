@@ -54,6 +54,10 @@ export function CardForm(props: {
   const ids = { contract: useId(), q: useId(), body: useId(), title: useId(), date: useId() };
   const [copied, setCopied] = useState<string | null>(null);
   const ready = data?.status === 'ready' ? data.data : null;
+  // Logo thiếu thì mẫu bỏ hẳn ô logo (public/mau/chung/mau.js) — báo riêng, không gộp vào "Ô trống trên ảnh".
+  const missing = ready && template ? missingDataSlots(template, contractKind, ready) : [];
+  const missingText = missing.filter((m) => m.slot !== 'logo');
+  const missingLogo = missing.some((m) => m.slot === 'logo');
 
   async function copy() {
     const text = kind === 'GREETING' && draft.title.trim() ? `${draft.title.trim()}\n${draft.body}` : draft.body;
@@ -130,10 +134,16 @@ export function CardForm(props: {
                       </span>
                     );
                   })}
-                {ready && template && missingDataSlots(template, contractKind, ready).length > 0 && (
+                {ready && template && missingText.length > 0 && (
                   <span className="mtk-auto__miss">
-                    Ô trống trên ảnh: {missingDataSlots(template, contractKind, ready).map((m) => m.label).join(', ')}
+                    Ô trống trên ảnh: {missingText.map((m) => m.label).join(', ')}
                     <Tooltip text="Mẫu này có ô lấy từ dữ liệu nhưng hợp đồng hoặc Hồ sơ thương hiệu chưa có. Ô đó để trống trên ảnh, phần còn lại vẫn vẽ. Điền ở Hồ sơ thương hiệu hoặc hợp đồng rồi chọn lại hợp đồng." />
+                  </span>
+                )}
+                {ready && template && missingLogo && (
+                  <span className="mtk-auto__miss">
+                    Chưa có logo: ảnh bỏ ô logo
+                    <Tooltip text="Hồ sơ thương hiệu chưa có logo nên ảnh không in ô logo (không để ô trống hay vòng tròn trống), tên thương hiệu vẫn in. Thêm logo ở Hồ sơ thương hiệu rồi chọn lại hợp đồng." />
                   </span>
                 )}
               </div>

@@ -1,9 +1,18 @@
 import type { ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router';
 import { useSession } from './session';
+import '../ui/ui.css';
+import './app.css';
 
+// Đang tải (khôi phục phiên, tải tệp của màn ngoài khung): vòng xoay 16px + chữ, giữa màn, không nhảy bố cục.
+// Không gắn role="status": thông báo "Máy chủ đang bận" của phiên đã dùng vai trò đó, hai cái cùng lúc sẽ lẫn nhau.
 export function Loading() {
-  return <p>Đang tải…</p>;
+  return (
+    <div className="app-loading" aria-live="polite">
+      <span className="ui-spinner" aria-hidden="true" />
+      <span>Đang tải…</span>
+    </div>
+  );
 }
 
 interface FromState {

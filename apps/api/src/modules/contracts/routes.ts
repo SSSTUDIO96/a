@@ -203,12 +203,66 @@ function assertCanAdjust(o: OrgContext, status: ContractStatus, action: string):
   }
 }
 
+// DÒNG CẦN LÊN LỊCH = dòng chưa huỷ loại PACKAGE / SERVICE: hai loại duy nhất mang giờ, nơi làm, thợ (schemas.ts `placement`).
+// Phụ phí, dòng tự nhập, dịch vụ phụ / phí di chuyển (dòng con) và dòng khoá học (COURSE) không lên lịch.
+// Biên bản nghiệm thu cuối, N2 — quyết định điều phối 01:40: còn dòng cần lên lịch thiếu giờ bắt đầu / kết thúc → CHẶN (409),
+// không đổi gì trong database. Trước đây dòng không giờ không thợ bị bỏ qua: hợp đồng đã chốt mà Lịch trống, ô giờ bị khoá.
+// Hình dạng lỗi (web dùng để chỉ đúng dòng): details = { reason: 'LINES_MISSING_TIME', lineIds, lines: [{ id, name,
+// subjectName, missing: ('scheduledStart' | 'scheduledEnd')[] }] } — cùng một hình dạng ở mọi cửa sinh lịch.
+const SCHEDULABLE_LINE_KINDS = ['PACKAGE', 'SERVICE'] as const;
+type ScheduleDoor = 'confirm' | 'addAfterConfirm';
+const MISSING_TIME_ACTION: Record<ScheduleDoor, string> = {
+  confirm: 'nhập giờ cho mọi dòng trước khi xác nhận hợp đồng',
+  addAfterConfirm: 'nhập giờ cho dòng phát sinh trước khi thêm vào hợp đồng đã xác nhận',
+};
+
+async function assertSchedulableLinesHaveTime(tx: Tx, orgId: string, contractId: string, door: ScheduleDoor, onlyLineIds?: string[]) {
+  const missing = await tx.contractLine.findMany({
+    where: {
+      contractId,
+      organizationId: orgId,
+      voidedAt: null,
+      kind: { in: [...SCHEDULABLE_LINE_KINDS] },
+      OR: [{ scheduledStart: null }, { scheduledEnd: null }],
+      ...(onlyLineIds ? { id: { in: onlyLineIds } } : {}),
+    },
+    select: { id: true, name: true, subjectName: true, scheduledStart: true, scheduledEnd: true },
+    orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+  });
+  if (missing.length === 0) return;
+  const lines = missing.map((l) => ({
+    id: l.id,
+    name: l.name,
+    subjectName: l.subjectName,
+    missing: [...(l.scheduledStart ? [] : ['scheduledStart' as const]), ...(l.scheduledEnd ? [] : ['scheduledEnd' as const])],
+  }));
+  const label = (l: { name: string; subjectName: string | null }) => (l.subjectName ? `${l.name} — ${l.subjectName}` : l.name);
+  const first = lines[0]!;
+  const message =
+    lines.length === 1
+      ? `Dòng "${label(first)}" chưa có ${first.missing.length === 2 ? 'giờ bắt đầu và giờ kết thúc' : first.missing[0] === 'scheduledStart' ? 'giờ bắt đầu' : 'giờ kết thúc'}`
+      : `${lines.length} dòng chưa có đủ giờ bắt đầu và giờ kết thúc: ${lines.map((l) => `"${label(l)}"`).join(', ')}`;
+  throw new AppError('CONFLICT', `${message} — ${MISSING_TIME_ACTION[door]}`, {
+    reason: 'LINES_MISSING_TIME',
+    lineIds: lines.map((l) => l.id),
+    lines,
+  });
+}
+
 // Dòng chưa huỷ có GIỜ HẸN hoặc có thợ dự kiến → một lịch đã xác nhận đúng giờ, đúng nơi, đúng thợ. Dòng có giờ mà
 // CHƯA có thợ vẫn sinh lịch (không thợ — hiện ở hàng "Chưa có thợ" của Lịch): hợp đồng đã chốt không được vắng mặt
 // trên lịch (biên bản nghiệm thu web 2, S1 — quyết định điều phối: xác nhận KHÔNG bắt buộc có thợ). Trùng giờ thì module
 // lịch ném 409 kèm danh sách và cả transaction quay lui (hợp đồng giữ nguyên trạng thái cũ).
 // Dùng cho MỌI cửa sinh lịch từ hợp đồng: xác nhận hợp đồng, thêm dòng phát sinh sau xác nhận.
-async function createLineAppointments(tx: Tx, ctx: TxCtx, contract: { id: string; customerId: string }, onlyLineIds?: string[]) {
+// Chốt đầu tiên: mọi dòng CẦN LÊN LỊCH phải đủ giờ (assertSchedulableLinesHaveTime) — không còn dòng nào bị bỏ qua im lặng.
+async function createLineAppointments(
+  tx: Tx,
+  ctx: TxCtx,
+  contract: { id: string; customerId: string },
+  door: ScheduleDoor,
+  onlyLineIds?: string[],
+) {
+  await assertSchedulableLinesHaveTime(tx, ctx.orgId, contract.id, door, onlyLineIds);
   const lines = await tx.contractLine.findMany({
     where: {
       contractId: contract.id,
@@ -622,12 +676,13 @@ export const contractRoutes: AnyRoute[] = [
               planned.map((l) => l.id),
             )
           : [];
-        // Dòng phát sinh sau xác nhận có thợ + giờ → lên lịch ngay.
+        // Dòng phát sinh sau xác nhận → lên lịch ngay; dòng cần lên lịch mà thiếu giờ → 409 (N2), cả transaction quay lui.
         const createdAppointmentIds = addedAfterConfirm
           ? await createLineAppointments(
               tx,
               { orgId: o.id, userId: uid, requestId },
               c,
+              'addAfterConfirm',
               planned.map((l) => l.id),
             )
           : [];
@@ -770,9 +825,9 @@ export const contractRoutes: AnyRoute[] = [
         // Mọi bước cùng transaction: một lớp vừa đầy → 409, hợp đồng giữ nguyên nháp, không lớp nào bị trừ chỗ.
         const enrollmentIds = body.to === 'CONFIRMED' ? await enrollContractLines(tx, o.id, c) : [];
         const snapshot = body.to === 'CONFIRMED' ? await snapshotTexts(tx, o.id, c) : {};
-        // Xác nhận hợp đồng = lên lịch cho các dòng có thợ, trong cùng transaction.
+        // Xác nhận hợp đồng = lên lịch cho MỌI dòng cần lên lịch (thiếu giờ → 409, N2), trong cùng transaction.
         const createdAppointmentIds =
-          body.to === 'CONFIRMED' ? await createLineAppointments(tx, { orgId: o.id, userId: uid, requestId }, c) : [];
+          body.to === 'CONFIRMED' ? await createLineAppointments(tx, { orgId: o.id, userId: uid, requestId }, c, 'confirm') : [];
         // Huỷ hợp đồng → huỷ ghi danh, trả chỗ.
         const released = body.to === 'CANCELLED' && body.reason ? await releaseEnrollments(tx, o.id, { contractId: c.id }, body.reason) : [];
         // Huỷ hợp đồng thì huỷ luôn các lịch đã gắn, trong cùng transaction; còn lịch đang làm thì không huỷ gì cả.
