@@ -84,6 +84,8 @@ export function errorHandler(deps: Deps) {
       appErr = new AppError('VALIDATION_FAILED', 'Dữ liệu gửi lên không hợp lệ', z.flattenError(err));
     } else if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
       appErr = new AppError('CONFLICT', 'Dữ liệu bị trùng', { fields: err.meta?.target });
+    } else if (isExclusionViolation(err)) {
+      appErr = new AppError('CONFLICT', 'Trùng lịch: thợ đã có lịch khác trong khoảng thời gian này');
     } else if (isBodyParseError(err)) {
       appErr = new AppError('VALIDATION_FAILED', 'Nội dung gửi lên không phải JSON hợp lệ');
     } else {
@@ -98,4 +100,18 @@ export function errorHandler(deps: Deps) {
 
 function isBodyParseError(err: unknown): boolean {
   return typeof err === 'object' && err !== null && (err as { type?: string }).type === 'entity.parse.failed';
+}
+
+// Database từ chối do ràng buộc EXCLUDE (chặn trùng lịch, mã Postgres 23P01).
+// Prisma 6.19 báo lỗi này theo hai dạng (đã thí nghiệm thật):
+// - qua create/update: PrismaClientUnknownRequestError, không có code, mã nằm trong message;
+// - qua $queryRaw/$executeRaw: PrismaClientKnownRequestError P2010, meta.code = '23P01'.
+export function isExclusionViolation(err: unknown): boolean {
+  if (err instanceof Prisma.PrismaClientKnownRequestError) {
+    return err.code === 'P2010' && (err.meta as { code?: string } | undefined)?.code === '23P01';
+  }
+  if (err instanceof Prisma.PrismaClientUnknownRequestError) {
+    return err.message.includes('23P01');
+  }
+  return false;
 }
