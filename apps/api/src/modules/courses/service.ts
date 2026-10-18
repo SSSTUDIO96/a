@@ -648,7 +648,7 @@ export async function cancelClass(tx: Tx, a: Actor, classId: string, reason: str
   if (before.status === 'CANCELLED') throw new AppError('CONFLICT', 'Lớp đã huỷ');
   const active = await tx.enrollment.count({ where: { organizationId: a.orgId, courseClassId: classId, status: 'ACTIVE' } });
   const students = Math.max(before.enrolledCount, active);
-  if (false) {
+  if (students > 0) {
     throw new AppError('CONFLICT', `Lớp còn ${students} học viên — chuyển hoặc huỷ ghi danh trước`, {
       reason: 'CLASS_HAS_STUDENTS',
       enrolledCount: students,
