@@ -89,7 +89,7 @@ export async function assertAcademy(db: Tx, orgId: string): Promise<{ timezone: 
 
 async function lockCourse(tx: Tx, orgId: string, courseId: string): Promise<CourseRow> {
   const rows = await tx.$queryRaw<{ id: string }[]>`
-    SELECT id FROM courses WHERE id = ${courseId}::uuid FOR UPDATE`;
+    SELECT id FROM courses WHERE id = ${courseId}::uuid AND organization_id = ${orgId}::uuid FOR UPDATE`;
   if (rows.length === 0) throw notFound.course();
   return tx.course.findUniqueOrThrow({ where: { id: courseId }, select: courseSelect });
 }
@@ -107,7 +107,7 @@ async function assertGroup(tx: Tx, orgId: string, groupId: string): Promise<void
 }
 
 async function assertInstructor(tx: Tx, orgId: string, membershipId: string, path: string): Promise<void> {
-  const m = await tx.membership.findFirst({ where: { id: membershipId, organizationId: orgId }, select: { status: true } });
+  const m = await tx.membership.findFirst({ where: { id: membershipId }, select: { status: true } });
   if (!m) throw notFound.instructor();
   if (m.status !== 'ACTIVE') throw fieldError(path, 'Giảng viên không còn hoạt động trong tổ chức');
 }
