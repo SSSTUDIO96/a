@@ -41,4 +41,11 @@ Anh Chiến nhắn lúc khoảng 15:13 UTC ngày 18/10/2026: *"Tự làm vào ch
 | 18:05 | Thu cọc khi hợp đồng còn nháp | Để thợ G quyết và ghi lý do (khách hay chuyển cọc trước khi chốt) | — | Được |
 | 18:05 | Quản trị nền tảng | Cấp quyền bằng lệnh chạy trên máy chủ, không qua trang web, không có mật khẩu chung. Người thường gọi đường quản trị nhận "không có đường này". | Sửa đúng lỗi số 6 của Studio Pro | Được |
 
+| 18:20 | Thợ E hỏi: thợ makeup có thấy 3 mục điều hướng (Lịch, Hợp đồng, Khách) không | **Giữ nguyên** theo quyền hiện có; mục nào thiếu quyền thì ẩn | Ẩn theo quyền đã thống nhất ở khung C | Được |
+| 18:40 | Phông viết tay | Tạm dùng phông miễn phí giấy phép OFL, chỉ giữ phông in đúng dấu tiếng Việt; phông là một biến thay được | Thư mục phông SS-Album ở ổ H: máy anh, phiên đám mây không đọc được | Được: thay khi anh tải tệp lên |
+| 18:55 | Database thử `makeup_test_contract` thiếu chốt chặn | Xoá 2 bậc phí chồng nhau của tổ chức **thử**, áp lại chốt, sửa checksum | Chỉ dữ liệu thử, không đụng dữ liệu thật | Được |
+| 19:05 | Cửa gác thêm phép `platform` | Người thường gọi trang quản trị nền tảng phải nhận 404 y hệt đường bịa; chọn đường theo địa chỉ `/platform/` | Đột biến 9 cho thấy chọn theo nhãn thì mù (sổ lỗi 15) | Được |
+| 19:10 | Lưu bản chụp hiện trạng việc dở của thợ | Lưu, ghi rõ "CHƯA nghiệm thu" ở lời lưu | Máy đám mây có thể bị thu hồi khi lâu không dùng; mất việc của 6 thợ thì đắt hơn | Được: các bản lưu sau đè lên |
+| 19:15 | Nghiệm thu web "đạt có điều kiện" | Giao 2 thợ sửa song song: máy chủ (T3, N2, N3, N4) và web (T2, N1, N5–N9); T1 đếm lại trên mã mới | Lỗi chia được theo tệp, không giẫm nhau | Được |
+
 **Cần anh xem lại nhất:** phân quyền theo vai trò mẫu (dòng 15:16). Studio anh có thể muốn thợ chính thấy cả lịch của đội.
