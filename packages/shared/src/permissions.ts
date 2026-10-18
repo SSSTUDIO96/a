@@ -10,6 +10,14 @@ export const PERMISSIONS = {
   'roles.read': 'Xem vai trò',
   'roles.manage': 'Tạo, sửa vai trò tuỳ chỉnh',
   'audit.read': 'Xem nhật ký thay đổi',
+  'catalog.read': 'Xem dịch vụ, gói, bảng giá',
+  'catalog.write': 'Thêm, sửa dịch vụ và gói',
+  'prices.write': 'Đổi giá',
+  'customers.read': 'Xem khách hàng',
+  'customers.write': 'Thêm, sửa khách hàng',
+  'schedule.read_own': 'Xem lịch mình được phân',
+  'schedule.read_all': 'Xem lịch cả tổ chức',
+  'schedule.write': 'Tạo, sửa, đổi trạng thái lịch',
 } as const;
 
 export type Permission = keyof typeof PERMISSIONS;
@@ -37,14 +45,27 @@ export const SYSTEM_ROLES: Record<SystemRoleKey, { name: string; permissions: Pe
   admin: { name: 'Quản trị', permissions: ALL_PERMISSIONS },
   manager: {
     name: 'Quản lý',
-    permissions: ['org.read', 'members.read', 'members.invite', 'members.update', 'roles.read'],
+    permissions: [
+      'org.read', 'members.read', 'members.invite', 'members.update', 'roles.read',
+      'catalog.read', 'catalog.write', 'prices.write', 'customers.read', 'customers.write',
+      'schedule.read_own', 'schedule.read_all', 'schedule.write',
+    ],
   },
-  artist: { name: 'Thợ makeup', permissions: ['org.read', 'members.read'] },
-  assistant: { name: 'Thợ phụ', permissions: ['org.read', 'members.read'] },
-  receptionist: { name: 'Lễ tân', permissions: ['org.read', 'members.read'] },
-  accountant: { name: 'Kế toán', permissions: ['org.read', 'members.read', 'audit.read'] },
-  instructor: { name: 'Giảng viên', permissions: ['org.read', 'members.read'] },
-  teaching_assistant: { name: 'Trợ giảng', permissions: ['org.read'] },
+  artist: { name: 'Thợ makeup', permissions: ['org.read', 'members.read', 'catalog.read', 'schedule.read_own'] },
+  assistant: { name: 'Thợ phụ', permissions: ['org.read', 'members.read', 'catalog.read', 'schedule.read_own'] },
+  receptionist: {
+    name: 'Lễ tân',
+    permissions: [
+      'org.read', 'members.read', 'catalog.read', 'customers.read', 'customers.write',
+      'schedule.read_own', 'schedule.read_all', 'schedule.write',
+    ],
+  },
+  accountant: {
+    name: 'Kế toán',
+    permissions: ['org.read', 'members.read', 'audit.read', 'catalog.read', 'customers.read', 'schedule.read_own', 'schedule.read_all'],
+  },
+  instructor: { name: 'Giảng viên', permissions: ['org.read', 'members.read', 'catalog.read', 'schedule.read_own'] },
+  teaching_assistant: { name: 'Trợ giảng', permissions: ['org.read', 'schedule.read_own'] },
 };
 
 export const SYSTEM_ROLE_KEYS = Object.keys(SYSTEM_ROLES) as SystemRoleKey[];

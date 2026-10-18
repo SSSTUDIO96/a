@@ -49,6 +49,8 @@ export interface RouteDef<B extends AnySchema, Q extends AnySchema, P extends An
   summary: string;
   tag: string;
   rateLimit?: 'auth';
+  // Bắt buộc header Idempotency-Key, chống tạo trùng khi bấm hai lần / mạng gửi lại.
+  idempotent?: boolean;
   body?: B;
   query?: Q;
   params?: P;
@@ -69,6 +71,11 @@ export function defineRoute<
     if (!def.path.startsWith('/orgs/:orgId')) {
       throw new Error(`Đường ${def.method.toUpperCase()} ${def.path} thuộc tổ chức phải bắt đầu bằng /orgs/:orgId`);
     }
+    if (def.idempotent && def.method !== 'post') {
+      throw new Error(`Đường ${def.method.toUpperCase()} ${def.path}: chống gửi trùng chỉ dùng cho POST`);
+    }
+  } else if (def.idempotent) {
+    throw new Error(`Đường ${def.method.toUpperCase()} ${def.path}: chống gửi trùng chỉ dùng cho đường thuộc tổ chức`);
   } else if (def.permission) {
     throw new Error(`Đường ${def.method.toUpperCase()} ${def.path} khai quyền nhưng không thuộc tổ chức`);
   }

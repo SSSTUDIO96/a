@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Makeup Pro – Phương án A</title>
+<style>
+:root{
+  --bg:#FAF8F6; --surface:#FFFFFF; --line:#E9E3DE; --line-2:#F2EDE9;
+  --text:#221C19; --muted:#716862; --faint:#A39A94;
+  --accent:#A63D62; --accent-soft:#F7E8EE;
+  --rose:#A63D62; --rose-bg:#FBEDF2; --rose-line:#E7B8C9;
+  --amber:#9A5B0F; --amber-bg:#FDF2E2; --amber-line:#EBCB98;
+  --violet:#5B45A0; --violet-bg:#F0ECFA; --violet-line:#CFC4EE;
+  --danger:#B42318; --danger-bg:#FEF0EE; --danger-line:#F3B8B0;
+  --hour:64px;
+  --font:"Be Vietnam Pro", Inter, "Segoe UI", Roboto, Arial, sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px;line-height:1.4;-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit;color:inherit}
+svg.i{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+/* ===== Khung ứng dụng ===== */
+.app{display:grid;grid-template-columns:216px 1fr;height:100vh}
+.rail{background:var(--surface);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:16px 12px;gap:4px}
+.brand{display:flex;align-items:center;gap:10px;padding:4px 8px 18px;font-weight:700;font-size:16px}
+.brand b{width:30px;height:30px;border-radius:8px;background:var(--accent);color:#fff;display:grid;place-items:center;font-size:13px}
+.nav a{display:flex;align-items:center;gap:12px;padding:10px 10px;border-radius:8px;color:var(--muted);text-decoration:none;font-weight:500}
+.nav a:hover{background:var(--line-2);color:var(--text)}
+.nav a.on{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.rail .studio{margin-top:auto;padding:10px;border-top:1px solid var(--line);display:flex;gap:10px;align-items:center;font-size:13px}
+.rail .studio small{display:block;color:var(--muted);font-size:12px}
+.main{min-width:0;display:flex;flex-direction:column;height:100vh}
+.topbar{display:none}
+.bottomnav{display:none}
+
+.screen{display:none;flex:1;min-height:0;flex-direction:column}
+.screen.on{display:flex}
+
+/* ===== Thanh công cụ ===== */
+.bar{display:flex;align-items:center;gap:12px;padding:14px 24px;background:var(--surface);border-bottom:1px solid var(--line);flex-wrap:wrap}
+.bar h1{font-size:18px;font-weight:700;margin-right:8px}
+.btn{display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 14px;border:1px solid var(--line);background:var(--surface);border-radius:8px;cursor:pointer;font-weight:500;white-space:nowrap}
+.btn:hover{border-color:#D8CFC9}
+.btn.icon{width:36px;padding:0;justify-content:center}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.sm{height:30px;padding:0 10px;font-size:13px}
+.datebox{display:flex;align-items:center;gap:6px}
+.datebox .d{font-weight:600;min-width:170px;text-align:center}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--surface)}
+.seg button{border:0;background:none;padding:0 14px;height:34px;cursor:pointer;color:var(--muted);font-weight:500}
+.seg button.on{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.spacer{flex:1}
+
+/* ===== Cảnh báo trùng lịch ===== */
+.alert{display:flex;align-items:center;gap:10px;margin:12px 24px 0;padding:10px 12px 10px 14px;background:var(--danger-bg);border:1px solid var(--danger-line);border-radius:8px;color:var(--danger)}
+.alert .t{flex:1;min-width:0}
+.alert .t b{font-weight:600}
+.alert .btn{border-color:var(--danger-line);color:var(--danger);background:#fff}
+
+/* ===== Lưới theo thợ ===== */
+.cal{flex:1;min-height:0;margin:12px 24px 16px;background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:auto;position:relative}
+.cal-in{display:grid;width:max-content;min-width:100%}
+.colh{position:sticky;top:0;z-index:3;background:var(--surface);border-bottom:1px solid var(--line);padding:10px 12px;display:flex;align-items:center;gap:10px;border-left:1px solid var(--line-2);min-width:0}
+.colh.corner{left:0;z-index:4;border-left:0}
+.av{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;flex:none;color:#fff}
+.colh .nm{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.colh .meta{font-size:12px;color:var(--muted);white-space:nowrap}
+.colh.unassigned .av{background:#fff;border:1.5px dashed var(--faint);color:var(--muted)}
+.axis{position:sticky;left:0;z-index:2;background:var(--surface);border-right:1px solid var(--line)}
+.axis div{height:var(--hour);font-size:11px;color:var(--faint);text-align:right;padding:2px 8px 0 0;position:relative;top:-8px}
+.axis div:first-child{top:0}
+.col{position:relative;border-left:1px solid var(--line-2);background:repeating-linear-gradient(to bottom,transparent 0,transparent calc(var(--hour) - 1px),var(--line-2) calc(var(--hour) - 1px),var(--line-2) var(--hour))}
+.col.unassigned{background-color:#FCFBFA}
+.off{position:absolute;left:0;right:0;background:repeating-linear-gradient(135deg,#F4F1EE 0 6px,#FAF8F6 6px 12px)}
+.ev{position:absolute;border-radius:6px;padding:5px 8px;overflow:hidden;border:1px solid;border-left-width:3px;cursor:pointer;font-size:12px;line-height:1.3}
+.ev .tm{font-weight:600;font-size:11.5px;opacity:.85}
+.ev .sv{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ev .kh{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;color:var(--text)}
+.ev .nc{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted);font-size:11.5px}
+.ev.cd{background:var(--rose-bg);border-color:var(--rose-line);border-left-color:var(--rose);color:var(--rose)}
+.ev.ah{background:var(--amber-bg);border-color:var(--amber-line);border-left-color:var(--amber);color:var(--amber)}
+.ev.tc{background:var(--violet-bg);border-color:var(--violet-line);border-left-color:var(--violet);color:var(--violet)}
+.ev.na{background:#fff;border:1.5px dashed var(--faint);color:var(--muted)}
+.ev.conflict{border-color:var(--danger);border-left-color:var(--danger);box-shadow:0 0 0 1px var(--danger) inset}
+.ev .flag{display:inline-flex;align-items:center;gap:3px;background:var(--danger);color:#fff;border-radius:4px;padding:0 5px;font-size:10.5px;font-weight:600;margin-left:4px;vertical-align:1px}
+.ev .assign{margin-top:6px}
+
+.legend{display:flex;gap:14px;align-items:center;font-size:12px;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+
+/* ===== Tooltip ===== */
+.tip{position:relative;display:inline-grid;place-items:center;width:16px;height:16px;border-radius:50%;border:1px solid var(--faint);color:var(--muted);font-size:10.5px;font-weight:700;cursor:help;margin-left:6px;vertical-align:1px}
+.tip:hover::after,.tip:focus::after{content:attr(data-tip);position:absolute;left:50%;bottom:calc(100% + 8px);transform:translateX(-50%);width:240px;background:#2A2220;color:#fff;font-weight:400;font-size:12px;line-height:1.45;padding:8px 10px;border-radius:6px;z-index:50;text-align:left}
+
+/* ===== Bảng giá ===== */
+.pg{flex:1;min-height:0;display:grid;grid-template-columns:220px minmax(0,1fr) 380px;gap:0}
+.cats{border-right:1px solid var(--line);background:var(--surface);padding:16px 12px;overflow:auto}
+.cats h3{font-size:12px;color:var(--muted);font-weight:600;padding:0 10px 8px;text-transform:uppercase;letter-spacing:.04em}
+.cats a{display:flex;justify-content:space-between;padding:9px 10px;border-radius:8px;color:var(--text);text-decoration:none}
+.cats a span{color:var(--faint)}
+.cats a.on{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.cats a.on span{color:var(--accent)}
+.list{overflow:auto;padding:16px 24px 24px}
+.grp{margin-bottom:18px}
+.grp h2{font-size:15px;font-weight:700;margin:4px 0 8px;display:flex;align-items:center;gap:8px}
+.grp h2 small{font-weight:500;color:var(--faint);font-size:13px}
+.rows{background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.row{display:grid;grid-template-columns:4px minmax(0,1fr) auto;gap:14px;align-items:center;padding:12px 16px 12px 0;border-top:1px solid var(--line-2);cursor:pointer}
+.row:first-child{border-top:0}
+.row:hover{background:#FDFBFA}
+.row.sel{background:var(--accent-soft)}
+.row .bar4{height:100%;min-height:36px;border-radius:0 3px 3px 0}
+.row .n{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .s{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .p{text-align:right;font-weight:600;white-space:nowrap}
+.row .p del{display:block;font-weight:400;color:var(--faint);font-size:12px}
+.badge{display:inline-block;font-size:11px;font-weight:600;padding:1px 6px;border-radius:4px;background:var(--line-2);color:var(--muted);margin-left:6px;vertical-align:1px}
+.drawer{border-left:1px solid var(--line);background:var(--surface);display:flex;flex-direction:column;min-height:0}
+.drawer header{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px}
+.drawer header h3{font-size:15px;flex:1}
+.form{padding:8px 20px;overflow:auto;flex:1}
+.set{display:grid;grid-template-columns:minmax(0,1fr) 170px;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line-2)}
+.set label{font-weight:500;white-space:nowrap}
+.set.sub label{padding-left:16px;color:var(--muted);font-weight:400}
+.ctl{height:34px;border:1px solid var(--line);border-radius:8px;padding:0 10px;background:#fff;width:100%;min-width:0}
+.money{text-align:right;font-variant-numeric:tabular-nums}
+.sw{width:38px;height:22px;border-radius:11px;background:#D9D2CD;position:relative;justify-self:end;cursor:pointer}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:left .15s}
+.sw.on{background:var(--accent)}
+.sw.on::after{left:19px}
+.drawer footer{padding:12px 20px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px}
+.chips{display:none;flex:none}
+
+/* ===== Máy tính bảng ===== */
+@media (max-width:1180px){
+  .app{grid-template-columns:64px 1fr}
+  .rail{padding:16px 8px;align-items:center}
+  .brand span,.nav a span,.rail .studio div{display:none}
+  .brand{padding:4px 0 18px}
+  .nav a{justify-content:center;padding:11px}
+  .rail .studio{padding:10px 0;justify-content:center}
+  .legend{display:none}
+  .pg{grid-template-columns:minmax(0,1fr) 340px}
+  .cats{display:none}
+  .chips{display:flex;flex:none;gap:8px;overflow-x:auto;padding:12px 24px 2px;scrollbar-width:none}
+  .chip{white-space:nowrap;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 12px;font-weight:500;color:var(--muted);font-size:13px}
+  .chip.on{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+  .list{padding-top:12px}
+  .datebox .d{min-width:150px}
+  .bar .seg{display:none}
+  .bar .viewsel{display:inline-flex}
+}
+.viewsel{display:none}
+
+/* ===== Điện thoại ===== */
+@media (max-width:640px){
+  :root{--hour:60px}
+  .app{grid-template-columns:1fr}
+  .rail{display:none}
+  .main{height:100vh;padding-bottom:64px}
+  .topbar{display:flex;align-items:center;gap:10px;height:52px;padding:0 16px;background:var(--surface);border-bottom:1px solid var(--line)}
+  .topbar .t{font-weight:700;font-size:16px;flex:1}
+  .bottomnav{display:grid;grid-template-columns:repeat(4,1fr);position:fixed;left:0;right:0;bottom:0;height:64px;background:var(--surface);border-top:1px solid var(--line);z-index:20}
+  .bottomnav a{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:11.5px;color:var(--muted);text-decoration:none}
+  .bottomnav a.on{color:var(--accent);font-weight:600}
+  .bar{padding:10px 16px;gap:8px}
+  .bar h1,.bar .hide-m{display:none}
+  .datebox{flex:1;justify-content:space-between}
+  .datebox .d{min-width:0;font-size:14px}
+  .alert{margin:10px 16px 0;align-items:flex-start;font-size:13px}
+  .cal{margin:10px 0 0;border-radius:0;border-left:0;border-right:0}
+  .colh{padding:8px;gap:8px}
+  .colh .av{width:28px;height:28px;font-size:11px}
+  .axis div{padding-right:6px}
+  .fab{display:grid!important}
+  .pg{grid-template-columns:1fr}
+  .drawer{display:none}
+  .chips{padding:10px 16px 0}
+  .list{padding:10px 16px 16px}
+  .bar .search{display:none}
+}
+.fab{display:none;position:fixed;right:16px;bottom:80px;width:52px;height:52px;border-radius:50%;background:var(--accent);color:#fff;place-items:center;z-index:21;border:0}
+.fab svg{width:24px;height:24px}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="i-lich" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></symbol>
+  <symbol id="i-gia" viewBox="0 0 24 24"><path d="M20 12l-8 8-9-9V4h7z"/><circle cx="7.5" cy="7.5" r="1.5"/></symbol>
+  <symbol id="i-khach" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5M16 4.5a3.5 3.5 0 010 7M18 14.8c1.8.7 3 2.5 3.5 5.2"/></symbol>
+  <symbol id="i-tho" viewBox="0 0 24 24"><path d="M14 3l7 7-9 9H5v-7z"/><path d="M11 6l7 7"/></symbol>
+  <symbol id="i-bc" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></symbol>
+  <symbol id="i-cd" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></symbol>
+  <symbol id="i-l" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></symbol>
+  <symbol id="i-r" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18h.01"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-5-5"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+</svg>
+
+<div class="app">
+  <aside class="rail">
+    <div class="brand"><b>MP</b><span>Makeup Pro</span></div>
+    <nav class="nav">
+      <a href="#lich" data-s="lich" title="Lịch makeup"><svg class="i"><use href="#i-lich"/></svg><span>Lịch makeup</span></a>
+      <a href="#bang-gia" data-s="bang-gia" title="Bảng giá"><svg class="i"><use href="#i-gia"/></svg><span>Bảng giá</span></a>
+      <a href="#" title="Khách hàng"><svg class="i"><use href="#i-khach"/></svg><span>Khách hàng</span></a>
+      <a href="#" title="Thợ makeup"><svg class="i"><use href="#i-tho"/></svg><span>Thợ makeup</span></a>
+      <a href="#" title="Báo cáo"><svg class="i"><use href="#i-bc"/></svg><span>Báo cáo</span></a>
+      <a href="#" title="Cài đặt"><svg class="i"><use href="#i-cd"/></svg><span>Cài đặt</span></a>
+    </nav>
+    <div class="studio"><span class="av" style="background:#7A6A62">CH</span><div>Studio Chiến<small>Chủ studio</small></div></div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar"><svg class="i"><use href="#i-menu"/></svg><span class="t" id="tb-title">Lịch makeup</span><span class="av" style="background:#7A6A62;width:30px;height:30px;font-size:11px">CH</span></div>
+
+    <!-- ========== MÀN LỊCH ========== -->
+    <section class="screen" id="s-lich">
+      <div class="bar">
+        <h1>Lịch makeup</h1>
+        <button class="btn hide-m">Hôm nay</button>
+        <div class="datebox">
+          <button class="btn icon" title="Ngày trước"><svg class="i"><use href="#i-l"/></svg></button>
+          <span class="d">Thứ Bảy, 24/10/2026</span>
+          <button class="btn icon" title="Ngày sau"><svg class="i"><use href="#i-r"/></svg></button>
+        </div>
+        <div class="seg"><button class="on">Ngày</button><button>3 ngày</button><button>Tuần</button></div>
+        <button class="btn viewsel hide-m">Ngày <svg class="i"><use href="#i-down"/></svg></button>
+        <div class="spacer hide-m"></div>
+        <button class="btn hide-m">Thợ: tất cả (4) <svg class="i"><use href="#i-down"/></svg></button>
+        <button class="btn pri hide-m"><svg class="i"><use href="#i-plus"/></svg>Đặt lịch</button>
+      </div>
+      <div class="alert" id="alert"></div>
+      <div class="cal" id="cal"></div>
+      <button class="fab" title="Đặt lịch"><svg class="i"><use href="#i-plus"/></svg></button>
+    </section>
+
+    <!-- ========== MÀN BẢNG GIÁ ========== -->
+    <section class="screen" id="s-bang-gia">
+      <div class="bar">
+        <h1>Bảng giá</h1>
+        <div class="spacer"></div>
+        <div class="search" style="position:relative"><svg class="i" style="position:absolute;left:10px;top:9px;color:var(--faint)"><use href="#i-search"/></svg><input class="ctl" style="width:240px;padding-left:34px" placeholder="Tìm dịch vụ hoặc gói"></div>
+        <button class="btn pri"><svg class="i"><use href="#i-plus"/></svg>Thêm <svg class="i"><use href="#i-down"/></svg></button>
+      </div>
+      <div class="pg">
+        <aside class="cats" id="cats"></aside>
+        <div style="min-width:0;display:flex;flex-direction:column;min-height:0">
+          <div class="chips" id="chips"></div>
+          <div class="list" id="list"></div>
+        </div>
+        <aside class="drawer">
+          <header><h3>Sửa dịch vụ</h3><button class="btn icon sm" title="Đóng"><svg class="i"><use href="#i-x"/></svg></button></header>
+          <div class="form">
+            <div class="set"><label>Tên dịch vụ</label><input class="ctl" value="Makeup ăn hỏi"></div>
+            <div class="set"><label>Nhóm</label><select class="ctl"><option>Ăn hỏi</option><option>Cô dâu</option><option>Tiệc &amp; sự kiện</option></select></div>
+            <div class="set"><label>Thời lượng<span class="tip" tabindex="0" data-tip="Thời gian thợ làm cho một khách. Lịch dùng con số này để chặn giờ và báo trùng lịch.">?</span></label><select class="ctl"><option>1 giờ 30 phút</option></select></div>
+            <div class="set"><label>Giá</label><input class="ctl money" value="1.500.000 ₫"></div>
+            <div class="set"><label>Giá theo bậc thợ<span class="tip" tabindex="0" data-tip="Bật để đặt giá khác nhau cho thợ chính và thợ phụ. Khi đặt lịch, giá tự đổi theo thợ được phân.">?</span></label><span class="sw on"></span></div>
+            <div class="set sub"><label>Thợ chính</label><input class="ctl money" value="1.500.000 ₫"></div>
+            <div class="set sub"><label>Thợ phụ</label><input class="ctl money" value="1.000.000 ₫"></div>
+            <div class="set"><label>Thời gian dọn đồ<span class="tip" tabindex="0" data-tip="Khoảng nghỉ sau mỗi ca để thợ dọn đồ hoặc di chuyển. Lịch tự chặn khoảng này, không cho đặt chồng.">?</span></label><select class="ctl"><option>15 phút</option></select></div>
+            <div class="set"><label>Cho khách đặt online<span class="tip" tabindex="0" data-tip="Dịch vụ hiện trên trang đặt lịch công khai của studio.">?</span></label><span class="sw on"></span></div>
+            <div class="set"><label>Đặt cọc<span class="tip" tabindex="0" data-tip="Số tiền khách cần chuyển trước để giữ lịch.">?</span></label><input class="ctl money" value="500.000 ₫"></div>
+          </div>
+          <footer><button class="btn">Huỷ</button><button class="btn pri">Lưu</button></footer>
+        </aside>
+      </div>
+    </section>
+  </div>
+
+  <nav class="bottomnav">
+    <a href="#lich" data-s="lich"><svg class="i"><use href="#i-lich"/></svg>Lịch</a>
+    <a href="#bang-gia" data-s="bang-gia"><svg class="i"><use href="#i-gia"/></svg>Bảng giá</a>
+    <a href="#"><svg class="i"><use href="#i-khach"/></svg>Khách</a>
+    <a href="#"><svg class="i"><use href="#i-cd"/></svg>Thêm</a>
+  </nav>
+</div>
+
+<script>
+/* ---------- Dữ liệu minh hoạ ---------- */
+const THO=[
+  {id:'ha',ten:'Nguyễn Thu Hà',ngan:'Thu Hà',vt:'TH',mau:'#A63D62',bac:'Thợ chính',nghi:[]},
+  {id:'ma',ten:'Trần Minh Anh',ngan:'Minh Anh',vt:'MA',mau:'#5B45A0',bac:'Thợ chính',nghi:[]},
+  {id:'tram',ten:'Lê Ngọc Trâm',ngan:'Ngọc Trâm',vt:'NT',mau:'#2F7D72',bac:'Thợ chính',nghi:[[12,13]]},
+  {id:'vy',ten:'Phạm Bảo Vy',ngan:'Bảo Vy',vt:'BV',mau:'#9A5B0F',bac:'Thợ phụ',nghi:[[4,7.5],[15,18]]},
+];
+const LICH=[
+  {tho:'ha',bd:'04:30',kt:'06:30',loai:'cd',dv:'Makeup cô dâu (ngày cưới)',kh:'Tôn Nữ Hoàng Bảo Ngọc Phương Thảo',nc:'Nhà gái – 128 Nguyễn Văn Cừ, Long Biên'},
+  {tho:'ha',bd:'06:00',kt:'07:30',loai:'ah',dv:'Makeup ăn hỏi',kh:'Lê Thị Lan',nc:'Tại studio'},
+  {tho:'ha',bd:'10:00',kt:'11:00',loai:'tc',dv:'Makeup tiệc',kh:'Đỗ Quỳnh Như',nc:'Tại studio'},
+  {tho:'ma',bd:'05:00',kt:'06:30',loai:'ah',dv:'Makeup ăn hỏi',kh:'Vũ Hồng Nhung',nc:'Nhà gái – Cầu Giấy'},
+  {tho:'ma',bd:'09:00',kt:'10:00',loai:'tc',dv:'Makeup tiệc',kh:'Đặng Thu Trang',nc:'Tại studio'},
+  {tho:'ma',bd:'16:00',kt:'17:00',loai:'tc',dv:'Makeup tiệc',kh:'Hoàng Hải Yến',nc:'Tại studio'},
+  {tho:'tram',bd:'07:00',kt:'09:00',loai:'cd',dv:'Gói Cưới Trọn Vẹn – buổi cưới',kh:'Bùi Khánh Linh',nc:'Khách sạn Melia, Lý Thường Kiệt'},
+  {tho:'tram',bd:'13:30',kt:'15:00',loai:'cd',dv:'Makeup cô dâu chụp ảnh cưới',kh:'Ngô Mai Anh',nc:'Tại studio'},
+  {tho:'vy',bd:'08:00',kt:'08:45',loai:'tc',dv:'Makeup mẹ cô dâu',kh:'Cô Phạm Thị Hồng',nc:'Khách sạn Melia'},
+  {tho:'vy',bd:'11:00',kt:'12:00',loai:'tc',dv:'Makeup kỷ yếu',kh:'Lớp 12A1 – Nguyễn Gia Hân',nc:'Tại studio'},
+  {tho:null,bd:'15:00',kt:'16:00',loai:'tc',dv:'Makeup tiệc',kh:'Trịnh Minh Châu',nc:'Tại studio'},
+];
+const NHOM=[
+  {id:'cd',ten:'Cô dâu',mau:'var(--rose)'},
+  {id:'ah',ten:'Ăn hỏi',mau:'var(--amber)'},
+  {id:'tc',ten:'Tiệc & sự kiện',mau:'var(--violet)'},
+  {id:'pp',ten:'Phụ phí',mau:'#A39A94'},
+  {id:'goi',ten:'Gói makeup',mau:'var(--accent)'},
+];
+const DV=[
+  {n:'cd',ten:'Makeup cô dâu (ngày cưới)',phut:120,gia:2500000,bac:true},
+  {n:'cd',ten:'Makeup cô dâu chụp ảnh cưới',phut:90,gia:1200000},
+  {n:'cd',ten:'Làm tóc cô dâu',phut:60,gia:800000},
+  {n:'ah',ten:'Makeup ăn hỏi',phut:90,gia:1500000,bac:true},
+  {n:'tc',ten:'Makeup tiệc',phut:60,gia:600000},
+  {n:'tc',ten:'Makeup mẹ cô dâu / chú rể',phut:45,gia:500000},
+  {n:'tc',ten:'Makeup kỷ yếu',phut:45,gia:350000},
+  {n:'tc',ten:'Makeup chú rể',phut:20,gia:200000},
+  {n:'pp',ten:'Phụ phí đi xa trên 10 km',gia:300000,ghi:'Cộng thêm mỗi ca'},
+  {n:'pp',ten:'Phụ phí ca sớm trước 5 giờ',gia:200000,ghi:'Cộng thêm mỗi ca'},
+];
+const GOI=[
+  {ten:'Gói Cưới Trọn Vẹn',gom:'Makeup ăn hỏi · Makeup cô dâu (ngày cưới) · Làm tóc × 2 buổi',gia:4300000,le:5600000},
+  {ten:'Gói Ăn Hỏi Gia Đình',gom:'Makeup ăn hỏi · Làm tóc cô dâu · Makeup mẹ × 2',gia:2900000,le:3300000},
+  {ten:'Gói Tiệc Nhóm 5 Người',gom:'Makeup tiệc × 5 khách, cùng một buổi',gia:2500000,le:3000000},
+];
+
+/* ---------- Tiện ích ---------- */
+const vnd=x=>x.toLocaleString('vi-VN').replace(/,/g,'.')+' ₫';
+const h=t=>{const[a,b]=t.split(':').map(Number);return a+b/60};
+const phut=p=>p>=60?(Math.floor(p/60)+' giờ'+(p%60?' '+p%60+' phút':'')):p+' phút';
+const START=4,END=18;
+
+/* ---------- Tìm ca trùng ---------- */
+const trung=[];
+LICH.forEach((a,i)=>LICH.forEach((b,j)=>{if(j>i&&a.tho&&a.tho===b.tho&&h(a.bd)<h(b.kt)&&h(b.bd)<h(a.kt)){a.c=b.c=true;trung.push([a,b])}}));
+
+/* ---------- Vẽ lịch ---------- */
+function drawCal(){
+  const hp=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--hour'));
+  const al=document.getElementById('alert');
+  if(trung.length){const[a,b]=trung[0];const t=THO.find(x=>x.id===a.tho);
+    al.innerHTML=`<svg class="i"><use href="#i-warn"/></svg><div class="t"><b>Trùng lịch:</b> ${t.ngan} có 2 ca chồng nhau ${b.bd}–${a.kt}</div><button class="btn sm">Đổi thợ</button>`;}
+  const mob=innerWidth<=640;
+  const tr=THO.map(t=>LICH.some(e=>e.tho===t.id&&e.c)?(mob?'236px':'minmax(280px,1.7fr)'):(mob?'150px':'minmax(160px,1fr)'));
+  const cols=(mob?'44px ':'56px ')+tr.join(' ')+(mob?' 140px':' minmax(150px,.8fr)');
+  let html=`<div class="cal-in" style="grid-template-columns:${cols}"><div class="colh corner"></div>`;
+  THO.forEach(t=>{const ca=LICH.filter(e=>e.tho===t.id);const gio=ca.reduce((s,e)=>s+h(e.kt)-h(e.bd),0);
+    html+=`<div class="colh"><span class="av" style="background:${t.mau}">${t.vt}</span><div style="min-width:0"><div class="nm">${t.ngan}</div><div class="meta">${ca.length} ca · ${String(gio).replace('.',',')} giờ</div></div></div>`});
+  html+=`<div class="colh unassigned"><span class="av">?</span><div style="min-width:0"><div class="nm">Chưa có thợ</div><div class="meta">${LICH.filter(e=>!e.tho).length} ca</div></div></div>`;
+  html+='<div class="axis">';for(let k=START;k<END;k++)html+=`<div>${String(k).padStart(2,'0')}:00</div>`;html+='</div>';
+  [...THO.map(t=>t.id),null].forEach(id=>{
+    html+=`<div class="col${id?'':' unassigned'}" style="height:${(END-START)*hp}px">`;
+    const t=THO.find(x=>x.id===id);
+    if(t)t.nghi.forEach(([a,b])=>html+=`<div class="off" style="top:${(a-START)*hp}px;height:${(b-a)*hp}px"></div>`);
+    const ds=LICH.filter(e=>e.tho===id);
+    ds.forEach(e=>{
+      const top=(h(e.bd)-START)*hp+1, ht=(h(e.kt)-h(e.bd))*hp-3;
+      let left='4px',w='calc(100% - 8px)';
+      if(e.c){const grp=ds.filter(x=>x.c);const k=grp.indexOf(e);w=`calc(${100/grp.length}% - 6px)`;left=`calc(${k*100/grp.length}% + 4px)`;}
+      const cls=id?e.loai:'na';
+      const short=ht<52;
+      html+=`<div class="ev ${cls}${e.c?' conflict':''}" style="top:${top}px;height:${ht}px;left:${left};width:${w}" title="${e.bd}–${e.kt} · ${e.dv} · ${e.kh}">
+        <div class="tm">${e.bd}–${e.kt}${e.c?'<span class="flag">Trùng</span>':''}</div>
+        <div class="sv">${e.dv}</div>${short?'':`<div class="kh">${e.kh}</div>`}${ht>84?`<div class="nc">${e.nc}</div>`:''}
+        ${id?'':'<div class="assign"><button class="btn sm">Phân thợ</button></div>'}</div>`;
+    });
+    html+='</div>';
+  });
+  html+='</div>';
+  document.getElementById('cal').innerHTML=html;
+}
+
+/* ---------- Vẽ bảng giá ---------- */
+function drawPrice(){
+  const dem=id=>id==='goi'?GOI.length:DV.filter(d=>d.n===id).length;
+  document.getElementById('cats').innerHTML='<h3>Danh mục</h3><a href="#bang-gia" class="on">Tất cả <span>'+(DV.length+GOI.length)+'</span></a>'+NHOM.map(n=>`<a href="#bang-gia">${n.ten} <span>${dem(n.id)}</span></a>`).join('');
+  document.getElementById('chips').innerHTML='<span class="chip on">Tất cả</span>'+NHOM.map(n=>`<span class="chip">${n.ten}</span>`).join('');
+  let html='';
+  NHOM.forEach(n=>{
+    html+=`<div class="grp"><h2>${n.ten} <small>${dem(n.id)}</small></h2><div class="rows">`;
+    if(n.id==='goi')GOI.forEach(g=>html+=`<div class="row"><span class="bar4" style="background:${n.mau}"></span><div style="min-width:0"><div class="n">${g.ten}</div><div class="s">${g.gom}</div></div><div class="p">${vnd(g.gia)}<del>${vnd(g.le)}</del></div></div>`);
+    else DV.filter(d=>d.n===n.id).forEach(d=>html+=`<div class="row${d.ten==='Makeup ăn hỏi'?' sel':''}"><span class="bar4" style="background:${n.mau}"></span><div style="min-width:0"><div class="n">${d.ten}${d.bac?'<span class="badge">Giá theo thợ</span>':''}</div><div class="s">${d.phut?phut(d.phut):d.ghi}</div></div><div class="p">${d.bac?'từ ':''}${vnd(d.bac?Math.round(d.gia*2/3/100000)*100000:d.gia)}</div></div>`);
+    html+='</div></div>';
+  });
+  document.getElementById('list').innerHTML=html;
+}
+
+/* ---------- Chuyển màn ---------- */
+function route(){
+  const s=(location.hash||'#lich').slice(1)==='bang-gia'?'bang-gia':'lich';
+  document.querySelectorAll('.screen').forEach(x=>x.classList.toggle('on',x.id==='s-'+s));
+  document.querySelectorAll('[data-s]').forEach(a=>a.classList.toggle('on',a.dataset.s===s));
+  document.getElementById('tb-title').textContent=s==='lich'?'Lịch makeup':'Bảng giá';
+  document.title='Makeup Pro – Phương án A – '+(s==='lich'?'Lịch':'Bảng giá');
+}
+window.addEventListener('hashchange',route);
+window.addEventListener('resize',drawCal);
+drawCal();drawPrice();route();
+</script>
+</body>
+</html>
