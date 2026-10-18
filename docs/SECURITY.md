@@ -63,7 +63,7 @@ Mã ở `apps/api/src/`, bài thử ở `apps/api/test/` (trừ khi ghi khác).
 | 24 | Khoá ngoại kép chặn gắn chéo tổ chức trong database | migration, xem `docs/DATABASE_SCHEMA.md` 3.1 | `escalation.test.ts` → "không gán được vai trò của tổ chức khác, kể cả ghi thẳng vào database" |
 | 25 | Sổ chỉ ghi thêm; khoá hợp đồng đã xác nhận; khoảng bận do database tính | migration 5, 7, 8 | `db-guards.test.ts` → 8 ca, ví dụ "dòng hợp đồng đã xác nhận: sửa giá / xoá bị chặn (409)…", "N3 — hợp đồng đã xác nhận: không về nháp, không tăng giảm giá, tổng tiền phải khớp các dòng"; `escalation.test.ts` → "nhật ký không sửa, không xoá được" |
 | 26 | Không xoá dây chuyền | `prisma/schema.prisma:3` | `escalation.test.ts` → "không xoá được tổ chức còn dữ liệu (không có xoá dây chuyền)" |
-| 27 | Đường quản trị nền tảng: người không có tên trong `platform_admins` nhận 404 | `app.ts:71-74` | **Chưa có bài thử trong kho ở `bc9633a`** (tệp `platform.test.ts` đang viết, chưa lưu) |
+| 27 | Đường quản trị nền tảng: người không có tên trong `platform_admins` nhận 404 | `app.ts:71-74` | Không có ở `634d6a3`. Commit `125e587` (17:03 UTC, chỉ đổi bài thử) thêm `platform.test.ts` (10 bài) và phép cửa gác `platform` |
 | 28 | Tải tệp: kiểm chữ ký đầu tệp, giới hạn dung lượng theo mục đích; đường đọc có hạn 10 phút | `modules/files/routes.ts` | **Chưa có bài thử trong kho ở `bc9633a`** (`files.test.ts` đang viết) |
 | 29 | Cửa gác bí mật cho bản web: quét `dist/` tìm tên/giá trị biến bí mật máy chủ, `postgresql://`, biến `VITE_*` lạ; có vi phạm thì build dừng | `apps/web/scripts/check-bundle-secrets.mjs` | `apps/web/scripts/check-bundle-secrets.test.ts` → 8 ca, gồm vế GIỮ "bản build thật của web sạch → exit 0" |
 | 30 | Log che header đăng nhập, cookie, mật khẩu, thẻ | `lib/logger.ts:7-17` | Không có bài thử |
@@ -102,7 +102,9 @@ Mã ở `apps/api/src/`, bài thử ở `apps/api/test/` (trừ khi ghi khác).
 
 **Lịch sử:** bản cửa gác đầu (4 phép, 10 đường) được phá thử 2 lần đều đỏ, nhưng thợ chấm độc lập vẫn tìm ra 3 kiểu lỗi nó không thấy (mã tổ chức khác trong thân và tham số lọc — lỗi T3). Từ đó có phép crossId, leak, refBase, crossRef và bài đột biến 6–8.
 
-**Cửa gác chưa kiểm:** đường `/platform/...` và `/public/...` (không thuộc tổ chức); nội dung tệp tải lên.
+**Phép thứ 10 — `platform`** (commit `125e587`, 17:03 UTC, sau mốc đối chiếu): người không có tên trong `platform_admins` gọi mọi đường `/platform/...` phải nhận 404 **giống hệt** một đường bịa; lọc đường theo địa chỉ chứ không theo phạm vi khai báo, kèm đột biến 9. Theo ghi chú của commit: trên bản sạch tách riêng, phép này 24/24 và đột biến 9 bắt 3/24; trên thư mục chung cửa gác vẫn đỏ vì `:fileId`. **Thợ tài liệu chưa tự chạy lại phép này.**
+
+**Cửa gác chưa kiểm:** đường `/public/...` (đang viết); nội dung tệp tải lên.
 
 ### 3. Rủi ro đã biết, chưa sửa
 | # | Rủi ro | Ở đâu | Trạng thái |
@@ -127,4 +129,4 @@ Mã ở `apps/api/src/`, bài thử ở `apps/api/test/` (trừ khi ghi khác).
 | Kiểm thử xâm nhập độc lập trên máy thật | Trước khi bán |
 | Sao lưu và diễn tập khôi phục | Trước khi có dữ liệu thật |
 | Giám sát, cảnh báo khi có lỗi 500 hay phát hiện dùng lại thẻ | Khi lên máy thật |
-| Bài thử cho quản trị nền tảng, tệp, thu tiền, hồ sơ thương hiệu | Đang viết, chưa lưu kho |
+| Bài thử cho tệp, thu tiền, hồ sơ thương hiệu | Đang viết, chưa lưu kho (quản trị nền tảng và hạn mức đã lưu ở `125e587`) |

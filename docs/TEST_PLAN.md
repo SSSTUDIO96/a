@@ -74,6 +74,8 @@ Dựng lại môi trường thử trên máy mới: `docs/BAN-GIAO-PHIEN.md`, m�
 
 **Lần chạy trên bản đang sửa** (17:00 UTC, commit `3d3e544` + việc chưa lưu): shared 78/78; web 158/160 (cùng 2 bài trên); máy chủ 22 tệp, 315 bài: 296 qua, 8 đỏ, 11 bỏ qua (cửa gác vẫn thiếu mẫu `:fileId`; thêm 1 bài `profile.test.ts` "giá hẹn tương lai…" đỏ). Có thêm 5 tệp bài thử đang viết: `files`, `payments`, `platform`, `profile`, `quota`.
 
+**Sau mốc đối chiếu:** commit `125e587` (17:03 UTC) chỉ đổi bài thử: thêm `platform.test.ts` (10 bài), `quota.test.ts` (13 bài), phép cửa gác thứ 10 `platform` và đột biến 9. Thợ tài liệu chưa chạy lại sau commit này.
+
 **Lần cửa gác chạy đủ gần nhất** (≈16:45 UTC, trước khi có đường tệp): 9 phép, `crossRef` 45/49 đỏ, các phép khác đủ; 8/8 đột biến bị bắt. Chi tiết: `docs/SECURITY.md` mục 2.
 
 ### 4. Ca đang có ở `bc9633a`, theo tệp
@@ -114,7 +116,7 @@ Dựng lại môi trường thử trên máy mới: `docs/BAN-GIAO-PHIEN.md`, m�
 | Thiếu | Vì sao |
 |---|---|
 | Mẫu `:fileId` cho cửa gác; mẫu tham chiếu chéo cho `staff[].membershipId` của hợp đồng | Cửa gác đang không chạy / còn 4 trường chưa phủ |
-| Cửa gác cho đường `/platform/...` và `/public/...` | Cửa gác chỉ quét đường thuộc tổ chức |
+| Cửa gác cho đường `/public/...` | Phép `platform` đã thêm ở `125e587`; đường công khai chưa có phép riêng |
 | Bài thử quản trị nền tảng, tệp, thu tiền, hồ sơ thương hiệu, hạn mức gói lưu vào kho | Đang viết, chưa lưu |
 | `makeup_test_web` tự áp migration trước khi chạy | Đang làm tay, đã lệch một lần |
 | Build + bật bản build + gọi `/health` tự động | Đang làm tay |
