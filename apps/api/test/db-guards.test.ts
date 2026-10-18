@@ -105,20 +105,57 @@ describe('lịch sử và hợp đồng', () => {
     const c = await deps.db.contract.create({
       data: { organizationId: orgId, code: `HD-T-${randomUUID().slice(0, 6)}`, customerId: customer.id, createdById: owner.id },
     });
-    const line = await deps.db.contractLine.create({
-      data: { organizationId: orgId, contractId: c.id, kind: 'CUSTOM', name: 'Phụ phí', unitPrice: 100000n, lineTotal: 100000n, createdById: owner.id },
+    // Thêm dòng và cập nhật tổng trong CÙNG transaction (database kiểm tổng khớp dòng lúc lưu).
+    const line = await deps.db.$transaction(async (tx) => {
+      const l = await tx.contractLine.create({
+        data: { organizationId: orgId, contractId: c.id, kind: 'CUSTOM', name: 'Phụ phí', unitPrice: 100000n, lineTotal: 100000n, createdById: owner.id },
+      });
+      await tx.contract.update({ where: { id: c.id }, data: { subtotal: 100000n, total: 100000n } });
+      return l;
     });
     await deps.db.contractLine.update({ where: { id: line.id }, data: { note: 'nháp sửa được' } });
-    await deps.db.contract.update({ where: { id: c.id }, data: { status: 'CONFIRMED', subtotal: 100000n, total: 100000n } });
+    await deps.db.contract.update({ where: { id: c.id }, data: { status: 'CONFIRMED' } });
     const e1 = await deps.db.contractLine.update({ where: { id: line.id }, data: { unitPrice: 1n, lineTotal: 1n } }).catch((e: unknown) => e);
     expect(databaseError(e1)?.status).toBe(409);
     expect(databaseError(e1)?.message).toMatch(/không được sửa/);
     const e2 = await deps.db.contractLine.delete({ where: { id: line.id } }).catch((e: unknown) => e);
     expect(databaseError(e2)?.message).toMatch(/không được xoá/);
-    const voided = await deps.db.contractLine.update({ where: { id: line.id }, data: { voidedAt: new Date(), voidReason: 'khách bỏ' } });
+    const voided = await deps.db.$transaction(async (tx) => {
+      const v = await tx.contractLine.update({ where: { id: line.id }, data: { voidedAt: new Date(), voidReason: 'khách bỏ' } });
+      await tx.contract.update({ where: { id: c.id }, data: { subtotal: 0n, total: 0n } });
+      return v;
+    });
     expect(voided.voidedAt).not.toBeNull();
     const e3 = await deps.db.contractLine.update({ where: { id: line.id }, data: { voidReason: 'đổi lý do' } }).catch((e: unknown) => e);
     expect(databaseError(e3)?.status).toBe(409);
+  });
+
+  it('N3 — hợp đồng đã xác nhận: không về nháp, không tăng giảm giá, tổng tiền phải khớp các dòng', async () => {
+    const customer = await deps.db.customer.create({ data: { organizationId: orgId, fullName: 'Khách N3' } });
+    const c = await deps.db.$transaction(async (tx) => {
+      const k = await tx.contract.create({
+        data: { organizationId: orgId, code: `HD-N3-${randomUUID().slice(0, 6)}`, customerId: customer.id, createdById: owner.id, subtotal: 200000n, total: 200000n },
+      });
+      await tx.contractLine.create({
+        data: { organizationId: orgId, contractId: k.id, kind: 'CUSTOM', name: 'Dòng', unitPrice: 200000n, lineTotal: 200000n, createdById: owner.id },
+      });
+      return k;
+    });
+    await deps.db.contract.update({ where: { id: c.id }, data: { status: 'CONFIRMED' } });
+    const back = await deps.db.contract.update({ where: { id: c.id }, data: { status: 'DRAFT' } }).catch((e: unknown) => e);
+    expect(databaseError(back)?.message).toMatch(/không được đưa về nháp/);
+    const disc = await deps.db.contract.update({ where: { id: c.id }, data: { discount: 50000n, total: 150000n } }).catch((e: unknown) => e);
+    expect(databaseError(disc)?.message).toMatch(/chỉ được hạ/);
+    // Sửa tổng mà không có dòng tương ứng → bị từ chối lúc lưu.
+    const total = await deps.db.contract.update({ where: { id: c.id }, data: { subtotal: 1n, total: 1n } }).catch((e: unknown) => e);
+    expect(databaseError(total)?.message).toMatch(/không khớp tổng các dòng/);
+    // Thêm dòng mà quên cập nhật tổng → bị từ chối lúc lưu.
+    const extra = await deps.db.contractLine.create({
+      data: { organizationId: orgId, contractId: c.id, kind: 'CUSTOM', name: 'Lén thêm', unitPrice: 9n, lineTotal: 9n, createdById: owner.id },
+    }).catch((e: unknown) => e);
+    expect(databaseError(extra)?.message).toMatch(/không khớp tổng các dòng/);
+    const after = await deps.db.contract.findUniqueOrThrow({ where: { id: c.id } });
+    expect([after.status, after.subtotal]).toEqual(['CONFIRMED', 200000n]);
   });
 
   it('vi phạm CHECK trả 400 chứ không 500', async () => {
