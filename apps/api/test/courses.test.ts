@@ -303,6 +303,8 @@ describe('Một lớp ↔ Nhiều lớp', () => {
     const res = await openClass(course.id);
     expect(res.status).toBe(409);
     expect(res.body.error.message).toBe('Khoá một lớp chỉ có một lớp — chuyển sang Nhiều lớp để mở thêm');
+    // reason chỉ có ở chốt máy chủ (kiểm dưới khoá dòng khoá học); trigger course_classes_single_guard là lưới cuối.
+    expect(res.body.error.details).toMatchObject({ reason: 'SINGLE_CLASS' });
     expect(await db.courseClass.count({ where: { courseId: course.id } })).toBe(1);
   });
 
@@ -327,6 +329,8 @@ describe('Một lớp ↔ Nhiều lớp', () => {
     const res = await call(ownerA, 'patch', url(orgA, `/courses/${course.id}`), { mode: 'SINGLE_CLASS' });
     expect(res.status).toBe(409);
     expect(res.body.error.message).toBe('Khoá đang có 2 lớp — chỉ chuyển về Một lớp khi còn 1 lớp');
+    // reason chỉ có ở chốt máy chủ; trigger courses_single_mode_guard là lưới cuối.
+    expect(res.body.error.details).toMatchObject({ reason: 'SINGLE_MODE_NEEDS_ONE_CLASS', liveClasses: 2 });
     expect((await db.course.findUniqueOrThrow({ where: { id: course.id } })).mode).toBe('MULTI_CLASS');
   });
 

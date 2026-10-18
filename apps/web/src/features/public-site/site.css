@@ -51,6 +51,7 @@
 .ps-hours__row { display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: 12px; }
 .ps-hours dt, .ps-hours dd { margin: 0; }
 .ps-hours__off { color: var(--faint); }
+.ps-hours__t { font-variant-numeric: tabular-nums; }
 .ps-policy { font-size: 13.5px; margin-bottom: 8px; }
 .ps-policy:last-child { margin-bottom: 0; }
 .ps-policy b { display: block; }

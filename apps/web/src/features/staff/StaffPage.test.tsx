@@ -116,6 +116,9 @@ function setupServer(permissions: readonly string[], opts: { myRoles?: string[];
         return json(201, { id: 'm-new', status: 'ACTIVE', createdAt: T, user: { id: 'u9', email: (body as { email: string }).email, fullName: 'Đinh Bảo Ngọc' }, roles: [] });
       }
       if (path === '/orgs/org-1/roles') return json(200, { items: [] });
+      if (path === '/orgs/org-1/files' && method === 'POST') {
+        return json(201, { id: 'f-anh', purpose: url.searchParams.get('purpose'), status: 'READY', originalName: url.searchParams.get('name'), mimeType: 'image/png', sizeBytes: 4, sha256: null, width: 1, height: 1, createdAt: T, signedUrl: 'https://anh.local/f-anh.png', signedUrlExpiresAt: T });
+      }
       if (path === '/orgs/org-1/makeup-subjects') return json(200, { items: [{ id: 's1', organizationId: 'org-1', name: 'Cô dâu', sortOrder: 0, isActive: true, createdAt: T, updatedAt: T }] });
       if (path === '/orgs/org-1/packages') return json(200, { items: PKGS, page: 1, pageSize: 100, total: PKGS.length });
       if (path === '/orgs/org-1/services') return json(200, { items: [], page: 1, pageSize: 100, total: 0 });
@@ -284,6 +287,40 @@ describe('Hộp Hồ sơ thợ', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     expect(writes(calls).at(-1)?.body).toEqual({ displayName: 'My Lương', isBookable: false });
     expect(await screen.findByText('My Lương')).toBeTruthy();
+  });
+});
+
+describe('Hộp Hồ sơ thợ — ảnh đại diện', () => {
+  it('chọn ảnh → POST /files?purpose=STAFF_AVATAR (thân nhị phân, có Idempotency-Key); Lưu mới gửi avatarFileId, không gửi avatarUrl', async () => {
+    const { calls } = setupServer(OWNER);
+    renderAt('/chien/nhan-su');
+    await screen.findByText('Lương Hà My');
+    await userEvent.click(screen.getByRole('button', { name: 'Hồ sơ Lương Hà My' }));
+    const dlg = await screen.findByRole('dialog', { name: /Hồ sơ thợ/ });
+    const file = new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47])], 'my.png', { type: 'image/png' });
+    await userEvent.upload(dlg.querySelector('input[type=file]') as HTMLInputElement, file);
+    await waitFor(() => expect(calls.some((c) => c.method === 'POST' && c.path.startsWith('/orgs/org-1/files?purpose=STAFF_AVATAR&name=my.png'))).toBe(true));
+    const post = calls.find((c) => c.method === 'POST')!;
+    expect(post.headers['Idempotency-Key']).toMatch(/.{8,}/);
+    expect(post.headers['Content-Type']).toBe('application/octet-stream');
+    expect(writes(calls).filter((c) => c.method === 'PATCH')).toHaveLength(0);
+    await within(dlg).findByRole('button', { name: /Đổi ảnh/ });
+    await userEvent.click(within(dlg).getByRole('button', { name: 'Lưu' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    const patch = writes(calls).find((c) => c.method === 'PATCH');
+    expect(patch?.body).toEqual({ avatarFileId: 'f-anh' });
+  });
+
+  it('ảnh sai loại → lỗi dưới ô, không gọi máy chủ', async () => {
+    const { calls } = setupServer(OWNER);
+    renderAt('/chien/nhan-su');
+    await screen.findByText('Lương Hà My');
+    await userEvent.click(screen.getByRole('button', { name: 'Hồ sơ Lương Hà My' }));
+    const dlg = await screen.findByRole('dialog', { name: /Hồ sơ thợ/ });
+    const input = dlg.querySelector('input[type=file]') as HTMLInputElement;
+    fireEvent.change(input, { target: { files: [new File(['x'], 'a.gif', { type: 'image/gif' })] } });
+    expect((await within(dlg).findByRole('alert')).textContent).toMatch(/Chỉ nhận ảnh/);
+    expect(writes(calls)).toHaveLength(0);
   });
 });
 

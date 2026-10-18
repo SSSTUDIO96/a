@@ -215,7 +215,8 @@ interface Line {
 
 function stripIds(lines: Line[]): unknown {
   const one = (l: Line): unknown => {
-    const { id: _id, addons, travel, travelBreakdown: _b, ...rest } = l as Line & { travelBreakdown: unknown };
+    // createdAt: dòng đã lưu có, bảng tính xem trước null. travelBreakdown nay SO (đã chụp vào dòng TRAVEL lúc lưu).
+    const { id: _id, addons, travel, createdAt: _c, ...rest } = l as Line & { createdAt: unknown };
     return { ...rest, addons: addons?.map(one), travel: travel ? one(travel) : null };
   };
   return lines.map((l) => one(l as Line));
@@ -268,7 +269,7 @@ describe('lập hợp đồng nhiều gói, nhiều nhân vật, dịch vụ ph�
     // Xem trước = hợp đồng, từng dòng, từng đồng.
     expect(q.body).toMatchObject({ subtotal: c.subtotal, discount: c.discount, total: c.total, travelTotal: c.travelTotal });
     expect(q.body.depositRequired).toBe(c.depositRequired);
-    // Số liệu công thức phí di chuyển chỉ có ở bảng tính (database chưa có cột lưu) — so phần còn lại.
+    // Số liệu công thức phí di chuyển: bảng tính có, và dòng đã lưu đọc lại ĐÚNG số đã chụp (migration 20261018240000).
     expect(q.body.lines[0].travel.travelBreakdown).toEqual({
       includedKm: 3,
       includedFrom: 'ORGANIZATION',
@@ -277,7 +278,7 @@ describe('lập hợp đồng nhiều gói, nhiều nhân vật, dịch vụ ph�
       roundTrip: true,
       tier: null,
     });
-    expect(c.lines[0].travel.travelBreakdown).toBeNull();
+    expect(c.lines[0].travel.travelBreakdown).toEqual(q.body.lines[0].travel.travelBreakdown);
     expect(stripIds(q.body.lines)).toEqual(stripIds(c.lines));
 
     // Database giữ đúng số dòng và tiền là BigInt khớp tổng.
@@ -374,6 +375,15 @@ describe('bán kính miễn phí của gói và phí theo bậc khoảng cách',
     const c = (await create(C.owner, C.orgId, { customerId: cust, lines: [line(radiusPkg, { mode: 'TIERED', distanceKm: 25 })] }).expect(201)).body;
     expect(c.lines[0].travel).toMatchObject({ travelMode: 'TIERED', distanceKm: 25, lineTotal: 400_000 });
     expect(c.total).toBe(2_400_000);
+    // Dòng đã lưu giữ bậc đã áp (chụp lúc lưu, migration 20261018240000) — bậc mở "từ 20 km" có toKm = null.
+    expect(c.lines[0].travel.travelBreakdown).toEqual({
+      includedKm: 10,
+      includedFrom: 'PACKAGE',
+      excessKm: 15,
+      chargedKm: null,
+      roundTrip: true,
+      tier: { fromKm: 20, toKm: null, amount: 400_000 },
+    });
   });
 
   it('theo bậc: không bậc nào khớp → 400 nêu số km', async () => {
@@ -865,6 +875,61 @@ describe('thợ phụ trách, cảnh báo trùng giờ, lên lịch khi xác nh�
     expect(hold[0]!.draftHolds).toEqual([expect.objectContaining({ contractId: draft.id, overlaps: true })]);
   });
 
+  // Phiếu vướng của thợ màn Hợp đồng (W5), mục 1: sửa hợp đồng nháp rồi xem trước — giữ chỗ của CHÍNH nó không báo.
+  it('xem trước với excludeContractId: giữ chỗ nháp của chính hợp đồng đang sửa không tính là cảnh báo; mã lạ → 404', async () => {
+    const line = staffLine('2027-07-01T01:00:00Z', '2027-07-01T03:00:00Z', [{ membershipId: m2, role: 'PRIMARY' }]);
+    const draft = (await create(A.owner, A.orgId, { customerId: customerA, lines: [line] }).expect(201)).body;
+    const plain = (await quote(A.owner, A.orgId, { customerId: customerA, lines: [line] }).expect(200)).body.lines[0].staffWarnings;
+    expect(plain).toEqual([expect.objectContaining({ membershipId: m2, level: 'OVERLAP', draftHolds: [expect.objectContaining({ contractId: draft.id })] })]);
+    const self = (await quote(A.owner, A.orgId, { customerId: customerA, excludeContractId: draft.id, lines: [line] }).expect(200)).body;
+    expect(self.lines[0].staffWarnings).toEqual([]);
+    const bad = await quote(A.owner, A.orgId, { customerId: customerA, excludeContractId: randomUUID(), lines: [line] });
+    expect(bad.status).toBe(404);
+    // Hợp đồng của tổ chức khác: đúng lời như mã bịa.
+    const other = (await create(B.owner, B.orgId, { customerId: customerB, lines: [{ kind: 'CUSTOM', name: 'X', unitPrice: 1000, quantity: 1 }] }).expect(201)).body;
+    const cross = await quote(A.owner, A.orgId, { customerId: customerA, excludeContractId: other.id, lines: [line] });
+    expect([cross.status, cross.body.error.message]).toEqual([404, bad.body.error.message]);
+  });
+
+  // Mục 2: một thợ ở hai dòng chồng giờ trong cùng hợp đồng → đỏ ngay ở xem trước (trước đây chỉ lộ khi xác nhận bị 409).
+  it('xem trước + xem nháp báo OVERLAP khi một thợ ở hai dòng CHỒNG giờ của cùng hợp đồng; giáp giờ thì không báo', async () => {
+    const two = (b1: [string, string], b2: [string, string]) => ({
+      customerId: customerA,
+      lines: [staffLine(b1[0], b1[1], [{ membershipId: m1, role: 'PRIMARY' }]), staffLine(b2[0], b2[1], [{ membershipId: m1, role: 'PRIMARY' }, { membershipId: m2, role: 'ASSIST' }])],
+    });
+    const overlapBody = two(['2027-07-02T01:00:00Z', '2027-07-02T03:00:00Z'], ['2027-07-02T02:00:00Z', '2027-07-02T04:00:00Z']);
+    const q = (await quote(A.owner, A.orgId, overlapBody).expect(200)).body;
+    expect(q.lines[0].staffWarnings).toEqual([
+      expect.objectContaining({ membershipId: m1, level: 'OVERLAP', sameContract: [expect.objectContaining({ lineId: null, lineIndex: 1 })] }),
+    ]);
+    expect(q.lines[1].staffWarnings).toEqual([
+      expect.objectContaining({ membershipId: m1, level: 'OVERLAP', sameContract: [expect.objectContaining({ lineIndex: 0 })] }),
+    ]);
+    const saved = (await create(A.owner, A.orgId, overlapBody).expect(201)).body;
+    expect(saved.lines[1].staffWarnings).toEqual([
+      expect.objectContaining({ membershipId: m1, level: 'OVERLAP', sameContract: [expect.objectContaining({ lineId: saved.lines[0].id, lineIndex: 0 })] }),
+    ]);
+    const adjacent = (await quote(A.owner, A.orgId, two(['2027-07-03T01:00:00Z', '2027-07-03T03:00:00Z'], ['2027-07-03T03:00:00Z', '2027-07-03T04:00:00Z'])).expect(200)).body;
+    expect(adjacent.lines.map((l: { staffWarnings: unknown[] }) => l.staffWarnings)).toEqual([[], []]);
+  });
+
+  // Mục 3: dòng trả createdAt (web ghi "Phát sinh {ngày}").
+  it('dòng hợp đồng trả createdAt (dòng phát sinh sau xác nhận có ngày thêm); bảng tính xem trước createdAt = null', async () => {
+    const body = { customerId: customerA, lines: [{ kind: 'CUSTOM', name: 'Phí A', unitPrice: 1000, quantity: 1 }] };
+    expect((await quote(A.owner, A.orgId, body).expect(200)).body.lines[0].createdAt).toBeNull();
+    const t0 = Date.now();
+    const c = (await create(A.owner, A.orgId, body).expect(201)).body;
+    expect(Math.abs(new Date(c.lines[0].createdAt).getTime() - t0)).toBeLessThan(60_000);
+    await confirm(c.id).expect(200);
+    const added = (
+      await request(app).post(url(A.orgId, `/${c.id}/lines`)).set(bearer(A.owner)).set('idempotency-key', idem()).send({ kind: 'CUSTOM', name: 'Phát sinh', unitPrice: 500, quantity: 1 }).expect(201)
+    ).body;
+    const extra = added.lines.find((l: { name: string }) => l.name === 'Phát sinh');
+    expect(extra.addedAfterConfirm).toBe(true);
+    expect(typeof extra.createdAt).toBe('string');
+    expect(new Date(extra.createdAt).getTime()).toBeGreaterThanOrEqual(new Date(c.lines[0].createdAt).getTime());
+  });
+
   it('xác nhận tạo đúng số lịch, đúng thợ, đúng giờ, đúng nơi; dòng không có thợ thì không tạo lịch', async () => {
     const c = (
       await create(A.owner, A.orgId, {
@@ -1255,4 +1320,41 @@ describe('chốt chặn database', () => {
       .catch((e: unknown) => e);
     expect(String((err as Error).message)).toMatch(/contracts_money/);
   });
+});
+
+// Phiếu vướng thợ D + W5, mục 4: số liệu phí di chuyển CHỤP vào dòng TRAVEL lúc lưu (migration 20261018240000).
+describe('chụp số liệu phí di chuyển vào dòng đã lưu', () => {
+  it('hợp đồng đã xác nhận vẫn trả travelBreakdown đúng lúc lưu dù cài đặt phí di chuyển đổi sau đó; dòng cũ (chưa chụp) → null', async () => {
+    const body = { customerId: customerA, lines: [bigBody().lines[0]] };
+    const q = (await quote(A.owner, A.orgId, body).expect(200)).body;
+    const c = (await create(A.owner, A.orgId, body).expect(201)).body;
+    const snap = q.lines[0].travel.travelBreakdown;
+    expect(snap).toEqual({ includedKm: 3, includedFrom: 'ORGANIZATION', excessKm: 9.35, chargedKm: 18.7, roundTrip: true, tier: null });
+    expect(c.lines[0].travel.travelBreakdown).toEqual(snap);
+    await request(app).post(url(A.orgId, `/${c.id}/status`)).set(bearer(A.owner)).send({ to: 'CONFIRMED' }).expect(200);
+    const policy = await deps.db.travelFeePolicy.findUniqueOrThrow({ where: { organizationId: A.orgId } });
+    await deps.db.travelFeePolicy.update({ where: { organizationId: A.orgId }, data: { freeKm: 5, roundTrip: false } });
+    try {
+      const after = (await request(app).get(url(A.orgId, `/${c.id}`)).set(bearer(A.owner)).expect(200)).body;
+      expect(after.lines[0].travel.travelBreakdown).toEqual(snap);
+      // Sửa số liệu đã chụp của dòng đã chốt: database chặn (trigger khoá dòng sau xác nhận phủ cả cột mới).
+      await expect(
+        deps.db.contractLine.update({ where: { id: c.lines[0].travel.id }, data: { includedKm: 1 } }),
+      ).rejects.toThrow(/dòng đã chốt không được sửa/);
+    } finally {
+      await deps.db.travelFeePolicy.update({ where: { organizationId: A.orgId }, data: { freeKm: policy.freeKm, roundTrip: policy.roundTrip } });
+    }
+    // Dòng TRAVEL lưu trước migration (các cột chụp để trống) → null, không đoán lại.
+    const old = (await create(A.owner, A.orgId, body).expect(201)).body;
+    await deps.db.contractLine.update({
+      where: { id: old.lines[0].travel.id },
+      data: { includedKm: null, includedFrom: null, excessKm: null, chargedKm: null, roundTrip: null, tierFromKm: null, tierToKm: null, tierAmount: null },
+    });
+    const oldView = (await request(app).get(url(A.orgId, `/${old.id}`)).set(bearer(A.owner)).expect(200)).body;
+    expect(oldView.lines[0].travel.travelBreakdown).toBeNull();
+    expect(oldView.lines[0].travel.lineTotal).toBe(94_000);
+    // Chỉ dòng TRAVEL mới có số liệu chụp (CHECK của database).
+    await expect(deps.db.contractLine.update({ where: { id: old.lines[0].id }, data: { roundTrip: true } })).rejects.toThrow(/contract_lines_travel_snapshot_only_travel/);
+  });
+
 });

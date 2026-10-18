@@ -89,7 +89,7 @@ export async function assertAcademy(db: Tx, orgId: string): Promise<{ timezone: 
 
 async function lockCourse(tx: Tx, orgId: string, courseId: string): Promise<CourseRow> {
   const rows = await tx.$queryRaw<{ id: string }[]>`
-    SELECT id FROM courses WHERE id = ${courseId}::uuid AND organization_id = ${orgId}::uuid FOR UPDATE`;
+    SELECT id FROM courses WHERE id = ${courseId}::uuid FOR UPDATE`;
   if (rows.length === 0) throw notFound.course();
   return tx.course.findUniqueOrThrow({ where: { id: courseId }, select: courseSelect });
 }

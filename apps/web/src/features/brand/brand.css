@@ -114,9 +114,9 @@
   .br-row.ui-row { grid-template-columns: minmax(0, 1fr); gap: 6px; }
   .br-row .ui-row__ctl { justify-content: stretch; }
   .br-row .ui-row__ctl > * { width: 100%; }
-  .br-wh { grid-template-columns: 70px 44px minmax(0, 1fr); }
-  .br-wh__shift { flex-wrap: wrap; }
-  .br-wh__time { width: 84px; }
+  .br-wh { grid-template-columns: 64px 44px minmax(0, 1fr); gap: 6px; }
+  .br-wh__shift { gap: 4px; }
+  .br-wh__time { width: 92px; }
   .br-skel__pvw { display: none; }
   .br-save {
     position: fixed; left: 0; right: 0; bottom: var(--h-bottomnav, 64px); margin: 0; border-radius: 0; border-left: 0; border-right: 0;

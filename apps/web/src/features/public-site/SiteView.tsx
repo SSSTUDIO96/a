@@ -235,7 +235,7 @@ export function SiteView({ data, embedded = false }: SiteViewProps) {
                 {days.map((d) => (
                   <div key={d.weekday} className="ps-hours__row">
                     <dt>{d.label}</dt>
-                    <dd className={d.text ? 'num' : 'ps-hours__off'}>{d.text ?? 'Nghỉ'}</dd>
+                    <dd className={d.text ? 'ps-hours__t' : 'ps-hours__off'}>{d.text ?? 'Nghỉ'}</dd>
                   </div>
                 ))}
               </dl>

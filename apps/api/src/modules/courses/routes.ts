@@ -112,6 +112,7 @@ export const courseRoutes: AnyRoute[] = [
   defineRoute({
     method: 'post',
     path: '/orgs/:orgId/courses',
+    idempotent: true,
     scope: 'org',
     permission: 'courses.write',
     tag: TAG,
