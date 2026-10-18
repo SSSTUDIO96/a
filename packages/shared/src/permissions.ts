@@ -18,6 +18,8 @@ export const PERMISSIONS = {
   'schedule.read_own': 'Xem lịch mình được phân',
   'schedule.read_all': 'Xem lịch cả tổ chức',
   'schedule.write': 'Tạo, sửa, đổi trạng thái lịch',
+  'contracts.read': 'Xem hợp đồng',
+  'contracts.write': 'Lập, sửa, xác nhận hợp đồng',
 } as const;
 
 export type Permission = keyof typeof PERMISSIONS;
@@ -48,7 +50,7 @@ export const SYSTEM_ROLES: Record<SystemRoleKey, { name: string; permissions: Pe
     permissions: [
       'org.read', 'members.read', 'members.invite', 'members.update', 'roles.read',
       'catalog.read', 'catalog.write', 'prices.write', 'customers.read', 'customers.write',
-      'schedule.read_own', 'schedule.read_all', 'schedule.write',
+      'schedule.read_own', 'schedule.read_all', 'schedule.write', 'contracts.read', 'contracts.write',
     ],
   },
   artist: { name: 'Thợ makeup', permissions: ['org.read', 'members.read', 'catalog.read', 'schedule.read_own'] },
@@ -57,15 +59,28 @@ export const SYSTEM_ROLES: Record<SystemRoleKey, { name: string; permissions: Pe
     name: 'Lễ tân',
     permissions: [
       'org.read', 'members.read', 'catalog.read', 'customers.read', 'customers.write',
-      'schedule.read_own', 'schedule.read_all', 'schedule.write',
+      'schedule.read_own', 'schedule.read_all', 'schedule.write', 'contracts.read', 'contracts.write',
     ],
   },
   accountant: {
     name: 'Kế toán',
-    permissions: ['org.read', 'members.read', 'audit.read', 'catalog.read', 'customers.read', 'schedule.read_own', 'schedule.read_all'],
+    permissions: [
+      'org.read', 'members.read', 'audit.read', 'catalog.read', 'customers.read',
+      'schedule.read_own', 'schedule.read_all', 'contracts.read',
+    ],
   },
   instructor: { name: 'Giảng viên', permissions: ['org.read', 'members.read', 'catalog.read', 'schedule.read_own'] },
   teaching_assistant: { name: 'Trợ giảng', permissions: ['org.read', 'schedule.read_own'] },
 };
 
 export const SYSTEM_ROLE_KEYS = Object.keys(SYSTEM_ROLES) as SystemRoleKey[];
+
+// Nhân vật makeup cài sẵn cho tổ chức mới; tổ chức tự thêm, sửa, ẩn sau.
+export const DEFAULT_MAKEUP_SUBJECTS = [
+  'Cô dâu',
+  'Chú rể',
+  'Mẹ cô dâu',
+  'Mẹ chú rể',
+  'Phù dâu',
+  'Khách mời',
+] as const;

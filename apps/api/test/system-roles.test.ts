@@ -35,3 +35,24 @@ describe('đồng bộ vai trò hệ thống cho tổ chức cũ', () => {
     expect(second.rolesCreated + second.rolesUpdated).toBe(0);
   });
 });
+
+describe('đồng bộ dữ liệu mặc định cho tổ chức tạo trước khi có hợp đồng', () => {
+  it('bổ sung cách tính phí di chuyển và bộ nhân vật mẫu; không thêm lại khi tổ chức đã có nhân vật', async () => {
+    const app = makeApp(deps);
+    const owner = await registerUser(app, 'cu-hd');
+    const orgId = await createOrg(app, owner, 'to-chuc-cu-hd');
+    const created = await deps.db.makeupSubject.count({ where: { organizationId: orgId } });
+    expect(created).toBeGreaterThan(0);
+    // Giả lập tổ chức cũ: chưa có phí di chuyển, chưa có nhân vật.
+    await deps.db.travelFeePolicy.delete({ where: { organizationId: orgId } });
+    await deps.db.makeupSubject.deleteMany({ where: { organizationId: orgId } });
+    await syncSystemRoles(deps.db);
+    expect(await deps.db.travelFeePolicy.count({ where: { organizationId: orgId } })).toBe(1);
+    expect(await deps.db.makeupSubject.count({ where: { organizationId: orgId } })).toBe(created);
+    // Chủ xoá bớt nhân vật → đồng bộ không thêm lại.
+    const one = await deps.db.makeupSubject.findFirstOrThrow({ where: { organizationId: orgId } });
+    await deps.db.makeupSubject.delete({ where: { id: one.id } });
+    await syncSystemRoles(deps.db);
+    expect(await deps.db.makeupSubject.count({ where: { organizationId: orgId } })).toBe(created - 1);
+  });
+});

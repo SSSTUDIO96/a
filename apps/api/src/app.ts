@@ -11,10 +11,11 @@ import { authRoutes } from './modules/auth/routes';
 import { orgRoutes } from './modules/orgs/routes';
 import { catalogRoutes } from './modules/catalog/routes';
 import { scheduleRoutes } from './modules/schedule/routes';
+import { contractRoutes } from './modules/contracts/routes';
 import { createHash } from 'node:crypto';
 import { Prisma } from '@prisma/client';
 
-export const ALL_ROUTES: AnyRoute[] = [...authRoutes, ...orgRoutes, ...catalogRoutes, ...scheduleRoutes];
+export const ALL_ROUTES: AnyRoute[] = [...authRoutes, ...orgRoutes, ...catalogRoutes, ...scheduleRoutes, ...contractRoutes];
 
 export function createApp(deps: Deps, routes: AnyRoute[] = ALL_ROUTES) {
   const app = express();

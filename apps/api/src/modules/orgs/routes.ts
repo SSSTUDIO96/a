@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { isPermission, SYSTEM_ROLE_KEYS, SYSTEM_ROLES } from '@makeup/shared';
+import { DEFAULT_MAKEUP_SUBJECTS, isPermission, SYSTEM_ROLE_KEYS, SYSTEM_ROLES } from '@makeup/shared';
 import type { Prisma } from '@prisma/client';
 import { defineRoute, mustOrg, mustUser } from '../../http/route';
 import { AppError } from '../../lib/errors';
@@ -91,6 +91,10 @@ export const orgRoutes = [
         const owner = await tx.role.findUniqueOrThrow({
           where: { organizationId_key: { organizationId: created.id, key: 'owner' } },
         });
+        await tx.makeupSubject.createMany({
+          data: DEFAULT_MAKEUP_SUBJECTS.map((name, i) => ({ organizationId: created.id, name, sortOrder: i })),
+        });
+        await tx.travelFeePolicy.create({ data: { organizationId: created.id } });
         const membership = await tx.membership.create({ data: { organizationId: created.id, userId: uid } });
         await tx.membershipRole.create({
           data: { organizationId: created.id, membershipId: membership.id, roleId: owner.id },

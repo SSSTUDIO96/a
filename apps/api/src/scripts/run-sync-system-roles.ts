@@ -7,7 +7,8 @@ const db = createPrisma(url);
 syncSystemRoles(db)
   .then((r) => {
     console.log(
-      `Đồng bộ vai trò hệ thống: ${r.organizations} tổ chức, tạo ${r.rolesCreated}, cập nhật ${r.rolesUpdated} vai trò`,
+      `Đồng bộ: ${r.organizations} tổ chức; vai trò tạo ${r.rolesCreated}, cập nhật ${r.rolesUpdated}; ` +
+        `phí di chuyển tạo ${r.travelPoliciesCreated}; bộ nhân vật mẫu ${r.subjectSetsSeeded}`,
     );
   })
   .finally(() => db.$disconnect());

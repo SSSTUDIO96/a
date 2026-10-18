@@ -91,11 +91,15 @@ model Organization {
   priceVersions     PriceVersion[]
   customers         Customer[]
   appointments      Appointment[]
-  appointmentItems  AppointmentItem[]
   appointmentStaff  AppointmentStaff[]
   statusHistory     AppointmentStatusHistory[]
   counters          OrgCounter[]
   idempotencyKeys   IdempotencyKey[]
+  makeupSubjects    MakeupSubject[]
+  studioLocations   StudioLocation[]
+  travelFeePolicy   TravelFeePolicy?
+  contracts         Contract[]
+  contractLines     ContractLine[]
 
   @@map("organizations")
 }
@@ -190,26 +194,44 @@ model ServiceCategory {
   @@map("service_categories")
 }
 
+enum ServiceKind {
+  // Dịch vụ chính (makeup cô dâu, makeup tiệc…)
+  MAIN
+  // Dịch vụ phụ tick thêm (làm tóc, nail, lens…)
+  ADDON
+  // Phụ phí cài sẵn (ca sớm, ngoài giờ, thêm người…)
+  SURCHARGE
+}
+
+// Nơi thực hiện: tại studio/cửa hàng, tại nhà khách, hoặc địa điểm khác.
+// Tại nhà và địa điểm khác thì hợp đồng tính phí di chuyển.
+enum LocationType {
+  STUDIO
+  CUSTOMER_HOME
+  OTHER
+}
+
 model Service {
-  id              String   @id @default(uuid()) @db.Uuid
-  organizationId  String   @map("organization_id") @db.Uuid
-  categoryId      String?  @map("category_id") @db.Uuid
+  id              String      @id @default(uuid()) @db.Uuid
+  organizationId  String      @map("organization_id") @db.Uuid
+  categoryId      String?     @map("category_id") @db.Uuid
+  kind            ServiceKind @default(MAIN)
   code            String
   name            String
   description     String?
-  durationMinutes Int      @map("duration_minutes")
-  isActive        Boolean  @default(true) @map("is_active")
+  durationMinutes Int         @map("duration_minutes")
+  isActive        Boolean     @default(true) @map("is_active")
   // Hiện trên website giới thiệu hay không (website chỉ đọc dịch vụ isActive && isPublic).
-  isPublic        Boolean  @default(false) @map("is_public")
-  sortOrder       Int      @default(0) @map("sort_order")
-  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  isPublic        Boolean     @default(false) @map("is_public")
+  sortOrder       Int         @default(0) @map("sort_order")
+  createdAt       DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime    @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  organization     Organization      @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  category         ServiceCategory?  @relation(fields: [categoryId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  prices           PriceVersion[]
-  packageItems     PackageItem[]
-  appointmentItems AppointmentItem[]
+  organization  Organization     @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  category      ServiceCategory? @relation(fields: [categoryId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  prices        PriceVersion[]
+  packageItems  PackageItem[]
+  contractLines ContractLine[]
 
   @@unique([organizationId, code])
   @@unique([id, organizationId])
@@ -217,26 +239,31 @@ model Service {
 }
 
 model ServicePackage {
-  id              String   @id @default(uuid()) @db.Uuid
-  organizationId  String   @map("organization_id") @db.Uuid
+  id              String         @id @default(uuid()) @db.Uuid
+  organizationId  String         @map("organization_id") @db.Uuid
   code            String
   name            String
   description     String?
-  durationMinutes Int      @map("duration_minutes")
-  staffCount      Int      @default(1) @map("staff_count")
+  durationMinutes Int            @map("duration_minutes")
+  staffCount      Int            @default(1) @map("staff_count")
   // Tiền cọc mặc định khi chốt lịch theo gói (đồng).
-  depositAmount   BigInt   @default(0) @map("deposit_amount")
+  depositAmount   BigInt         @default(0) @map("deposit_amount")
+  // Nhân vật makeup áp dụng (cô dâu, mẹ, phù dâu…); null = mọi nhân vật.
+  subjectId       String?        @map("subject_id") @db.Uuid
+  // Địa điểm gói cho phép chọn. Rỗng = không giới hạn.
+  locationTypes   LocationType[] @map("location_types")
   terms           String?
-  isActive        Boolean  @default(true) @map("is_active")
-  isPublic        Boolean  @default(false) @map("is_public")
-  sortOrder       Int      @default(0) @map("sort_order")
-  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  isActive        Boolean        @default(true) @map("is_active")
+  isPublic        Boolean        @default(false) @map("is_public")
+  sortOrder       Int            @default(0) @map("sort_order")
+  createdAt       DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  organization     Organization      @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  items            PackageItem[]
-  prices           PriceVersion[]
-  appointmentItems AppointmentItem[]
+  organization  Organization   @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  subject       MakeupSubject? @relation(fields: [subjectId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  items         PackageItem[]
+  contractLines ContractLine[]
+  prices        PriceVersion[]
 
   @@unique([organizationId, code])
   @@unique([id, organizationId])
@@ -296,6 +323,7 @@ model Customer {
 
   organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   appointments Appointment[]
+  contracts    Contract[]
 
   @@unique([id, organizationId])
   @@index([organizationId, phone])
@@ -327,36 +355,35 @@ enum StaffRole {
 }
 
 model Appointment {
-  id              String     @id @default(uuid()) @db.Uuid
-  organizationId  String     @map("organization_id") @db.Uuid
+  id              String        @id @default(uuid()) @db.Uuid
+  organizationId  String        @map("organization_id") @db.Uuid
   code            String
-  kind            EventKind  @default(MAKEUP)
+  kind            EventKind     @default(MAKEUP)
   title           String?
-  customerId      String?    @map("customer_id") @db.Uuid
-  startsAt        DateTime   @map("starts_at") @db.Timestamptz(3)
-  endsAt          DateTime   @map("ends_at") @db.Timestamptz(3)
+  customerId      String?       @map("customer_id") @db.Uuid
+  startsAt        DateTime      @map("starts_at") @db.Timestamptz(3)
+  endsAt          DateTime      @map("ends_at") @db.Timestamptz(3)
   // Phút di chuyển trước/sau lịch — tính vào khoảng bận của thợ khi chặn trùng.
-  travelBeforeMin Int        @default(0) @map("travel_before_min")
-  travelAfterMin  Int        @default(0) @map("travel_after_min")
+  travelBeforeMin Int           @default(0) @map("travel_before_min")
+  travelAfterMin  Int           @default(0) @map("travel_after_min")
   address         String?
-  latitude        Decimal?   @db.Decimal(9, 6)
-  longitude       Decimal?   @db.Decimal(9, 6)
-  status          WorkStatus @default(DRAFT)
-  // Các khoản đã chốt (đồng). Máy chủ tự tính tổng, không nhận tổng từ máy khách.
-  subtotal        BigInt     @default(0)
-  discount        BigInt     @default(0)
-  travelFee       BigInt     @default(0) @map("travel_fee")
-  total           BigInt     @default(0)
-  depositRequired BigInt     @default(0) @map("deposit_required")
+  latitude        Decimal?      @db.Decimal(9, 6)
+  longitude       Decimal?      @db.Decimal(9, 6)
+  status          WorkStatus    @default(DRAFT)
+  locationType    LocationType? @map("location_type")
+  // Lịch sinh từ hợp đồng thì trỏ về hợp đồng và dòng hợp đồng. Tiền nằm ở hợp đồng, lịch không giữ tiền.
+  contractId      String?       @map("contract_id") @db.Uuid
+  contractLineId  String?       @map("contract_line_id") @db.Uuid
   notes           String?
-  cancelReason    String?    @map("cancel_reason")
-  createdById     String     @map("created_by_id") @db.Uuid
-  createdAt       DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt       DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
+  cancelReason    String?       @map("cancel_reason")
+  createdById     String        @map("created_by_id") @db.Uuid
+  createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   organization  Organization               @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   customer      Customer?                  @relation(fields: [customerId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  items         AppointmentItem[]
+  contract      Contract?                  @relation(fields: [contractId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  contractLine  ContractLine?              @relation(fields: [contractLineId, organizationId], references: [id, organizationId], onDelete: Restrict)
   staff         AppointmentStaff[]
   statusHistory AppointmentStatusHistory[]
 
@@ -364,28 +391,6 @@ model Appointment {
   @@unique([id, organizationId])
   @@index([organizationId, startsAt])
   @@map("appointments")
-}
-
-// Dòng giá chốt tại thời điểm đặt lịch: đổi bảng giá sau đó KHÔNG làm đổi lịch đã chốt.
-model AppointmentItem {
-  id             String  @id @default(uuid()) @db.Uuid
-  organizationId String  @map("organization_id") @db.Uuid
-  appointmentId  String  @map("appointment_id") @db.Uuid
-  serviceId      String? @map("service_id") @db.Uuid
-  packageId      String? @map("package_id") @db.Uuid
-  priceVersionId String? @map("price_version_id") @db.Uuid
-  nameSnapshot   String  @map("name_snapshot")
-  unitPrice      BigInt  @map("unit_price")
-  quantity       Int     @default(1)
-  lineTotal      BigInt  @map("line_total")
-
-  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  appointment  Appointment     @relation(fields: [appointmentId, organizationId], references: [id, organizationId], onDelete: Cascade)
-  service      Service?        @relation(fields: [serviceId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  package      ServicePackage? @relation(fields: [packageId, organizationId], references: [id, organizationId], onDelete: Restrict)
-
-  @@index([appointmentId])
-  @@map("appointment_items")
 }
 
 model AppointmentStaff {
@@ -454,4 +459,174 @@ model IdempotencyKey {
 
   @@id([organizationId, userId, key])
   @@map("idempotency_keys")
+}
+
+// ==================== NHÂN VẬT, ĐỊA ĐIỂM, PHÍ DI CHUYỂN ====================
+
+// Nhân vật makeup: cô dâu, chú rể, mẹ cô dâu, phù dâu… Mỗi tổ chức tự thêm, sửa, ẩn.
+model MakeupSubject {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  name           String
+  sortOrder      Int      @default(0) @map("sort_order")
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  organization  Organization     @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  packages      ServicePackage[]
+  contractLines ContractLine[]
+
+  @@unique([organizationId, name])
+  @@unique([id, organizationId])
+  @@map("makeup_subjects")
+}
+
+// Studio / cửa hàng của tổ chức — điểm xuất phát để tính km.
+model StudioLocation {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  name           String
+  address        String
+  latitude       Decimal? @db.Decimal(9, 6)
+  longitude      Decimal? @db.Decimal(9, 6)
+  isDefault      Boolean  @default(false) @map("is_default")
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  organization  Organization   @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  contractLines ContractLine[]
+
+  @@unique([id, organizationId])
+  @@map("studio_locations")
+}
+
+enum TravelFeeMode {
+  // Một mức cố định mỗi lần đi
+  FIXED
+  // Đơn giá × số km (trừ số km miễn phí), không thấp hơn mức tối thiểu
+  PER_KM
+  // Nhập tay theo thoả thuận với từng khách
+  MANUAL
+}
+
+// Cách tính phí di chuyển mặc định của tổ chức. Khi lập hợp đồng vẫn được chọn cách khác cho từng dòng.
+model TravelFeePolicy {
+  organizationId String        @id @map("organization_id") @db.Uuid
+  defaultMode    TravelFeeMode @default(MANUAL) @map("default_mode")
+  fixedAmount    BigInt        @default(0) @map("fixed_amount")
+  perKmAmount    BigInt        @default(0) @map("per_km_amount")
+  freeKm         Decimal       @default(0) @map("free_km") @db.Decimal(7, 2)
+  minimumAmount  BigInt        @default(0) @map("minimum_amount")
+  // true = tính cả chiều đi và chiều về
+  roundTrip      Boolean       @default(false) @map("round_trip")
+  updatedAt      DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+
+  @@map("travel_fee_policies")
+}
+
+// ==================== HỢP ĐỒNG ====================
+
+enum ContractStatus {
+  DRAFT
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+}
+
+enum ContractLineKind {
+  PACKAGE
+  SERVICE
+  ADDON
+  SURCHARGE
+  TRAVEL
+  CUSTOM
+}
+
+// Hợp đồng là nơi DUY NHẤT giữ tiền của một đơn makeup.
+// Luật: subtotal = tổng line_total các dòng chưa huỷ; total = subtotal − discount (máy chủ tự tính, bài thử kiểm).
+model Contract {
+  id              String         @id @default(uuid()) @db.Uuid
+  organizationId  String         @map("organization_id") @db.Uuid
+  code            String
+  customerId      String         @map("customer_id") @db.Uuid
+  status          ContractStatus @default(DRAFT)
+  eventDate       DateTime?      @map("event_date") @db.Timestamptz(3)
+  subtotal        BigInt         @default(0)
+  discount        BigInt         @default(0)
+  total           BigInt         @default(0)
+  depositRequired BigInt         @default(0) @map("deposit_required")
+  notes           String?
+  terms           String?
+  cancelReason    String?        @map("cancel_reason")
+  confirmedAt     DateTime?      @map("confirmed_at") @db.Timestamptz(3)
+  createdById     String         @map("created_by_id") @db.Uuid
+  createdAt       DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  customer     Customer       @relation(fields: [customerId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  lines        ContractLine[]
+  appointments Appointment[]
+
+  @@unique([organizationId, code])
+  @@unique([id, organizationId])
+  @@index([organizationId, eventDate])
+  @@map("contracts")
+}
+
+// Một dòng hợp đồng. Giá chốt lúc thêm dòng (unit_price + price_version_id): đổi bảng giá sau không đổi hợp đồng.
+// Dịch vụ phụ (ADDON) gắn vào dòng gói qua parent_line_id.
+// Sau khi hợp đồng xác nhận: không sửa/xoá dòng cũ; chỉ thêm dòng phát sinh hoặc huỷ dòng có lý do.
+model ContractLine {
+  id                String           @id @default(uuid()) @db.Uuid
+  organizationId    String           @map("organization_id") @db.Uuid
+  contractId        String           @map("contract_id") @db.Uuid
+  parentLineId      String?          @map("parent_line_id") @db.Uuid
+  kind              ContractLineKind
+  serviceId         String?          @map("service_id") @db.Uuid
+  packageId         String?          @map("package_id") @db.Uuid
+  priceVersionId    String?          @map("price_version_id") @db.Uuid
+  subjectId         String?          @map("subject_id") @db.Uuid
+  subjectName       String?          @map("subject_name")
+  name              String
+  locationType      LocationType?    @map("location_type")
+  studioLocationId  String?          @map("studio_location_id") @db.Uuid
+  address           String?
+  latitude          Decimal?         @db.Decimal(9, 6)
+  longitude         Decimal?         @db.Decimal(9, 6)
+  scheduledStart    DateTime?        @map("scheduled_start") @db.Timestamptz(3)
+  scheduledEnd      DateTime?        @map("scheduled_end") @db.Timestamptz(3)
+  quantity          Int              @default(1)
+  unitPrice         BigInt           @map("unit_price")
+  lineDiscount      BigInt           @default(0) @map("line_discount")
+  lineTotal         BigInt           @map("line_total")
+  // Chỉ dùng cho dòng TRAVEL: cách tính và số liệu đã dùng để tính.
+  travelMode        TravelFeeMode?   @map("travel_mode")
+  distanceKm        Decimal?         @map("distance_km") @db.Decimal(7, 2)
+  perKmAmount       BigInt?          @map("per_km_amount")
+  note              String?
+  sortOrder         Int              @default(0) @map("sort_order")
+  addedAfterConfirm Boolean          @default(false) @map("added_after_confirm")
+  voidedAt          DateTime?        @map("voided_at") @db.Timestamptz(3)
+  voidReason        String?          @map("void_reason")
+  createdById       String           @map("created_by_id") @db.Uuid
+  createdAt         DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  contract       Contract        @relation(fields: [contractId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  parent         ContractLine?   @relation("LineAddons", fields: [parentLineId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  addons         ContractLine[]  @relation("LineAddons")
+  service        Service?        @relation(fields: [serviceId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  package        ServicePackage? @relation(fields: [packageId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  subject        MakeupSubject?  @relation(fields: [subjectId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  studioLocation StudioLocation? @relation(fields: [studioLocationId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  appointments   Appointment[]
+
+  @@unique([id, organizationId])
+  @@index([contractId])
+  @@map("contract_lines")
 }
