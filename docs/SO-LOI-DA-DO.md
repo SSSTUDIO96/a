@@ -69,6 +69,11 @@ Mỗi lỗi ghi đủ: triệu chứng · gốc bệnh · số đo · cách ch�
 - **Chứng minh thước mới không mù:** cài 3 lỗi (xem trước lộ khách, lọc danh sách quên tổ chức, báo "thuộc tổ chức khác" thay vì "không tìm thấy"). Cả 3 bị bắt.
 - **Bài học cho studio khác:** đổi tiêu chí của thước theo hướng *nới* thì bắt buộc cài lỗi để chứng minh thước vẫn bắt được. Nới mà không chứng minh là tự che lỗi của mình.
 
+### 13. Lưu bản khi bài thử đang đỏ
+- **Triệu chứng:** điều phối chạy "bài thử rồi lưu" trong một chuỗi lệnh. Bài thử web báo 2 bài đỏ nhưng lệnh lưu vẫn chạy. Lời ghi bản lưu còn chép số "147 bài" của thợ, không phải số điều phối tự đo.
+- **Đo lại:** trên đúng bản đã lưu (bung ra thư mục riêng), web đạt 119 + 28 = 147/147. Hai bài đỏ chỉ do phần thợ khác đang làm dở trong thư mục làm việc. Mã đã lưu không lỗi. Quy trình thì sai.
+- **Cách chặn:** lưu chỉ được chạy khi lệnh bài thử thoát mã 0 (nối bằng `&&`, không lọc kết quả qua `grep` trước đó). Số ghi trong lời lưu phải là số tự đo trên đúng bản sắp lưu.
+
 ---
 
 ## Phần CỦA RIÊNG DỰ ÁN NÀY

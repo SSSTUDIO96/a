@@ -297,3 +297,41 @@ Mã nguồn đã đọc (thư mục /tmp/claude-0/-home-user/98e5e0bd-eea6-5414-
 - **Đường `quote`:** chưa gọi thật, vì chưa chạy máy chủ cùng cơ sở dữ liệu. Số liệu trong bản mẫu là R&D tự tính theo đúng công thức trong /home/user/a/packages/shared/src/contract.ts: km × 2 chiều − `freeKm`, nhân `perKmAmount`, làm tròn lên bội 1.000 ₫, không thấp hơn `minimumAmount`. Bản nháp đầu vòng này trừ km miễn phí trước khi nhân 2 chiều (ra 187.000 ₫); đã sửa thành 217.000 ₫.
 - **Ảnh đại diện thật của thợ:** không có ảnh (không tải được ảnh từ mạng), nên bản mẫu dùng chữ viết tắt. Đúng với luật "trống → chữ viết tắt" của `StaffProfile.avatarUrl`.
 - **Máy tính bảng:** chưa chụp màn chi tiết gói của A và B; chỉ có C (…-chi-tiet-goi-tablet.png).
+
+## 11. Bổ sung 18/10/2026 — Thợ phụ trách trong hợp đồng
+
+**Câu hỏi của anh**
+- "Chỗ này không gán cho nhân sự phụ trách hả?"
+- "Và có cảnh báo nếu trùng giờ hoặc có lịch trong ngày hôm đó".
+
+**Đã thêm vào bản mẫu C** (/home/user/a/docs/rnd/v2-phuong-an-C.html)
+- **Hàng "Thợ phụ trách"** trong mỗi thẻ nhân vật, ngay dưới hàng "Giờ":
+  - chồng ảnh đại diện, thợ chính có viền màu;
+  - tên thợ;
+  - nút "Đổi".
+- **Dải cảnh báo trong thẻ:**
+  - đỏ "Trùng giờ 05:00–06:30 — hợp đồng sẽ không xác nhận được";
+  - vàng "Hà có lịch trong ngày · 1 ca";
+  - chi tiết giờ nằm trong tooltip;
+  - còn trùng giờ thì nút "Xác nhận hợp đồng" khoá.
+- **Ô chọn thợ** (máy tính: hộp thoại; điện thoại: ngăn kéo từ dưới lên):
+  - thợ xếp theo bậc;
+  - mỗi thợ có nhãn: không nhãn (rảnh) / vàng "Có lịch trong ngày · n ca" (bấm mở xem giờ) / đỏ "Trùng giờ …" / xám "Giữ chỗ nháp";
+  - thợ tắt nhận lịch thì mờ, không chọn được;
+  - người được chọn có nút chuyển Chính / Phụ.
+- **Hợp đồng đã xác nhận:** hàng thợ chỉ xem, có liên kết "Đổi ở Lịch".
+
+**Ảnh**
+- /home/user/a/docs/rnd/anh/v2-phuong-an-C-hop-dong-desktop.png
+- /home/user/a/docs/rnd/anh/v2-phuong-an-C-hop-dong-tablet.png
+- /home/user/a/docs/rnd/anh/v2-phuong-an-C-hop-dong-mobile.png
+- /home/user/a/docs/rnd/anh/v2-phuong-an-C-hop-dong-chon-tho-desktop.png
+- /home/user/a/docs/rnd/anh/v2-phuong-an-C-hop-dong-chon-tho-mobile.png
+- /home/user/a/docs/rnd/anh/v2-phuong-an-C-hop-dong-xac-nhan-desktop.png
+- /home/user/a/docs/rnd/anh/v2-phuong-an-C-hop-dong-xac-nhan-mobile.png
+
+**Nguồn dữ liệu**
+- Vẽ theo đặc tả điều phối: `lines[].staff[{membershipId, role}]`, `GET /orgs/:orgId/staff/availability`, `quote.staffWarnings`, và xác nhận trùng giờ → 409.
+- **Lúc vẽ, mã máy chủ chưa có các đường và trường này.** Bản vẽ /home/user/a/docs/rnd/BAN-VE-C.md mục 4.3 đã ghi rõ để đối chiếu lại khi máy chủ xong.
+
+**Còn mở:** hai bản mẫu A và B chưa thêm hàng thợ, vì anh đã chọn C.

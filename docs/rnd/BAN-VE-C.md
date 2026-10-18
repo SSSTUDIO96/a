@@ -398,12 +398,72 @@ Bản mẫu: `#hop-dong`, `#hop-dong-chon`, `#hop-dong-xn`.
 |---|---|---|
 | Đầu thẻ | nhãn nhân vật · tên gói · Qty · nút ✕ bỏ dòng | `kind: 'PACKAGE', packageId, subjectId` (mặc định lấy `subjectId` của gói, đổi được), `quantity` |
 | Giờ | 2 ô giờ "04:30 – 07:00" + chữ "1 × 2.700.000 ₫" | `scheduledStart, scheduledEnd` (ghép với `eventDate`) |
+| **Thợ phụ trách** ? *(bổ sung 18/10/2026)* | AvatarStack thợ đã chọn (thợ chính có viền màu) · tên rút gọn (nhiều thợ thì thêm "(chính)") · nút "Đổi" / "Chọn thợ" mở StaffPicker. Ngay dưới hàng là StaffWarningBanner nếu có cảnh báo. | `staff[{membershipId, role PRIMARY\|ASSIST}]` |
 | Dịch vụ phụ | CheckChip cho từng dịch vụ trong `items` có `isOptional = true`, kèm "+giá". Số lượng mặc định bằng số lượng dòng (Phù dâu × 2 → Kẹp mi × 2) | `addons[{serviceId, quantity}]` |
 | Làm ở đâu | Segmented Studio / Tại nhà / Nơi khác. Loại gói không cho phép thì khoá, tooltip "Gói này không làm …" | `locationType` |
 | ↳ Studio | Select tên studio + địa chỉ 12px dưới | `studioLocationId` |
 | ↳ Tại nhà, Nơi khác | Textarea địa chỉ 2 dòng | `address` |
 | Di chuyển `*` ? (chỉ khi Tại nhà hoặc Nơi khác; **bắt buộc**) | Segmented Cố định / Theo km / Nhập tay (mặc định `defaultMode`) · ô km (Theo km) hoặc MoneyInput (Nhập tay) · số tiền căn phải · dòng công thức 12px | `travel{mode, distanceKm?, amount?}`. Nhập tay bắt buộc `amount` (miễn phí = 0). Cố định và Theo km **không gửi** `amount`. |
 | Chân thẻ | "Cộng {nhân vật}" · số tiền | tổng `lineTotal` của dòng gói + addons + travel lấy từ `quote` |
+
+**Thợ phụ trách và cảnh báo trùng giờ** *(bổ sung 18/10/2026)*
+
+Ghi theo đặc tả điều phối gửi. Lúc vẽ, mã máy chủ **chưa có** các đường và trường này; khi máy chủ xong phải đối chiếu lại tên trường.
+
+Bản mẫu: `#hop-dong` (hàng thợ và dải cảnh báo), `#hop-dong-tho` (ô chọn thợ), `#hop-dong-xn` (đã xác nhận).
+
+Ảnh:
+- /home/user/a/docs/rnd/anh/v2-phuong-an-C-hop-dong-desktop.png
+- /home/user/a/docs/rnd/anh/v2-phuong-an-C-hop-dong-tablet.png
+- /home/user/a/docs/rnd/anh/v2-phuong-an-C-hop-dong-mobile.png
+- /home/user/a/docs/rnd/anh/v2-phuong-an-C-hop-dong-chon-tho-desktop.png
+- /home/user/a/docs/rnd/anh/v2-phuong-an-C-hop-dong-chon-tho-mobile.png
+- /home/user/a/docs/rnd/anh/v2-phuong-an-C-hop-dong-xac-nhan-desktop.png
+
+*Hàng "Thợ phụ trách"* — nằm ngay dưới hàng "Giờ"; cột nhãn rộng 118px.
+- Avatar 28px. Thợ chính có viền `box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--accent)`.
+- Tooltip "?" giải thích viền màu và việc tạo lịch khi xác nhận.
+- Chưa chọn thợ: chữ "Chưa chọn" màu `--faint` + nút "Chọn thợ".
+
+*StaffWarningBanner* — trong thẻ dòng, lề 0 16 10.
+- Nguồn: `quote.staffWarnings` của dòng đó.
+- Mỗi cảnh báo một dải, chữ 13px, bo 8. Chi tiết (giờ, tên ca, khách) nằm trong tooltip "?". Không viết thêm chữ khác.
+
+| Mức | Màu | Chữ trên dải |
+|---|---|---|
+| `OVERLAP` | đỏ: `--danger-bg` / `--danger-line` / `--danger` | biểu tượng cảnh báo · "**Trùng giờ 05:00–06:30** — hợp đồng sẽ không xác nhận được" |
+| `SAME_DAY` | vàng: `--warn-bg` / `--warn-line` / `--warn` | biểu tượng đồng hồ · "{tên} có lịch trong ngày · n ca" |
+
+- Còn ít nhất một dải đỏ: nút "Xác nhận hợp đồng" ở thanh tổng bị **khoá**, tooltip "Còn n dòng thợ trùng giờ. Đổi thợ hoặc đổi giờ trước khi xác nhận."
+- Máy chủ vẫn là chốt chặn cuối: nếu trả **409** khi xác nhận, hợp đồng vẫn ở trạng thái nháp. Giao diện gọi lại `quote` rồi hiện dải đỏ ở đúng dòng.
+
+*StaffPicker* — máy tính và máy tính bảng: Dialog rộng `min(560px, 100%)`; điện thoại: BottomSheet.
+- **Đầu hộp:** "Chọn thợ phụ trách" + dòng phụ "{nhân vật} · {giờ} · {ngày}".
+- **Thân hộp:** thợ nhóm theo **bậc** (tiêu đề nhóm viết hoa 11.5px trên nền `--soft`, xếp theo `tier.sortOrder`).
+- **Mỗi dòng thợ** (đệm 10 18):
+  - Checkbox · Avatar 28 · tên 14 / 600 · hàng nhãn trạng thái.
+  - Dòng đang chọn: nền `--accent-soft`, bên phải có Segmented "Chính / Phụ" (`role`). Mỗi dòng gói tối đa một thợ chính.
+- **Nhãn trạng thái:**
+
+| Tình trạng | Nhãn |
+|---|---|
+| `FREE` | không nhãn |
+| `SAME_DAY` | nhãn vàng "Có lịch trong ngày · n ca". Bấm vào thì mở ra danh sách giờ, 12px. |
+| `OVERLAP` | nhãn đỏ "Trùng giờ 05:00–06:30" + tooltip chi tiết. **Vẫn chọn được**: chủ studio có thể đang định đổi giờ ca kia. Cảnh báo sẽ hiện trong thẻ dòng. |
+| Có `draftHolds` | thêm nhãn xám "Giữ chỗ nháp", tooltip "Đang nằm trong một hợp đồng nháp khác cùng giờ. Chưa chặn lịch." |
+| `isBookable = false` | nhãn xám "Tắt nhận lịch". Checkbox khoá, cả dòng mờ. |
+
+- **Chân hộp:** "Huỷ" · "Chọn". Bấm "Chọn" ghi `staff` vào dòng rồi gọi lại `quote`.
+
+| Ô | Đường API | Trường |
+|---|---|---|
+| Danh sách thợ và tình trạng | Đ `GET /orgs/:orgId/staff/availability?startsAt&endsAt&excludeContractId` (`startsAt/endsAt` = `scheduledStart/End` của dòng; `excludeContractId` = hợp đồng đang sửa, khi đã có id) | mỗi thợ `{displayName, avatarUrl, initials, tier, isBookable, level OVERLAP\|SAME_DAY\|FREE, overlaps[], sameDay[], draftHolds[]}` |
+| Thợ đã chọn | G trong thân `POST /contracts` / `PATCH /contracts/:id` / `POST /contracts/quote` | `lines[i].staff[{membershipId, role}]` |
+| Dải cảnh báo trong thẻ | Đ `POST /contracts/quote` | `staffWarnings` theo dòng |
+| Xác nhận | G `POST /contracts/:id/status {to: 'CONFIRMED'}` | Máy chủ tạo lịch cho các thợ. Trùng giờ → 409, hợp đồng vẫn `DRAFT`. |
+
+- Thợ trùng giờ **trong chính hợp đồng này** (ví dụ cùng một thợ được gán cho dòng cô dâu 04:30–07:00 và dòng mẹ 05:00–05:45) cũng hiện là `OVERLAP`. Ô chọn ghi "Dòng Cô dâu của hợp đồng này" trong tooltip.
+- *Hợp đồng đã xác nhận:* hàng thợ **chỉ xem**. Thay nút "Đổi" bằng liên kết "Đổi ở Lịch", mở màn Lịch đúng ca đó (thợ của ca đã tạo đổi bằng `PATCH /appointments/:id {staff}`). Không hiện dải cảnh báo.
 
 **Dòng công thức Theo km**
 - Hiện theo `computeTravelFee` (/home/user/a/packages/shared/src/contract.ts): `{km} km × 2 chiều − {freeKm} km miễn phí = {km tính tiền} km × {perKmAmount}`.
@@ -495,7 +555,7 @@ Bản mẫu: `#hop-dong`, `#hop-dong-chon`, `#hop-dong-xn`.
 | `customers.read` / `customers.write` | Tìm khách / Khách mới |
 | `schedule.read_own` | Lịch (người chỉ có quyền này chỉ thấy ca của mình) |
 | `schedule.write` | Thêm, sửa, dời ca |
-| `staff.read` | Hàng hoặc cột thợ, avatar |
+| `staff.read` | Hàng hoặc cột thợ, avatar; ô chọn thợ trong hợp đồng (bổ sung 18/10/2026) |
 
 ---
 
@@ -508,11 +568,11 @@ Mỗi gói chỉ ghi vào nhóm tệp của mình. Tệp dùng chung (`src/ui/in
 | Gói | Tệp sở hữu | Nội dung | Phụ thuộc |
 |---|---|---|---|
 | **W0 Nền** | `apps/web/package.json`, `vite.config.ts`, `tsconfig.json`, `index.html`, `public/fonts/*`, `src/main.tsx`, `src/app/App.tsx`, `src/app/routes.tsx`, `src/styles/tokens.css`, `src/styles/base.css` | Dự án, phông tự chứa, token mục 1 (y nguyên tên biến), khung định tuyến rỗng (`/lich`, `/hop-dong`, `/hop-dong/:id`, `/bang-gia/:nhom`) | — |
-| **W1 Gọi API** | `src/api/client.ts`, `src/api/errors.ts`, `src/api/idempotency.ts`, `src/api/auth.ts`, `src/api/catalog.ts`, `src/api/contracts.ts`, `src/api/schedule.ts`, `src/api/staff.ts`, `src/api/types.ts` | fetch kèm token và `orgId`; ánh xạ lỗi 400/401/403/404/409; một hàm cho mỗi đường ở mục 4; `useQuote` (đợi 300ms, huỷ yêu cầu cũ) | W0 |
+| **W1 Gọi API** | `src/api/client.ts`, `src/api/errors.ts`, `src/api/idempotency.ts`, `src/api/auth.ts`, `src/api/catalog.ts`, `src/api/contracts.ts`, `src/api/schedule.ts`, `src/api/staff.ts`, `src/api/types.ts` | fetch kèm token và `orgId`; ánh xạ lỗi 400/401/403/404/409; một hàm cho mỗi đường ở mục 4, kể cả `GET /staff/availability` (bổ sung 18/10/2026); `useQuote` (đợi 300ms, huỷ yêu cầu cũ) | W0 |
 | **W2 Component** | `src/ui/*.tsx` (Button, TextInput, Textarea, MoneyInput, UnitInput, Select, Checkbox, CheckChip, Switch, Segmented, Qty, Card, Dialog, BottomSheet, Tooltip, Avatar, AvatarStack, StatusTag, Chip, StickyTotalBar, EmptyState, Skeleton), `src/ui/index.ts`, `src/ui/format.ts` (`formatVnd`, `formatKm`, `parseMoney`, `parseKm`) | Mục 3, đủ 6 trạng thái; bài thử cho MoneyInput/UnitInput (dấu chấm, dấu phẩy, giới hạn) | W0 |
 | **W3 Khung** | `src/layout/AppShell.tsx`, `Sidebar.tsx`, `TopBar.tsx`, `BottomNav.tsx`, `PageHeader.tsx`, `nav.ts`, `usePermissions.ts` | Mục 2, ẩn mục theo quyền (mục 6), 3 điểm gãy | W1, W2 |
 | **W4 Bảng giá** | `src/features/pricing/**` (PricingPage, SubjectCards, PackageRow, PackageDialog, groups/InfoPriceGroup, LocationsGroup, IncludedGroup, AddonsGroup, PayRatesGroup, ServicesPage, ServiceDialog, TravelPage, StudioLocations, SubjectsPage) | Mục 4.2 | W3 |
-| **W5 Hợp đồng** | `src/features/contracts/**` (ContractEditor, CatalogPicker, PickerSheet, CustomerBlock, PackageLineCard, TravelControl, ExtrasCard, TotalsCard, VoidLineDialog, ConfirmedBanner, ContractList) | Mục 4.3. **Không** nhập tệp của W4: phần chọn từ bảng giá tự đọc `src/api/catalog.ts`. | W3 (song song với W4) |
+| **W5 Hợp đồng** | `src/features/contracts/**` (ContractEditor, CatalogPicker, PickerSheet, CustomerBlock, PackageLineCard, TravelControl, ExtrasCard, TotalsCard, VoidLineDialog, ConfirmedBanner, ContractList) — *bổ sung 18/10/2026:* `src/features/contracts/StaffRow.tsx`, `StaffPicker.tsx`, `StaffWarningBanner.tsx`, `useStaffAvailability.ts` | Mục 4.3, gồm phần "Thợ phụ trách và cảnh báo trùng giờ". **Không** nhập tệp của W4: phần chọn từ bảng giá tự đọc `src/api/catalog.ts`. Hàm gọi `GET /staff/availability` đặt trong `src/api/staff.ts` (tệp của W1; W5 mở yêu cầu cho W1 thêm). | W3 (song song với W4); `useStaffAvailability` cần W1 thêm hàm gọi API |
 | **W6 Lịch** | `src/features/schedule/**` (SchedulePage, Toolbar, ModeSwitch, WeekGridC, WeekGridCMobile, DayListB, StaffColumnsA, AppointmentDialog, ConflictBanner, StatusActions) | Mục 4.1; mặc định C; luật 409 | W3 (song song với W4, W5) |
 | **W7 Kiểm thử giao diện** | `apps/web/e2e/**` (Playwright) | Chụp 3 khổ (1440, 1024, 390) cho mọi màn; kiểm không tràn ngang; so khớp số tiền với `quote` | W4, W5, W6 |
 

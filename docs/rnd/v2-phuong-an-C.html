@@ -215,7 +215,7 @@ textarea.ctl{height:auto;padding:8px 10px;resize:vertical}
 .ln2 .hd{display:flex;align-items:center;gap:8px;padding:12px 16px;flex-wrap:wrap}
 .ln2 .hd .n{font-weight:700}
 .ln2 .hd .sp{flex:1}
-.ln2 .rw{display:grid;grid-template-columns:96px minmax(0,1fr);gap:10px;align-items:center;padding:8px 16px;border-top:1px solid var(--line-2)}
+.ln2 .rw{display:grid;grid-template-columns:118px minmax(0,1fr);gap:10px;align-items:center;padding:8px 16px;border-top:1px solid var(--line-2)}
 .ln2 .rw>span:first-child{font-size:13px;color:var(--muted);font-weight:500}
 .ln2 .rw .fl{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .ln2 .ft{display:flex;justify-content:space-between;padding:10px 16px;border-top:1px solid var(--line-2);background:var(--soft);border-radius:0 0 12px 12px;font-size:13px}
@@ -237,7 +237,7 @@ textarea.ctl{height:auto;padding:8px 10px;resize:vertical}
   .pg3{grid-template-columns:180px minmax(0,1fr) 320px}
   .drw .set{grid-template-columns:minmax(0,1fr) 140px}
   .hd2{grid-template-columns:320px minmax(0,1fr);gap:14px}
-  .ln2 .rw{grid-template-columns:80px minmax(0,1fr)}
+  .ln2 .rw{grid-template-columns:118px minmax(0,1fr)}
 }
 @media (max-width:640px){
   .pg3{grid-template-columns:minmax(0,1fr);min-height:0}
@@ -286,6 +286,36 @@ textarea.ctl{height:auto;padding:8px 10px;resize:vertical}
   .dlg-bg{display:none}
   .mfoot{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
 }
+
+/* Thợ phụ trách (bổ sung 18/10/2026) */
+.ln2 .rw .tn{font-size:13px;font-weight:500;min-width:0}
+.ln2 .rw .grow{flex:1}
+.ln2 .rw.tho .avs .av+.av{margin-left:-2px}
+.av.chinh{box-shadow:0 0 0 2px #fff,0 0 0 4px var(--accent)}
+.avs .av.chinh{position:relative;z-index:1}
+.lnk{color:var(--accent);font-weight:600;font-size:13px;text-decoration:none}
+.wb{display:flex;align-items:center;gap:8px;margin:0 16px 10px;padding:8px 12px;border-radius:8px;font-size:13px;border:1px solid}
+.wb svg{width:16px;height:16px}
+.wb span{flex:1;min-width:0}
+.wb.red{background:var(--danger-bg);border-color:var(--danger-line);color:var(--danger)}
+.wb.yel{background:var(--warn-bg);border-color:var(--warn-line);color:var(--warn)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.pick-t{width:min(560px,100%)}
+.pk-ls{overflow:auto}
+.pr-t{display:flex;align-items:center;gap:10px;padding:10px 18px;border-bottom:1px solid var(--line-2);cursor:pointer}
+.pr-t.on{background:var(--accent-soft)}
+.pr-t.off{color:var(--faint);cursor:not-allowed}
+.pr-t.off .av{opacity:.45}
+.pr-t .tt2{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.pr-t .tt2 b{font-weight:600}
+.pr-t .nh{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.pr-t .role{flex:none}
+.sd summary{list-style:none;cursor:pointer}
+.sd summary::-webkit-details-marker{display:none}
+.sd[open] .fx{margin-top:4px}
+.pk-ft{display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--line)}
+@media (min-width:641px){ .sheet{display:none!important} }
+@media (max-width:640px){ .wb{margin:0 14px 10px} .pr-t{padding:10px 14px} }
 
 </style>
 </head>
@@ -534,6 +564,67 @@ function veNhom(k,tieu){
   if(k==='dc')body=`<div class="dcg">${nhomDiChuyen().map(x=>`<div class="card" style="padding:0 18px 8px">${khoiNhom(x)}</div>`).join('')}</div>`;
   return `<div class="ph"><h1>${tieu}</h1></div>${seg}${body}`;
 }
+
+/* ---------- THỢ PHỤ TRÁCH (bổ sung 18/10/2026) ----------
+   Dòng gói: lines[].staff[{membershipId, role PRIMARY|ASSIST}]
+   Ô chọn:   GET /orgs/:orgId/staff/availability?startsAt&endsAt&excludeContractId
+             → mỗi thợ {displayName, avatarUrl, initials, tier, isBookable, level OVERLAP|SAME_DAY|FREE, overlaps[], sameDay[], draftHolds[]}
+   Cảnh báo trong thẻ: quote.staffWarnings theo dòng */
+const THO=[
+ {id:'m1',ten:'Nguyễn Thu Hà',vt:'TH',mau:'#A63D62',bac:'Thợ chính bậc 1',nhan:true},
+ {id:'m2',ten:'Trần Minh Anh',vt:'MA',mau:'#5B45A0',bac:'Thợ chính bậc 1',nhan:true},
+ {id:'m3',ten:'Lê Ngọc Trâm',vt:'NT',mau:'#2F7D72',bac:'Thợ chính bậc 2',nhan:true},
+ {id:'m4',ten:'Phạm Bảo Vy',vt:'BV',mau:'#9A5B0F',bac:'Thợ phụ',nhan:true},
+ {id:'m5',ten:'Đỗ Khánh Linh',vt:'KL',mau:'#7A6A62',bac:'Thợ phụ',nhan:false},
+];
+const tho=id=>THO.find(t=>t.id===id);
+// Thợ đã gán cho từng dòng
+const GAN={l1:[['m1','PRIMARY']],l2:[['m2','PRIMARY']],l3:[['m3','PRIMARY'],['m4','ASSIST']]};
+// Hợp đồng đã xác nhận: dòng mẹ cô dâu đã đổi sang Ngọc Trâm (không trùng giờ) trước khi xác nhận
+const GAN_XN={...GAN,l2:[['m3','PRIMARY']]};
+// Cảnh báo theo dòng (quote.staffWarnings) — level OVERLAP | SAME_DAY
+const CANHBAO={
+ l1:[{tho:'m1',level:'SAME_DAY',ca:[['10:00','11:00','Makeup tiệc · Đỗ Quỳnh Như']]}],
+ l2:[{tho:'m2',level:'OVERLAP',ca:[['05:00','06:30','Makeup ăn hỏi · Vũ Hồng Nhung']]}],
+ l3:[],
+};
+// Tình trạng thợ cho ô chọn của dòng Mẹ cô dâu 05:00–05:45 (availability)
+const RANH={
+ m1:{level:'OVERLAP',ca:[['04:30','07:00','Dòng Cô dâu của hợp đồng này']]},
+ m2:{level:'OVERLAP',ca:[['05:00','06:30','Makeup ăn hỏi · Vũ Hồng Nhung']]},
+ m3:{level:'FREE',ca:[],nhap:'HĐ-2026-0139 (nháp) 05:00–06:00'},
+ m4:{level:'SAME_DAY',ca:[['08:00','08:45','Makeup mẹ cô dâu · Cô Phạm Thị Hồng'],['11:00','12:00','Makeup kỷ yếu · Lớp 12A1']]},
+ m5:{level:'FREE',ca:[]},
+};
+function hangTho(d,xn){
+  const g=(xn?GAN_XN:GAN)[d.id]||[];
+  const avs=g.map(([id,r])=>{const t=tho(id);return `<span class="av sm ${r==='PRIMARY'?'chinh':''}" style="background:${t.mau}" title="${t.ten} · ${r==='PRIMARY'?'thợ chính':'thợ phụ'}">${t.vt}</span>`}).join('');
+  const ten=g.map(([id,r])=>tho(id).ten.split(' ').slice(-2).join(' ')+(g.length>1&&r==='PRIMARY'?' (chính)':'')).join(', ');
+  const nut=xn?`<a class="lnk" href="#lich" title="Thợ của hợp đồng đã xác nhận được đổi ở màn Lịch">Đổi ở Lịch</a>`:`<a class="btn sm" href="#hop-dong-tho">${g.length?'Đổi':'Chọn thợ'}</a>`;
+  return `<div class="rw tho"><span>Thợ phụ trách${tip('Dấu viền màu = thợ chính. Thợ phụ đi kèm hỗ trợ. Khi xác nhận hợp đồng, máy sẽ tạo lịch cho các thợ này.')}</span><div class="fl"><span class="avs">${avs}</span><span class="tn">${ten||'<span class="faint">Chưa chọn</span>'}</span><span class="grow"></span>${nut}</div></div>`;
+}
+function daiCanhBao(d,xn){
+  if(xn)return '';
+  return (CANHBAO[d.id]||[]).map(w=>{const t=tho(w.tho);const gio=w.ca.map(c=>c[0]+'–'+c[1]).join(', ');
+    return w.level==='OVERLAP'
+     ?`<div class="wb red">${ic('warn')}<span><b>Trùng giờ ${gio}</b> — hợp đồng sẽ không xác nhận được</span>${tip(t.ten+' đã có: '+w.ca.map(c=>c[0]+'–'+c[1]+' '+c[2]).join('; ')+'. Đổi thợ hoặc đổi giờ.')}</div>`
+     :`<div class="wb yel">${ic('clock')}<span>${t.ten.split(' ').pop()} có lịch trong ngày · ${w.ca.length} ca</span>${tip(w.ca.map(c=>c[0]+'–'+c[1]+' '+c[2]).join('; ')+'. Không trùng giờ, chỉ để biết.')}</div>`}).join('');
+}
+function oChonTho(){
+  const d=DONG.find(x=>x.id==='l2');const chon=(GAN.l2||[]).map(x=>x[0]);
+  const bacs=[...new Set(THO.map(t=>t.bac))];
+  const dong=t=>{const r=RANH[t.id];const on=chon.includes(t.id);
+    let nhan='';
+    if(!t.nhan)nhan=`<span class="tag">Tắt nhận lịch</span>`;
+    else if(r.level==='OVERLAP')nhan=`<span class="tag huy">Trùng giờ ${r.ca.map(c=>c[0]+'–'+c[1]).join(', ')}</span>${tip(r.ca.map(c=>c[0]+'–'+c[1]+' '+c[2]).join('; '))}`;
+    else if(r.level==='SAME_DAY')nhan=`<details class="sd"><summary class="tag ps">Có lịch trong ngày · ${r.ca.length} ca</summary><div class="fx">${r.ca.map(c=>`${c[0]}–${c[1]} · ${c[2]}`).join('<br>')}</div></details>`;
+    if(r.nhap)nhan+=`<span class="tag" title="Đang nằm trong một hợp đồng nháp khác cùng giờ. Chưa chặn lịch.">Giữ chỗ nháp</span>`;
+    return `<label class="pr-t ${t.nhan?'':'off'} ${on?'on':''}"><input type="checkbox" ${on?'checked':''} ${t.nhan?'':'disabled'}><span class="av sm" style="background:${t.mau}">${t.vt}</span><span class="tt2"><b>${t.ten}</b><span class="nh">${nhan}</span></span>${on?`<span class="seg sm role"><button class="on">Chính</button><button>Phụ</button></span>`:''}</label>`};
+  return `<div class="ch2"><div style="flex:1;min-width:0"><h2>Chọn thợ phụ trách</h2><div class="fx">Mẹ cô dâu · ${d.gio} · Thứ Bảy 24/10</div></div><a class="btn icon sm ghost" href="#hop-dong" title="Đóng">${ic('x')}</a></div>
+   <div class="pk-ls">${bacs.map(b=>`<div class="lbl">${b}</div>${THO.filter(t=>t.bac===b).map(dong).join('')}`).join('')}</div>
+   <footer class="pk-ft"><a class="btn" href="#hop-dong">Huỷ</a><a class="btn pri" href="#hop-dong">Chọn</a></footer>`;
+}
+
 /* ---------- HỢP ĐỒNG: bảng giá trái, hợp đồng phải ---------- */
 function boChon(xn){
   const pk=g=>`<div class="pk"><div style="min-width:0"><div class="n">${g.ten}</div><div class="m">${nvTen(g.nv)} · ${g.dd.map(k=>DDN[k]).join(', ')}</div></div><button class="btn sm">${ic('plus')}${vnd(giaGoi(g))}</button>
@@ -549,12 +640,13 @@ function dongHD(d,xn){
   const dis=xn?'disabled':'';
   return `<div class="ln2 ${xn?'locked':''}"><div class="hd"><span class="ttl"><span class="tag nv">${nvTen(d.nv)}</span><span class="n">${g.ten}</span>${xn?ic('lock'):''}</span><span class="sp"></span>${xn?`<span class="fx">${d.sl} người</span><button class="btn ghost sm" title="Huỷ dòng này (bắt buộc ghi lý do)">Huỷ dòng</button>`:`<span class="qty"><button>−</button><span>${d.sl}</span><button>+</button></span><button class="btn icon sm ghost" title="Bỏ">${ic('x')}</button>`}</div>
     <div class="rw"><span>Giờ</span><div class="fl"><input class="ctl sm" style="width:72px;text-align:center" value="${d.gio.split(' – ')[0]}" ${dis}>–<input class="ctl sm" style="width:72px;text-align:center" value="${d.gio.split(' – ')[1]}" ${dis}><span class="fx">${d.sl} × ${vnd(dg)}</span></div></div>
+    ${hangTho(d,xn)}${daiCanhBao(d,xn)}
     <div class="rw"><span>Dịch vụ phụ</span><div class="fl">${g.tick.map(a=>{const s=dv(a);const on=!!d.them[a];const huy=xn&&XN.huy[d.id+'-'+a];return `<label class="ck ${on?'on':''} ${huy?'void':''}" ${huy?`title="Đã huỷ: ${huy}"`:''}><input type="checkbox" ${on?'checked':''} ${dis}>${s.ten}${on&&d.them[a]>1?' × '+d.them[a]:''} <span class="p">+${vnd(s.gia)}</span></label>${huy?`<span class="tag huy">Đã huỷ: ${huy}</span>`:''}`}).join('')}</div></div>
     <div class="rw"><span>Làm ở đâu</span><div class="dcr">${segDD(g,d.dd)}${oDiaDiem(d,xn,true)}</div></div>
     ${d.dd!=='STUDIO'?`<div class="rw"><span>Di chuyển<span class="req">*</span>${tip(TIP_DC)}</span><div class="dcr"><div class="fl">${segDC(d,xn)}${oKm(d,xn)}<b class="num" style="margin-left:auto">${vnd(tienDC(d))}</b></div>${d.dm==='PER_KM'?`<div class="fx">${congThucKm(d)}</div>`:''}</div></div>`:''}
     <div class="ft"><span class="muted">Cộng ${nvTen(d.nv).toLowerCase()}</span><b class="num">${vnd(sub)}</b></div></div>`;
 }
-function veHopDong(xn,sheet){
+function veHopDong(xn,sheet,chonTho){
   const T=tong(xn);const dis=xn?'disabled':'';
   const khac=bangTinh(xn).filter(x=>!x.d);
   const ct=`<div class="ct">
@@ -571,10 +663,11 @@ function veHopDong(xn,sheet){
       <div class="set"><label class="big">Tổng</label><span class="r num big">${vnd(T.tong)}</span></div>
       <div class="set"><label>Cọc cần thu${tip(TIP_COC)}</label><input class="ctl money" value="${vnd(T.coc)}" ${dis}></div>
       <div class="set note" style="align-items:start"><label>Ghi chú hợp đồng</label><textarea class="ctl" rows="2">${HD.ghichu}</textarea></div></div></div>
-    <div class="sumbar" style="margin-top:0"><div class="t"><span>Tổng<b class="num">${vnd(T.tong)}</b></span><span class="coc">Cọc<b class="num">${vnd(T.coc)}</b></span></div>${xn?`<button class="btn pri">${ic('plus')}Phát sinh</button>`:`<button class="btn hide-m">Lưu nháp</button><button class="btn pri">Xác nhận hợp đồng</button>`}</div>
+    <div class="sumbar" style="margin-top:0"><div class="t"><span>Tổng<b class="num">${vnd(T.tong)}</b></span><span class="coc">Cọc<b class="num">${vnd(T.coc)}</b></span></div>${xn?`<button class="btn pri">${ic('plus')}Phát sinh</button>`:`<button class="btn hide-m">Lưu nháp</button><button class="btn pri" disabled title="Còn 1 dòng thợ trùng giờ. Đổi thợ hoặc đổi giờ trước khi xác nhận.">Xác nhận hợp đồng</button>`}</div>
   </div>`;
   return `<div class="ph"><h1>${xn?'Hợp đồng':'Lập hợp đồng'}</h1><span class="sp"></span></div>
    <div class="hd2"><div class="card pick"><div class="ch2"><h2>${xn?'Thêm phát sinh':'Bảng giá'}</h2></div>${boChon(xn)}</div>${ct}</div>
+   ${chonTho?`<div class="dlg-bg"><div class="dlg pick-t">${oChonTho()}</div></div><div class="sheet"><div class="pane"><div class="grab"></div>${oChonTho()}</div></div>`:''}
    ${sheet?`<div class="sheet"><div class="pane"><div class="grab"></div><div class="ch2"><h2>Thêm từ bảng giá</h2><button class="btn icon sm ghost">${ic('x')}</button></div>${boChon(false)}</div></div>`:''}`;
 }
 const MAN={
@@ -586,6 +679,7 @@ const MAN={
   'bang-gia-nv':{nhom:'bang-gia',con:3,tieude:'Bảng giá',ve:()=>veNhom('nv','Nhân vật')},
   'hop-dong':{nhom:'hop-dong',con:0,tieude:'Lập hợp đồng '+HD.ma,tact:'<span class="tag draft">Nháp</span>',sum:true,ve:()=>veHopDong(false)},
   'hop-dong-chon':{nhom:'hop-dong',con:0,tieude:'Lập hợp đồng '+HD.ma,tact:'<span class="tag draft">Nháp</span>',sum:true,ve:()=>veHopDong(false,true)},
+  'hop-dong-tho':{nhom:'hop-dong',con:0,tieude:'Lập hợp đồng '+HD.ma,tact:'<span class="tag draft">Nháp</span>',sum:true,ve:()=>veHopDong(false,false,true)},
   'hop-dong-xn':{nhom:'hop-dong',con:1,tieude:'Hợp đồng '+HD.ma,tact:'<span class="tag ok">Đã xác nhận</span>',sum:true,ve:()=>veHopDong(true)},
 };
 route();
