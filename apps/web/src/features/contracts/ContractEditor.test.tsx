@@ -187,18 +187,18 @@ describe('cảnh báo thợ trong thẻ dòng', () => {
     api.quoteContract.mockResolvedValue(quote([]) as never);
     renderEditor(OWNER);
     await waitFor(() => expect(api.quoteContract).toHaveBeenCalled());
-    expect(await screen.findByText('600.000 ₫', { selector: '.ct-ln__ft b' })).toBeInTheDocument();
+    expect(await screen.findByText('600.000 ₫', { selector: '.ct-ln__ft b' })).toBeTruthy();
     expect(screen.queryByText(/Trùng giờ/)).toBeNull();
     expect(screen.queryByText(/có lịch trong ngày/)).toBeNull();
-    expect(await confirmButton()).toBeEnabled();
+    expect((await confirmButton() as HTMLButtonElement).disabled).toBe(false);
   });
 
   it('vàng: "Anh có lịch trong ngày · 1 ca"; vẫn xác nhận được', async () => {
     api.getContract.mockResolvedValue(detail('DRAFT') as never);
     api.quoteContract.mockResolvedValue(quote([SAME_DAY]) as never);
     renderEditor(OWNER);
-    expect(await screen.findByText('Anh có lịch trong ngày · 1 ca')).toBeInTheDocument();
-    expect(await confirmButton()).toBeEnabled();
+    expect(await screen.findByText('Anh có lịch trong ngày · 1 ca')).toBeTruthy();
+    expect((await confirmButton() as HTMLButtonElement).disabled).toBe(false);
   });
 
   it('đỏ: "Trùng giờ 05:00–06:30" và khoá nút xác nhận, lý do ở tooltip', async () => {
@@ -206,10 +206,10 @@ describe('cảnh báo thợ trong thẻ dòng', () => {
     api.quoteContract.mockResolvedValue(quote([OVERLAP]) as never);
     renderEditor(OWNER);
     const band = await screen.findByText('Trùng giờ 05:00–06:30');
-    expect(band.closest('[data-muc]')).toHaveAttribute('data-muc', 'OVERLAP');
+    expect((band.closest('[data-muc]'))?.getAttribute('data-muc')).toBe('OVERLAP');
     const btn = await confirmButton();
-    expect(btn).toBeDisabled();
-    expect(btn).toHaveAccessibleName('Xác nhận hợp đồng — Còn 1 dòng thợ trùng giờ. Đổi thợ hoặc đổi giờ trước khi xác nhận.');
+    expect((btn as HTMLButtonElement).disabled).toBe(true);
+    expect(btn.getAttribute('aria-label')).toBe('Xác nhận hợp đồng — Còn 1 dòng thợ trùng giờ. Đổi thợ hoặc đổi giờ trước khi xác nhận.');
   });
 });
 
@@ -236,16 +236,16 @@ describe('xác nhận và lỗi máy chủ', () => {
     renderEditor(OWNER);
     await waitFor(() => expect(api.quoteContract).toHaveBeenCalledTimes(1));
     const btn = await confirmButton();
-    await waitFor(() => expect(btn).toBeEnabled());
+    await waitFor(() => expect((btn as HTMLButtonElement).disabled).toBe(false));
     // Đợi số tiền về để bảo đảm không còn yêu cầu quote đang chờ.
     await screen.findByText('600.000 ₫', { selector: '.ct-ln__ft b' });
     api.quoteContract.mockResolvedValue(quote([OVERLAP]) as never);
     await userEvent.click(btn);
-    expect(await screen.findByText('Trùng lịch: Trần Minh Anh đã có lịch L-0123 06:00–07:30')).toBeInTheDocument();
+    expect(await screen.findByText('Trùng lịch: Trần Minh Anh đã có lịch L-0123 06:00–07:30')).toBeTruthy();
     expect(api.updateContract).not.toHaveBeenCalled();
     await waitFor(() => expect(api.quoteContract).toHaveBeenCalledTimes(2));
-    expect(await screen.findByText('Trùng giờ 05:00–06:30')).toBeInTheDocument();
-    expect(screen.getByText('Nháp')).toBeInTheDocument();
+    expect(await screen.findByText('Trùng giờ 05:00–06:30')).toBeTruthy();
+    expect(screen.getByText('Nháp')).toBeTruthy();
   });
 
   it('400 khi lưu: lỗi hiện ngay dưới ô theo đường dẫn trường', async () => {
@@ -261,8 +261,8 @@ describe('xác nhận và lỗi máy chủ', () => {
     await userEvent.clear(screen.getByLabelText('Ghi chú hợp đồng'));
     await userEvent.type(screen.getByLabelText('Ghi chú hợp đồng'), 'Nhà ở ngõ nhỏ');
     await userEvent.click(screen.getByRole('button', { name: 'Lưu nháp' }));
-    expect(await screen.findByText('Tiền cọc không được lớn hơn tổng')).toBeInTheDocument();
-    expect(screen.getByLabelText('Cọc cần thu')).toHaveAttribute('aria-invalid', 'true');
+    expect(await screen.findByText('Tiền cọc không được lớn hơn tổng')).toBeTruthy();
+    expect((screen.getByLabelText('Cọc cần thu'))?.getAttribute('aria-invalid')).toBe('true');
   });
 
   it('403 khi lưu: dải đỏ lời máy chủ, giữ dữ liệu đã nhập', async () => {
@@ -273,8 +273,8 @@ describe('xác nhận và lỗi máy chủ', () => {
     await screen.findByText('600.000 ₫', { selector: '.ct-ln__ft b' });
     await userEvent.type(screen.getByLabelText('Ghi chú hợp đồng'), 'Ghi chú mới');
     await userEvent.click(screen.getByRole('button', { name: 'Lưu nháp' }));
-    expect(await screen.findByRole('alert', { name: '' })).toHaveTextContent('Bạn không có quyền sửa hợp đồng');
-    expect(screen.getByLabelText('Ghi chú hợp đồng')).toHaveValue('Ghi chú mới');
+    expect((await screen.findByRole('alert', { name: '' })).textContent).toContain('Bạn không có quyền sửa hợp đồng');
+    expect(((screen.getByLabelText('Ghi chú hợp đồng')) as HTMLTextAreaElement).value).toBe('Ghi chú mới');
   });
 });
 
@@ -286,14 +286,14 @@ describe('dòng phí di chuyển', () => {
     const card = await screen.findByRole('region', { name: /Mẹ cô dâu/ });
     await waitFor(() => expect(api.quoteContract).toHaveBeenCalledTimes(1));
     await userEvent.click(within(card).getByRole('radio', { name: 'Tại nhà' }));
-    expect(within(card).getByText('Di chuyển')).toBeInTheDocument();
-    expect(within(card).getByLabelText('bắt buộc')).toBeInTheDocument();
+    expect(within(card).getByText('Di chuyển')).toBeTruthy();
+    expect(within(card).getByLabelText('bắt buộc')).toBeTruthy();
     // Thiếu km: không gửi quote mới (giữ số cũ, số mờ).
     await new Promise((r) => setTimeout(r, 400));
     expect(api.quoteContract).toHaveBeenCalledTimes(1);
     await userEvent.type(within(card).getByLabelText('Số km một chiều'), '12,35');
     await waitFor(() => expect(api.quoteContract).toHaveBeenCalledTimes(2));
-    const body = api.quoteContract.mock.calls[1]?.[1] as { lines: Record<string, unknown>[] };
+    const body = api.quoteContract.mock.calls[1]?.[1] as unknown as { lines: Record<string, unknown>[] };
     expect(body.lines[0]).toMatchObject({ locationType: 'CUSTOMER_HOME', travel: { mode: 'PER_KM', distanceKm: 12.35 } });
   });
 });
@@ -307,15 +307,15 @@ describe('ẩn / khoá theo quyền', () => {
     expect(screen.queryByRole('button', { name: 'Lưu nháp' })).toBeNull();
     expect(screen.queryByRole('button', { name: /Xác nhận hợp đồng/ })).toBeNull();
     expect(screen.queryByText('Bảng giá')).toBeNull();
-    expect(screen.getByLabelText('Giờ bắt đầu')).toBeDisabled();
+    expect((screen.getByLabelText('Giờ bắt đầu') as HTMLButtonElement).disabled).toBe(true);
     expect(screen.queryByRole('button', { name: 'Đổi' })).toBeNull();
   });
 
   it('đã xác nhận + lễ tân (không có contracts.adjust): có "+ Phát sinh", KHÔNG có "Huỷ dòng"', async () => {
     api.getContract.mockResolvedValue(detail('CONFIRMED') as never);
     renderEditor(SYSTEM_ROLES.receptionist.permissions);
-    expect(await screen.findByText('Dòng đã chốt. Chỉ thêm phát sinh hoặc huỷ dòng kèm lý do.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Phát sinh' })).toBeInTheDocument();
+    expect(await screen.findByText('Dòng đã chốt. Chỉ thêm phát sinh hoặc huỷ dòng kèm lý do.')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Phát sinh' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Huỷ dòng' })).toBeNull();
     expect(api.quoteContract).not.toHaveBeenCalled();
   });
@@ -327,7 +327,7 @@ describe('ẩn / khoá theo quyền', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Huỷ dòng' }));
     const dialog = await screen.findByRole('dialog');
     await userEvent.click(within(dialog).getByRole('button', { name: 'Huỷ dòng' }));
-    expect(await within(dialog).findByText('Nhập lý do.')).toBeInTheDocument();
+    expect(await within(dialog).findByText('Nhập lý do.')).toBeTruthy();
     expect(api.voidContractLine).not.toHaveBeenCalled();
     await userEvent.type(within(dialog).getByLabelText(/Lý do/), 'Khách đổi ý');
     await userEvent.click(within(dialog).getByRole('button', { name: 'Huỷ dòng' }));

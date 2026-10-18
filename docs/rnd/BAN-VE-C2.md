@@ -330,3 +330,182 @@ Theo vai trò mẫu: thợ makeup/thợ phụ **không** thấy menu Khách hàn
 4. **Cảnh báo trùng số điện thoại** khi thêm khách (máy chủ chưa kiểm). Fresha có bước gộp khách trùng.
 5. Các ô Studio Pro có mà mình chưa có: địa chỉ, link Facebook/Zalo, nguồn khách, hạng khách, tổng chi tiêu, người phụ trách, tab "Khách tiềm năng". Anh chưa yêu cầu → không vẽ.
 6. Ẩn/xoá khách (máy chủ chưa có đường).
+
+---
+
+## 3. Thu tiền hợp đồng dịch vụ — phương án A "Y khuôn Thu tiền đào tạo C" (quyết định thay)
+
+Bản mẫu: /home/user/a/docs/rnd/v4-thu-tien.html — `#a`, `#a-ct`, `#a-tien-do`, `#a-lech`, `#a-hoan`, `#a-vuot`, `#a-huy`, `#so-thu`, `#doanh-thu`, `#trang-thai`.
+Khuôn gốc phải giữ: /home/user/a/docs/rnd/v3-dao-tao-C.html `#thu-tien`, `#thong-ke` (ảnh /home/user/a/docs/rnd/anh/v3-dao-tao-C-thu-tien-desktop.png).
+
+Ảnh (3 khổ): /home/user/a/docs/rnd/anh/v4-thu-tien-a-{desktop,tablet,mobile}.png, …-a-ct-…, …-a-tien-do-…, …-a-lech-…, …-a-hoan-…, …-a-vuot-…, …-a-huy-…, …-so-thu-…, …-doanh-thu-…, …-trang-thai-…; có nhãn trường: /home/user/a/docs/rnd/anh/v4-thu-tien-truong-a-desktop.png, /home/user/a/docs/rnd/anh/v4-thu-tien-truong-doanh-thu-desktop.png
+
+### 3.0 Một khuôn cho hai loại hợp đồng — và chỗ khuôn đào tạo phải sửa theo
+
+Màn này và màn Thu tiền đào tạo **dùng chung một bộ component** (`src/features/payments/**`). Khác nhau chỉ ở cột trái và dòng phụ của thẻ đầu. Khi đối chiếu với máy chủ thật, R&D thấy khuôn đào tạo (v3) có 3 ô **chưa có trường**: "Áp vào đợt", "Vào tài khoản", "Người thu". Ở bản vẽ này 3 ô đó **không vẽ** (đã ghi ở 3.8). Thợ dựng phần đào tạo sau này phải theo form ở 3.3, không theo ảnh v3, cho tới khi máy chủ có trường.
+
+Cũng chưa có `Contract.kind`, nên **không có** chip "Khoá học / Dịch vụ makeup" và không có hàng đợi "Quá hạn / 7 ngày tới" theo hạn đợt (cần đường mới, 3.8-1). Cột trái tạm nhóm theo **ngày sự kiện** — dữ liệu có thật.
+
+### 3.1 Đường và điều hướng
+
+| Đường | Màn | Quyền |
+|---|---|---|
+| `/:orgSlug/thu-tien` | Thu tiền: danh sách + hợp đồng đầu danh sách | `payments.read` |
+| `/:orgSlug/thu-tien/:contractId` | Thu tiền một hợp đồng (điện thoại: màn con) | `payments.read` |
+| `/:orgSlug/bao-cao/doanh-thu` | Doanh thu | `reports.read` |
+| `/:orgSlug/bao-cao/so-thu` | Sổ thu | `payments.read` |
+
+- Thanh trái máy tính: "Hợp đồng" có menu con **Lập hợp đồng · Danh sách hợp đồng · Thu tiền** (giống v3). Mục mới **"Báo cáo"** có menu con **Doanh thu · Sổ thu**.
+- `nav.ts` hiện chỉ cho một quyền mỗi mục → **yêu cầu W3**: cho mục và mục con khai quyền riêng; mục "Báo cáo" hiện khi có `reports.read` **hoặc** `payments.read` (lễ tân có `payments.read` mà không có `reports.read`: thấy Sổ thu, không thấy Doanh thu).
+- Điện thoại (giữ thanh dưới đã ký ở BAN-VE-C 2.3): ô "Hợp đồng" mở trang có Segmented "Hợp đồng · Thu tiền"; "Báo cáo" nằm trong ngăn "Thêm". (R&D 03 đề xuất đưa "Thu tiền" xuống thanh dưới — đang chờ anh duyệt, bản vẽ này **không** đổi.)
+- Từ trang hợp đồng đã xác nhận (W5): thêm liên kết "Thu tiền" → `/:orgSlug/thu-tien/:id` (yêu cầu W5).
+
+### 3.2 Bố cục màn Thu tiền
+
+ListDetail thường (380 | 1fr). Tiêu đề trang: "Thu tiền" + chữ phụ "hợp đồng dịch vụ makeup".
+
+*Cột trái — thẻ "Hợp đồng cần thu"* (chữ phụ "hôm nay dd/mm/yyyy")
+- Ô tìm "Tìm mã HĐ, tên khách, số điện thoại" → `GET /contracts?q=`.
+- Segmented sm: **Đã xác nhận** (mặc định) · Nháp · Hoàn thành → tham số `status`. (Máy chủ cho thu cọc khi hợp đồng còn nháp.)
+- Ba nhóm (ListGroupHeader + số dòng), mỗi nhóm một lần gọi `GET /contracts` với cùng `status`, `q`, `pageSize=50`:
+  1. "Sự kiện 7 ngày tới": `eventFrom = hôm nay 00:00`, `eventTo = hôm nay + 7 ngày 23:59` (giờ Việt Nam, ISO kèm `+07:00`)
+  2. "Sự kiện sau đó": `eventFrom = hôm nay + 8 ngày`
+  3. "Đã qua ngày sự kiện": `eventTo = hôm qua 23:59`
+  - Hợp đồng chưa có ngày sự kiện: nhóm 4 "Chưa có ngày sự kiện" — **máy chủ chưa lọc được `eventDate = null`** → không hiện nhóm này; ghi ở 3.8-3.
+- Mỗi dòng (ListRow không ảnh): tên khách 14/600 xuống dòng · mã HĐ 12.5px · bên phải tổng hợp đồng 14/700 + nhãn xám "Sự kiện dd/mm". **Không** hiện "còn lại" (danh sách chưa trả số này — 3.8-2).
+
+*Cột phải — 4 khối, từ trên xuống* (giống v3-C)
+1. **Thẻ đầu**: StatusTag hợp đồng · tên khách 18/700; dòng phụ 12px "{mã} · Sự kiện dd/mm/yyyy · {SĐT} · Mở hợp đồng" (liên kết tới `/hop-dong/:id`). Dưới là **4 ô số** (lưới 4; máy tính bảng, điện thoại 2×2): Tổng · Cọc phải thu · Đã thu thực tế · **Còn lại** (ô nhấn: viền `--accent-line`, nền `--accent-soft`).
+   - Ô Cọc phải thu: nếu `depositOutstanding > 0` thêm dòng 12px `--warn` "còn thiếu {số}".
+   - Ô Còn lại: nếu `overpaid > 0` thì số hiện 0 ₫ và thêm dòng 12px "Khách trả thừa {overpaid}".
+2. **Hai thẻ cạnh nhau** (máy tính bảng, điện thoại: chồng dọc):
+   - **Tiến độ thanh toán**: nút ghost "Sửa tiến độ" (chỉ `payments.write`). Mỗi đợt: chấm tròn 12px (đã đủ: đặc `--ok`; còn lại: viền `--accent`; quá hạn: viền `--danger`) · tên 600 · "Hạn dd/mm/yyyy" 12px · bên phải số tiền 700 + StatusTag đợt (nhãn `INSTALLMENT_STATUS_LABELS`: Đã thu đủ = ok, Đã thu một phần = warn, Chưa đến hạn = xám, Quá hạn = danger). Đợt thu một phần ghi thêm 12px "đã thu {paidAmount}".
+     - `scheduleDifference ≠ 0` (thêm phát sinh/huỷ dòng sau khi lập tiến độ): dải vàng trên đầu thẻ "Tổng hợp đồng đã đổi sau khi lập tiến độ: các đợt đang thiếu/thừa {|diff|}. Sửa tiến độ" (`#a-lech`).
+     - Chưa lập tiến độ (`installments` rỗng): EmptyState "Chưa lập tiến độ thanh toán. Hợp đồng vẫn ghi phiếu thu được." + nút "Lập tiến độ".
+   - **Phiếu đã ghi** (chữ phụ "n phiếu"): mỗi phiếu: "{mã} · dd/mm/yyyy · {cách trả}" 600 · dòng 12px "Ghi bởi {createdBy.fullName} · {ghi chú}" · bên phải số tiền 700 (phiếu hoàn: dấu "−" + nhãn warn "Hoàn") + nút ghost sm "Huỷ phiếu" (chỉ `payments.void`). Phiếu đã huỷ: chấm rỗng xám, chữ gạch ngang, nhãn đỏ "Đã huỷ: {voidReason}", không có nút. Xếp như máy chủ (ngày thu mới nhất trước).
+3. **Thẻ "Ghi phiếu thu"** (luôn mở, như v3-C; chỉ `payments.write`; thiếu quyền thì ẩn cả thẻ):
+
+| Dòng | Điều khiển | Trường gửi |
+|---|---|---|
+| Loại phiếu ? | Segmented Thu · Hoàn tiền (ô "Hoàn tiền" chỉ có khi `payments.void`; không có thì ẩn cả dòng) | `kind: 'RECEIPT' \| 'REFUND'` |
+| Số tiền `*` ? | MoneyInput. **Điền sẵn** `outstanding` của đợt chưa đủ có hạn sớm nhất; không có tiến độ thì điền `remaining` (nếu > 0) | `amount` (số nguyên > 0) |
+| Cách trả `*` | Segmented 4 ô Tiền mặt · Chuyển khoản · Quẹt thẻ · Khác (nhãn `PAYMENT_METHOD_LABELS`); dòng "wide" (điện thoại: nút xuống dòng dưới nhãn, rộng hết) | `method` |
+| Ngày thu | ô ngày (mặc định hôm nay; không cho chọn ngày tương lai) | `receivedAt` (ISO kèm `+07:00`; để nguyên hôm nay thì không gửi) |
+| Ghi chú | TextInput; ở chế độ Hoàn tiền: bắt buộc (luật studio — máy chủ không bắt, giao diện bắt) | `note` |
+
+   Chân thẻ: "Lưu phiếu thu" / "Lưu phiếu hoàn" → `POST /contracts/:id/payments` + header `Idempotency-Key` (tạo mới sau mỗi lần lưu thành công). Thành công: thay 4 ô số bằng `summary` trả về, gọi lại `GET /contracts/:id/payments` để cập nhật đợt và phiếu, xoá form (giữ Cách trả vừa chọn).
+
+### 3.3 Hộp thoại
+
+*Sửa tiến độ* (`#a-tien-do`) — Dialog 720 (điện thoại: BottomSheet, bảng thành thẻ).
+- Đầu: dòng phụ "{mã} · Tổng {total} · Cọc phải thu {depositRequired}", tiêu đề "Tiến độ thanh toán".
+- Hàng nút "Chia gợi ý:" — **Cọc + còn lại vào ngày sự kiện** (`suggestInstallments(total, deposit, 1, hôm nay, số ngày tới sự kiện)`; không có ngày sự kiện thì ẩn nút này) · **Cọc + 2 đợt** · **Cọc + 3 đợt** (khoảng cách 30 ngày). Hàm có sẵn trong `@makeup/shared`.
+- Bảng: Tên đợt (TextInput sm) · Hạn (ô ngày) · Số tiền (MoneyInput sm) · Đợt cọc (radio, tối đa 1) · nút ✕. Dưới: "+ Thêm đợt" (tối đa 24 — `MAX_INSTALLMENTS`) · bên phải "Tổng các đợt {số}".
+- Giao diện kiểm trước bằng `checkInstallmentPlan` (shared): lệch tổng → dải đỏ đúng câu của hàm ("Tổng các đợt (…) phải bằng tổng hợp đồng (…): còn thiếu …") và **khoá** nút Lưu.
+- Lưu → `PUT /contracts/:id/installments {installments:[{name, dueDate, amount, isDeposit}]}` (thay toàn bộ). Xoá hết đợt rồi lưu = bỏ tiến độ.
+
+*Khách trả thừa?* (`#a-vuot`) — khi `POST …/payments` trả **409** có `details.overBy`.
+- Dải vàng "Thu vượt tổng hợp đồng {overBy} (còn phải thu {remaining})." · Lý do `*` (Textarea). Nút: "Sửa lại số tiền" (đóng hộp, tiêu điểm ô Số tiền) · "Vẫn ghi phiếu" → gửi lại với **Idempotency-Key mới** (thân đã khác), thêm `allowOverpay: true` và `note`.
+
+*Huỷ phiếu* (`#a-huy`) — ConfirmDialog 440: "Huỷ phiếu {mã}?" · câu giải thích "Phiếu không bị xoá: vẫn hiện trong sổ thu, gạch ngang, kèm lý do. Chỉ huỷ được một lần." · Lý do huỷ `*`. Nút "Giữ phiếu" · "Huỷ phiếu" → `POST /payments/:paymentId/void {reason}`.
+
+### 3.4 Báo cáo › Doanh thu (`#doanh-thu`) — khuôn thống kê C của v3
+
+ListDetail hẹp (300 | 1fr); điện thoại: bộ lọc ở trên, số liệu dưới (không tách màn).
+- **Bộ lọc** (cột trái): Kỳ = Segmented Tháng · Quý · Năm + Select kỳ cụ thể → `from`, `to` (đầu kỳ 00:00 +07:00; `to` = đầu kỳ sau, vì máy chủ tính [from, to)). Năm = 12 tháng (≤ 366 ngày). **Không** có lọc "Loại hợp đồng/Nhóm khoá" (chưa có trường).
+- **4 StatTile**: Doanh số ? (dưới: "{contractCount} hợp đồng") · Cọc phải thu ? (dưới, nếu > 0: "còn thiếu {depositOutstanding}" màu `--warn`) · Đã thu thực tế ? · **Còn lại** ? (highlight). Chữ trong 4 Tooltip **lấy nguyên từ `basis`** máy chủ trả (sales, depositRequired, collected, outstanding) — không tự viết.
+- **Biểu đồ cột đôi 6 tháng** "Doanh số và thực thu 6 tháng" (đơn vị triệu đồng, 1 trục): gọi thêm `GET /reports/revenue?groupBy=month` cho 6 tháng gần nhất tính tới tháng đang chọn. Doanh số `#A63D62`, Thực thu `#5B45A0` (đã chạy bộ kiểm màu: đạt cả mù màu — ΔE 11,8). Cột rộng tối đa 26px, bo trên 4px, khe 2px giữa 2 cột. Chú giải ở trên; rê chuột/chạm vào một tháng hiện hộp "Tháng m · Doanh số x tr · Thực thu y tr". Bảng bên dưới là bản xem dạng bảng.
+- **Bảng "Theo hợp đồng"** (`groupBy=contract`): Hợp đồng (mã 700 + tên khách 12px) · Xác nhận (dd/mm) · Tổng · Cọc · Đã thu · Thu trong kỳ · **Còn lại** (700). Dòng `bookedInPeriod = false`: chữ `--muted` + nhãn xám "Kỳ khác" (tooltip: "Chỉ có tiền thu/hoàn trong kỳ, doanh số tính ở kỳ khác"). Hợp đồng đã huỷ: Còn lại hiện "—" (máy chủ trả `null`). Số âm (hoàn nhiều hơn thu trong kỳ) hiện "−300.000 ₫". Máy tính bảng ẩn cột Xác nhận, Cọc; điện thoại thành thẻ.
+- **Không có chữ "lợi nhuận"** ở bất cứ đâu.
+
+### 3.5 Báo cáo › Sổ thu (`#so-thu`)
+
+- Bộ lọc như Doanh thu + Chip "Cách trả" (Tất cả · 4 cách) → `method`; Chip "Loại phiếu" (Tất cả · Phiếu thu · Phiếu hoàn) → `kind`.
+- 3 StatTile: Tổng thu (dưới "{receiptCount} phiếu") · Tổng hoàn ("{refundCount} phiếu") · **Thực thu** ? (highlight; tooltip "Thu trừ hoàn, không tính phiếu đã huỷ").
+- Bảng: Ngày thu · Phiếu (mã; nhãn "Hoàn" / "Đã huỷ"; dòng 12px người ghi) · Hợp đồng · khách (liên kết tới `/thu-tien/:contractId`) · Cách trả (ẩn ở máy tính bảng) · Số tiền. Phiếu đã huỷ: cả dòng `--muted`, mã và số gạch ngang (vẫn hiện để đối soát). 50 dòng/trang, nút trang ở chân.
+- Nút "Tải CSV" ở đầu trang: **tạo phía máy** từ các trang đã tải (không có đường xuất riêng). Nếu chưa tải hết trang thì tải nốt rồi mới xuất.
+
+### 3.6 Ô ↔ trường
+
+| Ô | Đọc | Ghi |
+|---|---|---|
+| Danh sách hợp đồng (trái) | `GET /contracts?status&q&eventFrom&eventTo&pageSize=50` → `items[{id, code, status, eventDate, total, customer{fullName, phone}}]` | — |
+| Thẻ đầu + 4 ô số | `GET /contracts/:id/payments` → `contract{id, code, status, eventDate, confirmedAt, customer{id, fullName, phone}}`, `summary{total, depositRequired, received, refunded, paid, remaining, overpaid, depositOutstanding}` | — |
+| Các đợt | `installments[{id, name, dueDate, amount, isDeposit, sortOrder, paidAmount, outstanding, status}]`, `installmentsTotal`, `scheduleDifference` | `PUT /contracts/:id/installments` |
+| Phiếu | `payments[{id, code, kind, method, amount, receivedAt, note, voidedAt, voidReason, createdAt, createdBy{id, fullName}}]` | `POST /payments/:paymentId/void {reason}` |
+| Form phiếu | — | `POST /contracts/:id/payments {kind, method, amount, receivedAt?, note?, allowOverpay?}` → trả `{…phiếu, contract, summary}` |
+| Doanh thu | `GET /reports/revenue?from&to&groupBy=month\|contract` → `totals{contractCount, sales, depositRequired, depositOutstanding, outstanding, received, refunded, collected}`, `basis{…}`, `rows[]` | — |
+| Sổ thu | `GET /payments?from&to&method&kind&contractId&page&pageSize` → `totals{received, receiptCount, refunded, refundCount, net}`, `items[{…phiếu, contract{id, code, customer{id, fullName}}}]`, `total` | — |
+
+### 3.7 Trạng thái, lỗi, quyền
+
+| Tình huống | Hiển thị |
+|---|---|
+| Tải lần đầu | Skeleton: 4 ô số (2 vạch mỗi ô), 2 thẻ 3 dòng |
+| Nhóm trái rỗng | Ẩn nhóm. Cả 3 nhóm rỗng: EmptyState "Không có hợp đồng {trạng thái} nào." |
+| 400 khi lưu phiếu/tiến độ | Lỗi dưới ô (đường dẫn trường trong lỗi), hoặc dải đỏ chữ máy chủ (lỗi từ `checkInstallmentPlan`) |
+| 409 thu vượt | Hộp "Khách trả thừa?" |
+| 409 hoàn vượt số đã thu / huỷ phiếu thu làm số đã thu âm / phiếu đã huỷ trước đó / hợp đồng đã huỷ (chỉ ghi được phiếu hoàn) / lập tiến độ cho hợp đồng đã huỷ | Dải đỏ trên thẻ liên quan, **đúng chữ máy chủ**; giữ dữ liệu đã nhập |
+| 404 hợp đồng | EmptyState "Không tìm thấy hợp đồng" + "Về danh sách" |
+| Mất mạng khi lưu | Dải vàng đầu trang, nút Lưu khoá; bấm lại dùng **cùng** Idempotency-Key (không sinh phiếu đôi) |
+
+| Quyền | Hiện / bật |
+|---|---|
+| `payments.read` | Menu Thu tiền, màn Thu tiền (chỉ xem), Sổ thu |
+| `payments.write` | Thẻ "Ghi phiếu thu", nút "Sửa tiến độ" / "Lập tiến độ" |
+| `payments.void` | Ô "Hoàn tiền" trong Loại phiếu, nút "Huỷ phiếu" |
+| `reports.read` | Doanh thu |
+| `contracts.read` | Cột trái (danh sách hợp đồng). Không có thì cột trái là EmptyState "Bạn không có quyền xem danh sách hợp đồng" (vẫn mở được `/thu-tien/:id` qua liên kết) |
+
+Theo vai trò mẫu: lễ tân ghi phiếu thu, không hoàn/huỷ, không xem Doanh thu. Kế toán: đủ (cả huỷ phiếu, doanh thu). Quản lý: đủ. Thợ: không thấy.
+
+### 3.8 Đề xuất trường / đường mới (KHÔNG vẽ)
+
+1. **Hàng đợi cần thu theo hạn đợt** `GET /payments/due?until=` → các đợt chưa thu đủ của mọi hợp đồng (Quá hạn / 7 ngày tới / Sau đó) — để có đúng hàng đợi như v3-C. Khi có: chỉ đổi phần nhóm của cột trái, khuôn giữ nguyên.
+2. `GET /contracts` trả thêm `paid`, `remaining` (dùng chung với màn Khách hàng).
+3. Lọc `eventDate = null` (`?noEventDate=true`) để hiện nhóm "Chưa có ngày sự kiện".
+4. `Contract.kind` (khoá học / dịch vụ) — để có chip lọc và tách doanh thu theo loại như v3.
+5. `Payment.installmentId` (áp vào đợt), `Payment.accountLabel` (vào tài khoản), `Payment.receivedByMembershipId` (người thu) — 3 ô của khuôn v3 chưa có trường.
+6. Ảnh minh chứng chuyển khoản `Payment.proofFileId` (Studio Pro bắt buộc; anh chưa yêu cầu).
+7. Đường xuất CSV/Excel sổ thu phía máy chủ (khi sổ dài).
+
+### 3.9 Gói việc theo tệp
+
+| Gói | Tệp sở hữu | Nội dung | Phụ thuộc |
+|---|---|---|---|
+| **W10 Thu tiền** | `src/features/payments/**`: `PaymentsPage.tsx`, `ContractQueue.tsx`, `PaymentPanel.tsx` (khối phải, **dùng lại cho đào tạo**), `SummaryTiles.tsx`, `InstallmentsCard.tsx`, `InstallmentsDialog.tsx`, `PaymentsCard.tsx`, `PaymentForm.tsx`, `OverpayDialog.tsx`, `VoidPaymentDialog.tsx`, `usePaymentProgress.ts`; **`src/api/payments.ts` (tệp mới)** | Mục 3.1–3.3 | Có sẵn `src/api/contracts.ts` (`listContracts`) |
+| **W10b Báo cáo** | `src/features/reports/**`: `RevenuePage.tsx`, `RevenueTiles.tsx`, `RevenueChart.tsx`, `RevenueByContractTable.tsx`, `LedgerPage.tsx`, `LedgerTable.tsx`, `PeriodFilter.tsx`, `csv.ts`; **`src/api/reports.ts` (tệp mới)** | Mục 3.4–3.5 | `src/api/payments.ts` (chỉ import kiểu `PaymentView`) |
+| Yêu cầu W3 | `nav.ts` (menu con Hợp đồng, mục Báo cáo, quyền theo mục con), `routes.tsx` (4 đường ở 3.1) | | |
+| Yêu cầu W5 | Liên kết "Thu tiền" trong trang hợp đồng | | |
+
+W10 và W10b chạy song song: W10b chỉ import kiểu từ `src/api/payments.ts`; nếu W10 chưa xong thì W10b tự khai kiểu tạm trong `src/api/reports.ts` rồi đổi sang import sau.
+
+### 3.10 Hàm API web cần thêm
+
+```ts
+// src/api/payments.ts (mới, W10)
+export type PaymentKind = 'RECEIPT' | 'REFUND';           // lấy từ @makeup/shared: PAYMENT_KINDS
+export type PaymentMethod = 'CASH' | 'BANK_TRANSFER' | 'CARD' | 'OTHER';
+export type InstallmentStatus = 'PAID' | 'PARTIAL' | 'DUE' | 'OVERDUE';
+export interface PaymentView { id: string; code: string; contractId: string; kind: PaymentKind; method: PaymentMethod; amount: Vnd; receivedAt: IsoDateTime; note: string | null; voidedAt: IsoDateTime | null; voidReason: string | null; createdAt: IsoDateTime; createdBy: { id: string; fullName: string } }
+export interface PaymentSummary { total: Vnd; depositRequired: Vnd; received: Vnd; refunded: Vnd; paid: Vnd; remaining: Vnd; overpaid: Vnd; depositOutstanding: Vnd }
+export interface InstallmentView { id: string; name: string; dueDate: IsoDateTime; amount: Vnd; isDeposit: boolean; sortOrder: number; paidAmount: Vnd; outstanding: Vnd; status: InstallmentStatus }
+export interface PaymentProgress { contract: { id: string; code: string; status: ContractStatus; eventDate: IsoDateTime | null; confirmedAt: IsoDateTime | null; customer: { id: string; fullName: string; phone: string | null } }; summary: PaymentSummary; installments: InstallmentView[]; installmentsTotal: Vnd; scheduleDifference: Vnd | null; payments: PaymentView[] }
+export interface InstallmentInput { name: string; dueDate: IsoDateTime; amount: Vnd; isDeposit?: boolean }
+export interface PaymentInput { kind?: PaymentKind; method: PaymentMethod; amount: Vnd; receivedAt?: IsoDateTime; note?: string; allowOverpay?: boolean }
+export interface PaymentResult extends PaymentView { contract: { id: string; code: string; status: ContractStatus }; summary: PaymentSummary }
+export function getPaymentProgress(orgId: string, contractId: string, signal?: AbortSignal): Promise<PaymentProgress>;                  // GET  /contracts/:id/payments
+export function putInstallments(orgId: string, contractId: string, installments: InstallmentInput[]): Promise<PaymentProgress>;          // PUT  /contracts/:id/installments
+export function createPayment(orgId: string, contractId: string, input: PaymentInput, idempotencyKey: string): Promise<PaymentResult>;  // POST /contracts/:id/payments
+export function voidPayment(orgId: string, paymentId: string, reason: string): Promise<PaymentResult>;                                  // POST /payments/:id/void
+export interface LedgerQuery { from: IsoDateTime; to: IsoDateTime; method?: PaymentMethod; kind?: PaymentKind; contractId?: string; page?: number; pageSize?: number }
+export interface Ledger { from: string; to: string; totals: { received: Vnd; receiptCount: number; refunded: Vnd; refundCount: number; net: Vnd }; items: (PaymentView & { contract: { id: string; code: string; customer: { id: string; fullName: string } } })[]; page: number; pageSize: number; total: number }
+export function listPayments(orgId: string, query: LedgerQuery, signal?: AbortSignal): Promise<Ledger>;                                // GET  /payments
+
+// src/api/reports.ts (mới, W10b)
+export interface RevenueBucket { contractCount: number; sales: Vnd; depositRequired: Vnd; depositOutstanding: Vnd; outstanding: Vnd; received: Vnd; refunded: Vnd; collected: Vnd }
+export interface RevenueByContractRow { contractId: string; code: string; status: ContractStatus; customer: { id: string; fullName: string }; confirmedAt: IsoDateTime | null; eventDate: IsoDateTime | null; bookedInPeriod: boolean; total: Vnd; depositRequired: Vnd; paid: Vnd; paidInPeriod: Vnd; remaining: Vnd | null; depositOutstanding: Vnd | null }
+export interface RevenueReport<R> { from: string; to: string; groupBy: 'month' | 'contract'; basis: { sales: string; depositRequired: string; collected: string; outstanding: string }; totals: RevenueBucket; rows: R[] }
+export function getRevenueByMonth(orgId: string, q: { from: IsoDateTime; to: IsoDateTime }, signal?: AbortSignal): Promise<RevenueReport<RevenueBucket & { period: string }>>;      // groupBy=month
+export function getRevenueByContract(orgId: string, q: { from: IsoDateTime; to: IsoDateTime }, signal?: AbortSignal): Promise<RevenueReport<RevenueByContractRow>>;                // groupBy=contract
+```

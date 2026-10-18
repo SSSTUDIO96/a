@@ -284,6 +284,7 @@
 
 /* ---------- Hộp thoại ca ---------- */
 .ws-dlg.ui-dialog { width: min(860px, 100%); }
+.ws-dlg__top { height: 0; scroll-margin-top: 8px; }
 .ws-info { display: flex; flex-direction: column; }
 .ws-info__row { display: grid; grid-template-columns: 118px minmax(0, 1fr); gap: 12px; padding: 9px 0; border-top: 1px solid var(--line-2); align-items: baseline; }
 .ws-info__row:first-child { border-top: 0; }
@@ -361,6 +362,8 @@
   .ws-a__in { --ws-axis: 44px; }
   .ws-a__colh { padding: 8px; }
   .ws-info__row { grid-template-columns: 96px minmax(0, 1fr); }
+  .ws-form .ws-row-wide { --row-ctl-phone: 240px; }
+  .ws-form .ws-row-stack-phone { grid-template-columns: minmax(0, 1fr); gap: 6px; }
   .ws-skel__row { grid-template-columns: 50px repeat(4, minmax(0, 1fr)); }
   .ws-skel__row > :nth-child(n + 6) { display: none; }
 }

@@ -148,6 +148,7 @@ export function AppointmentDialog({
   const idemKey = useRef(newIdempotencyKey());
   const startRef = useRef<HTMLInputElement>(null);
   const staffRef = useRef<HTMLDivElement>(null);
+  const topRef = useRef<HTMLDivElement>(null);
   const pendingFocus = useRef<'staff' | 'time' | null>(target.kind === 'edit' ? (target.focus ?? null) : null);
 
   const terminal = appt ? isTerminalStatus(appt.status) : false;
@@ -167,6 +168,13 @@ export function AppointmentDialog({
     }, 0);
     return () => window.clearTimeout(t);
   }, [mode]);
+
+  // Có dải trùng lịch hoặc lỗi chung: cuộn thân hộp về đầu để thấy dải (nút Lưu nằm ở chân, thân có thể đang cuộn xuống dưới).
+  useEffect(() => {
+    if (!conflicts && !general) return;
+    const body = topRef.current?.parentElement;
+    if (body) body.scrollTop = 0;
+  }, [conflicts, general]);
 
   function setConflictState(list: AppointmentConflict[] | null, message?: string) {
     setConflicts(list);
@@ -334,6 +342,7 @@ export function AppointmentDialog({
 
   return (
     <Dialog open onClose={close} title={title} eyebrow={eyebrow} footer={footer} className="ws-dlg">
+      <div ref={topRef} className="ws-dlg__top" aria-hidden="true" />
       {conflicts && (
         <ConflictBanner
           conflicts={conflicts}
@@ -540,7 +549,7 @@ function FormBody({
             onChange={(e) => e.target.value && update({ day: e.target.value })}
           />
         </SettingRow>
-        <SettingRow label="Giờ" required controlWidth={300} tip="Giờ kết thúc sớm hơn giờ bắt đầu nghĩa là ca kết thúc vào ngày hôm sau.">
+        <SettingRow label="Giờ" required controlWidth={300} className="ws-row-wide ws-row-stack-phone" tip="Giờ kết thúc sớm hơn giờ bắt đầu nghĩa là ca kết thúc vào ngày hôm sau.">
           <div className="ws-times">
             <TextInput
               ref={startRef}
@@ -583,7 +592,7 @@ function FormBody({
             error={errors.travelAfterMin}
           />
         </SettingRow>
-        <SettingRow label="Làm ở đâu" controlWidth={300}>
+        <SettingRow label="Làm ở đâu" controlWidth={300} className="ws-row-wide">
           <Segmented<LocationType>
             aria-label="Làm ở đâu"
             size="sm"
@@ -597,7 +606,7 @@ function FormBody({
           />
         </SettingRow>
         {form.locationType && (
-          <SettingRow label="Địa chỉ" htmlFor="ws-dia-chi" controlWidth={300}>
+          <SettingRow label="Địa chỉ" htmlFor="ws-dia-chi" controlWidth={300} className="ws-row-wide">
             <Textarea id="ws-dia-chi" value={form.address} maxLength={500} onChange={(e) => update({ address: e.target.value })} error={errors.address} />
           </SettingRow>
         )}
@@ -760,7 +769,7 @@ function CustomerField({
 
   if (form.customer) {
     return (
-      <SettingRow label="Khách" controlWidth={300}>
+      <SettingRow label="Khách" controlWidth={300} className="ws-row-wide">
         <div className="ws-kh">
           <span>
             <b className="ws-strong">{form.customer.fullName}</b>
@@ -809,7 +818,7 @@ function CustomerField({
   }
 
   return (
-    <SettingRow label="Khách" htmlFor="ws-kh-tim" controlWidth={300}>
+    <SettingRow label="Khách" htmlFor="ws-kh-tim" controlWidth={300} className="ws-row-wide">
       <div className="ws-kh-find">
         {access.customersRead && (
           <TextInput

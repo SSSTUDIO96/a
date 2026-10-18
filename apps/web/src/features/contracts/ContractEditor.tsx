@@ -272,7 +272,8 @@ export function ContractEditor({ orgId, slug, tz, has, contractId }: ContractEdi
   // ---- Lưu / xác nhận ----
   const scrollToFirstError = () =>
     requestAnimationFrame(() => {
-      document.querySelector('.ct-page [aria-invalid="true"], .ct-page .ct-err, .ct-page .ct-alert')?.scrollIntoView({ block: 'center' });
+      const el = document.querySelector<HTMLElement>('.ct-page [aria-invalid="true"], .ct-page .ct-err, .ct-page .ct-alert');
+      if (el && typeof el.scrollIntoView === 'function') el.scrollIntoView({ block: 'center' });
     });
 
   const applyError = (err: unknown) => {
