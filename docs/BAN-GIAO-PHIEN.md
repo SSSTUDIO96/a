@@ -43,6 +43,20 @@ Cập nhật: 18/10/2026. Kho: `SSSTUDIO96/a`, nhánh `claude/nen-mong-makeup`.
 | W2 (token, phông, component) | Thợ F đang làm |
 | W3 khung → W4 Bảng giá, W5 Hợp đồng, W6 Lịch (3 chế độ, mặc định C) → W7 kiểm thử 3 khổ | Chưa bắt đầu |
 
+## Việc đang chạy (cập nhật 18:05)
+| Thợ | Việc | Tệp |
+|---|---|---|
+| A | Bán kính gói + bảng bậc phí di chuyển | modules/catalog |
+| B | Lưu trữ tệp (StorageDriver, ký URL, ảnh đại diện thợ) | modules/files, lib/storage, modules/staff |
+| D | Gán thợ cho dòng hợp đồng + cảnh báo + tạo lịch khi xác nhận; computeTravelFee theo bán kính/bậc | modules/contracts, packages/shared/src/contract.ts |
+| E | W3 khung điều hướng web | apps/web/src/layout, src/app |
+| G | Thu tiền: tiến độ, phiếu thu, báo cáo doanh thu | modules/payments, packages/shared/src/payments.ts |
+| H | Máy chủ quản trị nền tảng + quota | modules/platform, lib/quota.ts |
+| C | Cập nhật tài liệu (N4) | docs/*.md |
+| Chấm | Chấm web móng/W1/W2 | worktree riêng |
+| R&D | Vòng 3: trung tâm đào tạo + 3 hướng mẫu chào mừng | docs/rnd |
+Migration mới nhất của điều phối: `20261018190000_tep_thu_tien_nen_tang` (lưu trữ tệp, thu tiền, quản trị nền tảng, bán kính gói, bậc phí). Chưa lưu kho chính thức vì tệp hợp đồng của D cần xử lý hình thức phí mới.
+
 ## Bước tiếp (theo thứ tự)
 1. Nhận báo cáo F (W2), A và B (bật chống gửi trùng cho 7 đường tạo), E (api.put). Chạy `pnpm test` ở gốc kho, lưu bản đã kiểm.
 2. Giao thợ C cập nhật tài liệu (N4). Cho thợ chấm chấm lại mốc 2 (T3, N4) và lát 1.

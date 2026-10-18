@@ -1,4 +1,4 @@
-import type { Prisma } from '@prisma/client';
+import type { Prisma, TravelFeeMode as DbTravelFeeMode } from '@prisma/client';
 import { vndFromBigInt, type Vnd } from '@makeup/shared';
 import { AppError } from '../../lib/errors';
 import { initialsOf } from '../staff/common';
@@ -122,7 +122,8 @@ export interface LineView {
   unitPrice: Vnd;
   lineDiscount: Vnd;
   lineTotal: Vnd;
-  travelMode: PlannedLine['travelMode'];
+  // Theo enum database (đọc được cả cách tính mới như TIERED); dòng do module này tạo chỉ dùng FIXED/PER_KM/MANUAL.
+  travelMode: DbTravelFeeMode | null;
   distanceKm: number | null;
   perKmAmount: Vnd | null;
   note: string | null;

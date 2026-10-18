@@ -36,4 +36,9 @@ Anh Chiến nhắn lúc khoảng 15:13 UTC ngày 18/10/2026: *"Tự làm vào ch
 | 17:05 | G5: thợ xem được số điện thoại thợ khác | Số điện thoại **thợ** chỉ hiện với người có quyền sửa nhân sự. Số điện thoại **khách** trong lịch của thợ vẫn hiện, vì thợ cần gọi khách. | Bảo vệ thông tin cá nhân giữa nhân viên | Được |
 | 17:10 | GitHub | Anh đã cài Claude GitHub App chỉ cho kho `a`. Đã đẩy nhánh `claude/nen-mong-makeup`. | — | — |
 
+| 18:00 | Bán kính miễn phí khi tại nhà | Đặt theo từng gói, km **một chiều**; trống thì lấy mức chung của studio. Trong bán kính: 0 đ (trừ khi nhập tay). | Khách nói "nhà cách 12 km" là một chiều | Được |
+| 18:00 | Phụ phí khi vượt bán kính | 4 hình thức: theo km vượt (khứ hồi nhân đôi cả bán kính), theo bậc khoảng cách, cố định, nhập tay. Không có bậc nào khớp thì báo lỗi, không tự đoán. | Đủ các cách studio hay dùng | Được |
+| 18:05 | Thu cọc khi hợp đồng còn nháp | Để thợ G quyết và ghi lý do (khách hay chuyển cọc trước khi chốt) | — | Được |
+| 18:05 | Quản trị nền tảng | Cấp quyền bằng lệnh chạy trên máy chủ, không qua trang web, không có mật khẩu chung. Người thường gọi đường quản trị nhận "không có đường này". | Sửa đúng lỗi số 6 của Studio Pro | Được |
+
 **Cần anh xem lại nhất:** phân quyền theo vai trò mẫu (dòng 15:16). Studio anh có thể muốn thợ chính thấy cả lịch của đội.

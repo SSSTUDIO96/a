@@ -11,6 +11,8 @@ import {
   OrgParams,
   decimalNumber,
   decimalToNumber,
+  kmCents,
+  Km,
   lockOrg,
   nonEmpty,
   strictBody,
@@ -55,9 +57,42 @@ function assertLocationState(s: { latitude: unknown; longitude: unknown; isDefau
   }
 }
 
-const TravelMode = z.enum(['FIXED', 'PER_KM', 'MANUAL'], { error: 'Cách tính phải là FIXED, PER_KM hoặc MANUAL' });
+const TravelMode = z.enum(['FIXED', 'PER_KM', 'MANUAL', 'TIERED'], {
+  error: 'Cách tính phải là FIXED, PER_KM, MANUAL hoặc TIERED',
+});
 
-type PolicyRow = Prisma.TravelFeePolicyGetPayload<object>;
+const Tier = strictBody({ fromKm: Km, toKm: Km.nullable(), amount: Money });
+type TierInput = z.infer<typeof Tier>;
+
+const tierLabel = (t: TierInput) => `${t.fromKm}–${t.toKm ?? '∞'} km`;
+
+// Kiểm bậc trước khi ghi (database chặn chồng bậc là lớp hai); trả bậc đã xếp theo km bắt đầu.
+function checkTiers(mode: string, tiers: TierInput[]): TierInput[] {
+  if (mode === 'TIERED' && tiers.length === 0) {
+    throw new AppError('VALIDATION_FAILED', 'Chọn tính phí theo bậc km (TIERED) thì phải có ít nhất một bậc');
+  }
+  for (const t of tiers) {
+    if (t.toKm !== null && kmCents(t.toKm) <= kmCents(t.fromKm)) {
+      throw new AppError('VALIDATION_FAILED', `Bậc ${tierLabel(t)}: km kết thúc phải lớn hơn km bắt đầu`, { tier: t });
+    }
+  }
+  const sorted = [...tiers].sort((a, b) => kmCents(a.fromKm) - kmCents(b.fromKm));
+  for (let i = 1; i < sorted.length; i++) {
+    const prev = sorted[i - 1];
+    const cur = sorted[i];
+    if (!prev || !cur) throw new Error('Chỉ số bậc ngoài mảng — lỗi lập trình');
+    // Bậc là khoảng [từ, đến): bậc sau được bắt đầu đúng tại km kết thúc của bậc trước.
+    if (prev.toKm === null || kmCents(prev.toKm) > kmCents(cur.fromKm)) {
+      throw new AppError('VALIDATION_FAILED', `Bậc ${tierLabel(prev)} và bậc ${tierLabel(cur)} chồng nhau`, {
+        tiers: [prev, cur],
+      });
+    }
+  }
+  return sorted;
+}
+
+const policyInclude = { tiers: { orderBy: { fromKm: 'asc' } } } satisfies Prisma.TravelFeePolicyInclude;
+type PolicyRow = Prisma.TravelFeePolicyGetPayload<{ include: typeof policyInclude }>;
 
 function policyValues(p: PolicyRow) {
   return {
@@ -67,6 +102,11 @@ function policyValues(p: PolicyRow) {
     freeKm: p.freeKm.toNumber(),
     minimumAmount: vndFromBigInt(p.minimumAmount, 'phí tối thiểu'),
     roundTrip: p.roundTrip,
+    tiers: p.tiers.map((t) => ({
+      fromKm: t.fromKm.toNumber(),
+      toKm: decimalToNumber(t.toKm),
+      amount: vndFromBigInt(t.amount, 'phí bậc km'),
+    })),
   };
 }
 
@@ -231,7 +271,7 @@ export const locationRoutes = [
     summary: 'Cách tính phí di chuyển mặc định của tổ chức',
     handler: async ({ deps, org }) => {
       const o = mustOrg(org);
-      const policy = await deps.db.travelFeePolicy.findUnique({ where: { organizationId: o.id } });
+      const policy = await deps.db.travelFeePolicy.findUnique({ where: { organizationId: o.id }, include: policyInclude });
       // Tổ chức tạo trước bản vẽ v2 mà chưa chạy đồng bộ thì báo rõ, không bịa cấu hình.
       if (!policy) throw new AppError('NOT_FOUND', 'Tổ chức chưa có cấu hình phí di chuyển');
       return { body: presentPolicy(policy) };
@@ -244,38 +284,52 @@ export const locationRoutes = [
     scope: 'org',
     permission: 'prices.write',
     tag: 'Bảng giá',
-    summary: 'Ghi đè toàn bộ cách tính phí di chuyển (gửi đủ mọi trường)',
+    summary: 'Ghi đè toàn bộ cách tính phí di chuyển và bảng bậc km (gửi đủ mọi trường, kể cả tiers)',
     body: strictBody({
       defaultMode: TravelMode,
       fixedAmount: Money,
       perKmAmount: Money,
-      freeKm: decimalNumber({ min: 0, max: 99999.99, scale: 2, label: 'Số km miễn phí' }),
+      freeKm: Km,
       minimumAmount: Money,
       roundTrip: z.boolean(),
+      tiers: z.array(Tier).max(50, 'Tối đa 50 bậc km'),
     }),
     handler: async ({ deps, org, body, userId, requestId }) => {
       const o = mustOrg(org);
+      const tiers = checkTiers(body.defaultMode, body.tiers);
       const data = {
         defaultMode: body.defaultMode,
         fixedAmount: BigInt(body.fixedAmount),
         perKmAmount: BigInt(body.perKmAmount),
-        freeKm: new Prisma.Decimal(String(body.freeKm)),
+        freeKm: new Prisma.Decimal(body.freeKm),
         minimumAmount: BigInt(body.minimumAmount),
         roundTrip: body.roundTrip,
       };
       const row = await deps.db.$transaction(async (tx) => {
         await lockOrg(tx, o.id);
-        const before = await tx.travelFeePolicy.findUnique({ where: { organizationId: o.id } });
-        const after = before
-          ? await tx.travelFeePolicy.update({ where: { organizationId: o.id }, data })
-          : await tx.travelFeePolicy.create({ data: { organizationId: o.id, ...data } });
+        const before = await tx.travelFeePolicy.findUnique({ where: { organizationId: o.id }, include: policyInclude });
+        if (before) await tx.travelFeePolicy.update({ where: { organizationId: o.id }, data });
+        else await tx.travelFeePolicy.create({ data: { organizationId: o.id, ...data } });
+        // Thay toàn bộ bảng bậc: xoá trước rồi thêm, để ràng buộc không chồng bậc không vấp bậc cũ.
+        await tx.travelFeeTier.deleteMany({ where: { organizationId: o.id } });
+        if (tiers.length > 0) {
+          await tx.travelFeeTier.createMany({
+            data: tiers.map((t) => ({
+              organizationId: o.id,
+              fromKm: new Prisma.Decimal(t.fromKm),
+              toKm: t.toKm === null ? null : new Prisma.Decimal(t.toKm),
+              amount: BigInt(t.amount),
+            })),
+          });
+        }
+        const after = await tx.travelFeePolicy.findUniqueOrThrow({ where: { organizationId: o.id }, include: policyInclude });
         await writeAudit(tx, {
           organizationId: o.id,
           actorUserId: mustUser(userId),
           action: 'travel_policy.updated',
           entityType: 'travel_fee_policy',
           entityId: o.id,
-          data: { before: before ? policyValues(before) : null, after: body },
+          data: { before: before ? policyValues(before) : null, after: policyValues(after) },
           requestId,
         });
         return after;

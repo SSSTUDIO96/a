@@ -25,6 +25,12 @@ export const PERMISSIONS = {
   'staff.write': 'Sửa hồ sơ thợ, gán bậc lương, quản lý danh sách bậc',
   'payroll.read': 'Xem tiền công theo gói',
   'payroll.write': 'Đặt tiền công theo gói, theo bậc',
+  'payments.read': 'Xem tiến độ thanh toán, phiếu thu',
+  'payments.write': 'Lập tiến độ thanh toán, ghi phiếu thu',
+  'payments.void': 'Huỷ phiếu thu, ghi phiếu hoàn tiền',
+  'reports.read': 'Xem báo cáo doanh thu',
+  'files.read': 'Xem tệp, ảnh của tổ chức',
+  'files.write': 'Tải tệp, ảnh lên',
 } as const;
 
 export type Permission = keyof typeof PERMISSIONS;
@@ -56,16 +62,24 @@ export const SYSTEM_ROLES: Record<SystemRoleKey, { name: string; permissions: Pe
       'org.read', 'members.read', 'members.invite', 'members.update', 'roles.read',
       'catalog.read', 'catalog.write', 'prices.write', 'customers.read', 'customers.write',
       'schedule.read_own', 'schedule.read_all', 'schedule.write', 'contracts.read', 'contracts.write',
-      'contracts.adjust', 'staff.read', 'staff.write',
+      'contracts.adjust', 'staff.read', 'staff.write', 'payments.read', 'payments.write', 'payments.void',
+      'reports.read', 'files.read', 'files.write',
     ],
   },
-  artist: { name: 'Thợ makeup', permissions: ['org.read', 'members.read', 'catalog.read', 'schedule.read_own', 'staff.read'] },
-  assistant: { name: 'Thợ phụ', permissions: ['org.read', 'members.read', 'catalog.read', 'schedule.read_own', 'staff.read'] },
+  artist: {
+    name: 'Thợ makeup',
+    permissions: ['org.read', 'members.read', 'catalog.read', 'schedule.read_own', 'staff.read', 'files.read'],
+  },
+  assistant: {
+    name: 'Thợ phụ',
+    permissions: ['org.read', 'members.read', 'catalog.read', 'schedule.read_own', 'staff.read', 'files.read'],
+  },
   receptionist: {
     name: 'Lễ tân',
     permissions: [
       'org.read', 'members.read', 'catalog.read', 'customers.read', 'customers.write',
       'schedule.read_own', 'schedule.read_all', 'schedule.write', 'contracts.read', 'contracts.write', 'staff.read',
+      'payments.read', 'payments.write', 'files.read', 'files.write',
     ],
   },
   accountant: {
@@ -73,6 +87,7 @@ export const SYSTEM_ROLES: Record<SystemRoleKey, { name: string; permissions: Pe
     permissions: [
       'org.read', 'members.read', 'audit.read', 'catalog.read', 'customers.read',
       'schedule.read_own', 'schedule.read_all', 'contracts.read', 'staff.read', 'payroll.read',
+      'payments.read', 'payments.write', 'payments.void', 'reports.read', 'files.read',
     ],
   },
   instructor: { name: 'Giảng viên', permissions: ['org.read', 'members.read', 'catalog.read', 'schedule.read_own'] },

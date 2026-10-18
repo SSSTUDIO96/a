@@ -5,6 +5,7 @@ import type { GateOrg, RefSamples, Samples } from './gate';
 // Thân yêu cầu hợp lệ cho các đường POST/PATCH có tham số id (khoá: "METHOD /đường").
 export const SAMPLES: Samples = {
   'GET /orgs/:orgId/appointments': () => ({ from: '2026-11-25T00:00:00.000Z', to: '2026-12-10T00:00:00.000Z' }),
+  'GET /orgs/:orgId/staff/availability': () => ({ startsAt: '2027-03-01T01:00:00.000Z', endsAt: '2027-03-01T03:00:00.000Z' }),
   'PATCH /orgs/:orgId/members/:membershipId': () => ({ status: 'SUSPENDED' }),
   'PATCH /orgs/:orgId/roles/:roleId': () => ({ name: 'Đổi tên thử' }),
   'PATCH /orgs/:orgId/service-categories/:categoryId': () => ({ name: 'Đổi tên thử' }),
@@ -89,6 +90,15 @@ export const REF_SAMPLES: RefSamples = {
   'PATCH /orgs/:orgId/contracts/:contractId': [(o) => ({ lines: [packageLine(o), serviceLine(o)] })],
   'POST /orgs/:orgId/contracts/:contractId/lines': [packageLine, serviceLine],
   'GET /orgs/:orgId/staff': [(o) => ({ tierId: o.ids.tierId })],
+  'GET /orgs/:orgId/staff/availability': [
+    (o) => ({
+      startsAt: '2027-03-01T01:00:00.000Z',
+      endsAt: '2027-03-01T03:00:00.000Z',
+      membershipIds: o.ids.membershipId,
+      excludeAppointmentIds: o.ids.appointmentId,
+      excludeContractId: o.ids.contractId,
+    }),
+  ],
   'PATCH /orgs/:orgId/staff/:membershipId': [(o) => ({ tierId: o.ids.tierId })],
   'PUT /orgs/:orgId/packages/:packageId/pay-rates': [(o) => ({ rates: [{ tierId: o.ids.tierId, amount: 100000 }] })],
   'PUT /orgs/:orgId/services/:serviceId/pay-rates': [(o) => ({ rates: [{ tierId: o.ids.tierId, amount: 100000 }] })],

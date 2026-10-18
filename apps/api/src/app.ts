@@ -14,13 +14,16 @@ import { catalogRoutes } from './modules/catalog/routes';
 import { scheduleRoutes } from './modules/schedule/routes';
 import { contractRoutes } from './modules/contracts/routes';
 import { staffRoutes } from './modules/staff/routes';
+import { fileRoutes } from './modules/files/routes';
+import { paymentRoutes } from './modules/payments/routes';
+import { platformRoutes } from './modules/platform/routes';
 import { createHash } from 'node:crypto';
 import { Prisma } from '@prisma/client';
 
 // Lời báo lỗi mặc định của zod bằng tiếng Việt (lời riêng trong từng schema vẫn được ưu tiên).
 z.config(z.locales.vi());
 
-export const ALL_ROUTES: AnyRoute[] = [...authRoutes, ...orgRoutes, ...catalogRoutes, ...scheduleRoutes, ...contractRoutes, ...staffRoutes];
+export const ALL_ROUTES: AnyRoute[] = [...authRoutes, ...orgRoutes, ...catalogRoutes, ...scheduleRoutes, ...contractRoutes, ...staffRoutes, ...fileRoutes, ...paymentRoutes, ...platformRoutes];
 
 export function createApp(deps: Deps, routes: AnyRoute[] = ALL_ROUTES) {
   const app = express();
@@ -65,6 +68,10 @@ export function createApp(deps: Deps, routes: AnyRoute[] = ALL_ROUTES) {
     if (route.rateLimit === 'auth') handlers.push(authLimiter);
     handlers.push(async (req: Request, res: Response) => {
       const userId = route.scope === 'public' ? null : await authenticate(req, deps);
+      // Đường quản trị nền tảng: người không có tên trong platform_admins nhận đúng lời "không có đường" — không lộ là có.
+      if (route.scope === 'platform' && !(await deps.db.platformAdmin.findUnique({ where: { userId: userId ?? '' } }))) {
+        throw new AppError('NOT_FOUND', 'Không có đường API này');
+      }
       const org =
         route.scope === 'org' && userId && route.permission
           ? await loadOrgContext(

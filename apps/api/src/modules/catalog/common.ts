@@ -59,6 +59,22 @@ export function decimalNumber(opts: { min: number; max: number; scale: number; l
     .refine((v) => re.test(String(v)), `${opts.label} có tối đa ${opts.scale} chữ số sau dấu phẩy`);
 }
 
+// Số km nhận số hoặc chuỗi, tối đa 2 chữ số lẻ; trả chuỗi chuẩn để lưu Decimal không lệch số thực.
+const KM_RE = /^\d{1,5}(\.\d{1,2})?$/;
+export const Km = z
+  .union([z.number(), z.string().trim()], { error: 'Số km phải là số' })
+  .transform((v) => String(v))
+  .superRefine((s, ctx) => {
+    if (s.startsWith('-')) ctx.addIssue({ code: 'custom', message: 'Số km không được âm' });
+    else if (!KM_RE.test(s)) ctx.addIssue({ code: 'custom', message: 'Số km tối đa 99999.99, có tối đa 2 chữ số sau dấu phẩy' });
+  });
+
+// Đổi chuỗi km đã kiểm sang số nguyên phần trăm km để so sánh chính xác.
+export function kmCents(s: string): number {
+  const [int = '0', frac = ''] = s.split('.');
+  return Number(int) * 100 + Number(frac.padEnd(2, '0'));
+}
+
 export function decimalToNumber(d: Prisma.Decimal | null): number | null {
   return d === null ? null : d.toNumber();
 }

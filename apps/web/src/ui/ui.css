@@ -142,13 +142,13 @@
   align-items: center;
   gap: 8px;
   font-weight: 500;
-  min-height: 32px; /* dòng danh sách tick như .ckl bản mẫu (đệm 7–8 trên dưới) */
-  padding: 6px 0;
+  min-height: 34px; /* dòng danh sách tick như .ckl bản mẫu (đệm 7 trên dưới) */
+  padding: 7px 0;
   cursor: pointer;
   min-width: 0;
 }
 .ui-check input { margin: 0; cursor: inherit; }
-.ui-check-row { display: flex; align-items: center; min-width: 0; }
+.ui-check-row { display: flex; align-items: center; gap: 8px; min-width: 0; } /* nhãn → "?" cách 8 + 6 như bản mẫu */
 .ui-check--grow { flex: 1; }
 .ui-check__label { min-width: 0; overflow-wrap: anywhere; display: inline-flex; align-items: center; }
 .ui-check__trail { margin-left: auto; color: var(--muted); font-weight: 400; padding-left: 12px; }

@@ -5,7 +5,8 @@ import type { Env } from '../env';
 import type { Db } from '../lib/prisma';
 import type { Logger } from '../lib/logger';
 
-export type Scope = 'public' | 'auth' | 'org';
+// platform = người quản trị toàn nền tảng (bảng platform_admins); người khác nhận 404.
+export type Scope = 'public' | 'auth' | 'org' | 'platform';
 export type Method = 'get' | 'post' | 'put' | 'patch' | 'delete';
 
 export interface Deps {
@@ -84,6 +85,19 @@ export function defineRoute<
     if (def.idempotent && def.method !== 'post') {
       throw new Error(`Đường ${def.method.toUpperCase()} ${def.path}: chống gửi trùng chỉ dùng cho POST`);
     }
+  } else if (def.scope === 'platform') {
+    if (!def.path.startsWith('/platform/')) {
+      throw new Error(`Đường ${def.method.toUpperCase()} ${def.path} quản trị nền tảng phải bắt đầu bằng /platform/`);
+    }
+    // Quyền tổ chức không áp cho quản trị nền tảng: chỉ cần có tên trong bảng platform_admins.
+    if (def.permission) {
+      throw new Error(`Đường ${def.method.toUpperCase()} ${def.path} quản trị nền tảng không khai quyền tổ chức`);
+    }
+    if (def.idempotent) {
+      throw new Error(`Đường ${def.method.toUpperCase()} ${def.path}: chống gửi trùng chỉ dùng cho đường thuộc tổ chức`);
+    }
+  } else if (def.path.startsWith('/platform/')) {
+    throw new Error(`Đường ${def.method.toUpperCase()} ${def.path} dưới /platform/ phải khai scope "platform"`);
   } else if (def.path.includes(':orgId')) {
     throw new Error(`Đường ${def.method.toUpperCase()} ${def.path} có :orgId nhưng không khai scope "org"`);
   } else if (def.idempotent) {

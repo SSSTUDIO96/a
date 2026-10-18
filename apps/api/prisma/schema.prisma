@@ -54,6 +54,9 @@ model User {
   statusChanges        AppointmentStatusHistory[] @relation("StatusChangedBy")
   payRatesUpdated      StaffPayRate[]             @relation("PayRateUpdatedBy")
   idempotencyKeys      IdempotencyKey[]
+  filesCreated         StoredFile[]
+  paymentsCreated      Payment[]                  @relation("PaymentCreatedBy")
+  platformAdmin        PlatformAdmin?             @relation("PlatformAdminUser")
 
   @@map("users")
 }
@@ -119,6 +122,10 @@ model Organization {
   staffProfiles     StaffProfile[]
   staffPayRates     StaffPayRate[]
   contractLineStaff ContractLineStaff[]
+  storedFiles       StoredFile[]
+  installments      PaymentInstallment[]
+  payments          Payment[]
+  subscriptions     OrganizationSubscription[]
 
   @@map("organizations")
 }
@@ -274,6 +281,8 @@ model ServicePackage {
   subjectId       String?        @map("subject_id") @db.Uuid
   // Địa điểm gói cho phép chọn. Rỗng = không giới hạn.
   locationTypes   LocationType[] @map("location_types")
+  // Bán kính miễn phí của gói khi làm tại nhà / địa điểm khác (km một chiều). Trống = theo mức chung của tổ chức.
+  includedKm      Decimal?       @map("included_km") @db.Decimal(7, 2)
   terms           String?
   isActive        Boolean        @default(true) @map("is_active")
   isPublic        Boolean        @default(false) @map("is_public")
@@ -540,6 +549,8 @@ enum TravelFeeMode {
   PER_KM
   // Nhập tay theo thoả thuận với từng khách
   MANUAL
+  // Theo bậc khoảng cách (bảng travel_fee_tiers): vd 10–20 km: 200.000 ₫, 20–30 km: 400.000 ₫
+  TIERED
 }
 
 // Cách tính phí di chuyển mặc định của tổ chức. Khi lập hợp đồng vẫn được chọn cách khác cho từng dòng.
@@ -554,9 +565,25 @@ model TravelFeePolicy {
   roundTrip      Boolean       @default(false) @map("round_trip")
   updatedAt      DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  tiers        TravelFeeTier[]
 
   @@map("travel_fee_policies")
+}
+
+// Bậc phí di chuyển theo khoảng cách MỘT CHIỀU. Trong bán kính miễn phí thì 0 đ; vượt thì tra bảng:
+// khoảng cách trong [fromKm, toKm) → thu amount. toKm trống = bậc cuối (từ fromKm trở lên).
+model TravelFeeTier {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  fromKm         Decimal  @map("from_km") @db.Decimal(7, 2)
+  toKm           Decimal? @map("to_km") @db.Decimal(7, 2)
+  amount         BigInt
+
+  policy TravelFeePolicy @relation(fields: [organizationId], references: [organizationId], onDelete: Cascade)
+
+  @@unique([organizationId, fromKm])
+  @@map("travel_fee_tiers")
 }
 
 // ==================== HỢP ĐỒNG ====================
@@ -598,11 +625,13 @@ model Contract {
   createdAt       DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt       DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  customer     Customer       @relation(fields: [customerId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  organization Organization         @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  customer     Customer             @relation(fields: [customerId, organizationId], references: [id, organizationId], onDelete: Restrict)
   lines        ContractLine[]
   appointments Appointment[]
-  createdBy    User           @relation("ContractCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  installments PaymentInstallment[]
+  payments     Payment[]
+  createdBy    User                 @relation("ContractCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
 
   @@unique([organizationId, code])
   @@unique([id, organizationId])
@@ -750,4 +779,174 @@ model ContractLineStaff {
   @@id([lineId, membershipId])
   @@index([membershipId])
   @@map("contract_line_staff")
+}
+
+// ==================== LƯU TRỮ TỆP ====================
+
+enum FilePurpose {
+  STAFF_AVATAR
+  CUSTOMER_AVATAR
+  ORG_LOGO
+  ALBUM_IMAGE
+  COURSE_RESOURCE
+  SUBMISSION
+  WELCOME_CARD
+  OTHER
+}
+
+enum FileStatus {
+  UPLOADING
+  READY
+  DELETED
+}
+
+// Tệp không nằm trong database — database chỉ giữ thông tin và khoá lưu trữ (storage_key).
+model StoredFile {
+  id             String      @id @default(uuid()) @db.Uuid
+  organizationId String      @map("organization_id") @db.Uuid
+  purpose        FilePurpose
+  storageKey     String      @unique @map("storage_key")
+  originalName   String      @map("original_name")
+  mimeType       String      @map("mime_type")
+  sizeBytes      BigInt      @map("size_bytes")
+  sha256         String?
+  width          Int?
+  height         Int?
+  status         FileStatus  @default(UPLOADING)
+  isPublic       Boolean     @default(false) @map("is_public")
+  createdById    String      @map("created_by_id") @db.Uuid
+  createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  deletedAt      DateTime?   @map("deleted_at") @db.Timestamptz(3)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  createdBy    User         @relation(fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@unique([id, organizationId])
+  @@index([organizationId, purpose])
+  @@map("stored_files")
+}
+
+// ==================== THU TIỀN ====================
+
+// Tiến độ thanh toán: các đợt dự kiến của một hợp đồng (cọc, đợt 1, đợt 2…).
+model PaymentInstallment {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  contractId     String   @map("contract_id") @db.Uuid
+  name           String
+  dueDate        DateTime @map("due_date") @db.Timestamptz(3)
+  amount         BigInt
+  isDeposit      Boolean  @default(false) @map("is_deposit")
+  sortOrder      Int      @default(0) @map("sort_order")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  contract     Contract     @relation(fields: [contractId, organizationId], references: [id, organizationId], onDelete: Restrict)
+
+  @@index([contractId])
+  @@map("payment_installments")
+}
+
+enum PaymentMethod {
+  CASH
+  BANK_TRANSFER
+  CARD
+  OTHER
+}
+
+enum PaymentKind {
+  // Tiền khách trả vào
+  RECEIPT
+  // Tiền trả lại khách
+  REFUND
+}
+
+// Phiếu thu / phiếu hoàn: CHỈ GHI THÊM. Ghi sai thì huỷ phiếu có lý do, không sửa, không xoá.
+model Payment {
+  id             String        @id @default(uuid()) @db.Uuid
+  organizationId String        @map("organization_id") @db.Uuid
+  contractId     String        @map("contract_id") @db.Uuid
+  code           String
+  kind           PaymentKind   @default(RECEIPT)
+  method         PaymentMethod
+  amount         BigInt
+  receivedAt     DateTime      @map("received_at") @db.Timestamptz(3)
+  note           String?
+  voidedAt       DateTime?     @map("voided_at") @db.Timestamptz(3)
+  voidReason     String?       @map("void_reason")
+  createdById    String        @map("created_by_id") @db.Uuid
+  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  contract     Contract     @relation(fields: [contractId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  createdBy    User         @relation("PaymentCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@unique([organizationId, code])
+  @@index([contractId])
+  @@index([organizationId, receivedAt])
+  @@map("payments")
+}
+
+// ==================== QUẢN TRỊ NỀN TẢNG ====================
+
+// Người quản trị toàn nền tảng (không thuộc tổ chức nào). Không có mật khẩu chung — đăng nhập bằng tài khoản riêng.
+model PlatformAdmin {
+  userId      String   @id @map("user_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  createdById String?  @map("created_by_id") @db.Uuid
+
+  user User @relation("PlatformAdminUser", fields: [userId], references: [id], onDelete: Restrict)
+
+  @@map("platform_admins")
+}
+
+// Gói thuê bao. Giới hạn null = không giới hạn.
+model SubscriptionPlan {
+  id                      String   @id @default(uuid()) @db.Uuid
+  code                    String   @unique
+  name                    String
+  priceMonthly            BigInt   @map("price_monthly")
+  maxStaff                Int?     @map("max_staff")
+  maxAppointmentsPerMonth Int?     @map("max_appointments_per_month")
+  maxStorageMb            Int?     @map("max_storage_mb")
+  maxStudents             Int?     @map("max_students")
+  maxCourses              Int?     @map("max_courses")
+  customDomain            Boolean  @default(false) @map("custom_domain")
+  features                String[]
+  isActive                Boolean  @default(true) @map("is_active")
+  sortOrder               Int      @default(0) @map("sort_order")
+  createdAt               DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt               DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  subscriptions OrganizationSubscription[]
+
+  @@map("subscription_plans")
+}
+
+enum SubscriptionStatus {
+  TRIAL
+  ACTIVE
+  PAST_DUE
+  EXPIRED
+  CANCELLED
+}
+
+// Lịch sử thuê bao của tổ chức: mỗi lần đổi gói/gia hạn là một dòng mới. Hết hạn KHÔNG xoá dữ liệu.
+model OrganizationSubscription {
+  id             String             @id @default(uuid()) @db.Uuid
+  organizationId String             @map("organization_id") @db.Uuid
+  planId         String             @map("plan_id") @db.Uuid
+  status         SubscriptionStatus
+  startsAt       DateTime           @map("starts_at") @db.Timestamptz(3)
+  endsAt         DateTime?          @map("ends_at") @db.Timestamptz(3)
+  note           String?
+  createdById    String?            @map("created_by_id") @db.Uuid
+  createdAt      DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  plan         SubscriptionPlan @relation(fields: [planId], references: [id], onDelete: Restrict)
+
+  @@index([organizationId, startsAt])
+  @@map("organization_subscriptions")
 }

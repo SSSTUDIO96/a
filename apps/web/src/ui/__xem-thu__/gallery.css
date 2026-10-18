@@ -42,6 +42,7 @@
   .xt-head h1 { font-size: var(--fs-h1-tablet); }
   .xt-grid { grid-template-columns: minmax(0, 1fr); }
   .xt-dg { grid-template-columns: 1fr; }
+  .xt-ng + .xt-ng > h3:first-child { margin-top: 18px; }
   .xt-rw { grid-template-columns: 80px minmax(0, 1fr); }
 }
 @media (max-width: 640px) {
@@ -57,4 +58,4 @@
 .xt-tip-room-sm { padding-bottom: 44px; }
 .xt-row > .ui-skel-group { flex: 1; }
 .xt-ng-gap { margin-top: 18px; }
-.xt-add { padding: 0; margin: 4px 0 2px; }
+.ui-btn.xt-add { padding: 0; margin: 4px 0 2px; }

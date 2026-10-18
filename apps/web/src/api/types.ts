@@ -35,6 +35,24 @@ export interface PagingQuery {
   pageSize?: number;
 }
 
+// ======================= Tổ chức =======================
+
+// orgs/routes.ts — GET /orgs/:orgId: dòng tổ chức + vai trò và quyền của người đang xem.
+export interface OrganizationDetail {
+  id: string;
+  slug: string;
+  name: string;
+  kind: 'INDIVIDUAL' | 'TEAM' | 'ACADEMY';
+  timezone: string;
+  currency: string;
+  status: 'ACTIVE' | 'SUSPENDED';
+  createdAt: IsoDateTime;
+  updatedAt: IsoDateTime;
+  myRoles: string[];
+  // Khoá quyền (packages/shared PERMISSIONS), đã sắp xếp.
+  myPermissions: string[];
+}
+
 // ======================= Bảng giá (catalog) =======================
 
 // catalog/categories.ts — dòng database trả nguyên.

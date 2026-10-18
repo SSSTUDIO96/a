@@ -349,7 +349,7 @@ describe('quyền', () => {
       request(app)
         .put(url(orgA, '/travel-fee-policy'))
         .set(bearer(artistA))
-        .send({ defaultMode: 'FIXED', fixedAmount: 1, perKmAmount: 0, freeKm: 0, minimumAmount: 0, roundTrip: false }),
+        .send({ defaultMode: 'FIXED', fixedAmount: 1, perKmAmount: 0, freeKm: 0, minimumAmount: 0, roundTrip: false, tiers: [] }),
     ];
     const statuses = (await Promise.all(denied)).map((r) => r.status);
     expect(statuses).toEqual(denied.map(() => 403));
@@ -422,7 +422,7 @@ describe('cách ly tổ chức', () => {
       request(app)
         .put(url(orgA, '/travel-fee-policy'))
         .set(bearer(ownerB))
-        .send({ defaultMode: 'FIXED', fixedAmount: 1, perKmAmount: 0, freeKm: 0, minimumAmount: 0, roundTrip: false }),
+        .send({ defaultMode: 'FIXED', fixedAmount: 1, perKmAmount: 0, freeKm: 0, minimumAmount: 0, roundTrip: false, tiers: [] }),
     ]);
     expect(r.map((x) => x.status)).toEqual(r.map(() => 404));
     const subjectsB = await request(app).get(url(orgB, '/makeup-subjects')).set(bearer(ownerB)).expect(200);
@@ -433,7 +433,7 @@ describe('cách ly tổ chức', () => {
     await request(app)
       .put(url(orgA, '/travel-fee-policy'))
       .set(bearer(ownerA))
-      .send({ defaultMode: 'FIXED', fixedAmount: 150_000, perKmAmount: 0, freeKm: 0, minimumAmount: 0, roundTrip: false })
+      .send({ defaultMode: 'FIXED', fixedAmount: 150_000, perKmAmount: 0, freeKm: 0, minimumAmount: 0, roundTrip: false, tiers: [] })
       .expect(200);
     const polB = await request(app).get(url(orgB, '/travel-fee-policy')).set(bearer(ownerB)).expect(200);
     expect(polB.body).toMatchObject({ defaultMode: 'MANUAL', fixedAmount: 0 });
@@ -503,8 +503,8 @@ describe('cách tính phí di chuyển', () => {
     const owner = await registerUser(app, 'chu-phi');
     const org = await createOrg(app, owner, 'phi');
     const g = await request(app).get(url(org, '/travel-fee-policy')).set(bearer(owner)).expect(200);
-    expect(g.body).toMatchObject({ defaultMode: 'MANUAL', fixedAmount: 0, perKmAmount: 0, freeKm: 0, minimumAmount: 0, roundTrip: false });
-    const body = { defaultMode: 'PER_KM', fixedAmount: 0, perKmAmount: 7_000, freeKm: 2.5, minimumAmount: 50_000, roundTrip: true };
+    expect(g.body).toMatchObject({ defaultMode: 'MANUAL', fixedAmount: 0, perKmAmount: 0, freeKm: 0, minimumAmount: 0, roundTrip: false, tiers: [] });
+    const body = { defaultMode: 'PER_KM', fixedAmount: 0, perKmAmount: 7_000, freeKm: 2.5, minimumAmount: 50_000, roundTrip: true, tiers: [] };
     const p = await request(app).put(url(org, '/travel-fee-policy')).set(bearer(owner)).send(body).expect(200);
     expect(p.body).toMatchObject(body);
     const g2 = await request(app).get(url(org, '/travel-fee-policy')).set(bearer(owner)).expect(200);
@@ -518,7 +518,7 @@ describe('cách tính phí di chuyển', () => {
   });
 
   it('số âm, km quá 2 số lẻ, cách tính lạ, thiếu trường → 400', async () => {
-    const base = { defaultMode: 'FIXED', fixedAmount: 100_000, perKmAmount: 0, freeKm: 0, minimumAmount: 0, roundTrip: false };
+    const base = { defaultMode: 'FIXED', fixedAmount: 100_000, perKmAmount: 0, freeKm: 0, minimumAmount: 0, roundTrip: false, tiers: [] };
     const send = (b: Body) => request(app).put(url(orgA, '/travel-fee-policy')).set(bearer(ownerA)).send(b);
     const bad: Body[] = [
       { ...base, fixedAmount: -1 },
@@ -535,7 +535,139 @@ describe('cách tính phí di chuyển', () => {
   });
 });
 
+describe('phí di chuyển theo bậc km', () => {
+  const policy = (tiers: Body[], defaultMode = 'TIERED') => ({
+    defaultMode,
+    fixedAmount: 0,
+    perKmAmount: 0,
+    freeKm: 0,
+    minimumAmount: 0,
+    roundTrip: false,
+    tiers,
+  });
+
+  it('đặt bậc (trả theo km bắt đầu), sửa thay toàn bộ, nhật ký trước → sau', async () => {
+    const owner = await registerUser(app, 'chu-bac');
+    const org = await createOrg(app, owner, 'bac');
+    const put = (b: Body) => request(app).put(url(org, '/travel-fee-policy')).set(bearer(owner)).send(b);
+    const first = await put(
+      policy([
+        { fromKm: 5, toKm: '15.5', amount: 100_000 },
+        { fromKm: 0, toKm: 5, amount: 0 },
+        { fromKm: '15.5', toKm: null, amount: 250_000 },
+      ]),
+    ).expect(200);
+    expect(first.body.defaultMode).toBe('TIERED');
+    expect(first.body.tiers).toEqual([
+      { fromKm: 0, toKm: 5, amount: 0 },
+      { fromKm: 5, toKm: 15.5, amount: 100_000 },
+      { fromKm: 15.5, toKm: null, amount: 250_000 },
+    ]);
+    const g = await request(app).get(url(org, '/travel-fee-policy')).set(bearer(owner)).expect(200);
+    expect(g.body.tiers).toEqual(first.body.tiers);
+    await put(policy([{ fromKm: 0, toKm: 10, amount: 50_000 }])).expect(200);
+    const rows = await deps.db.travelFeeTier.findMany({ where: { organizationId: org } });
+    expect(rows.map((r) => [r.fromKm.toNumber(), r.toKm?.toNumber() ?? null, r.amount])).toEqual([[0, 10, 50_000n]]);
+    const logs = await request(app).get(url(org, '/audit-logs')).set(bearer(owner)).expect(200);
+    const log = logs.body.items.find((l: { action: string }) => l.action === 'travel_policy.updated');
+    expect(log.data.before.tiers).toHaveLength(3);
+    expect(log.data.after.tiers).toEqual([{ fromKm: 0, toKm: 10, amount: 50_000 }]);
+    // Đổi sang cách tính khác với bảng bậc rỗng thì xoá hết bậc.
+    await put(policy([], 'MANUAL')).expect(200);
+    expect(await deps.db.travelFeeTier.count({ where: { organizationId: org } })).toBe(0);
+  });
+
+  it('bậc chồng nhau, km kết thúc ≤ km bắt đầu, TIERED không có bậc, km âm → 400; bậc cũ giữ nguyên', async () => {
+    const owner = await registerUser(app, 'chu-bac2');
+    const org = await createOrg(app, owner, 'bac2');
+    const put = (b: Body) => request(app).put(url(org, '/travel-fee-policy')).set(bearer(owner)).send(b);
+    await put(policy([{ fromKm: 0, toKm: 10, amount: 1 }])).expect(200);
+    const overlap = await put(
+      policy([
+        { fromKm: 0, toKm: 10, amount: 1 },
+        { fromKm: '9.99', toKm: 20, amount: 2 },
+      ]),
+    );
+    expect(overlap.status).toBe(400);
+    expect(overlap.body.error.message).toBe('Bậc 0–10 km và bậc 9.99–20 km chồng nhau');
+    const openEnded = await put(
+      policy([
+        { fromKm: 0, toKm: null, amount: 1 },
+        { fromKm: 30, toKm: 40, amount: 2 },
+      ]),
+    );
+    expect(openEnded.status).toBe(400);
+    expect(openEnded.body.error.message).toContain('chồng nhau');
+    const reversed = await put(policy([{ fromKm: 10, toKm: 10, amount: 1 }]));
+    expect(reversed.status).toBe(400);
+    expect(reversed.body.error.message).toBe('Bậc 10–10 km: km kết thúc phải lớn hơn km bắt đầu');
+    const empty = await put(policy([]));
+    expect(empty.status).toBe(400);
+    expect(empty.body.error.message).toContain('ít nhất một bậc');
+    for (const t of [
+      { fromKm: -1, toKm: 5, amount: 1 },
+      { fromKm: 0, toKm: 5.123, amount: 1 },
+      { fromKm: 0, toKm: 5, amount: -1 },
+      { fromKm: 0, toKm: 5, amount: 1.5 },
+    ]) {
+      expect((await put(policy([t]))).status, JSON.stringify(t)).toBe(400);
+    }
+    const rows = await deps.db.travelFeeTier.findMany({ where: { organizationId: org } });
+    expect(rows.map((r) => [r.fromKm.toNumber(), r.toKm?.toNumber() ?? null])).toEqual([[0, 10]]);
+  });
+
+  it('database chặn bậc chồng nhau khi ghi thẳng (lớp hai)', async () => {
+    const owner = await registerUser(app, 'chu-bac3');
+    const org = await createOrg(app, owner, 'bac3');
+    await deps.db.travelFeeTier.create({ data: { organizationId: org, fromKm: 0, toKm: 10, amount: 1n } });
+    await expect(deps.db.travelFeeTier.create({ data: { organizationId: org, fromKm: 5, toKm: 20, amount: 1n } })).rejects.toThrow();
+    await expect(deps.db.travelFeeTier.create({ data: { organizationId: org, fromKm: 30, toKm: 20, amount: 1n } })).rejects.toThrow();
+  });
+
+  it('tổ chức B không đọc/sửa được bậc của A', async () => {
+    const ownerC = await registerUser(app, 'chu-bac-a');
+    const orgC = await createOrg(app, ownerC, 'bac-a');
+    await request(app)
+      .put(url(orgC, '/travel-fee-policy'))
+      .set(bearer(ownerC))
+      .send(policy([{ fromKm: 0, toKm: 7, amount: 70_000 }]))
+      .expect(200);
+    await request(app).get(url(orgC, '/travel-fee-policy')).set(bearer(ownerB)).expect(404);
+    await request(app)
+      .put(url(orgC, '/travel-fee-policy'))
+      .set(bearer(ownerB))
+      .send(policy([{ fromKm: 0, toKm: 1, amount: 1 }]))
+      .expect(404);
+    const polB = await request(app).get(url(orgB, '/travel-fee-policy')).set(bearer(ownerB)).expect(200);
+    expect(JSON.stringify(polB.body.tiers)).not.toContain('70000');
+    const rowsC = await deps.db.travelFeeTier.findMany({ where: { organizationId: orgC } });
+    expect(rowsC.map((r) => r.amount)).toEqual([70_000n]);
+  });
+});
+
 describe('gói dịch vụ', () => {
+  it('includedKm: nhận số hoặc chuỗi ≤ 2 số lẻ, null về mặc định tổ chức; âm hoặc quá 2 số lẻ → 400', async () => {
+    const p = await newPackage(ownerA, orgA, { includedKm: '12.5', locationTypes: ['CUSTOMER_HOME'] });
+    const g = await request(app).get(url(orgA, `/packages/${p.id}`)).set(bearer(ownerA)).expect(200);
+    expect(g.body.includedKm).toBe(12.5);
+    const p2 = await request(app).patch(url(orgA, `/packages/${p.id}`)).set(bearer(ownerA)).send({ includedKm: 20 }).expect(200);
+    expect(p2.body.includedKm).toBe(20);
+    const p3 = await request(app).patch(url(orgA, `/packages/${p.id}`)).set(bearer(ownerA)).send({ includedKm: null }).expect(200);
+    expect(p3.body.includedKm).toBeNull();
+    const neg = await request(app).patch(url(orgA, `/packages/${p.id}`)).set(bearer(ownerA)).send({ includedKm: -1 });
+    expect(neg.status).toBe(400);
+    expect(JSON.stringify(neg.body.error.details)).toContain('Số km không được âm');
+    await request(app).patch(url(orgA, `/packages/${p.id}`)).set(bearer(ownerA)).send({ includedKm: '3.333' }).expect(400);
+    const create = await request(app)
+      .post(url(orgA, '/packages'))
+      .set(idem())
+      .set(bearer(ownerA))
+      .send({ code: `KM-${uniq()}`, name: 'G', durationMinutes: 60, listPrice: 1, includedKm: -0.5 });
+    expect(create.status).toBe(400);
+    const row = await deps.db.servicePackage.findUniqueOrThrow({ where: { id: p.id } });
+    expect(row.includedKm).toBeNull();
+  });
+
   it('gói có nhân vật, địa điểm, dịch vụ đã gồm và dịch vụ phụ tick thêm kèm giá hiện hành', async () => {
     const subj = await request(app).post(url(orgA, '/makeup-subjects')).set(idem()).set(bearer(ownerA)).send({ name: `Cô dâu Huế ${uniq()}` }).expect(201);
     const main = await newService(ownerA, orgA, { kind: 'MAIN', listPrice: 2_000_000 });
