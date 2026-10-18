@@ -64,7 +64,7 @@ export function PackageDialog({ orgId, target, subjects, services, perms, onClos
   const createKey = useStableKey();
   const priceKey = useStableKey();
   const bodyRef = useRef<HTMLDivElement>(null);
-  useFirstErrorFocus(bodyRef, errors);
+  const focusFirstError = useFirstErrorFocus(bodyRef);
 
   // Bảng tiền công: chỉ khi sửa và có payroll.read.
   const packageId = target.kind === 'edit' ? target.pkg.id : null;
@@ -104,13 +104,17 @@ export function PackageDialog({ orgId, target, subjects, services, perms, onClos
     const m = mapSaveError(err, step, { includedCount: form.included.length, sentRates });
     setErrors(m.fields);
     setBanner(m.banner);
+    focusFirstError();
   }
 
   async function save() {
     setBanner(null);
     const v = validatePackageForm(form, mode);
     setErrors(v);
-    if (Object.keys(v).length > 0 || inputErrors.any()) return;
+    if (Object.keys(v).length > 0 || inputErrors.any()) {
+      focusFirstError();
+      return;
+    }
     setSaving(true);
     try {
       if (mode === 'create') {

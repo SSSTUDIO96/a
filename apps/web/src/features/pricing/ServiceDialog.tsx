@@ -59,7 +59,7 @@ export function ServiceDialog({
   const createKey = useStableKey();
   const priceKey = useStableKey();
   const bodyRef = useRef<HTMLDivElement>(null);
-  useFirstErrorFocus(bodyRef, errors);
+  const focusFirstError = useFirstErrorFocus(bodyRef);
 
   const serviceId = target.kind === 'edit' ? target.service.id : null;
   const showPay = perms.payrollRead;
@@ -97,13 +97,17 @@ export function ServiceDialog({
     const m = mapSaveError(err, step, { sentRates });
     setErrors(m.fields);
     setBanner(m.banner);
+    focusFirstError();
   }
 
   async function save() {
     setBanner(null);
     const v = validateServiceForm(form);
     setErrors(v);
-    if (Object.keys(v).length > 0 || inputErrors.any()) return;
+    if (Object.keys(v).length > 0 || inputErrors.any()) {
+      focusFirstError();
+      return;
+    }
     setSaving(true);
     try {
       if (mode === 'create') {

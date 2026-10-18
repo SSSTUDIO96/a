@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="ten" content="Khách hàng — R&D v4">
+<title>Khách hàng — R&D v4</title>
+<link rel="stylesheet" href="v4-chung/v4.css">
+<style>
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none;padding:0 18px}
+.tabs a{padding:12px 12px;color:var(--muted);text-decoration:none;font-weight:500;border-bottom:2px solid transparent;white-space:nowrap}
+.tabs a.on{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
+.hd-r{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;padding:12px 18px;border-top:1px solid var(--line-2);text-decoration:none;color:var(--text);align-items:center}
+.hd-r:first-child{border-top:0}
+.hd-r .n{font-weight:600}
+.hd-r .d{font-size:12.5px;color:var(--muted)}
+.hd-r .p{font-weight:700;text-align:right}
+.hd-r .rt{display:flex;flex-direction:column;align-items:flex-end;gap:4px;grid-row:span 2}
+.tl2{padding:4px 18px 12px}
+.ev{display:grid;grid-template-columns:86px minmax(0,1fr) auto;gap:2px 12px;padding:10px 0;border-top:1px solid var(--line-2);align-items:start}
+.ev:first-child{border-top:0}
+.ev .t{font-weight:700;font-size:13px}
+.ev .t small{display:block;font-weight:400;color:var(--muted);font-size:12px}
+.ev .n{font-weight:600}
+.ev .d{font-size:12.5px;color:var(--muted);white-space:nowrap}
+.kv{display:grid;grid-template-columns:140px minmax(0,1fr);gap:8px 16px;padding:12px 18px}
+.kv dt{color:var(--muted);font-weight:500}
+.kv dd{overflow-wrap:anywhere}
+.cg{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.cc{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:flex;gap:12px;align-items:center;text-decoration:none;color:var(--text)}
+.cc.sel{border-color:var(--accent);background:var(--accent-soft)}
+.cc b{display:block;font-weight:600}
+.cc span{font-size:12.5px;color:var(--muted)}
+.pager{display:flex;gap:6px;justify-content:flex-end;align-items:center;padding:10px 14px;border-top:1px solid var(--line);flex-wrap:wrap}
+.bigname{font-size:20px;font-weight:700;overflow-wrap:anywhere}
+@media (max-width:640px){
+  .kv{grid-template-columns:1fr;gap:2px;padding:10px 14px}
+  .kv dd{margin-bottom:8px}
+  .hd-r{padding:12px 14px}
+  .tl2{padding:4px 14px 10px}
+  .ev{grid-template-columns:70px minmax(0,1fr)}
+  .ev .tag{grid-column:2}
+  .cg{grid-template-columns:minmax(0,1fr)}
+  .tabs{padding:0 8px}
+}
+</style>
+</head>
+<body>
+<script src="v4-chung/v4.js"></script>
+<script>
+const {icon,av,vnd,tip,man,mucLuc}=V4;
+const f=(s)=>` data-f="${s}"`;
+// GET /customers?page&pageSize&q → items[{id, fullName, phone, email, note, createdAt, updatedAt}], total
+const KH=[
+ ['Tôn Nữ Hoàng Bảo Ngọc Phương Thảo','0912 345 678','phuongthao.tnhbn@gmail.com','12/08/2026'],
+ ['Nguyễn Thị Mai','0903 778 221',null,'11/10/2026'],
+ ['Phạm Thu Trang','0986 410 552','trang.pham@gmail.com','09/10/2026'],
+ ['Đỗ Minh Ngọc','0355 902 113',null,'05/10/2026'],
+ ['Lê Bảo Châu','0868 120 334','baochau@gmail.com','02/10/2026'],
+ ['Trần Hải Yến','0977 663 019',null,'28/09/2026'],
+ ['Vũ Thanh Hương','0915 004 287',null,'21/09/2026'],
+ ['Hoàng Gia Linh','0398 551 662','gialinh.h@gmail.com','14/09/2026'],
+];
+// GET /contracts?customerId → items[{code, status, eventDate, total, depositRequired, confirmedAt}]
+const HD=[
+ ['HD-000151','DRAFT','02/01/2027',1500000,'Chụp ảnh cưới'],
+ ['HD-000142','CONFIRMED','24/10/2026',5300000,'Ngày cưới'],
+ ['HD-000098','COMPLETED','15/08/2026',1800000,'Ăn hỏi'],
+];
+const ST={DRAFT:['draft','Nháp'],CONFIRMED:['ok','Đã xác nhận'],COMPLETED:['ok','Hoàn thành'],CANCELLED:['huy','Đã huỷ']};
+// GET /contracts/:id → appointments[{code, startsAt, status, contractLineId}] (+ tên dòng gói từ lines[])
+const LH=[
+ ['24/10/2026','04:30','LH-000412','Cô dâu – Ngày cưới','HD-000142','CONFIRMED'],
+ ['24/10/2026','05:00','LH-000413','Mẹ – Trang điểm nhẹ nhàng','HD-000142','CONFIRMED'],
+ ['24/10/2026','06:00','LH-000414','Phù dâu × 2','HD-000142','CONFIRMED'],
+ ['15/08/2026','05:30','LH-000301','Cô dâu – Ăn hỏi','HD-000098','COMPLETED'],
+];
+const tagHD=s=>`<span class="tag ${ST[s][0]}"${f('status → CONTRACT_STATUS_LABELS')}>${ST[s][1]}</span>`;
+const WS={CONFIRMED:['ok','Đã xác nhận'],COMPLETED:['ok','Hoàn thành']};
+const tagLH=s=>`<span class="tag ${WS[s][0]}"${f('appointments[].status → WORK_STATUS_LABELS')}>${WS[s][1]}</span>`;
+const K0=KH[0];
+
+function theThongTin(edit){
+  if(edit) return `<div class="card"><div class="ch2"><h2>Thông tin khách</h2></div><div class="cb">
+   <div class="set wide"><label>Họ và tên<span class="req">*</span></label><input class="ctl"${f('fullName')} value="${K0[0]}"></div>
+   <div class="set wide"><label>Số điện thoại ${tip('Tự chuẩn hoá về 0xxxxxxxxx. Nhập +84 cũng được.')}</label><input class="ctl"${f('phone')} value="${K0[1]}"></div>
+   <div class="set wide"><label>Email</label><input class="ctl"${f('email')} value="${K0[2]}"></div>
+   <div class="set wide stack"><label>Ghi chú</label><textarea class="ctl" rows="3"${f('note')}>Da nhạy cảm, không dùng keo dán mi.</textarea></div></div>
+   <div class="cf"><button class="btn">Huỷ</button><button class="btn pri"${f('PATCH /customers/:id')}>Lưu</button></div></div>`;
+  return `<div class="card"><div class="ch2">${av(K0[0],false)}<h2 class="bigname"${f('fullName')}>${K0[0]}</h2><a class="btn sm" href="#c-sua">Sửa</a></div>
+   <dl class="kv"><dt>Số điện thoại</dt><dd class="num"${f('phone')}><a href="tel:0912345678">${K0[1]}</a></dd><dt>Email</dt><dd${f('email')}>${K0[2]}</dd>
+   <dt>Ghi chú</dt><dd${f('note')}>Da nhạy cảm, không dùng keo dán mi.</dd><dt>Khách từ</dt><dd${f('createdAt')}>${K0[3]}</dd></dl></div>`;
+}
+function theHopDong(){
+  return `<div class="card"><div class="ch2"><h2>Hợp đồng</h2><small>${HD.length} hợp đồng</small><a class="btn sm pri" href="#">${icon('plus','s')}Lập hợp đồng</a></div>
+   <div>${HD.map(([c,s,d,t,g])=>`<a class="hd-r" href="#"><span class="n"${f('code')}>${c} · ${g}</span><span class="rt"><span class="p num"${f('total')}>${vnd(t)}</span>${tagHD(s)}</span><span class="d"${f('eventDate')}>Sự kiện ${d}</span></a>`).join('')}</div></div>`;
+}
+function theLich(){
+  return `<div class="card"><div class="ch2"><h2>Lịch makeup</h2><small>từ các hợp đồng</small> ${tip('Chỉ hiện lịch gắn với hợp đồng của khách. Lịch tạo lẻ (không có hợp đồng) chưa lấy được theo khách — xem đề xuất trong bản vẽ.')}</div>
+   <div class="tl2">${LH.map(([d,h,c,n,hd,s])=>`<div class="ev"><span class="t"${f('appointments[].startsAt')}>${h}<small>${d}</small></span><span><span class="n"${f('lines[].name (dòng gắn lịch)')}>${n}</span><br><span class="d"${f('appointments[].code · contract.code')}>${c} · ${hd}</span></span>${tagLH(s)}</div>`).join('')}</div></div>`;
+}
+function listKH(sel,phan){
+  return `<div class="card left"><div class="sch"><div class="srch">${icon('search','s')}<input class="ctl" placeholder="Tìm theo tên hoặc số điện thoại"${f('GET /customers?q')}></div></div>
+   <div class="lh"><span>${phan||'Mới thêm gần đây'}</span><span class="sp"></span><span${f('total')}>128 khách</span></div>
+   <div class="ls">${KH.map(([n,p],i)=>`<a href="#c-ct" class="lr ${i===sel?'sel':''}">${av(n,false)}<span class="n"${f('fullName')}>${n}</span><span class="d num"${f('phone')}>${p}</span></a>`).join('')}
+   <div style="padding:12px 14px"><button class="btn" style="width:100%"${f('page + 1')}>Xem thêm 20 khách</button></div></div></div>`;
+}
+
+/* A — Bảng + trang chi tiết có tab */
+man('a',{nav:'khach',title:'Khách hàng',act:'+'},`
+<div class="ph"><h1>Khách hàng</h1><span class="sp"></span><button class="btn pri">${icon('plus','s')}Khách mới</button></div>
+<div class="card"><div class="sch"><div class="srch" style="max-width:420px">${icon('search','s')}<input class="ctl" placeholder="Tìm theo tên hoặc số điện thoại"></div></div>
+<table class="tbl m-cards"><thead><tr><th>Khách hàng</th><th>Số điện thoại</th><th class="t-hide">Email</th><th>Khách từ</th></tr></thead><tbody>
+${KH.map(([n,p,e,d])=>`<tr><td><div class="who">${av(n,false,'sm')}<b${f('fullName')}>${n}</b></div></td><td class="num" data-l="SĐT"${f('phone')}>${p}</td><td class="t-hide"${f('email')}>${e||'<span class="faint">—</span>'}</td><td data-l="Khách từ"${f('createdAt')}>${d}</td></tr>`).join('')}
+</tbody></table><div class="pager"><span class="fx">1–20 / 128</span><button class="btn sm">‹</button><button class="btn sm">›</button></div></div>`);
+man('a-ct',{nav:'khach',title:'Khách hàng',back:'#a'},`
+<div class="ph"><a class="btn icon" href="#a">${icon('back')}</a><h1>${K0[0]}</h1></div>
+<div class="card"><div class="tabs"><a class="on">Thông tin</a><a>Hợp đồng (3)</a><a>Lịch makeup (4)</a></div>
+<dl class="kv"><dt>Số điện thoại</dt><dd>${K0[1]}</dd><dt>Email</dt><dd>${K0[2]}</dd><dt>Ghi chú</dt><dd>Da nhạy cảm, không dùng keo dán mi.</dd><dt>Khách từ</dt><dd>${K0[3]}</dd></dl>
+<div class="cf"><button class="btn">Sửa</button></div></div>`);
+
+/* B — Thẻ + ngăn kéo */
+man('b',{nav:'khach',title:'Khách hàng',act:'+'},`
+<div class="ph"><h1>Khách hàng</h1><div class="srch" style="width:320px">${icon('search','s')}<input class="ctl" placeholder="Tìm theo tên hoặc số điện thoại"></div><span class="sp"></span><button class="btn pri">${icon('plus','s')}Khách mới</button></div>
+<div class="srch m-only" style="margin-bottom:12px">${icon('search','s')}<input class="ctl" placeholder="Tìm theo tên hoặc số điện thoại"></div>
+<div class="cg">${KH.map(([n,p],i)=>`<a class="cc ${i===0?'sel':''}" href="#b-ct">${av(n,false)}<div style="min-width:0"><b>${n}</b><span class="num">${p}</span></div></a>`).join('')}</div>`);
+man('b-ct',{nav:'khach',title:'Khách hàng',act:'+'},`
+<div class="ph"><h1>Khách hàng</h1></div>
+<div class="cg">${KH.map(([n,p],i)=>`<a class="cc ${i===0?'sel':''}">${av(n,false)}<div style="min-width:0"><b>${n}</b><span class="num">${p}</span></div></a>`).join('')}</div>
+<div class="drawer-bg"></div><aside class="drawer" style="width:min(520px,100%)"><div class="dh"><h2>Khách hàng</h2><button class="btn icon ghost">${icon('x')}</button></div>
+<div class="db vstack" style="padding-top:14px">${theThongTin()}${theHopDong()}${theLich()}</div></aside>`);
+
+/* C — Hai cột (ĐỀ XUẤT) */
+man('c',{nav:'khach',title:'Khách hàng',act:'+',mobile:'list'},`
+<div class="ph"><h1>Khách hàng</h1><span class="sp"></span><a class="btn pri" href="#c-moi">${icon('plus','s')}Khách mới</a></div>
+<div class="c2">${listKH(0)}<div class="right">${theThongTin()}${theHopDong()}${theLich()}</div></div>`);
+man('c-ct',{nav:'khach',title:'Khách hàng',back:'#c',mobile:'detail'},`
+<div class="ph"><h1>Khách hàng</h1><span class="sp"></span><a class="btn pri" href="#c-moi">${icon('plus','s')}Khách mới</a></div>
+<div class="c2">${listKH(0)}<div class="right">${theThongTin()}${theHopDong()}${theLich()}</div></div>`);
+man('c-sua',{nav:'khach',title:'Sửa khách',back:'#c-ct',mobile:'detail'},`
+<div class="ph"><h1>Khách hàng</h1></div>
+<div class="c2">${listKH(0)}<div class="right">${theThongTin(true)}${theHopDong()}</div></div>`);
+man('c-tim',{nav:'khach',title:'Khách hàng',act:'+',mobile:'list'},`
+<div class="ph"><h1>Khách hàng</h1><span class="sp"></span><a class="btn pri" href="#c-moi">${icon('plus','s')}Khách mới</a></div>
+<div class="c2"><div class="card left"><div class="sch"><div class="srch">${icon('search','s')}<input class="ctl" value="0912 34"${f('GET /customers?q (≥3 số → tìm theo SĐT)')}></div></div>
+<div class="lh"><span>Kết quả</span><span class="sp"></span><span>1 khách</span></div>
+<a href="#c-ct" class="lr sel">${av(K0[0],false)}<span class="n">${K0[0]}</span><span class="d num"><b>0912 34</b>5 678</span></a></div>
+<div class="right">${theThongTin()}${theHopDong()}${theLich()}</div></div>`);
+man('c-moi',{nav:'khach',title:'Khách mới',back:'#c',mobile:'detail'},`
+<div class="ph"><h1>Khách hàng</h1></div>
+<div class="c2">${listKH(0)}<div class="right"><div class="card" style="height:300px"></div></div></div>
+<div class="dlg-bg"><div class="dlg"><div class="dh"><h2>Khách mới</h2><button class="btn icon ghost">${icon('x')}</button></div>
+<div class="db"><div class="set wide"><label>Họ và tên<span class="req">*</span></label><input class="ctl"${f('POST /customers {fullName}')} placeholder="Ví dụ: Nguyễn Thị Mai"></div>
+<div class="set wide"><label>Số điện thoại</label><input class="ctl err"${f('phone')} value="0912 345"><div></div><div class="errmsg">Số điện thoại không hợp lệ (ví dụ đúng: 0912 345 678 hoặc +84 912 345 678)</div></div>
+<div class="set wide"><label>Email</label><input class="ctl"${f('email')}></div>
+<div class="set wide stack"><label>Ghi chú</label><textarea class="ctl" rows="2"${f('note')} placeholder="Ví dụ: da nhạy cảm, hẹn qua Zalo"></textarea></div></div>
+<footer><button class="btn">Huỷ</button><button class="btn pri">Thêm khách</button></footer></div></div>`);
+man('c-trang-thai',{nav:'khach',title:'Trạng thái'},`
+<div class="ph"><h1>Trạng thái của màn Khách hàng</h1></div>
+<div class="states">
+ <div class="card"><h4>Đang tải</h4>${[1,2,3,4].map(()=>`<div style="display:flex;gap:10px;align-items:center;padding:9px 0"><span class="sk" style="width:32px;height:32px;border-radius:50%"></span><span style="flex:1;display:flex;flex-direction:column;gap:6px"><span class="sk" style="width:70%"></span><span class="sk" style="width:40%;height:10px"></span></span></div>`).join('')}</div>
+ <div class="card"><h4>Rỗng</h4><div class="empty"><span>Chưa có khách nào. Khách cũng tự được thêm khi lập hợp đồng.</span><a class="btn pri sm" href="#c-moi">Thêm khách</a></div></div>
+ <div class="card"><h4>Không tìm thấy</h4><div class="empty"><span>Không có khách nào khớp "0987 1". Kiểm tra lại số hoặc thêm khách mới.</span><a class="btn sm" href="#c-moi">Thêm khách "0987 1…"</a></div></div>
+ <div class="card"><h4>403 / lỗi</h4><div class="bn red">${icon('lock','s')}<span>Bạn không có quyền xem hợp đồng. Thẻ "Hợp đồng" và "Lịch makeup" được ẩn.</span></div><div class="bn red" style="margin-top:8px">${icon('warn','s')}<span>Không kết nối được máy chủ. <a href="#">Thử lại</a></span></div></div>
+</div>`);
+mucLuc('Khách hàng — R&D vòng 4','Ba phương án cùng họ C. Bấm "Hiện trường dữ liệu" để thấy trường của từng ô.',[
+ ['Phương án A — Bảng + trang chi tiết có tab',[['a','Danh sách dạng bảng'],['a-ct','Chi tiết khách (tab)']]],
+ ['Phương án B — Thẻ + ngăn kéo phải',[['b','Lưới thẻ khách'],['b-ct','Ngăn kéo chi tiết']]],
+ ['Phương án C — Hai cột như Hợp đồng C (đề xuất, đã chọn thay)',[['c','Danh sách + chi tiết'],['c-ct','Chi tiết (điện thoại: màn con)'],['c-tim','Tìm theo số điện thoại'],['c-sua','Sửa thông tin'],['c-moi','Khách mới (có lỗi số điện thoại)'],['c-trang-thai','Trạng thái tải / rỗng / lỗi / 403']]],
+]);
+V4.boot();
+</script>
+</body>
+</html>

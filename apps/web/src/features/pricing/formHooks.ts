@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, type RefObject } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { newIdempotencyKey } from '../../api/idempotency';
-import type { FormErrors } from './logic';
 
 // Lỗi tự phát hiện của ô tiền / ô số (gõ chữ, số lẻ…): ghi lại theo khoá ô để chặn lưu cho tới khi sửa xong.
 export function useInputErrors() {
@@ -26,13 +25,16 @@ export function useStableKey() {
   );
 }
 
-// Bản vẽ mục 5: lỗi 400 → cuộn tới ô lỗi đầu tiên.
-export function useFirstErrorFocus(container: RefObject<HTMLElement | null>, errors: FormErrors) {
+// Bản vẽ mục 5: lỗi 400 → cuộn tới ô lỗi đầu tiên. Chỉ chạy sau mỗi lần bấm Lưu bị lỗi (gọi `focusFirstError`),
+// không chạy khi người dùng đang gõ sửa lỗi.
+export function useFirstErrorFocus(container: RefObject<HTMLElement | null>) {
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
-    if (Object.keys(errors).length === 0) return;
+    if (attempt === 0) return;
     const el = container.current?.querySelector<HTMLElement>('[aria-invalid="true"], .pr-gerr, .pr-banner');
     if (!el) return;
     el.scrollIntoView?.({ block: 'center' });
     if (el.matches('input, select, textarea')) el.focus({ preventScroll: true });
-  }, [container, errors]);
+  }, [container, attempt]);
+  return useCallback(() => setAttempt((n) => n + 1), []);
 }

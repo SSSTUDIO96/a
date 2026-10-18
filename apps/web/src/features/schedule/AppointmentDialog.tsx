@@ -31,7 +31,7 @@ import {
   WorkStatusTag,
 } from '../../ui';
 import { ConflictBanner } from './ConflictBanner';
-import { conflictsOf, kindText, type ScheduleAccess, type StaffLane } from './model';
+import { conflictsOf, isMakeupStaff, kindText, type ScheduleAccess, type StaffLane } from './model';
 import { cx, LOCATION_LABELS, StaffAvatars, staffNames } from './parts';
 import { StatusActions } from './StatusActions';
 import { addDays, dayKeyOf, dayLabel, ddmm, formatDuration, hhmm, vnIso, weekdayLong, type DayKey } from './time';
@@ -161,7 +161,7 @@ export function AppointmentDialog({
     const t = window.setTimeout(() => {
       if (which === 'time') startRef.current?.focus();
       else {
-        staffRef.current?.scrollIntoView({ block: 'nearest' });
+        staffRef.current?.scrollIntoView?.({ block: 'nearest' });
         staffRef.current?.querySelector<HTMLElement>('input,button')?.focus();
       }
     }, 0);
@@ -182,7 +182,9 @@ export function AppointmentDialog({
   function handleError(err: unknown) {
     const list = conflictsOf(err);
     if (list) {
-      setConflictState(list, userMessage(err));
+      // Máy chủ ghi tên tài khoản (staffName); màn dùng tên hiển thị của thợ như trên lưới.
+      const named = list.map((c) => ({ ...c, staffName: lanes.find((l) => l.membershipId === c.membershipId)?.name ?? c.staffName }));
+      setConflictState(named, userMessage(err));
       return;
     }
     const fe = fieldErrors(err);
@@ -200,7 +202,7 @@ export function AppointmentDialog({
     } else {
       // Đã ở chế độ nhập: chạy lại hiệu ứng đặt tiêu điểm.
       const t = which === 'time' ? startRef.current : staffRef.current?.querySelector<HTMLElement>('input,button');
-      staffRef.current?.scrollIntoView({ block: 'nearest' });
+      if (which === 'staff') staffRef.current?.scrollIntoView?.({ block: 'nearest' });
       t?.focus();
       pendingFocus.current = null;
     }
@@ -538,7 +540,7 @@ function FormBody({
             onChange={(e) => e.target.value && update({ day: e.target.value })}
           />
         </SettingRow>
-        <SettingRow label="Giờ" required tip="Giờ kết thúc sớm hơn giờ bắt đầu nghĩa là ca kết thúc vào ngày hôm sau.">
+        <SettingRow label="Giờ" required controlWidth={300} tip="Giờ kết thúc sớm hơn giờ bắt đầu nghĩa là ca kết thúc vào ngày hôm sau.">
           <div className="ws-times">
             <TextInput
               ref={startRef}
@@ -648,8 +650,14 @@ function StaffChecklist({
   const options = useMemo(() => {
     const picked = new Set(form.staff.map((s) => s.membershipId));
     if (staffMembers) {
+      // Cùng luật với hàng thợ của lưới (buildStaffLanes): thợ đang nhận lịch có hồ sơ thợ hoặc vai trò thợ.
+      // Tổ chức chưa có ai như vậy (ví dụ studio một người) thì cho chọn mọi người đang nhận lịch.
+      const bookable = staffMembers.filter((m) => m.isBookable);
+      const makeup = bookable.filter((m) => isMakeupStaff(m));
+      const base = makeup.length > 0 ? makeup : bookable;
+      const ids = new Set(base.map((m) => m.membershipId));
       return staffMembers
-        .filter((m) => m.isBookable || picked.has(m.membershipId))
+        .filter((m) => ids.has(m.membershipId) || picked.has(m.membershipId))
         .map((m) => ({ id: m.membershipId, name: m.displayName, tier: m.tier?.name ?? null }));
     }
     return lanes.map((l) => ({ id: l.membershipId, name: l.name, tier: l.tierName }));

@@ -9,6 +9,17 @@
 
 ## 1. Kết luận
 
+> **Cập nhật cuối vòng (điều phối quyết thay anh Chiến, 18/10/2026):**
+> - Chọn **phương án C**. Bản vẽ Chặng 2: /home/user/a/docs/rnd/BAN-VE-C3-DAO-TAO.md
+> - Mẫu thiết kế: **không chọn một mẫu**; app cho người dùng chọn trong toàn bộ bộ mẫu.
+> - Thanh dưới điện thoại theo `Organization.kind`: trung tâm đào tạo (`ACADEMY`) dùng Lịch · Hợp đồng · Thu tiền · Khoá học · Thêm; tổ chức khác giữ như bản vẽ C mục 2.3.
+> - Bộ mẫu hiện có:
+>   - 10 mẫu chào mừng sang trọng hiện đại + 9 mẫu đợt 1.
+>   - 10 mẫu Feedback, dùng cho cả hợp đồng khoá học và dịch vụ.
+>   - **6 mẫu Lời chúc**.
+>   - Nhóm **4 phông chữ ký**.
+> - Khoá học có hai kiểu, **Một lớp / Nhiều lớp**. Số học viên tối đa nằm ở từng lớp, có trạng thái còn chỗ / sắp đầy / hết chỗ (mục 13).
+
 **Đề xuất màn hình: phương án C.**
 - Hai cột, giống màn Lập hợp đồng C anh đã chọn:
   - cột trái: danh mục khoá, hàng đợi cần thu hoặc bộ lọc;
@@ -383,6 +394,8 @@ Máy chủ (`apps/api/prisma/schema.prisma`) **đã có**: `OrganizationProfile`
 
 ### 10.6 Feedback
 
+> Đã thay bằng bảng `DesignCard` + `DesignCardPhoto` dùng chung cho thẻ chào mừng, feedback và lời chúc. Xem /home/user/a/docs/rnd/BAN-VE-C3-DAO-TAO.md mục 1.1 và 1.4. Bảng dưới giữ để đối chiếu.
+
 | Khoá | Ô | Trường | Trạng thái |
 |---|---|---|---|
 | `nd` | Nội dung lời khen | `Testimonial.content` | đề xuất |
@@ -418,3 +431,146 @@ Máy chủ (`apps/api/prisma/schema.prisma`) **đã có**: `OrganizationProfile`
   - Ô chọn khổ trên màn hiện chỉ có "Vuông · Dọc 4:5".
 - **Phần chưa bày:** chi tiết hộp "Bộ lọc" trên điện thoại (phương án C) và màn "Sửa mẫu điều khoản".
 - Chưa dựng thông số (Chặng 2). Chưa đụng vào `apps/web` và `apps/api`. Không chạy git.
+
+
+## 13. Bổ sung cuối vòng 3
+
+### 13.1 Phông chữ ký (nét mảnh, đều)
+
+Anh Chiến muốn thêm một nhóm phông kiểu chữ ký: nét mảnh, độ dày đều như bút bi.
+
+**Cách thử:**
+- 55 phông viết tay OFL trên Google Fonts.
+- Cửa lọc 1, dấu tiếng Việt: 6 chuỗi "Quỳnh Như · Thuý Tây · Nguyễn Hoa · Đặng Thị Ngọc Ánh · Phường Vạn Xuân · Nguyễn Trọng Chiến".
+- Cửa lọc 2, nét đều: đo trên ảnh chữ cỡ 300px.
+  - Lấy xương chữ, đo độ dày nét tại từng điểm.
+  - Tỉ lệ = nét dày (phân vị 90) / nét mảnh (phân vị 10). Càng gần 1 thì nét càng đều.
+- Sau đó R&D mở ảnh nhìn.
+
+| Phông | Dấu (đủ chữ) | Tỉ lệ nét | Kết luận | Lý do |
+|---|---|---|---|---|
+| Send Flowers | 6/6 | 1,34 | **Giữ — MP Chữ ký 1** | Đều nhất, dấu tách rõ |
+| Oooh Baby | 6/6 | 1,36 | **Giữ — MP Chữ ký 3** | Bút bi thẳng, dễ đọc |
+| Whisper | 6/6 | 2,40 | **Giữ — MP Chữ ký 2** | Kiểu ký tên bay; "Tây" đọc đúng |
+| Waterfall | 6/6 | 2,50 | **Giữ — MP Chữ ký 4** | Mảnh nhất; chữ nhỏ nên hệ số cỡ đặt 1,3 |
+| Bilbo | 6/6 | 2,11 | Dự phòng | Hơi đứng, giống chữ viết thường hơn chữ ký |
+| Moon Dance | 6/6 | 2,55 | Dự phòng | |
+| Allison | 6/6 | 2,55 | Dự phòng | Có nét đậm nhẹ ở chữ hoa |
+| Corinthia | 6/6 | 2,68 | Dự phòng | |
+| Ms Madi | 6/6 | 1,50 | Loại | Nét ngang của "T" chạm dấu mũ: "Tây" đọc thành "Tẩy" |
+| WindSong | 6/6 | 2,37 | Loại | "Tây" đọc thành "Tẩy"; chữ rộng, nét bay dài |
+| Sassy Frass | 6/6 | 2,50 | Loại | "Tây" đọc thành "Tẩy"; chữ nhỏ khó đọc |
+| Ingrid Darling | 6/6 | 2,55 | Loại | Nhiều nét xoắn trang trí, không ra chữ ký |
+| Ephesis, Hurricane | 6/6 | 2,57–2,83 | Loại | Nét đậm nhạt kiểu ngòi |
+| Island Moments, Inspiration, Birthstone Bounce, Bonheur Royale, Comforter, Grey Qo, Love Light, My Soul, Lavishly Yours, Qwigley, Estonia, Explora, Luxurious Script, Passions Conflict, MonteCarlo, Beau Rivage, Cherish, Mea Culpa, Comforter Brush, Babylonica, Ballet, The Nautigal, Arizonia, Caramel, Tapestry | 6/6 | 3,0–7,7 | Loại | Nét đậm nhạt rõ (kiểu ngòi calligraphy), không phải chữ ký nét đều |
+| Herr Von Muellerhoff, Monsieur La Doulaise, Mrs Saint Delafield, Mr De Haviland, League Script, Kristi, Rouge Script, Mr Dafoe, Homemade Apple, Dawning of a New Day, Zeyada, Sacramento, Montez, Meddon, La Belle Aurore | 1/6 | — | Loại | **Thiếu chữ có dấu** (ư, ễ, ặ, ị, ọ, ờ, ạ, ế; vài phông thiếu cả Đ, ỳ) |
+
+**Ảnh:**
+- So sánh, nền kem: /home/user/a/docs/rnd/anh/v3-phong-chu-ky-so-sanh.png
+- Áp lên mẫu thật (mỗi ảnh là 1 mẫu × 4 phông chữ ký):
+  - /home/user/a/docs/rnd/anh/v3-chu-ky-tren-shd-01.png
+  - /home/user/a/docs/rnd/anh/v3-chu-ky-tren-shd-08.png
+  - /home/user/a/docs/rnd/anh/v3-chu-ky-tren-shd-10.png
+  - /home/user/a/docs/rnd/anh/v3-chu-ky-tren-fb-04.png
+  - /home/user/a/docs/rnd/anh/v3-chu-ky-tren-fb-07.png
+- Ảnh rời từng mẫu: `…/v3-mau-chao-mung/shd-0N-chu-ky-K-1080x1350.png`, `…/v3-mau-feedback/fb-0N-chu-ky-K-1080x1350.png`
+
+**Tệp:**
+- Tệp `.ttf` + `OFL-*.txt` ở /home/user/a/docs/rnd/v3-mau-chao-mung/phong/
+- Nhóm "MP Chữ ký 1..4" trong `phong.css`, biến `--f-ky-N`, hệ số cỡ `--ky-co-N`.
+- Mẫu nào cũng chuyển sang chữ ký được bằng tham số `?ky=N`; trong app là trường `DesignCard.fontOverride`.
+
+### 13.2 Mẫu cho hợp đồng dịch vụ: Feedback ảnh và Lời chúc
+
+**Mỗi mẫu khai dùng cho loại hợp đồng nào:**
+- Khoá học, dịch vụ, hoặc cả hai.
+- Mẫu "cả hai" tự đổi chữ theo loại hợp đồng. Ví dụ "Cảm nhận của học viên" ↔ "Cảm nhận của khách hàng"; dòng phụ "Khoá · Lớp" ↔ "Nhân vật · Gói · Ngày sự kiện".
+- Thử bằng tham số `?loai=khoa|dv`.
+
+**Ô chỉ có ở hợp đồng dịch vụ:**
+- Nhân vật makeup — `ContractLine.subjectName`
+- Tên gói — `ContractLine.name`
+- Ngày sự kiện — `Contract.eventDate`
+
+**Ô chỉ có ở hợp đồng khoá học:** khoá, lớp, ngày khai giảng / kết thúc, lịch học, giảng viên.
+
+**Feedback:**
+- 9 trong 10 mẫu dùng cho cả hai loại.
+- fb-09 (trước – sau) chỉ dùng cho dịch vụ.
+- Mỗi mẫu "cả hai" có thêm ảnh hai bản: `…/v3-mau-feedback/fb-0N-khoa-1080x1350.png` và `…-dv-1080x1350.png`.
+
+**Lời chúc:**
+- 6 mẫu ở /home/user/a/docs/rnd/v3-mau-loi-chuc/, mỗi mẫu có `.html` và 2 khổ ảnh 1080×1350 / 1080×1080.
+- Mẫu nào học từ ảnh nào, mẫu nào tự sáng tác: xem bảng dưới.
+
+| Mã | Tên | Dùng cho | Nguồn |
+|---|---|---|---|
+| lc-01 | Thiệp kem chúc mừng ngày cưới | Dịch vụ | Tự sáng tác (cùng họ shd-01) |
+| lc-02 | Đen vàng cảm ơn đã tin chọn | Cả hai | Tự sáng tác (cùng họ shd-02) |
+| lc-03 | Ảnh lớn, khung trắng | Dịch vụ | Tự sáng tác |
+| lc-04 | Hai ảnh nghiêng, xanh rêu | Dịch vụ | Tự sáng tác |
+| lc-05 | Chúc mừng hoàn thành khoá học | Khoá học | Tự sáng tác (cùng họ shd-10) |
+| lc-06 | Thiệp hoa lá gửi mẹ cô dâu | Dịch vụ | Tự sáng tác (cùng họ shd-09) |
+
+**Câu chúc soạn sẵn** (sửa được; trong app là bảng `GreetingPhrase`):
+
+| Tên | Dùng cho | Tiêu đề | Câu chúc |
+|---|---|---|---|
+| Ngày cưới | Dịch vụ | Trăm năm hạnh phúc | Chúc hai bạn trăm năm hạnh phúc, luôn giữ trọn yêu thương như ngày hôm nay. Cảm ơn bạn đã tin tưởng để chúng tôi được góp một phần nhỏ vào ngày trọng đại. |
+| Cảm ơn đã tin chọn | Cả hai | Cảm ơn bạn đã tin chọn | Cảm ơn bạn đã dành cho chúng tôi sự tin tưởng. Mong rằng mỗi khoảnh khắc trong ngày đặc biệt đều rạng rỡ như chính bạn. |
+| Mẹ cô dâu | Dịch vụ | Chúc mừng gia đình | Chúc mừng gia đình đón thêm niềm vui lớn. Cảm ơn cô đã cho chúng con được chăm chút cho cô trong ngày đặc biệt này. Chúc cô luôn mạnh khoẻ và an vui. |
+| Lễ ăn hỏi | Dịch vụ | Chúc mừng lễ ăn hỏi | Chúc mừng lễ ăn hỏi của hai bạn. Chúc chặng đường phía trước luôn ngập tràn yêu thương, thấu hiểu và bình an. |
+| Sự kiện, dự tiệc | Dịch vụ | Luôn toả sáng | Cảm ơn bạn đã chọn chúng tôi cho ngày đặc biệt. Chúc bạn luôn tự tin và toả sáng theo cách riêng của mình. |
+| Hoàn thành khoá học | Khoá học | Chúc mừng em | Chúc mừng em đã hoàn thành khoá học. Chúc em vững tay nghề, tự tin trên con đường trở thành chuyên viên trang điểm. |
+
+**Trang bày:** /home/user/a/docs/rnd/v3-bay-mau.html
+- Gồm: 10 mẫu chào mừng + 10 Feedback + 6 Lời chúc + câu chúc soạn sẵn + phông chữ ký + 9 mẫu đợt 1.
+- Mỗi mẫu ghi dùng cho loại hợp đồng nào, và ô nào lấy từ trường nào.
+
+**Màn trong bản mẫu C:**
+- Thanh trái có mục mới **Mẫu thiết kế** (Thẻ chào mừng · Feedback · Lời chúc).
+- `#feedback`: hợp đồng khoá học. `#feedback-dv`: hợp đồng dịch vụ. `#loi-chuc`: chọn câu chúc soạn sẵn, sửa, sao chép.
+- Mẫu không hợp loại hợp đồng hiện mờ và không chọn được.
+
+**Trường mới** (chi tiết ở BAN-VE-C3 mục 1.1):
+- `DesignCard.title` / `body`: câu chúc, lời khen.
+- `DesignCard.rating`, `receivedAt`, `fontOverride`, `snapshot`.
+- `DesignCardPhoto`.
+- `GreetingPhrase`.
+
+### 13.3 Khoá Một lớp / Nhiều lớp, số tối đa theo lớp
+
+**Theo lời anh Chiến:**
+- **Một lớp:** khoá chính là lớp. Form có Tên khoá\*, Học phí\*, Thời gian\* (ngày bắt đầu → kết thúc, thứ, giờ), Số học viên tối đa\*. Người dùng không phải nghĩ tới chữ "lớp".
+- **Nhiều lớp:** khoá giữ tên, học phí, số tối đa mặc định. Mỗi lần khai giảng mở một lớp có tên riêng ("Nâng cao K1", "Nâng cao K2"), thời gian riêng, số tối đa riêng (lấy sẵn từ khoá).
+- **Đổi Một lớp → Nhiều lớp** lúc nào cũng được: lớp hiện tại giữ nguyên thành lớp đầu tiên. Màn sửa có hộp nhắc.
+
+**Trạng thái chỗ của lớp:**
+- Còn chỗ (< 75%): nhãn hồng "còn N chỗ".
+- Sắp đầy (≥ 75%): nhãn vàng "Sắp đầy · còn N".
+- Hết chỗ: nhãn xám; nút "Ghi danh" đổi thành "Hết chỗ" và bị tắt. Ở form hợp đồng, lớp hết chỗ không chọn được.
+
+**Ảnh:**
+- Danh sách xen khoá một lớp và nhiều lớp, 3 khổ: /home/user/a/docs/rnd/anh/v3-dao-tao-C-khoa-hoc-{desktop,tablet,mobile}.png
+- Chi tiết khoá một lớp: …/v3-dao-tao-C-khoa-hoc-mot-{desktop,tablet}.png và …/v3-dao-tao-C-khoa-hoc-mot-ct-mobile.png
+- Ba trạng thái lớp: /home/user/a/docs/rnd/anh/v3-dao-tao-C-trang-thai-lop.png
+- Form Thêm khoá — Một lớp: …/v3-dao-tao-C-khoa-moi-{desktop,tablet,mobile}.png
+- Form Thêm khoá — Nhiều lớp: …/v3-dao-tao-C-khoa-moi-nhieu-{desktop,tablet,mobile}.png
+- Mở lớp: …/v3-dao-tao-C-lop-moi-{desktop,tablet,mobile}.png
+- Sửa khoá một lớp, có nhắc khi đổi sang nhiều lớp: …/v3-dao-tao-C-khoa-hoc-mo-{desktop,tablet,mobile}.png
+- Hợp đồng chọn lớp (lớp K11 hết chỗ bị tắt): …/v3-dao-tao-C-hop-dong-{desktop,tablet,mobile}.png
+
+**Ô ↔ trường:**
+
+| Ô | Trường | Trạng thái |
+|---|---|---|
+| Kiểu khoá | `Course.mode SINGLE_CLASS / MULTI_CLASS` | đề xuất |
+| Tên khoá, Nhóm, Học phí, Cọc | `Course.name`, `groupId`, `tuitionFee`, `depositAmount` | đề xuất |
+| Số học viên tối đa (khoá Nhiều lớp) | `Course.defaultCapacity` | đề xuất |
+| Tên lớp | `CourseClass.name` (khoá Một lớp: tự đặt bằng tên khoá) | đề xuất |
+| Thời gian | `CourseClass.startDate`, `endDate` | đề xuất |
+| Lịch học (thứ) | `CourseClass.weekdays Int[]` | đề xuất |
+| Giờ học | `CourseClass.startMinute`, `endMinute` | đề xuất |
+| Số tối đa của lớp | `CourseClass.capacity` | đề xuất |
+| x đã ghi danh | `CourseClass.enrolledCount` (đếm `Enrollment` ACTIVE; chặn vượt bằng CHECK) | đề xuất |
+| Giảng viên, Ở đâu | `CourseClass.instructorMembershipId`, `studioLocationId` | đề xuất (bảng đích có) |

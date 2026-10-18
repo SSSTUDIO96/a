@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="ten" content="Thu tiền hợp đồng dịch vụ — R&D v4">
+<title>Thu tiền dịch vụ — R&D v4</title>
+<link rel="stylesheet" href="v4-chung/v4.css">
+<style>
+/* Cùng khuôn với màn Thu tiền đào tạo C (v3-dao-tao-C.html #thu-tien) */
+.hd2{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.hd2 h2{font-size:18px;font-weight:700;overflow-wrap:anywhere}
+.kp4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:12px}
+.kp4>div{border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-width:0}
+.kp4 span{display:block;color:var(--muted);font-size:12.5px}
+.kp4 b{display:block;font-size:19px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.kp4 small{display:block;font-size:12px;color:var(--warn)}
+.kp4 .em{border-color:var(--accent-line);background:var(--accent-soft)}
+.two-c{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start}
+.dt{display:grid;grid-template-columns:14px minmax(0,1fr) auto;gap:4px 12px;padding:12px 18px;border-top:1px solid var(--line-2);align-items:start}
+.dt:first-child{border-top:0}
+.dt .dot{width:12px;height:12px;border-radius:50%;border:2px solid var(--accent);margin-top:4px}
+.dt.paid .dot{background:var(--ok);border-color:var(--ok)}
+.dt.part .dot{background:linear-gradient(90deg,var(--accent) 50%,#fff 50%)}
+.dt.over .dot{border-color:var(--danger)}
+.dt.void{color:var(--faint)}
+.dt.void .dot{border-color:var(--faint);background:none}
+.dt .r{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.dt b{font-weight:600}
+.q-n{font-weight:600;overflow-wrap:anywhere}
+.flt .grp{margin-top:6px}
+.chart{padding:8px 18px 14px}
+.chart .lg{display:flex;gap:16px;font-size:12.5px;color:var(--muted);margin:6px 0 10px;flex-wrap:wrap}
+.chart .lg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+.bars{display:grid;grid-template-columns:36px repeat(6,minmax(0,1fr));height:220px;align-items:end;gap:0;border-bottom:1px solid var(--line);position:relative}
+.bars .ax{align-self:stretch;display:flex;flex-direction:column;justify-content:space-between;font-size:11px;color:var(--faint);padding-bottom:0}
+.bars .g{display:flex;gap:2px;justify-content:center;align-items:flex-end;height:100%;position:relative}
+.bars .g i{display:block;width:min(26px,32%);border-radius:4px 4px 0 0}
+.bars .g:hover{background:var(--soft)}
+.bars .gl{position:absolute;left:36px;right:0;border-top:1px dashed var(--line-2)}
+.xl{display:grid;grid-template-columns:36px repeat(6,minmax(0,1fr));font-size:12px;color:var(--muted);text-align:center;margin-top:6px}
+.tt{position:absolute;bottom:calc(100% - 40px);left:50%;transform:translateX(-50%);background:#2A2220;color:#fff;font-size:12px;padding:6px 8px;border-radius:6px;white-space:nowrap;z-index:5}
+.tbl .muted td{color:var(--muted)}
+.wrapx{overflow-x:auto}
+@media (max-width:1180px){
+  .kp4{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .two-c{grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width:640px){
+  .kp4{gap:8px}
+  .kp4 b{font-size:16px}
+  .dt{padding:12px 14px}
+  .bars{height:180px}
+}
+</style>
+</head>
+<body>
+<script src="v4-chung/v4.js"></script>
+<script>
+const {icon,av,vnd,tip,man,mucLuc}=V4;
+const f=(s)=>` data-f="${s}"`;
+// GET /contracts?status=CONFIRMED&eventFrom&eventTo → items[{id, code, status, eventDate, total, depositRequired, customer{fullName, phone}}]
+const DS=[
+ ['Sự kiện 7 ngày tới',[['Phạm Thu Trang','HD-000138','19/10',3200000],['Nguyễn Thị Mai','HD-000149','22/10',2450000],['Tôn Nữ Hoàng Bảo Ngọc Phương Thảo','HD-000142','24/10',5300000]]],
+ ['Sự kiện sau đó',[['Đỗ Minh Ngọc','HD-000150','08/11',4100000],['Hoàng Gia Linh','HD-000152','29/11',2900000]]],
+ ['Đã qua ngày sự kiện',[['Trần Hải Yến','HD-000131','12/10',2800000]]],
+];
+// GET /contracts/:id/payments
+const HDX={code:'HD-000142',kh:'Tôn Nữ Hoàng Bảo Ngọc Phương Thảo',sdt:'0912 345 678',su:'24/10/2026',total:5300000,coc:1000000,paid:1000000};
+const DOT=[{name:'Đặt cọc',due:'12/10/2026',amount:1000000,paidAmount:1000000,status:'PAID',isDeposit:true},{name:'Thanh toán còn lại',due:'24/10/2026',amount:4300000,paidAmount:0,status:'DUE'}];
+const PHIEU=[
+ {code:'PT-000087',ngay:'12/10/2026',cach:'Chuyển khoản',tien:1000000,ai:'Lương Hà My',ghi:'CK Vietcombank, nội dung "HD142 coc"'},
+ {code:'PT-000085',ngay:'10/10/2026',cach:'Tiền mặt',tien:500000,ai:'Lương Hà My',ghi:null,huy:'Ghi nhầm hợp đồng'},
+];
+const STT={PAID:['ok','Đã thu đủ'],PARTIAL:['ps','Đã thu một phần'],DUE:['','Chưa đến hạn'],OVERDUE:['huy','Quá hạn']};
+
+function trai(sel,{flt}={}){
+  return `<div class="card left"><div class="ch2"><h2>Hợp đồng cần thu</h2><small>hôm nay 18/10/2026</small></div>
+  <div class="sch"><div class="srch">${icon('search','s')}<input class="ctl" placeholder="Tìm mã HĐ, tên khách, số điện thoại"${f('GET /contracts?q')}></div>
+   <div class="seg sm" style="align-self:flex-start"${f('GET /contracts?status')}><button class="on">Đã xác nhận</button><button>Nháp</button><button>Hoàn thành</button></div></div>
+  <div class="ls">${DS.map(([g,ds])=>`<div class="lh ${g.startsWith('Đã qua')?'':''}"><span${f('nhóm theo eventDate (eventFrom/eventTo)')}>${g}</span><span class="sp"></span><span>${ds.length}</span></div>`+ds.map(([k,c,d,t])=>`<a href="#a-ct" class="lr noav ${c===sel?'sel':''}"><span class="q-n"${f('customer.fullName')}>${k}</span><span class="rt" style="grid-row:span 2"><span class="p num"${f('total')}>${vnd(t)}</span><span class="tag"${f('eventDate')}>Sự kiện ${d}</span></span><span class="d"${f('code')}>${c}</span></a>`).join('')).join('')}</div></div>`;
+}
+function dau(){
+  return `<div class="card"><div class="cb" style="padding-top:14px;padding-bottom:16px">
+   <div class="hd2"><span class="tag ok"${f('contract.status')}>Đã xác nhận</span><h2${f('contract.customer.fullName')}>${HDX.kh}</h2></div>
+   <div class="fx" style="margin-top:4px"><span${f('contract.code')}>${HDX.code}</span> · <span${f('contract.eventDate')}>Sự kiện ${HDX.su}</span> · <span${f('customer.phone')}>${HDX.sdt}</span> · <a href="#">Mở hợp đồng</a></div>
+   <div class="kp4"><div${f('summary.total')}><span>Tổng</span><b>${vnd(HDX.total)}</b></div><div${f('summary.depositRequired · depositOutstanding')}><span>Cọc phải thu</span><b>${vnd(HDX.coc)}</b></div>
+   <div${f('summary.paid (thu − hoàn)')}><span>Đã thu thực tế</span><b>${vnd(HDX.paid)}</b></div><div class="em"${f('summary.remaining')}><span>Còn lại</span><b>${vnd(HDX.total-HDX.paid)}</b></div></div></div></div>`;
+}
+function theDot(opt={}){
+  return `<div class="card"><div class="ch2"><h2>Tiến độ thanh toán</h2><a class="btn sm ghost" href="#a-tien-do"${f('PUT /contracts/:id/installments')}>Sửa tiến độ</a></div>
+   ${opt.lech?`<div style="padding:10px 18px 0"><div class="bn yel">${icon('warn','s')}<span>Tổng hợp đồng đã đổi sau khi lập tiến độ: các đợt đang <b>thiếu 150.000 ₫</b>. <a href="#a-tien-do">Sửa tiến độ</a></span></div></div>`:''}
+   <div>${DOT.map(d=>`<div class="dt ${d.status==='PAID'?'paid':''}"><span class="dot"></span><span><b${f('installments[].name')}>${d.name}</b><div class="fx"${f('dueDate')}>Hạn ${d.due}</div></span><span class="r"><span class="num b"${f('amount')}>${vnd(d.amount)}</span>${opt.btnThu&&d.status!=='PAID'?`<a class="btn sm pri" href="#b-thu">Thu ${vnd(d.amount-d.paidAmount)}</a>`:`<span class="tag ${STT[d.status][0]}"${f('status (PAID/PARTIAL/DUE/OVERDUE)')}>${STT[d.status][1]}</span>`}</span></div>`).join('')}</div></div>`;
+}
+function thePhieu(){
+  return `<div class="card"><div class="ch2"><h2>Phiếu đã ghi</h2><small>${PHIEU.length} phiếu</small></div>
+   <div>${PHIEU.map(p=>`<div class="dt ${p.huy?'void':'paid'}"><span class="dot"></span><span><b class="${p.huy?'strike':''}"><span${f('payments[].code')}>${p.code}</span> · <span${f('receivedAt')}>${p.ngay}</span> · <span${f('method → PAYMENT_METHOD_LABELS')}>${p.cach}</span></b>
+    <div class="fx"${f('createdBy.fullName · note')}>Ghi bởi ${p.ai}${p.ghi?' · '+p.ghi:''}</div>${p.huy?`<span class="tag huy" style="margin-top:4px"${f('voidReason')}>Đã huỷ: ${p.huy}</span>`:''}</span>
+    <span class="r"><span class="num b ${p.huy?'strike':''}"${f('amount')}>${vnd(p.tien)}</span>${p.huy?'':`<a class="btn sm ghost" href="#a-huy"${f('POST /payments/:id/void')}>Huỷ phiếu</a>`}</span></div>`).join('')}</div></div>`;
+}
+function form(hoan){
+  return `<div class="card"><div class="ch2"><h2>${hoan?'Ghi phiếu hoàn tiền':'Ghi phiếu thu'}</h2></div><div class="cb">
+   <div class="set"><label>Loại phiếu ${tip('Phiếu hoàn tiền cần quyền "Huỷ phiếu thu, ghi phiếu hoàn tiền". Không có quyền thì ô này ẩn.')}</label><span class="r"><span class="seg"${f('kind RECEIPT/REFUND')}><button class="${hoan?'':'on'}">Thu</button><button class="${hoan?'on':''}">Hoàn tiền</button></span></span></div>
+   <div class="set"><label>Số tiền<span class="req">*</span> ${tip('Điền sẵn số còn thiếu của đợt chưa thu đủ gần nhất. Tiền tự đổ vào đợt có hạn sớm nhất.')}</label><input class="ctl money"${f('amount')} value="${hoan?'500.000 ₫':'4.300.000 ₫'}"></div>
+   <div class="set"><label>Cách trả<span class="req">*</span></label><span class="r"><span class="seg"${f('method')}><button>Tiền mặt</button><button class="on">Chuyển khoản</button><button>Quẹt thẻ</button><button>Khác</button></span></span></div>
+   <div class="set"><label>Ngày thu</label><input class="ctl" type="text"${f('receivedAt (trống = bây giờ)')} value="18/10/2026"></div>
+   <div class="set"><label>Ghi chú${hoan?'<span class="req">*</span>':''}</label><input class="ctl"${f('note')} placeholder="${hoan?'Lý do hoàn, ví dụ: bớt 1 phù dâu':'Ví dụ: nội dung chuyển khoản'}"></div></div>
+   <div class="cf"><button class="btn pri"${f('POST /contracts/:id/payments + Idempotency-Key')}>${hoan?'Lưu phiếu hoàn':'Lưu phiếu thu'}</button></div></div>`;
+}
+const PH=`<div class="ph"><h1>Thu tiền</h1><span class="sub">hợp đồng dịch vụ makeup</span></div>`;
+/* ===== A — đúng khuôn Thu tiền đào tạo C (ĐỀ XUẤT) ===== */
+man('a',{nav:'hd',kid:'Thu tiền',title:'Thu tiền',mobile:'list'},`${PH}
+<div class="c2">${trai('HD-000142')}<div class="right">${dau()}<div class="two-c">${theDot()}${thePhieu()}</div>${form()}</div></div>`);
+man('a-ct',{nav:'hd',kid:'Thu tiền',title:'HD-000142',back:'#a',mobile:'detail'},`${PH}
+<div class="c2">${trai('HD-000142')}<div class="right">${dau()}<div class="two-c">${theDot()}${thePhieu()}</div>${form()}</div></div>`);
+man('a-hoan',{nav:'hd',kid:'Thu tiền',title:'HD-000142',back:'#a',mobile:'detail'},`${PH}
+<div class="c2">${trai('HD-000142')}<div class="right">${dau()}${form(true)}</div></div>`);
+man('a-lech',{nav:'hd',kid:'Thu tiền',title:'HD-000142',back:'#a',mobile:'detail'},`${PH}
+<div class="c2">${trai('HD-000142')}<div class="right">${dau()}<div class="two-c">${theDot({lech:1})}<div class="card"><div class="ch2"><h2>Phiếu đã ghi</h2></div><div class="empty"><span>Chưa có phiếu nào.</span></div></div></div>
+<div class="card"><div class="ch2"><h2>Hợp đồng chưa lập tiến độ (ví dụ HD-000150)</h2></div><div class="empty"><span>Chưa lập tiến độ thanh toán. Hợp đồng vẫn ghi phiếu thu được.</span><a class="btn sm pri" href="#a-tien-do">Lập tiến độ</a></div></div></div></div>`);
+man('a-tien-do',{nav:'hd',kid:'Thu tiền',title:'Tiến độ thanh toán',back:'#a-ct',mobile:'detail'},`${PH}
+<div class="c2">${trai('HD-000142')}<div class="right">${dau()}</div></div>
+<div class="dlg-bg"><div class="dlg w" style="width:min(720px,100%)"><div class="dh"><div style="flex:1"><div class="fx">HD-000142 · Tổng 5.300.000 ₫ · Cọc phải thu 1.000.000 ₫</div><h2>Tiến độ thanh toán</h2></div><button class="btn icon ghost">${icon('x')}</button></div>
+<div class="db">
+ <div class="row" style="padding:10px 0"><span class="muted small">Chia gợi ý:</span><button class="btn sm">Cọc + còn lại vào ngày sự kiện</button><button class="btn sm">Cọc + 2 đợt</button><button class="btn sm">Cọc + 3 đợt</button></div>
+ <table class="tbl m-cards"><thead><tr><th>Tên đợt</th><th>Hạn</th><th class="r">Số tiền</th><th>Đợt cọc</th><th></th></tr></thead><tbody>
+ <tr><td data-l="Tên"><input class="ctl sm"${f('installments[].name')} value="Đặt cọc"></td><td data-l="Hạn"><input class="ctl sm"${f('dueDate')} value="12/10/2026"></td><td data-l="Số tiền"><input class="ctl sm money"${f('amount')} value="1.000.000 ₫"></td><td data-l="Cọc"><input type="radio" name="coc" checked${f('isDeposit (tối đa 1)')}></td><td><button class="btn icon ghost sm">${icon('x','s')}</button></td></tr>
+ <tr><td data-l="Tên"><input class="ctl sm" value="Thanh toán còn lại"></td><td data-l="Hạn"><input class="ctl sm" value="24/10/2026"></td><td data-l="Số tiền"><input class="ctl sm money err" value="4.150.000 ₫"></td><td data-l="Cọc"><input type="radio" name="coc"></td><td><button class="btn icon ghost sm">${icon('x','s')}</button></td></tr>
+ </tbody></table>
+ <div class="row" style="padding:10px 0"><button class="btn sm dashed">${icon('plus','s')}Thêm đợt</button><span class="sp"></span><span class="small">Tổng các đợt <b class="num">5.150.000 ₫</b></span></div>
+ <div class="bn red">${icon('warn','s')}<span>Tổng các đợt (5.150.000 ₫) phải bằng tổng hợp đồng (5.300.000 ₫): còn thiếu 150.000 ₫</span></div>
+</div><footer><button class="btn">Huỷ</button><button class="btn pri dis" disabled>Lưu tiến độ</button></footer></div></div>`);
+man('a-vuot',{nav:'hd',kid:'Thu tiền',title:'HD-000142',back:'#a',mobile:'detail'},`${PH}
+<div class="c2">${trai('HD-000142')}<div class="right">${dau()}${form()}</div></div>
+<div class="dlg-bg"><div class="dlg" style="width:min(480px,100%)"><div class="dh"><h2>Khách trả thừa?</h2><button class="btn icon ghost">${icon('x')}</button></div>
+<div class="db"><div class="bn yel" style="margin:8px 0 12px">${icon('warn','s')}<span>Thu vượt tổng hợp đồng 200.000 ₫ (còn phải thu 4.300.000 ₫).</span></div>
+<div class="set stack"><label>Lý do<span class="req">*</span></label><textarea class="ctl" rows="2"${f('note (bắt buộc khi allowOverpay)')} placeholder="Ví dụ: khách chuyển dư, sẽ trừ vào lần sau"></textarea></div></div>
+<footer><button class="btn">Sửa lại số tiền</button><button class="btn pri"${f('allowOverpay: true')}>Vẫn ghi phiếu</button></footer></div></div>`);
+man('a-huy',{nav:'hd',kid:'Thu tiền',title:'HD-000142',back:'#a',mobile:'detail'},`${PH}
+<div class="c2">${trai('HD-000142')}<div class="right">${dau()}${thePhieu()}</div></div>
+<div class="dlg-bg"><div class="dlg" style="width:min(440px,100%)"><div class="dh"><h2>Huỷ phiếu PT-000087?</h2><button class="btn icon ghost">${icon('x')}</button></div>
+<div class="db"><p class="muted small" style="margin:8px 0 10px">Phiếu không bị xoá: vẫn hiện trong sổ thu, gạch ngang, kèm lý do. Chỉ huỷ được một lần.</p>
+<div class="set stack"><label>Lý do huỷ<span class="req">*</span></label><textarea class="ctl" rows="2"${f('reason')} placeholder="Ví dụ: ghi nhầm hợp đồng"></textarea></div></div>
+<footer><button class="btn">Giữ phiếu</button><button class="btn pri">Huỷ phiếu</button></footer></div></div>`);
+
+/* ===== B — cùng khuôn, nút "Thu" trên từng đợt mở hộp thoại ===== */
+man('b',{nav:'hd',kid:'Thu tiền',title:'Thu tiền',mobile:'list'},`<div class="ph"><h1>Thu tiền</h1><span class="sp"></span><a class="btn pri" href="#b-thu">${icon('plus','s')}Ghi phiếu thu</a></div>
+<div class="c2">${trai('HD-000142')}<div class="right">${dau()}${theDot({btnThu:1})}${thePhieu()}</div></div>`);
+man('b-thu',{nav:'hd',kid:'Thu tiền',title:'HD-000142',back:'#b',mobile:'detail'},`<div class="ph"><h1>Thu tiền</h1></div>
+<div class="c2">${trai('HD-000142')}<div class="right">${dau()}${theDot({btnThu:1})}</div></div>
+<div class="dlg-bg"><div class="dlg" style="width:min(600px,100%)"><div class="dh"><div style="flex:1"><div class="fx">HD-000142 · đợt "Thanh toán còn lại"</div><h2>Ghi phiếu thu</h2></div><button class="btn icon ghost">${icon('x')}</button></div>
+<div class="db">${form().replace(/^<div class="card"><div class="ch2"><h2>Ghi phiếu thu<\/h2><\/div>/,'<div>')}</div></div></div>`);
+
+/* ===== C — thu tiền nằm trong trang hợp đồng ===== */
+man('c',{nav:'hd',kid:'Danh sách hợp đồng',title:'HD-000142',back:'#'},`<div class="ph"><a class="btn icon" href="#">${icon('back')}</a><h1>HD-000142</h1><span class="tag ok">Đã xác nhận</span><span class="sp"></span><button class="btn">In hợp đồng</button></div>
+<div class="card" style="margin-bottom:16px"><div class="row" style="padding:0 18px;border-bottom:1px solid var(--line)">${['Nội dung','Thu tiền','Lịch'].map((t,i)=>`<a style="padding:12px;text-decoration:none;font-weight:${i===1?600:500};color:${i===1?'var(--accent)':'var(--muted)'};border-bottom:2px solid ${i===1?'var(--accent)':'transparent'}">${t}</a>`).join('')}</div>
+<div class="cb" style="padding:14px 18px"><div class="kp4" style="margin-top:0"><div><span>Tổng</span><b>${vnd(5300000)}</b></div><div><span>Cọc phải thu</span><b>${vnd(1000000)}</b></div><div><span>Đã thu thực tế</span><b>${vnd(1000000)}</b></div><div class="em"><span>Còn lại</span><b>${vnd(4300000)}</b></div></div></div></div>
+<div class="two-c">${theDot()}${thePhieu()}</div><div style="margin-top:16px">${form()}</div>`);
+
+/* ===== Sổ thu và Doanh thu (cho phương án chọn) ===== */
+const LOC=(extra)=>`<div class="card left"><div class="ch2"><h2>Bộ lọc</h2></div><div class="cb flt">
+ <div class="grp">Kỳ</div><div class="seg sm" style="width:100%;margin:8px 0"${f('from, to (tối đa 366 ngày)')}><button class="on" style="flex:1">Tháng</button><button style="flex:1">Quý</button><button style="flex:1">Năm</button></div>
+ <select class="ctl"><option>Tháng 10/2026</option></select>${extra||''}</div></div>`;
+const SO=[['18/10/2026','PT-000091','HD-000149','Nguyễn Thị Mai','Tiền mặt',500000,'RECEIPT','Lương Hà My'],['17/10/2026','PT-000090','HD-000138','Phạm Thu Trang','Chuyển khoản',2000000,'RECEIPT','Lương Hà My'],['15/10/2026','PT-000089','HD-000120','Vũ Thanh Hương','Chuyển khoản',300000,'REFUND','Nguyễn Trọng Chiến'],['12/10/2026','PT-000087','HD-000142','Tôn Nữ Hoàng Bảo Ngọc Phương Thảo','Chuyển khoản',1000000,'RECEIPT','Lương Hà My'],['10/10/2026','PT-000085','HD-000142','Tôn Nữ Hoàng Bảo Ngọc Phương Thảo','Tiền mặt',500000,'VOID','Lương Hà My']];
+man('so-thu',{nav:'bao-cao',kid:'Sổ thu',title:'Sổ thu',mobile:'list'},`<div class="ph"><h1>Sổ thu</h1><span class="sub">Tháng 10/2026 · theo ngày thu</span><span class="sp"></span><button class="btn">Tải CSV</button></div>
+<div class="c2 narrow">${LOC(`<div class="grp">Cách trả</div><div class="chips" style="margin-top:8px"${f('method')}><a class="chip on">Tất cả</a><a class="chip">Tiền mặt</a><a class="chip">Chuyển khoản</a><a class="chip">Quẹt thẻ</a><a class="chip">Khác</a></div><div class="grp">Loại phiếu</div><div class="chips" style="margin-top:8px"${f('kind')}><a class="chip on">Tất cả</a><a class="chip">Phiếu thu</a><a class="chip">Phiếu hoàn</a></div>`)}
+<div class="right"><div class="so4" style="grid-template-columns:repeat(3,minmax(0,1fr))"><div class="so"${f('totals.received · receiptCount')}><span>Tổng thu</span><b>${vnd(28500000)}</b><small>42 phiếu</small></div><div class="so"${f('totals.refunded · refundCount')}><span>Tổng hoàn</span><b>${vnd(300000)}</b><small>1 phiếu</small></div><div class="so hl"${f('totals.net')}><span>Thực thu ${tip('Thu trừ hoàn, không tính phiếu đã huỷ.')}</span><b>${vnd(28200000)}</b></div></div>
+<div class="card"><table class="tbl m-cards"><thead><tr><th>Ngày thu</th><th>Phiếu</th><th>Hợp đồng · khách</th><th class="t-hide">Cách trả</th><th class="r">Số tiền</th></tr></thead><tbody>
+${SO.map(([d,c,h,k,m,t,kind,ai])=>`<tr class="${kind==='VOID'?'muted':''}"><td data-l="Ngày"${f('receivedAt')}>${d}</td><td data-l="Phiếu"><span class="${kind==='VOID'?'strike':''}"${f('code')}>${c}</span>${kind==='REFUND'?' <span class="tag ps">Hoàn</span>':''}${kind==='VOID'?' <span class="tag huy">Đã huỷ</span>':''}<div class="fx"${f('createdBy.fullName')}>${ai}</div></td><td data-l="HĐ"><a href="#a-ct"${f('contract.code · contract.customer.fullName')}>${h}</a> · ${k}</td><td class="t-hide"${f('method')}>${m}</td><td class="r num ${kind==='VOID'?'strike':''}"${f('amount')}>${kind==='REFUND'?'−':''}${vnd(t)}</td></tr>`).join('')}
+</tbody></table><div class="pager"><span class="fx">1–50 / 43</span></div></div></div></div>`);
+
+const TH=[['T5',48,41],['T6',62,50],['T7',55,58],['T8',71,60],['T9',66,62],['T10',58,28.2]];
+function chart(){
+  const max=80;
+  return `<div class="card"><div class="ch2"><h2>Doanh số và thực thu 6 tháng</h2><small>triệu đồng</small></div><div class="chart">
+   <div class="lg"><span><i style="background:#A63D62"></i>Doanh số</span><span><i style="background:#5B45A0"></i>Thực thu</span></div>
+   <div class="bars">${[0,20,40,60].map(v=>`<span class="gl" style="bottom:${v/max*100}%"></span>`).join('')}<div class="ax"><span>80</span><span>60</span><span>40</span><span>20</span><span>0</span></div>
+   ${TH.map(([m,a,b],i)=>`<div class="g" title="${m}/2026 — Doanh số ${a} triệu · Thực thu ${b} triệu"${f('rows[].sales · rows[].collected (groupBy=month)')}>${i===5?`<span class="tt">Tháng 10 · Doanh số ${a} tr · Thực thu ${String(b).replace('.',',')} tr</span>`:''}<i style="height:${a/max*100}%;background:#A63D62"></i><i style="height:${b/max*100}%;background:#5B45A0"></i></div>`).join('')}</div>
+   <div class="xl"><span></span>${TH.map(([m])=>`<span>${m}</span>`).join('')}</div></div></div>`;
+}
+const HDT=[['HD-000142','Tôn Nữ Hoàng Bảo Ngọc Phương Thảo','12/10',5300000,1000000,1000000,1000000,4300000,1],['HD-000138','Phạm Thu Trang','03/10',3200000,1000000,3200000,2000000,0,1],['HD-000149','Nguyễn Thị Mai','11/10',2450000,500000,500000,500000,1950000,1],['HD-000120','Vũ Thanh Hương','22/09',1900000,500000,1600000,-300000,300000,0]];
+man('doanh-thu',{nav:'bao-cao',kid:'Doanh thu',title:'Doanh thu',mobile:'list'},`<div class="ph"><h1>Doanh thu</h1><span class="sub">Tháng 10/2026 · mốc tính: ngày xác nhận hợp đồng</span></div>
+<div class="c2 narrow">${LOC()}<div class="right">
+<div class="so4"><div class="so"${f('totals.sales')}><span>Doanh số ${tip('Tổng tiền các hợp đồng đã xác nhận hoặc hoàn thành có ngày xác nhận trong kỳ.')}</span><b>${vnd(58000000)}</b><small>14 hợp đồng</small></div>
+<div class="so"${f('totals.depositRequired · depositOutstanding')}><span>Cọc phải thu ${tip('Tổng tiền cọc của chính các hợp đồng đó.')}</span><b>${vnd(12500000)}</b><small style="color:var(--warn)">còn thiếu ${vnd(2000000)}</small></div>
+<div class="so"${f('totals.collected')}><span>Đã thu thực tế ${tip('Phiếu thu trừ phiếu hoàn có ngày thu trong kỳ (mọi hợp đồng), không tính phiếu đã huỷ.')}</span><b>${vnd(28200000)}</b></div>
+<div class="so hl"${f('totals.outstanding')}><span>Còn lại ${tip('Tổng tiền chưa thu của các hợp đồng tính vào doanh số, tính đến hiện tại.')}</span><b>${vnd(33300000)}</b></div></div>
+${chart()}
+<div class="card"><div class="ch2"><h2>Theo hợp đồng</h2><small>groupBy = contract</small></div><div class="wrapx"><table class="tbl m-cards"><thead><tr><th>Hợp đồng</th><th class="t-hide">Xác nhận</th><th class="r">Tổng</th><th class="r t-hide">Cọc</th><th class="r">Đã thu</th><th class="r">Thu trong kỳ</th><th class="r">Còn lại</th></tr></thead><tbody>
+${HDT.map(([c,k,d,t,coc,da,ky,con,b])=>`<tr class="${b?'':'muted'}"><td data-l="HĐ"><b${f('rows[].code')}>${c}</b> ${b?'':'<span class="tag" title="Chỉ có tiền thu/hoàn trong kỳ, doanh số tính ở kỳ khác">Kỳ khác</span>'}<div class="fx"${f('rows[].customer.fullName')}>${k}</div></td><td class="t-hide"${f('rows[].confirmedAt')}>${d}</td><td class="r num" data-l="Tổng"${f('rows[].total')}>${vnd(t)}</td><td class="r num t-hide"${f('rows[].depositRequired')}>${vnd(coc)}</td><td class="r num" data-l="Đã thu"${f('rows[].paid')}>${vnd(da)}</td><td class="r num" data-l="Thu trong kỳ"${f('rows[].paidInPeriod')}>${ky<0?'−'+vnd(-ky):vnd(ky)}</td><td class="r num b" data-l="Còn lại"${f('rows[].remaining')}>${vnd(con)}</td></tr>`).join('')}
+</tbody></table></div></div></div></div>`);
+
+man('trang-thai',{nav:'hd',kid:'Thu tiền',title:'Trạng thái'},`<div class="ph"><h1>Trạng thái của màn Thu tiền</h1></div>
+<div class="states">
+ <div class="card"><h4>Đang tải</h4><div class="kp4" style="margin:0">${[1,2,3,4].map(()=>'<div><span class="sk" style="width:60%;height:10px"></span><span class="sk" style="margin-top:8px;height:16px"></span></div>').join('')}</div></div>
+ <div class="card"><h4>Rỗng</h4><div class="empty"><span>Không có hợp đồng đã xác nhận nào có sự kiện trong 7 ngày tới.</span></div></div>
+ <div class="card"><h4>409 hợp đồng đã huỷ</h4><div class="bn red">${icon('warn','s')}<span>Hợp đồng đã huỷ — chỉ ghi được phiếu hoàn tiền.</span></div></div>
+ <div class="card"><h4>403</h4><div class="bn grey">${icon('lock','s')}<span>Bạn chỉ được xem. Ghi phiếu cần quyền "Lập tiến độ thanh toán, ghi phiếu thu".</span></div></div>
+</div>`);
+mucLuc('Thu tiền hợp đồng dịch vụ — R&D vòng 4','Ba phương án, đều giữ khuôn màn Thu tiền đào tạo C (R&D vòng 3). Bấm "Hiện trường dữ liệu" để thấy trường của từng ô.',[
+ ['Phương án A — y khuôn đào tạo C: phiếu thu luôn mở ở dưới (đề xuất, đã chọn thay)',[['a','Thu tiền'],['a-ct','Chi tiết (điện thoại: màn con)'],['a-tien-do','Sửa tiến độ (có lỗi tổng lệch)'],['a-lech','Tiến độ lệch tổng / chưa lập tiến độ'],['a-hoan','Ghi phiếu hoàn tiền'],['a-vuot','409 thu vượt tổng'],['a-huy','Huỷ phiếu có lý do'],['so-thu','Báo cáo › Sổ thu'],['doanh-thu','Báo cáo › Doanh thu'],['trang-thai','Trạng thái']]],
+ ['Phương án B — cùng khuôn, nút "Thu" trên từng đợt mở hộp thoại',[['b','Thu tiền'],['b-thu','Hộp thoại ghi phiếu']]],
+ ['Phương án C — thu tiền là một tab trong trang hợp đồng',[['c','Hợp đồng › tab Thu tiền']]],
+]);
+V4.boot();
+</script>
+</body>
+</html>

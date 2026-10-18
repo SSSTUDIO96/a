@@ -382,7 +382,8 @@ export function matchQuote(draft: ContractDraft, quote: QuoteExt | null): (Group
     const q = quote.lines[i];
     if (!q || q.kind !== l.kind) return false;
     if (l.kind === 'PACKAGE') return q.packageId === l.refId;
-    if (l.kind === 'SERVICE' || l.kind === 'SURCHARGE') return q.serviceId === (l.kind === 'SERVICE' ? l.refId : l.serviceId);
+    if (l.kind === 'SERVICE') return q.serviceId === l.refId;
+    if (l.kind === 'SURCHARGE') return q.serviceId === l.serviceId;
     return true;
   });
   return ok ? quote.lines : none;

@@ -499,6 +499,8 @@ model IdempotencyKey {
   user         User         @relation(fields: [userId], references: [id], onDelete: Restrict)
 
   @@id([organizationId, userId, key])
+  // Tạo tổ chức tra khoá theo (người dùng, khoá) khi chưa biết tổ chức — không có chỉ mục là quét cả bảng.
+  @@index([userId, key])
   @@map("idempotency_keys")
 }
 

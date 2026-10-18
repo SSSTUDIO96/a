@@ -91,6 +91,11 @@ export interface StaffLane {
 
 const MAKEUP_ROLE_KEYS = new Set(['artist', 'assistant']);
 
+// Có hồ sơ thợ, hoặc mang vai trò Thợ makeup / Thợ phụ.
+export function isMakeupStaff(m: Pick<StaffMember, 'hasProfile' | 'roleKeys'>): boolean {
+  return m.hasProfile || m.roleKeys.some((k) => MAKEUP_ROLE_KEYS.has(k));
+}
+
 /**
  * Hàng thợ của lưới (C), cột thợ (A), chip lọc (B).
  * - Chỉ có schedule.read_own: đúng một hàng là chính mình (máy chủ cũng chỉ trả ca của mình).
@@ -123,8 +128,7 @@ export function buildStaffLanes(input: {
   const lanes: StaffLane[] = [];
   const seen = new Set<string>();
   for (const m of staff ?? []) {
-    const isMakeupStaff = m.hasProfile || m.roleKeys.some((k) => MAKEUP_ROLE_KEYS.has(k));
-    if ((m.isBookable && isMakeupStaff) || fromAppointments.has(m.membershipId)) {
+    if ((m.isBookable && isMakeupStaff(m)) || fromAppointments.has(m.membershipId)) {
       lanes.push(fromStaff(m));
       seen.add(m.membershipId);
     }

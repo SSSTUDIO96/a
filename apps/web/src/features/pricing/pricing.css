@@ -95,7 +95,7 @@
 }
 .pr-ng .ui-row:first-of-type { border-top: 0; }
 .pr-ckl { display: flex; flex-direction: column; }
-.pr-ckl > .ui-field { padding: 7px 0; }
+.pr-ckl > .ui-field { padding: 0; }
 .pr-ckl .ui-check { font-weight: 500; }
 .pr-qty { display: flex; align-items: flex-start; gap: 4px; width: 100%; min-width: 0; }
 .pr-qty > .ui-field { flex: 1; min-width: 0; }
@@ -224,4 +224,7 @@ span.pr-subrow__name { padding-left: 8px; }
   .pr-trow__amt { grid-column: 1 / span 3; grid-row: 2; }
   .pr-trow__del { grid-column: 4; grid-row: 2; }
   .pr-trow--head > span:nth-child(4) { display: none; }
+  .pr-trow { padding: 8px 0; }
+  .pr-trow + .pr-trow:not(.pr-trow--head) { border-top: 1px solid var(--line-2); }
+  .pr-trow--head + .pr-trow { border-top: 0; }
 }

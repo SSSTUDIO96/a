@@ -245,3 +245,32 @@ describe('ApiError', () => {
     await expect(api.post('/auth/logout', {}, { auth: false })).resolves.toBeUndefined();
   });
 });
+
+describe('Retry-After → ApiError.retryAfterSeconds', () => {
+  const busy = (headers: Record<string, string>) =>
+    vi.stubGlobal('fetch', vi.fn(async () => json(429, { error: { code: 'RATE_LIMITED', message: 'Thử quá nhiều lần', requestId: 'r' } }, headers)));
+
+  it('dạng số giây', async () => {
+    busy({ 'Retry-After': '12' });
+    const { api } = await freshApi();
+    await expect(api.post('/auth/login', {}, { auth: false })).rejects.toMatchObject({ status: 429, retryAfterSeconds: 12 });
+  });
+
+  it('dạng ngày giờ HTTP → số giây từ bây giờ, làm tròn lên', async () => {
+    const at = new Date(Math.ceil(Date.now() / 1000) * 1000 + 30_000);
+    busy({ 'Retry-After': at.toUTCString() });
+    const { api } = await freshApi();
+    const err = (await api.post('/auth/login', {}, { auth: false }).catch((e: unknown) => e)) as { retryAfterSeconds: number };
+    expect(err.retryAfterSeconds).toBeGreaterThanOrEqual(29);
+    expect(err.retryAfterSeconds).toBeLessThanOrEqual(31);
+    expect(Number.isInteger(err.retryAfterSeconds)).toBe(true);
+  });
+
+  it('header hỏng hoặc thiếu → null (cả trang lỗi không phải JSON)', async () => {
+    busy({ 'Retry-After': 'mai nhé' });
+    const { api } = await freshApi();
+    await expect(api.post('/auth/login', {}, { auth: false })).rejects.toMatchObject({ retryAfterSeconds: null });
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('bận', { status: 503 })));
+    await expect(api.get('/x')).rejects.toMatchObject({ code: 'HTTP_503', retryAfterSeconds: null });
+  });
+});

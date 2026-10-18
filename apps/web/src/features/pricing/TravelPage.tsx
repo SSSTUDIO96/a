@@ -90,7 +90,7 @@ function TravelPolicyForm({ orgId, policy, canWrite, onSaved }: { orgId: string;
   const [saving, setSaving] = useState(false);
   const inputErrors = useInputErrors();
   const ref = useRef<HTMLDivElement>(null);
-  useFirstErrorFocus(ref, errors);
+  const focusFirstError = useFirstErrorFocus(ref);
   const dirty = policy === null || travelDirty(policy, form);
 
   const set = (patch: Partial<TravelForm>) => {
@@ -111,7 +111,10 @@ function TravelPolicyForm({ orgId, policy, canWrite, onSaved }: { orgId: string;
     setBanner(null);
     const v = validateTravelForm(form);
     setErrors(v);
-    if (Object.keys(v).length > 0 || inputErrors.any()) return;
+    if (Object.keys(v).length > 0 || inputErrors.any()) {
+      focusFirstError();
+      return;
+    }
     setSaving(true);
     try {
       await putTravelFeePolicy(orgId, buildTravelInput(form));
@@ -120,6 +123,7 @@ function TravelPolicyForm({ orgId, policy, canWrite, onSaved }: { orgId: string;
       const m = mapTravelError(err);
       setErrors(m.fields);
       setBanner(m.banner);
+      focusFirstError();
     } finally {
       setSaving(false);
     }

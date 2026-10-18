@@ -87,6 +87,13 @@ Mỗi lỗi ghi đủ: triệu chứng · gốc bệnh · số đo · cách ch�
 - **Cách chặn:** chọn theo **địa chỉ thật** (mọi đường bắt đầu bằng `/platform/`), không theo nhãn. Đo lại: cài lỗi → vi phạm 3/24, bản đúng → 24/24.
 - **Bài học cho studio khác:** phép kiểm nào chọn đối tượng theo chính cái nhãn có thể sai, thì mù đúng với cái sai đó. Luôn cài lỗi thử, và xem cả **mẫu số** chứ không chỉ "đỏ hay xanh".
 
+### 16. Lệnh áp migration "vào database tạm" lại đi vào database phát triển
+- **Triệu chứng:** điều phối áp thử một migration vào database tạm bằng `DATABASE_URL=<tạm> prisma migrate deploy`. Công cụ báo "đã áp hết", nhưng database tạm có 0 bảng.
+- **Gốc bệnh:** bản vẽ dữ liệu khai `directUrl = env("DIRECT_URL")`. Khi có `directUrl`, Prisma áp migration qua đường đó. Tệp `.env` trỏ `DIRECT_URL` về `makeup_dev`, nên migration chưa vào kho đã bị áp vào database phát triển. Cùng lệnh sai đã được điều phối chép vào đầu bài của 3 thợ màn hình.
+- **Số đo:** 1 database bị áp nhầm (`makeup_dev`, chỉ dữ liệu thử): 2 migration, trong đó 1 migration chỉ thêm chỉ mục, chưa nằm trong kho. Đối chiếu checksum: bản đã áp nhầm khớp từng byte với tệp đưa vào kho sau đó, nên database không lệch. Bài thử tự động: 0 bị, vì đã đặt cả hai biến từ trước.
+- **Cách chặn:** lệnh `pnpm db:deploy-to <đường_kết_nối>` đặt CẢ HAI biến, từ chối database không phải `makeup_test…` (trừ khi ghi cờ rõ), rồi đọc lại trạng thái trên chính database đích. Đã thử: vế BẮT (thiếu đường kết nối → từ chối; trỏ `makeup_dev` → từ chối) và vế GIỮ (database thử mới → áp 11/11, kiểm lại khớp).
+- **Bài học cho studio khác:** một công cụ có hai chỗ khai "đi đâu" thì lệnh chỉ đổi một chỗ sẽ lặng lẽ đi về chỗ kia. Sau mỗi lệnh ghi dữ liệu, đếm lại trên đúng nơi mình nhắm, đừng tin câu "thành công".
+
 ---
 
 ## Phần CỦA RIÊNG DỰ ÁN NÀY
@@ -96,3 +103,4 @@ Mỗi lỗi ghi đủ: triệu chứng · gốc bệnh · số đo · cách ch�
 - Lỗi 5: migration `20261018151403_bang_gia_lich`.
 - Lỗi 14: migration `20261018190000_tep_thu_tien_nen_tang`; database thử `makeup_test_contract` đã dọn 2 bậc chồng của tổ chức thử, áp `travel_tiers_no_overlap`, sửa checksum; `prisma migrate status` báo khớp 9/9.
 - Lỗi 15: `apps/api/test/gate.ts` phép 9 `platform`, đột biến 9 trong `apps/api/test/gate-mutants.test.ts`.
+- Lỗi 16: `apps/api/prisma/schema.prisma` (datasource directUrl), `apps/api/.env`, lệnh chặn `apps/api/scripts/deploy-to.mjs` (`pnpm db:deploy-to`).

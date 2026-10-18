@@ -155,7 +155,7 @@ textarea.ctl{height:auto;padding:8px 10px;resize:vertical;line-height:1.45}
 .row .sp{flex:1}
 .g2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
 .g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:start}
-.stack{display:flex;flex-direction:column;gap:16px}
+.vstack{display:flex;flex-direction:column;gap:16px}
 /* Dải thông báo */
 .bn{display:flex;gap:8px;align-items:flex-start;padding:9px 12px;border-radius:8px;font-size:13px;border:1px solid}
 .bn svg{margin-top:1px}

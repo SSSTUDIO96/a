@@ -30,7 +30,7 @@
 .ct-addm { display: none; }
 
 /* ---------- Thẻ đầu: khách + ngày ---------- */
-.ct-head__body { padding: 6px 16px 12px; }
+.ct-head > .ui-card__body { padding: 6px 16px 12px; }
 .ct-set { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 12px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line-2); }
 .ct-set:first-child { border-top: 0; }
 .ct-set > .ct-set__l { font-weight: 500; }
@@ -71,7 +71,8 @@
 .ct-fl__grow { flex: 1; }
 .ct-dcr { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .ct-time { width: 84px; }
-.ct-time input { text-align: center; }
+.ct-time input { text-align: center; padding: 0 6px; }
+.ct-time input::-webkit-calendar-picker-indicator { display: none; }
 .ct-km { width: 110px; }
 .ct-manual { width: 130px; }
 .ct-amt { margin-left: auto; font-weight: 700; }

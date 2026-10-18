@@ -10,9 +10,27 @@ export class ApiError extends Error {
     readonly status: number,
     readonly requestId: string | null,
     readonly details: unknown = undefined,
+    // Số giây máy chủ bảo chờ (header Retry-After, thường đi kèm 429/503); không có hoặc đọc không được → null.
+    readonly retryAfterSeconds: number | null = null,
   ) {
     super(message);
   }
+}
+
+// Header Retry-After (RFC 9110 mục 10.2.3): số giây ("12") hoặc ngày giờ HTTP ("Wed, 21 Oct 2026 07:28:00 GMT").
+// Ngày giờ → số giây từ bây giờ, làm tròn lên (đã qua → 0). Thiếu hoặc hỏng → null.
+export function parseRetryAfter(value: string | null, now: number = Date.now()): number | null {
+  if (value === null) return null;
+  const v = value.trim();
+  if (/^\d+$/.test(v)) {
+    const n = Number(v);
+    return Number.isSafeInteger(n) ? n : null;
+  }
+  // Chỉ nhận dạng ngày giờ có tên thứ/tháng kiểu HTTP, không đoán những chuỗi số lạ như "1.5" hay "-3".
+  if (!/[A-Za-z]{3}/.test(v)) return null;
+  const at = Date.parse(v);
+  if (Number.isNaN(at)) return null;
+  return Math.max(0, Math.ceil((at - now) / 1000));
 }
 
 export interface ServerErrorBody {

@@ -69,11 +69,18 @@ export function createApp(deps: Deps, routes: AnyRoute[] = ALL_ROUTES) {
   const refreshProbeLimiter = rateLimit({
     windowMs: 60_000,
     limit: deps.env.REFRESH_PROBE_LIMIT_PER_MINUTE,
+    // Không bật standardHeaders ở đây: hai bộ đếm cùng đặt header RateLimit thì bộ sau ghi đè số liệu của trần tổng.
+    // Chỉ thêm Retry-After lúc chặn (web cần để báo "thử lại sau N giây"); trần tổng tự gửi nhờ standardHeaders.
     standardHeaders: false,
     legacyHeaders: false,
     skip: (req) => !hasPresentedRefreshToken(req),
     skipSuccessfulRequests: true,
-    handler: limited,
+    handler: (req, res, next) => {
+      const resetTime = (req as Request & { rateLimit?: { resetTime?: Date } }).rateLimit?.resetTime;
+      const seconds = resetTime ? Math.max(0, Math.ceil((resetTime.getTime() - Date.now()) / 1000)) : 60;
+      res.setHeader('Retry-After', String(seconds));
+      limited(req, res, next);
+    },
   });
   const refreshCeilingLimiter = rateLimit({
     windowMs: 60_000,

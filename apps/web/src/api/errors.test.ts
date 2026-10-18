@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ApiError, conflictFields, errorKind, fieldErrors, userMessage, validationIssues } from './errors';
+import { ApiError, conflictFields, errorKind, fieldErrors, parseRetryAfter, userMessage, validationIssues } from './errors';
 
 const e = (code: string, status: number, details?: unknown) => new ApiError(code, `lời ${code}`, status, 'req-1', details);
 
@@ -48,5 +48,28 @@ describe('ánh xạ lỗi theo bản vẽ mục 5', () => {
     expect(validationIssues(err)).toHaveLength(4);
     expect(validationIssues(e('CONFLICT', 409, { issues: [{ path: 'a', message: 'b' }] }))).toEqual([]);
     expect(conflictFields(e('CONFLICT', 409, { fields: ['slug'] }))).toEqual(['slug']);
+  });
+});
+
+describe('parseRetryAfter', () => {
+  const now = Date.parse('2026-10-18T10:00:00.000Z');
+  it('số giây', () => {
+    expect(parseRetryAfter('12', now)).toBe(12);
+    expect(parseRetryAfter(' 0 ', now)).toBe(0);
+  });
+  it('ngày giờ HTTP → số giây làm tròn lên; đã qua → 0', () => {
+    expect(parseRetryAfter('Sun, 18 Oct 2026 10:00:30 GMT', now)).toBe(30);
+    expect(parseRetryAfter('Sun, 18 Oct 2026 10:00:30 GMT', now + 200)).toBe(30);
+    expect(parseRetryAfter('Sun, 18 Oct 2026 09:59:00 GMT', now)).toBe(0);
+  });
+  it('thiếu hoặc hỏng → null', () => {
+    expect(parseRetryAfter(null, now)).toBeNull();
+    expect(parseRetryAfter('', now)).toBeNull();
+    expect(parseRetryAfter('mai nhé', now)).toBeNull();
+    expect(parseRetryAfter('1.5', now)).toBeNull();
+    expect(parseRetryAfter('-3', now)).toBeNull();
+  });
+  it('ApiError luôn có trường retryAfterSeconds (mặc định null)', () => {
+    expect(new ApiError('X', 'x', 429, null)).toHaveProperty('retryAfterSeconds', null);
   });
 });

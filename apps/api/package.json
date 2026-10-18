@@ -12,6 +12,7 @@
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:generate": "prisma generate",
+    "db:deploy-to": "node scripts/deploy-to.mjs",
     "db:sync-roles": "tsx src/scripts/run-sync-system-roles.ts",
     "postinstall": "prisma generate",
     "db:sync-roles:prod": "node dist/scripts/run-sync-system-roles.js",

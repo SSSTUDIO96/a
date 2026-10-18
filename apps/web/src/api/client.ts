@@ -1,4 +1,4 @@
-import { ApiError, isServerErrorBody, NETWORK_MESSAGE } from './errors';
+import { ApiError, isServerErrorBody, NETWORK_MESSAGE, parseRetryAfter } from './errors';
 
 // Máy khách API: gọi đường tương đối /api/v1 (cùng tên miền với trang web).
 // Access token chỉ nằm trong biến của module này — tải lại trang là mất, khôi phục bằng refresh (cookie httpOnly).
@@ -76,11 +76,19 @@ async function readResult<T>(res: Response): Promise<T> {
     }
   }
   if (!res.ok) {
+    const retryAfter = parseRetryAfter(res.headers.get('retry-after'));
     if (isServerErrorBody(parsed)) {
       const e = parsed.error;
-      throw new ApiError(e.code, e.message, res.status, e.requestId ?? headerRequestId, e.details);
+      throw new ApiError(e.code, e.message, res.status, e.requestId ?? headerRequestId, e.details, retryAfter);
     }
-    throw new ApiError(`HTTP_${res.status}`, `Máy chủ trả lỗi không rõ (mã ${res.status}). Vui lòng thử lại.`, res.status, headerRequestId);
+    throw new ApiError(
+      `HTTP_${res.status}`,
+      `Máy chủ trả lỗi không rõ (mã ${res.status}). Vui lòng thử lại.`,
+      res.status,
+      headerRequestId,
+      undefined,
+      retryAfter,
+    );
   }
   if (parsed === undefined) {
     throw new ApiError('INVALID_RESPONSE', 'Máy chủ trả dữ liệu không đọc được.', res.status, headerRequestId);
