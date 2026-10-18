@@ -1,9 +1,9 @@
 import { expect, test, type APIRequestContext, type Browser, type Page } from '@playwright/test';
+import { SHOTS } from './anh';
 
 // Khung điều hướng (gói W3) ở 3 khổ 1440 / 1024 / 390 với 3 loại tài khoản tạo qua API thật:
 // chủ tổ chức, thợ (vai trò hệ thống "Thợ makeup"), và người chỉ có quyền xem lịch (vai trò tuỳ chỉnh).
 
-const SHOTS = 'e2e/anh';
 const PASSWORD = 'mat-khau-e2e-du-dai';
 const VIEWPORTS = [
   { name: '1440', width: 1440, height: 900 },

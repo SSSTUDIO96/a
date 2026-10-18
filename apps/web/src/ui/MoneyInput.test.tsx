@@ -162,3 +162,103 @@ describe('MoneyInput', () => {
     expect(input().getAttribute('aria-describedby')).toBe(screen.getByRole('alert').id);
   });
 });
+
+// Nghiệm thu web 1 — N5, N6. Quy ước VN: tiền dùng dấu chấm ngăn nghìn, không có phần lẻ; chữ mơ hồ thì báo lỗi, không đoán.
+describe('MoneyInput — dấu chấm tự gõ và giá trị đặt từ ngoài (nghiệm thu web 1)', () => {
+  function ExternalHarness({ onValue = () => {}, onInputError = () => {} }: { onValue?: (v: Vnd | null) => void; onInputError?: (m: string | null) => void }) {
+    const [value, setValue] = useState<Vnd | null>(500_000);
+    return (
+      <>
+        <MoneyInput
+          aria-label="Giá bán"
+          value={value}
+          onInputError={onInputError}
+          onChange={(v) => {
+            setValue(v);
+            onValue(v);
+          }}
+        />
+        <button type="button" onClick={() => setValue(3_000_000)}>
+          Chọn gói khác
+        </button>
+      </>
+    );
+  }
+
+  it('N5: gõ từng phím "1.5" → báo lỗi có chữ, KHÔNG thành 15 đ; gõ tiếp thành "1.500" → nhận 1.500 đ', async () => {
+    const user = userEvent.setup();
+    const onValue = vi.fn();
+    render(<Harness onValue={onValue} />);
+    await user.click(input());
+    await user.keyboard('1.5');
+    expect(input().value).toBe('1.5');
+    expect(input().getAttribute('aria-invalid')).toBe('true');
+    expect(screen.getByRole('alert').textContent).toContain('Dấu chấm chỉ dùng ngăn nghìn');
+    expect(onValue).not.toHaveBeenCalledWith(15);
+    await user.keyboard('00');
+    expect(input().value).toBe('1.500');
+    expect(input().hasAttribute('aria-invalid')).toBe(false);
+    expect(onValue).toHaveBeenLastCalledWith(1_500);
+    expect(onValue).not.toHaveBeenCalledWith(15);
+    expect(onValue).not.toHaveBeenCalledWith(150);
+  });
+
+  it('N5: gõ dấu chấm cuối "1.500." hoặc chèn dấu chấm sai chỗ → báo lỗi, giữ số cũ', async () => {
+    const user = userEvent.setup();
+    const onValue = vi.fn();
+    render(<Harness initial={1_500} onValue={onValue} />);
+    await user.click(input());
+    await user.keyboard('.');
+    expect(input().value).toBe('1.500.');
+    expect(screen.getByRole('alert').textContent).toContain('Dấu chấm');
+    await user.keyboard('5');
+    expect(input().value).toBe('1.500.5');
+    expect(input().getAttribute('aria-invalid')).toBe('true');
+    expect(onValue).not.toHaveBeenCalled();
+    await user.keyboard('00');
+    expect(input().value).toBe('1.500.500');
+    expect(onValue).toHaveBeenLastCalledWith(1_500_500);
+  });
+
+  it('N5: gõ "1.500.000" bằng tay (có dấu chấm) vẫn nhận đúng 1.500.000 đ', async () => {
+    const user = userEvent.setup();
+    const onValue = vi.fn();
+    render(<Harness onValue={onValue} />);
+    await user.click(input());
+    await user.keyboard('1.500.000');
+    expect(input().value).toBe('1.500.000');
+    expect(onValue).toHaveBeenLastCalledWith(1_500_000);
+    expect(input().hasAttribute('aria-invalid')).toBe(false);
+  });
+
+  it('N6: ô đang báo lỗi ("-5"), rời ô, form tự điền giá mới → ô hiện giá mới, hết lỗi', async () => {
+    const user = userEvent.setup();
+    const onInputError = vi.fn();
+    render(<ExternalHarness onInputError={onInputError} />);
+    await user.click(input());
+    await user.clear(input());
+    await user.keyboard('-5');
+    await user.click(screen.getByText('Chọn gói khác'));
+    expect(input().value).toBe('3.000.000 ₫');
+    expect(input().hasAttribute('aria-invalid')).toBe(false);
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(onInputError).toHaveBeenLastCalledWith(null);
+  });
+
+  it('N6: ô đang báo lỗi dấu chấm ("1.5") mà form đặt giá mới → ô hiện giá mới; gõ lại thì đọc bình thường', async () => {
+    const user = userEvent.setup();
+    const onValue = vi.fn();
+    render(<ExternalHarness onValue={onValue} />);
+    await user.click(input());
+    await user.clear(input());
+    await user.keyboard('1.5');
+    expect(input().getAttribute('aria-invalid')).toBe('true');
+    await user.click(screen.getByText('Chọn gói khác'));
+    expect(input().value).toBe('3.000.000 ₫');
+    expect(input().hasAttribute('aria-invalid')).toBe(false);
+    await user.click(input());
+    await user.keyboard('0');
+    expect(input().value).toBe('30.000.000');
+    expect(onValue).toHaveBeenLastCalledWith(30_000_000);
+  });
+});

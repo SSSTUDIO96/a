@@ -3,7 +3,7 @@ import type { Prisma } from '@prisma/client';
 import { MAX_APPOINTMENT_MS } from '@makeup/shared';
 import { defineRoute, mustOrg } from '../../http/route';
 import { IsoTime } from '../schedule/appointments';
-import { resolveAvatarUrls } from '../files/service';
+import { avatarSelect, resolveAvatarUrls } from '../files/service';
 import { initialsOf } from './common';
 
 // Cảnh báo khi chọn thợ: trùng giờ (OVERLAP), có lịch khác trong cùng ngày (SAME_DAY), hay rảnh (FREE).
@@ -87,7 +87,7 @@ export async function staffAvailabilityTx(
       id: true,
       user: { select: { fullName: true } },
       staffProfile: {
-        select: { displayName: true, avatarUrl: true, isBookable: true, tier: { select: { id: true, name: true } } },
+        select: { displayName: true, ...avatarSelect, isBookable: true, tier: { select: { id: true, name: true } } },
       },
     },
   });
@@ -151,7 +151,7 @@ export async function staffAvailabilityTx(
   const avatarOf = await resolveAvatarUrls(
     tx,
     orgId,
-    members.map((m) => m.staffProfile?.avatarUrl),
+    members.map((m) => m.staffProfile),
   );
   const result = new Map<string, StaffAvailability>();
   for (const m of members) {
@@ -160,7 +160,7 @@ export async function staffAvailabilityTx(
     result.set(m.id, {
       membershipId: m.id,
       displayName,
-      avatarUrl: avatarOf(p?.avatarUrl),
+      avatarUrl: avatarOf(p),
       initials: initialsOf(displayName),
       tier: p?.tier ?? null,
       isBookable: p?.isBookable ?? true,

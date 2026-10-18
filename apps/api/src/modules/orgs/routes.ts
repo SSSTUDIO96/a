@@ -5,7 +5,7 @@ import { defineRoute, mustOrg, mustUser } from '../../http/route';
 import { AppError } from '../../lib/errors';
 import { writeAudit } from '../../lib/audit';
 import { assertCanEditRole, assertCanGrant, assertCanTouchMember, assertKeepsAnOwner } from './guards';
-import { lockOrgAndRecheck } from '../../http/middleware';
+import { lockOrgAndRecheck, recordNewOrgIdempotency } from '../../http/middleware';
 
 // Tên trang của web không được dùng làm đường dẫn tổ chức (web dùng /:orgSlug/...).
 const RESERVED_SLUGS = new Set(['dang-nhap', 'dang-ky', 'tao-to-chuc', 'api', 'admin', 'quan-tri', 'www', 'app', 'static', 'assets']);
@@ -84,13 +84,15 @@ export const orgRoutes = [
     path: '/orgs',
     scope: 'auth',
     tag: 'Tổ chức',
-    summary: 'Tạo tổ chức mới; người tạo thành chủ tài khoản',
+    summary:
+      'Tạo tổ chức mới; người tạo thành chủ tài khoản. Header Idempotency-Key tuỳ chọn: gửi lại cùng khoá + cùng nội dung → trả lại đúng tổ chức đã tạo',
+    idempotent: 'new-org',
     body: z.object({
       name: z.string().trim().min(1, 'Nhập tên tổ chức').max(120, 'Tên tổ chức tối đa 120 ký tự'),
       slug: Slug,
       kind: z.enum(['INDIVIDUAL', 'TEAM', 'ACADEMY']),
     }),
-    handler: async ({ deps, body, userId, requestId }) => {
+    handler: async ({ deps, body, userId, requestId, idempotency }) => {
       const uid = mustUser(userId);
       const taken = await deps.db.organization.findUnique({ where: { slug: body.slug }, select: { id: true } });
       if (taken) throw new AppError('CONFLICT', 'Đường dẫn tổ chức đã có người dùng, chọn tên khác', { fields: ['slug'] });
@@ -122,6 +124,8 @@ export const orgRoutes = [
           data: body,
           requestId,
         });
+        // Khoá chống gửi trùng ghi cùng transaction: tổ chức có thì khoá có (xem recordNewOrgIdempotency).
+        await recordNewOrgIdempotency(tx, created.id, uid, idempotency, { status: 201, body: created });
         return created;
       });
       return { status: 201, body: org };

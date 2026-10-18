@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=1080">
+<title>Thẻ chào mừng shd-08 – Chữ ký trên nền trắng</title>
+<!-- Makeup Pro · R&D vòng 3 · Mẫu chào mừng sang trọng hiện đại
+     Nguồn ý tưởng: Tự sáng tác
+     Ô dữ liệu: anh (Ảnh học viên), ten (Tên học viên), khoa (Tên khoá), lop (Mã lớp), ngay (Ngày khai giảng), logo (Logo), th (Tên thương hiệu)
+     Phông: MP Viết tay 2, MP Chữ có chân, MP Chữ không chân — khai báo ở phong/phong.css (phông viết tay là PHÔNG TẠM, thay một chỗ trong tệp đó).
+     Khổ: mặc định 1080×1350; thêm ?kho=vuong để ra 1080×1080. Thay dữ liệu bằng tham số đường dẫn (xem chung/mau.js).
+     Ảnh người và logo mặc định: vector do R&D tự vẽ. -->
+<link rel="stylesheet" href="phong/phong.css"><link rel="stylesheet" href="chung/mau.css">
+<style>
+#c{background:#FBFAF7;color:#1E1C1B}
+.w{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;text-align:center;padding:90px 80px 70px}
+.cir{width:230px;height:230px;border-radius:50%;overflow:hidden;flex:none}
+.k1{font:500 19px var(--f-sans);letter-spacing:.5em;text-transform:uppercase;color:#8E857E;margin-top:56px}
+.ten{font-family:var(--f-tay-2);font-size:calc(150px*var(--tay-co-2));line-height:1.08;width:100%;margin-top:20px}
+.rl{width:160px;height:1px;background:#1E1C1B;margin:34px 0 30px}
+.kh{font:italic 500 40px/1.2 var(--f-chan)}
+.dt{font:500 19px var(--f-sans);letter-spacing:.3em;text-transform:uppercase;color:#8E857E;margin-top:18px}
+.ft{display:flex;align-items:center;gap:14px}.ft img{width:50px;height:50px}.ft span{font:600 18px var(--f-sans);letter-spacing:.28em;text-transform:uppercase}
+.vuong .w{padding:56px 80px 50px}.vuong .cir{width:170px;height:170px}.vuong .k1{margin-top:34px}.vuong .rl{margin:22px 0 20px}.vuong .ten{font-size:calc(124px*var(--tay-co-2))}
+</style></head><body><div id="c"><div class="w"><div class="cir"><img class="ph" data-f="anh" alt=""></div>
+<div class="k1">Chào mừng học viên</div>
+<div class="ten" data-f="ten" data-fit="2"></div>
+<div class="rl"></div><div class="kh" data-f="khoa" data-fit="2"></div>
+<div class="dt">Lớp <span data-f="lop"></span> · khai giảng <span data-f="ngayCham"></span></div>
+<div class="sp"></div><div class="ft"><img data-f="logo" alt=""><span data-f="th"></span></div></div></div>
+<script>window.MAC_DINH={};</script>
+<script src="chung/qrcode.js"></script><script src="chung/mau.js"></script></body></html>

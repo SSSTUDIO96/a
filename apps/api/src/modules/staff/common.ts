@@ -1,4 +1,5 @@
 import type { Prisma } from '@prisma/client';
+import { avatarSelect, type AvatarSource } from '../files/service';
 
 // Chữ viết tắt hiện thay ảnh đại diện khi chưa có ảnh: chữ đầu của từ đầu và từ cuối ("Nguyễn Thị Hoa" → "NH").
 export function initialsOf(name: string): string {
@@ -17,7 +18,7 @@ export const staffMemberSelect = {
   staffProfile: {
     select: {
       displayName: true,
-      avatarUrl: true,
+      ...avatarSelect,
       phone: true,
       isBookable: true,
       tier: { select: { id: true, name: true, isActive: true } },
@@ -29,10 +30,10 @@ export type StaffMemberRow = Prisma.MembershipGetPayload<{ select: typeof staffM
 
 // Thành viên chưa có hồ sơ thợ vẫn hiện: tên lấy từ tài khoản, chưa có bậc, mặc định nhận lịch (khớp mặc định database).
 // Số điện thoại thợ chỉ trả cho người có quyền sửa hồ sơ thợ (staff.write); người khác nhận null.
-// avatarOf: đổi giá trị đã lưu thành URL ký có hạn (modules/files resolveAvatarUrls).
+// avatarOf: đổi hồ sơ thành URL ảnh đại diện ký có hạn (modules/files resolveAvatarUrls).
 export function presentStaff(
   m: StaffMemberRow,
-  view: { showPhone: boolean; avatarOf: (raw: string | null | undefined) => string | null },
+  view: { showPhone: boolean; avatarOf: (p: AvatarSource | null | undefined) => string | null },
 ) {
   const p = m.staffProfile;
   const displayName = p?.displayName ?? m.user.fullName;
@@ -42,7 +43,7 @@ export function presentStaff(
     fullName: m.user.fullName,
     displayName,
     initials: initialsOf(displayName),
-    avatarUrl: view.avatarOf(p?.avatarUrl),
+    avatarUrl: view.avatarOf(p),
     phone: view.showPhone ? (p?.phone ?? null) : null,
     tier: p?.tier ?? null,
     isBookable: p?.isBookable ?? true,

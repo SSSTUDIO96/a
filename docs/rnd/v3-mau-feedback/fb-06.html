@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=1080">
+<title>Mẫu feedback fb-06 – Lưới ba ảnh</title>
+<!-- Makeup Pro · R&D vòng 3 · Mẫu feedback
+     Nguồn ý tưởng: Tự sáng tác
+     Ô dữ liệu: a1 (Ảnh 1), a2 (Ảnh 2), a3 (Ảnh 3), nd (Nội dung lời khen), kh (Tên khách/học viên), dv (Khoá học hoặc dịch vụ), logo (Logo), th (Tên thương hiệu)
+     Phông: MP Chữ có chân, MP Chữ không chân — khai báo ở ../v3-mau-chao-mung/phong/phong.css (phông viết tay là PHÔNG TẠM, thay một chỗ trong tệp đó).
+     Khổ: mặc định 1080×1350; thêm ?kho=vuong để ra 1080×1080. Thay dữ liệu bằng tham số đường dẫn (xem chung/mau.js).
+     Ảnh người và logo mặc định: vector do R&D tự vẽ. -->
+<link rel="stylesheet" href="../v3-mau-chao-mung/phong/phong.css"><link rel="stylesheet" href="../v3-mau-chao-mung/chung/mau.css">
+<style>
+#c{background:#FFFFFF;color:#1F1B1A}
+.gr{position:absolute;left:0;right:0;top:0;height:700px;display:grid;grid-template-columns:3fr 2fr;grid-template-rows:1fr 1fr;gap:8px}
+.gr div{overflow:hidden}.gr div:first-child{grid-row:1/3}
+.w{position:absolute;left:0;right:0;top:700px;bottom:0;display:flex;flex-direction:column;padding:44px 72px 50px;border-top:10px solid #A63D62}
+.nd{font:400 31px/1.5 var(--f-sans);flex:1 1 0;min-height:0;overflow:hidden}
+.pr{display:flex;align-items:baseline;gap:14px;margin-top:18px}.pr b{font:italic 600 40px var(--f-chan)}.pr span{font:500 21px var(--f-sans);color:#7C7370}
+.ft{display:flex;align-items:center;gap:12px;margin-top:20px}.ft img{width:46px;height:46px}.ft span{font:600 17px var(--f-sans);letter-spacing:.26em;text-transform:uppercase;color:#A63D62}
+.vuong .gr{height:500px}.vuong .w{top:500px;padding:34px 64px 38px}.vuong .nd{font-size:27px}
+.nd{display:flex;flex-direction:column;justify-content:center}
+</style></head><body><div id="c"><div class="gr"><div><img class="ph" data-f="a1" alt=""></div><div><img class="ph" data-f="a2" alt=""></div><div><img class="ph" data-f="a3" alt=""></div></div>
+<div class="w"><div class="nd" data-f="nd" data-fitc="44"></div><div class="pr"><b data-f="kh"></b><span data-f="dv"></span></div>
+<div class="ft"><img data-f="logo" alt=""><span data-f="th"></span></div></div></div>
+<script>window.MAC_DINH={};</script>
+<script src="../v3-mau-chao-mung/chung/qrcode.js"></script><script src="../v3-mau-chao-mung/chung/mau.js"></script></body></html>

@@ -3,6 +3,7 @@ import express from 'express';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import request from 'supertest';
 import { createStorageFromEnv, getStorage, LocalDiskDriver, S3Driver, signToken, verifyToken } from '../src/lib/storage';
+import { loadEnv } from '../src/env';
 import { detectType, imageSize } from '../src/modules/files/detect';
 import { RAW_ROUTE, rawFileHandler } from '../src/modules/files/raw';
 import { makePng } from './png';
@@ -122,14 +123,16 @@ describe('URL ký có hạn (driver đĩa) và cấu hình kho tệp', () => {
     expect(verifyToken(secret, 'khong-co-dau-cham')).toEqual({ ok: false, reason: 'MALFORMED' });
   });
 
-  it('production thiếu cấu hình → ném lỗi, không tự chọn mặc định; development có mặc định đĩa tạm', () => {
-    const base = { JWT_ACCESS_SECRET: 'x'.repeat(40) };
-    expect(() => createStorageFromEnv({ ...base, NODE_ENV: 'production' })).toThrow(/STORAGE_DRIVER/);
-    expect(() => createStorageFromEnv({ ...base, NODE_ENV: 'production', STORAGE_DRIVER: 'local' })).toThrow(/STORAGE_LOCAL_DIR/);
-    expect(() => createStorageFromEnv({ ...base, NODE_ENV: 'production', STORAGE_DRIVER: 's3', S3_ENDPOINT: 'https://s3.example.com' })).toThrow(/S3_REGION/);
-    expect(createStorageFromEnv({ ...base, NODE_ENV: 'development' })).toBeInstanceOf(LocalDiskDriver);
-    expect(createStorageFromEnv({ ...base, NODE_ENV: 'development', STORAGE_DRIVER: 'local', STORAGE_LOCAL_DIR: '', STORAGE_SIGNING_SECRET: '' })).toBeInstanceOf(LocalDiskDriver);
-    expect(() => createStorageFromEnv({ ...base, NODE_ENV: 'production', STORAGE_DRIVER: 'local', STORAGE_LOCAL_DIR: '' })).toThrow(/STORAGE_LOCAL_DIR/);
+  it('production thiếu cấu hình → đọc env ném lỗi (máy chủ không khởi động), không tự chọn mặc định; development có mặc định đĩa tạm', () => {
+    // Biến kho tệp kiểm ở EnvSchema (env.ts) — xem thêm test/cau-hinh-kho-tep.test.ts.
+    const base = { DATABASE_URL: 'postgresql://u:p@localhost:5432/x', JWT_ACCESS_SECRET: 'x'.repeat(40) };
+    const storage = (env: Record<string, string>) => createStorageFromEnv(loadEnv({ ...base, ...env }));
+    expect(() => storage({ NODE_ENV: 'production' })).toThrow(/STORAGE_DRIVER/);
+    expect(() => storage({ NODE_ENV: 'production', STORAGE_DRIVER: 'local' })).toThrow(/STORAGE_LOCAL_DIR/);
+    expect(() => storage({ NODE_ENV: 'production', STORAGE_DRIVER: 's3', S3_ENDPOINT: 'https://s3.example.com' })).toThrow(/S3_REGION/);
+    expect(storage({ NODE_ENV: 'development' })).toBeInstanceOf(LocalDiskDriver);
+    expect(storage({ NODE_ENV: 'development', STORAGE_DRIVER: 'local', STORAGE_LOCAL_DIR: '', STORAGE_SIGNING_SECRET: '' })).toBeInstanceOf(LocalDiskDriver);
+    expect(() => storage({ NODE_ENV: 'production', STORAGE_DRIVER: 'local', STORAGE_LOCAL_DIR: '' })).toThrow(/STORAGE_LOCAL_DIR/);
   });
 
   it('driver S3: URL ký SigV4 khớp ví dụ mẫu trong tài liệu AWS (chưa thử với dịch vụ thật)', () => {

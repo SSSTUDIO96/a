@@ -15,6 +15,7 @@ import {
 import type { OrgContext } from '../../http/route';
 import { AppError } from '../../lib/errors';
 import { writeAudit } from '../../lib/audit';
+import { isStaffOverlapViolation } from '../../http/middleware';
 
 export type InitialStatus = (typeof INITIAL_STATUSES)[number];
 
@@ -201,15 +202,26 @@ export async function assertBookable(tx: Prisma.TransactionClient, orgId: string
   }
 }
 
-// Truy vấn trước để báo trùng dễ đọc. Ràng buộc EXCLUDE ở database vẫn là chốt chặn cuối khi hai yêu cầu đua nhau.
-export async function assertNoOverlap(
+export interface OverlapConflict {
+  appointmentId: string;
+  code: string;
+  startsAt: string;
+  endsAt: string;
+  blockStart: string;
+  blockEnd: string;
+  membershipId: string;
+  staffName: string;
+}
+
+// Các khoảng bận đang chồng lên khoảng [blockStart, blockEnd) của các thợ cho trước (trừ chính lịch đang sửa).
+export async function findOverlaps(
   tx: Prisma.TransactionClient,
   orgId: string,
   membershipIds: string[],
   block: { blockStart: Date; blockEnd: Date },
   excludeAppointmentId?: string,
-) {
-  if (membershipIds.length === 0) return;
+): Promise<OverlapConflict[]> {
+  if (membershipIds.length === 0) return [];
   const rows = await tx.appointmentStaff.findMany({
     where: {
       organizationId: orgId,
@@ -228,8 +240,7 @@ export async function assertNoOverlap(
     },
     orderBy: { blockStart: 'asc' },
   });
-  if (rows.length === 0) return;
-  const conflicts = rows.map((r) => ({
+  return rows.map((r) => ({
     appointmentId: r.appointment.id,
     code: r.appointment.code,
     startsAt: r.appointment.startsAt.toISOString(),
@@ -239,8 +250,49 @@ export async function assertNoOverlap(
     membershipId: r.membershipId,
     staffName: r.membership.user.fullName,
   }));
+}
+
+// Lỗi 409 trùng lịch: LUÔN kèm details.conflicts (web types.ts hứa như vậy).
+export function overlapError(conflicts: OverlapConflict[]): AppError {
+  if (conflicts.length === 0) {
+    return new AppError('CONFLICT', 'Trùng lịch: vừa có lịch khác chen vào giờ này, vui lòng tải lại lịch rồi thử lại', { conflicts });
+  }
   const summary = conflicts.map((c) => `${c.staffName} đã có lịch ${c.code}`).join('; ');
-  throw new AppError('CONFLICT', `Trùng lịch: ${summary}`, { conflicts });
+  return new AppError('CONFLICT', `Trùng lịch: ${summary}`, { conflicts });
+}
+
+// Truy vấn trước để báo trùng dễ đọc. Ràng buộc EXCLUDE ở database vẫn là chốt chặn cuối khi hai yêu cầu đua nhau
+// (bọc phần ghi bằng guardOverlap để lỗi của chốt cuối cũng kèm danh sách lịch trùng).
+export async function assertNoOverlap(
+  tx: Prisma.TransactionClient,
+  orgId: string,
+  membershipIds: string[],
+  block: { blockStart: Date; blockEnd: Date },
+  excludeAppointmentId?: string,
+) {
+  const conflicts = await findOverlaps(tx, orgId, membershipIds, block, excludeAppointmentId);
+  if (conflicts.length > 0) throw overlapError(conflicts);
+}
+
+// Bọc các câu ghi có thể chạm ràng buộc EXCLUDE (phân thợ, đổi giờ, đổi trạng thái sang chiếm giờ).
+// Hai yêu cầu đua nhau: bước kiểm trước của bên thua không thấy lịch chưa commit của bên thắng, nên database chặn.
+// Khi đó quay về điểm lưu (transaction vẫn dùng được) rồi TRA LẠI: lúc này lịch bên thắng đã commit nên thấy được,
+// và lỗi 409 kèm đủ danh sách như đường kiểm trước (biên bản nghiệm thu web 1, N4).
+export async function guardOverlap<T>(
+  tx: Prisma.TransactionClient,
+  check: { orgId: string; membershipIds: string[]; block: { blockStart: Date; blockEnd: Date }; excludeAppointmentId?: string },
+  write: () => Promise<T>,
+): Promise<T> {
+  await tx.$executeRaw`SAVEPOINT chan_trung_lich`;
+  try {
+    const result = await write();
+    await tx.$executeRaw`RELEASE SAVEPOINT chan_trung_lich`;
+    return result;
+  } catch (err) {
+    if (!isStaffOverlapViolation(err)) throw err;
+    await tx.$executeRaw`ROLLBACK TO SAVEPOINT chan_trung_lich`;
+    throw overlapError(await findOverlaps(tx, check.orgId, check.membershipIds, check.block, check.excludeAppointmentId));
+  }
 }
 
 // Mã lịch tuần tự theo tổ chức. Câu upsert khoá dòng bộ đếm nên hai yêu cầu đồng thời không lấy trùng số.
@@ -377,17 +429,20 @@ export async function createAppointmentTx(
     },
   });
   if (input.staff.length > 0) {
-    await tx.appointmentStaff.createMany({
-      data: input.staff.map((s) => ({
-        organizationId: ctx.orgId,
-        appointmentId: created.id,
-        membershipId: s.membershipId,
-        role: s.role,
-        blockStart: block.blockStart,
-        blockEnd: block.blockEnd,
-        isBlocking,
-      })),
-    });
+    const membershipIds = input.staff.map((s) => s.membershipId);
+    await guardOverlap(tx, { orgId: ctx.orgId, membershipIds, block }, () =>
+      tx.appointmentStaff.createMany({
+        data: input.staff.map((s) => ({
+          organizationId: ctx.orgId,
+          appointmentId: created.id,
+          membershipId: s.membershipId,
+          role: s.role,
+          blockStart: block.blockStart,
+          blockEnd: block.blockEnd,
+          isBlocking,
+        })),
+      }),
+    );
   }
   await tx.appointmentStatusHistory.create({
     data: {
@@ -438,25 +493,31 @@ export async function applyStatusChangeTx(
   if (to === 'CANCELLED' && !reason) throw new AppError('VALIDATION_FAILED', 'Huỷ lịch phải ghi lý do');
   const wasBlocking = isBlockingStatus(before.status);
   const nowBlocking = isBlockingStatus(to);
-  if (!wasBlocking && nowBlocking) {
-    await assertNoOverlap(
-      tx,
-      ctx.orgId,
-      before.staff.map((s) => s.membershipId),
-      computeBlock(before),
-      before.id,
-    );
+  const check = {
+    orgId: ctx.orgId,
+    membershipIds: before.staff.map((s) => s.membershipId),
+    block: computeBlock(before),
+    excludeAppointmentId: before.id,
+  };
+  const startsBlocking = !wasBlocking && nowBlocking;
+  if (startsBlocking) {
+    await assertNoOverlap(tx, check.orgId, check.membershipIds, check.block, check.excludeAppointmentId);
   }
-  if (wasBlocking !== nowBlocking) {
-    await tx.appointmentStaff.updateMany({
-      where: { appointmentId: before.id, organizationId: ctx.orgId },
-      data: { isBlocking: nowBlocking },
+  const write = async () => {
+    if (wasBlocking !== nowBlocking) {
+      await tx.appointmentStaff.updateMany({
+        where: { appointmentId: before.id, organizationId: ctx.orgId },
+        data: { isBlocking: nowBlocking },
+      });
+    }
+    await tx.appointment.update({
+      where: { id: before.id },
+      data: { status: to, ...(to === 'CANCELLED' ? { cancelReason: reason } : {}) },
     });
-  }
-  await tx.appointment.update({
-    where: { id: before.id },
-    data: { status: to, ...(to === 'CANCELLED' ? { cancelReason: reason } : {}) },
-  });
+  };
+  // Chỉ lúc lịch bắt đầu chiếm giờ mới có thể chạm ràng buộc EXCLUDE.
+  if (startsBlocking) await guardOverlap(tx, check, write);
+  else await write();
   await tx.appointmentStatusHistory.create({
     data: {
       organizationId: ctx.orgId,

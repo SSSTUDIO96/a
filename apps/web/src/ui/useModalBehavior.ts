@@ -82,6 +82,15 @@ export function useModalBehavior(
       }
     }
 
+    // Phím gõ khi tiêu điểm đang Ở NGOÀI hộp (bấm chuột ra nền mờ → tiêu điểm rơi về <body>, hoặc ô đang
+    // giữ tiêu điểm bị gỡ khỏi trang): phím không đi qua khung hộp nên onKeyDown ở trên không nghe được.
+    // Hộp trên cùng vẫn phải nhận Esc (đóng) và Tab / Shift+Tab (kéo tiêu điểm về hộp).
+    function onDocumentKeyDown(e: KeyboardEvent) {
+      if (!panel || stack[stack.length - 1] !== panel) return;
+      if (e.target instanceof Node && panel.contains(e.target)) return; // onKeyDown của khung hộp đã lo.
+      onKeyDown(e);
+    }
+
     // Tiêu điểm lọt ra ngoài (bấm chuột vào chỗ khác, trình đọc màn hình) → kéo về hộp.
     function onFocusIn(e: FocusEvent) {
       if (!panel || stack[stack.length - 1] !== panel) return;
@@ -92,9 +101,11 @@ export function useModalBehavior(
     }
 
     panel.addEventListener('keydown', onKeyDown);
+    document.addEventListener('keydown', onDocumentKeyDown);
     document.addEventListener('focusin', onFocusIn);
     return () => {
       panel.removeEventListener('keydown', onKeyDown);
+      document.removeEventListener('keydown', onDocumentKeyDown);
       document.removeEventListener('focusin', onFocusIn);
       const i = stack.lastIndexOf(panel);
       if (i >= 0) stack.splice(i, 1);

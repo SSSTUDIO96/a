@@ -1,6 +1,7 @@
 import type { Prisma, TravelFeeMode as DbTravelFeeMode } from '@prisma/client';
 import { vndFromBigInt, type Vnd } from '@makeup/shared';
 import { AppError } from '../../lib/errors';
+import { avatarSelect, resolveAvatarUrls, type AvatarSource } from '../files/service';
 import { initialsOf } from '../staff/common';
 import { staffAvailabilityTx, type AvailabilityShift, type DraftHold } from '../staff/availability';
 import type { PlannedLine, Sheet, TravelBreakdown } from './sheet';
@@ -18,19 +19,24 @@ export interface StaffView {
 const staffMemberSelect = {
   id: true,
   user: { select: { fullName: true } },
-  staffProfile: { select: { displayName: true, avatarUrl: true, tier: { select: { id: true, name: true } } } },
+  staffProfile: { select: { displayName: true, ...avatarSelect, tier: { select: { id: true, name: true } } } },
 } satisfies Prisma.MembershipSelect;
 
 type StaffMember = Prisma.MembershipGetPayload<{ select: typeof staffMemberSelect }>;
-export type StaffMap = Map<string, StaffMember>;
+// Ảnh đại diện đã đổi sẵn thành URL ký có hạn lúc nạp (presentSheet chạy đồng bộ, không tự truy vấn được).
+type ResolvedMember = StaffMember & { avatar: string | null };
+export type StaffMap = Map<string, ResolvedMember>;
+type AvatarOf = (p: AvatarSource | null | undefined) => string | null;
 
-function staffView(m: StaffMember, role: StaffView['role']): StaffView {
+// Ảnh đại diện thợ trong hợp đồng đi qua đúng hàm dùng chung resolveAvatarUrls (modules/files) như danh sách thợ —
+// không đọc thẳng avatar_url (từng lộ chuỗi tạm "file:<id>" thay vì URL ký).
+function staffView(m: StaffMember, role: StaffView['role'], avatarOf: AvatarOf): StaffView {
   const displayName = m.staffProfile?.displayName ?? m.user.fullName;
   return {
     membershipId: m.id,
     role,
     displayName,
-    avatarUrl: m.staffProfile?.avatarUrl ?? null,
+    avatarUrl: avatarOf(m.staffProfile),
     initials: initialsOf(displayName),
     tier: m.staffProfile?.tier ?? null,
   };
@@ -43,7 +49,12 @@ export async function loadStaffMap(db: Prisma.TransactionClient, orgId: string, 
   const ids = [...new Set(sheet.lines.flatMap((l) => l.staff.map((s) => s.membershipId)))];
   if (ids.length === 0) return new Map();
   const rows = await db.membership.findMany({ where: { id: { in: ids }, organizationId: orgId }, select: staffMemberSelect });
-  return new Map(rows.map((r) => [r.id, r]));
+  const avatarOf = await resolveAvatarUrls(
+    db,
+    orgId,
+    rows.map((r) => r.staffProfile),
+  );
+  return new Map(rows.map((r) => [r.id, { ...r, avatar: avatarOf(r.staffProfile) }]));
 }
 
 // Cảnh báo lúc tư vấn (không chặn lưu nháp): thợ đã có ca trùng giờ, có ca khác trong ngày, hoặc đang được giữ ở hợp đồng nháp khác.
@@ -172,7 +183,7 @@ function plannedView(l: PlannedLine, staff: StaffMap, warnings: WarningMap): Lin
     const m = staff.get(s.membershipId);
     // Thợ đã qua kiểm ở bảng tính; thiếu ở đây là lỗi lắp ráp, không đoán.
     if (!m) throw new Error(`Thiếu thông tin thợ ${s.membershipId} khi trình bày bảng tính`);
-    return staffView(m, s.role);
+    return staffView(m, s.role, () => m.avatar);
   });
   return {
     ...rest,
@@ -203,7 +214,7 @@ const lineInclude = {
 
 type LineRow = Prisma.ContractLineGetPayload<{ include: typeof lineInclude }>;
 
-function rowView(r: LineRow, warnings: WarningMap): LineView {
+function rowView(r: LineRow, warnings: WarningMap, avatarOf: AvatarOf): LineView {
   return {
     id: r.id,
     kind: r.kind,
@@ -231,7 +242,7 @@ function rowView(r: LineRow, warnings: WarningMap): LineView {
     addedAfterConfirm: r.addedAfterConfirm,
     voidedAt: r.voidedAt,
     voidReason: r.voidReason,
-    staff: r.plannedStaff.map((s) => staffView(s.membership, s.role)).sort(byRole),
+    staff: r.plannedStaff.map((s) => staffView(s.membership, s.role, avatarOf)).sort(byRole),
     staffWarnings: warnings.get(r.id) ?? [],
     travelBreakdown: null,
   };
@@ -287,7 +298,12 @@ export async function loadContractDetail(db: Prisma.TransactionClient, orgId: st
       .map((r) => ({ key: r.id, start: r.scheduledStart, end: r.scheduledEnd, membershipIds: r.plannedStaff.map((s) => s.membership.id) })),
     { contractId: c.id, appointmentIds: c.appointments.map((a) => a.id) },
   );
-  const lines = group(c.lines.map((r) => ({ key: r.id, parentKey: r.parentLineId, view: rowView(r, warnings) })));
+  const avatarOf = await resolveAvatarUrls(
+    db,
+    orgId,
+    c.lines.flatMap((r) => r.plannedStaff.map((s) => s.membership.staffProfile)),
+  );
+  const lines = group(c.lines.map((r) => ({ key: r.id, parentKey: r.parentLineId, view: rowView(r, warnings, avatarOf) })));
   const travelTotal = c.lines
     .filter((l) => l.kind === 'TRAVEL' && l.voidedAt === null)
     .reduce((s, l) => s + vndFromBigInt(l.lineTotal, 'phí di chuyển'), 0);

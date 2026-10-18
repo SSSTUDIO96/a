@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=1080">
+<title>Mẫu feedback fb-07 – Khung điện thoại tin nhắn</title>
+<!-- Makeup Pro · R&D vòng 3 · Mẫu feedback
+     Nguồn ý tưởng: Học từ ảnh 2 (nội dung dạng tin nhắn) — biến thể khung điện thoại
+     Ô dữ liệu: a1 (Ảnh 1), kh (Tên khách/học viên), nd (Nội dung lời khen), nfb (Ngày nhận lời khen), dv (Khoá học hoặc dịch vụ), logo (Logo), th (Tên thương hiệu)
+     Phông: MP Viết tay 1, MP Chữ không chân — khai báo ở ../v3-mau-chao-mung/phong/phong.css (phông viết tay là PHÔNG TẠM, thay một chỗ trong tệp đó).
+     Khổ: mặc định 1080×1350; thêm ?kho=vuong để ra 1080×1080. Thay dữ liệu bằng tham số đường dẫn (xem chung/mau.js).
+     Ảnh người và logo mặc định: vector do R&D tự vẽ. -->
+<link rel="stylesheet" href="../v3-mau-chao-mung/phong/phong.css"><link rel="stylesheet" href="../v3-mau-chao-mung/chung/mau.css">
+<style>
+#c{background:#EDE6E1;color:#2B2324}
+.ph0{position:absolute;left:70px;top:90px;bottom:90px;width:540px;background:#1E1A1B;border-radius:56px;padding:18px}
+.sc{width:100%;height:100%;background:#F7F3F1;border-radius:42px;display:flex;flex-direction:column;overflow:hidden}
+.hd{display:flex;align-items:center;gap:14px;padding:46px 26px 18px;background:#fff;border-bottom:1px solid #EEE6E2}
+.hd .a{width:58px;height:58px;border-radius:50%;overflow:hidden;flex:none}.hd b{font:700 24px var(--f-sans);display:block}.hd span{font:500 17px var(--f-sans);color:#8B8180}
+.chat{padding:24px 20px;flex:1;min-height:0;overflow:hidden;font-family:var(--f-sans)}
+.chat .bb{background:#fff;border:1px solid #ECE3DF;border-radius:24px;border-bottom-left-radius:6px}
+.rt{position:absolute;left:650px;right:60px;top:90px;bottom:90px;display:flex;flex-direction:column}
+.rt img.lg{width:64px;height:64px}
+.th{font:600 17px var(--f-sans);letter-spacing:.24em;text-transform:uppercase;color:#8A2E45;margin-top:14px}
+.hw{font-family:var(--f-tay-1);font-size:calc(104px*var(--tay-co-1));line-height:1.12;color:#8A2E45;margin-top:auto}
+.dv{font:500 20px/1.4 var(--f-sans);color:#6E6264;margin-top:20px}
+.vuong .ph0{width:500px;top:60px;bottom:60px}.vuong .rt{left:610px;top:60px;bottom:60px}.vuong .hd{padding:30px 22px 14px}
+</style></head><body><div id="c"><div class="ph0"><div class="sc"><div class="hd"><div class="a"><img class="ph" data-f="a1" alt=""></div><div><b data-f="kh"></b><span data-f="nfbCham"></span></div></div>
+<div class="chat" data-chat="3" data-fitc="32"></div></div></div>
+<div class="rt"><img class="lg" data-f="logo" alt=""><div class="th" data-f="th"></div><div class="hw">Cảm ơn bạn đã tin tưởng</div><div class="dv" data-f="dv"></div></div></div>
+<script>window.MAC_DINH={};</script>
+<script src="../v3-mau-chao-mung/chung/qrcode.js"></script><script src="../v3-mau-chao-mung/chung/mau.js"></script></body></html>

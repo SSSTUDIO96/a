@@ -32,6 +32,15 @@ export interface HandlerCtx<B, Q, P> {
   params: P;
   userId: string | null;
   org: OrgContext | null;
+  // Chỉ có ở đường khai idempotent: 'new-org' khi máy khách gửi Idempotency-Key. Handler phải gọi
+  // recordNewOrgIdempotency (http/middleware.ts) trong CÙNG transaction tạo tổ chức.
+  idempotency?: IdempotencyCtx | null;
+}
+
+export interface IdempotencyCtx {
+  key: string;
+  routeKey: string;
+  requestHash: string;
 }
 
 export interface CookieInstruction {
@@ -50,6 +59,9 @@ export interface HandlerResult {
 
 type AnySchema = z.ZodType;
 
+// Dạng hợp lệ của header Idempotency-Key (dùng chung cho app.ts và đường đăng ký).
+export const IDEMPOTENCY_KEY_PATTERN = /^[A-Za-z0-9_-]{8,128}$/;
+
 export interface RouteDef<B extends AnySchema, Q extends AnySchema, P extends AnySchema> {
   method: Method;
   // Đường tương đối sau /api/v1, ví dụ "/orgs/:orgId/members".
@@ -59,9 +71,13 @@ export interface RouteDef<B extends AnySchema, Q extends AnySchema, P extends An
   permission?: Permission;
   summary: string;
   tag: string;
-  rateLimit?: 'auth';
-  // Bắt buộc header Idempotency-Key, chống tạo trùng khi bấm hai lần / mạng gửi lại.
-  idempotent?: boolean;
+  // 'auth': đăng ký + đăng nhập chung một bộ đếm theo IP. 'refresh': bộ đếm RIÊNG cho đổi thẻ (tải lại trang
+  // không được ăn vào hạn mức đăng nhập — biên bản nghiệm thu web 1, T3). Mức cụ thể: xem app.ts.
+  rateLimit?: 'auth' | 'refresh';
+  // true (đường thuộc tổ chức): bắt buộc header Idempotency-Key, chống tạo trùng khi bấm hai lần / mạng gửi lại.
+  // 'new-org' (POST /orgs): khoá TUỲ CHỌN; dòng idempotency_keys gắn vào chính tổ chức vừa tạo + người tạo
+  // (bảng bắt buộc có organization_id — biên bản nghiệm thu web 1, N2).
+  idempotent?: boolean | 'new-org';
   body?: B;
   query?: Q;
   params?: P;
@@ -85,6 +101,9 @@ export function defineRoute<
     if (def.idempotent && def.method !== 'post') {
       throw new Error(`Đường ${def.method.toUpperCase()} ${def.path}: chống gửi trùng chỉ dùng cho POST`);
     }
+    if (def.idempotent === 'new-org') {
+      throw new Error(`Đường ${def.method.toUpperCase()} ${def.path}: 'new-org' chỉ dành cho đường tạo tổ chức (scope "auth")`);
+    }
   } else if (def.scope === 'platform') {
     if (!def.path.startsWith('/platform/')) {
       throw new Error(`Đường ${def.method.toUpperCase()} ${def.path} quản trị nền tảng phải bắt đầu bằng /platform/`);
@@ -100,6 +119,10 @@ export function defineRoute<
     throw new Error(`Đường ${def.method.toUpperCase()} ${def.path} dưới /platform/ phải khai scope "platform"`);
   } else if (def.path.includes(':orgId')) {
     throw new Error(`Đường ${def.method.toUpperCase()} ${def.path} có :orgId nhưng không khai scope "org"`);
+  } else if (def.idempotent === 'new-org') {
+    if (def.scope !== 'auth' || def.method !== 'post') {
+      throw new Error(`Đường ${def.method.toUpperCase()} ${def.path}: 'new-org' chỉ dùng cho POST cần đăng nhập`);
+    }
   } else if (def.idempotent) {
     throw new Error(`Đường ${def.method.toUpperCase()} ${def.path}: chống gửi trùng chỉ dùng cho đường thuộc tổ chức`);
   } else if (def.permission) {

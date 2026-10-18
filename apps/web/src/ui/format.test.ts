@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { formatVnd as sharedFormatVnd, MAX_DISTANCE_KM } from '@makeup/shared';
-import { formatDecimal, formatKm, formatVnd, groupThousands, parseDecimal, parseKm, parseMoney } from './format';
+import { ERR_AMBIGUOUS_DOT, formatDecimal, formatKm, formatVnd, groupThousands, parseDecimal, parseKm, parseMoney } from './format';
 
 describe('formatVnd', () => {
   it('dùng lại đúng hàm của @makeup/shared, không phải bản sao', () => {
@@ -112,5 +112,23 @@ describe('formatKm, formatDecimal, groupThousands', () => {
     expect(formatDecimal(99_999.99)).toBe('99.999,99');
     expect(groupThousands('1500000')).toBe('1.500.000');
     expect(groupThousands('0012')).toBe('12');
+  });
+});
+
+describe('đầu vào mơ hồ → báo lỗi, không đoán (nghiệm thu web 1, N7)', () => {
+  it('km: "2.500", "1.000", "12.500 km" không có dấu phẩy → lỗi "Dấu chấm dễ nhầm"', () => {
+    for (const s of ['2.500', '1.000', '12.500 km', '100.000']) expect(parseKm(s), s).toEqual({ ok: false, error: ERR_AMBIGUOUS_DOT });
+  });
+  it('km: có dấu phẩy thì dấu chấm chắc chắn là ngăn nghìn: "1.234,5" → 1234.5; gõ liền "2500" → 2500', () => {
+    expect(parseKm('1.234,5')).toEqual({ ok: true, value: 1234.5 });
+    expect(parseKm('2500')).toEqual({ ok: true, value: 2500 });
+  });
+  it('tiền: nhóm đầu bắt đầu bằng 0 ("0.500") là mơ hồ → lỗi', () => {
+    expect(parseMoney('0.500').ok).toBe(false);
+    expect(parseMoney('500')).toEqual({ ok: true, value: 500 });
+  });
+  it('formatDecimal không ngăn nghìn (chữ trong ô đang sửa)', () => {
+    expect(formatDecimal(2500, 2, false)).toBe('2500');
+    expect(formatDecimal(1234.5, 2, false)).toBe('1234,5');
   });
 });

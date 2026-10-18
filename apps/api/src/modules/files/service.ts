@@ -109,33 +109,41 @@ export async function presentFile(f: StoredFile) {
   };
 }
 
-// ẢNH ĐẠI DIỆN THỢ — TẠM lưu tham chiếu "file:<id>" trong staff_profiles.avatar_url vì bảng chưa có cột
-// avatar_file_id (xem PHIẾU VƯỚNG). Mọi chỗ trả ảnh đại diện phải đi qua resolveAvatarUrls.
-export const FILE_REF_PREFIX = 'file:';
+// ẢNH ĐẠI DIỆN THỢ: staff_profiles.avatar_file_id (khoá ngoại kép tới tệp cùng tổ chức) là nguồn chính;
+// avatar_url chỉ còn giữ ảnh https nhập tay từ trước khi có module tệp. MỌI chỗ trả ảnh đại diện thợ
+// (danh sách thợ, bảng tiền công, mức rảnh, hợp đồng…) chọn avatarSelect rồi đi qua resolveAvatarUrls.
+export const avatarSelect = { avatarFileId: true, avatarUrl: true } as const;
 
-export function fileRef(fileId: string): string {
-  return `${FILE_REF_PREFIX}${fileId}`;
+export interface AvatarSource {
+  avatarFileId: string | null;
+  avatarUrl: string | null;
 }
 
-// Đổi giá trị avatar_url đã lưu thành URL ký có hạn, một câu truy vấn cho cả danh sách (không N+1).
-// Tệp đã xoá/không còn → null. Giá trị cũ không phải "file:" (đường dẫn https nhập tay trước đây) giữ nguyên.
+// Ảnh nhập tay cũ: bản cũ chỉ nhận https, nên chỉ trả nguyên văn đường dẫn https. Giá trị khác (vd. chuỗi tạm
+// "file:<id>" do máy chủ bản cũ ghi trong lúc chuyển phiên bản) → null, không bao giờ lộ ra ngoài.
+function legacyUrl(raw: string | null): string | null {
+  return raw !== null && /^https:\/\/\S+$/i.test(raw) ? raw : null;
+}
+
+// Đổi hồ sơ thợ thành URL ký có hạn, một câu truy vấn cho cả danh sách (không N+1).
+// Tệp đã xoá/chưa tải xong → null (giao diện hiện chữ viết tắt).
 export async function resolveAvatarUrls(
   db: Prisma.TransactionClient,
   orgId: string,
-  stored: (string | null | undefined)[],
-): Promise<(raw: string | null | undefined) => string | null> {
-  const ids = [...new Set(stored.filter((v): v is string => !!v && v.startsWith(FILE_REF_PREFIX)).map((v) => v.slice(FILE_REF_PREFIX.length)))];
+  profiles: (AvatarSource | null | undefined)[],
+): Promise<(p: AvatarSource | null | undefined) => string | null> {
+  const ids = [...new Set(profiles.map((p) => p?.avatarFileId).filter((id): id is string => !!id))];
   const files = ids.length
     ? await db.storedFile.findMany({
-        where: { id: { in: ids }, organizationId: orgId, status: 'READY' },
+        where: { id: { in: ids }, organizationId: orgId, status: 'READY', deletedAt: null },
         select: { id: true, storageKey: true },
       })
     : [];
   const urls = new Map<string, string>();
-  for (const f of files) urls.set(f.id, await getStorage().getSignedUrl(f.storageKey, SIGNED_URL_TTL_SEC));
-  return (raw) => {
-    if (!raw) return null;
-    if (!raw.startsWith(FILE_REF_PREFIX)) return raw;
-    return urls.get(raw.slice(FILE_REF_PREFIX.length)) ?? null;
+  for (const f of files) urls.set(f.id, (await signedUrlOf(f)).signedUrl);
+  return (p) => {
+    if (!p) return null;
+    if (p.avatarFileId) return urls.get(p.avatarFileId) ?? null;
+    return legacyUrl(p.avatarUrl);
   };
 }

@@ -34,6 +34,8 @@ export interface MoneyInputProps extends NativeInput, FieldMessages {
 const ALLOWED_TYPING = /^[\d.,\s  ₫đĐ-]*$/u;
 const ERR_LETTERS = 'Chỉ nhập chữ số.';
 
+const countDots = (s: string) => s.split('.').length - 1;
+
 function displayOf(value: Vnd | null, focused: boolean): string {
   if (value === null) return '';
   return focused ? groupThousands(String(value)) : formatVnd(value);
@@ -66,6 +68,18 @@ export function MoneyInput({
   // Chữ đang hiện khi có lỗi tự phát hiện hoặc đang gõ; null = hiện theo `value`.
   const [draft, setDraft] = useState<string | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
+  // Người dùng tự gõ dấu chấm sai nhóm ("1.5") → ô vào chế độ đọc chặt: không tự bỏ dấu chấm nữa
+  // cho tới khi chữ trong ô thành số hợp lệ ("1.500"), xoá trắng, hoặc form đặt giá trị mới.
+  const [strictDots, setStrictDots] = useState(false);
+  // Giá trị gần nhất ô đã biết (do ô tự trả ra hoặc đã đồng bộ). `value` khác số này = form vừa đặt giá trị
+  // mới từ ngoài (chọn gói khác, tải lại dữ liệu) → bỏ chữ đang gõ và lỗi cũ, hiện theo giá trị mới.
+  const [knownValue, setKnownValue] = useState<Vnd | null>(value);
+  if (!Object.is(value, knownValue)) {
+    setKnownValue(value);
+    setDraft(null);
+    setLocalError(null);
+    setStrictDots(false);
+  }
 
   const reportRef = useRef(onInputError);
   useEffect(() => {
@@ -91,7 +105,11 @@ export function MoneyInput({
     }
     setDraft(nextText);
     setLocalError(null);
-    if (next !== value) onChange(next);
+    setStrictDots(false);
+    if (next !== value) {
+      setKnownValue(next);
+      onChange(next);
+    }
   }
 
   function handleChange(e: ChangeEvent<HTMLInputElement>) {
@@ -109,6 +127,22 @@ export function MoneyInput({
       const r = parseMoney(trimmed);
       setDraft(raw);
       setLocalError(r.ok ? null : r.error);
+      return;
+    }
+    // Dấu chấm do người dùng tự gõ (nhiều dấu chấm hơn chữ đang hiện), hoặc đang sửa một chữ đã sai:
+    // đọc nguyên văn. "1.5" là lỗi, không đoán thành 15 đ; "1.500" thì nhận.
+    // Dấu chấm do ô tự chèn (gõ thêm/xoá chữ số giữa "1.500.000") thì vẫn tự chia lại nhóm như cũ.
+    if (trimmed.includes('.') && (strictDots || countDots(raw) > countDots(text))) {
+      const r = parseMoney(trimmed);
+      if (!r.ok) {
+        setDraft(raw);
+        setStrictDots(true);
+        setLocalError(r.error);
+        return;
+      }
+      const nextText = r.value === null ? '' : groupThousands(String(r.value));
+      setCaret(caretAfterDigits(nextText, digitsBefore(raw, caret)));
+      accept(r.value, nextText);
       return;
     }
     const digits = trimmed.replace(/\./g, '');

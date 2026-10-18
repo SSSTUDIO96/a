@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=1080">
+<title>Thẻ chào mừng shd-07 – Vé vào lớp</title>
+<!-- Makeup Pro · R&D vòng 3 · Mẫu chào mừng sang trọng hiện đại
+     Nguồn ý tưởng: Tự sáng tác
+     Ô dữ liệu: logo (Logo), th (Tên thương hiệu), anh (Ảnh học viên), ten (Tên học viên), khoa (Tên khoá), lop (Mã lớp), ngay (Ngày khai giảng), lich (Lịch học)
+     Phông: MP Viết tay 4, MP Chữ có chân, MP Chữ không chân — khai báo ở phong/phong.css (phông viết tay là PHÔNG TẠM, thay một chỗ trong tệp đó).
+     Khổ: mặc định 1080×1350; thêm ?kho=vuong để ra 1080×1080. Thay dữ liệu bằng tham số đường dẫn (xem chung/mau.js).
+     Ảnh người và logo mặc định: vector do R&D tự vẽ. -->
+<link rel="stylesheet" href="phong/phong.css"><link rel="stylesheet" href="chung/mau.css">
+<style>
+#c{background:#EDE3D6;color:#F6EADB}
+.tk{position:absolute;left:90px;right:90px;top:90px;bottom:90px;background:#5A1E2E;border-radius:30px;display:flex;flex-direction:column}
+.mn{flex:1;display:flex;flex-direction:column;align-items:center;text-align:center;padding:56px 70px 40px;min-height:0}
+.top{display:flex;align-items:center;gap:14px}
+.ld{width:58px;height:58px;border-radius:50%;background:#F6EADB;display:grid;place-items:center}.ld img{width:46px;height:46px}
+.th{font:500 18px var(--f-sans);letter-spacing:.3em;text-transform:uppercase;color:#D8B878}
+.cir{width:340px;height:340px;border-radius:50%;overflow:hidden;border:2px solid #D8B878;margin-top:auto;flex:none}
+.hw{font-family:var(--f-tay-4);font-size:calc(82px*var(--tay-co-4));color:#D8B878;margin-top:30px;line-height:1.1}
+.ten{font:600 64px/1.12 var(--f-chan);margin-top:6px;width:100%}
+.kh{font:500 20px var(--f-sans);letter-spacing:.24em;text-transform:uppercase;color:#E7CFA0;margin-top:20px;margin-bottom:auto}
+.pf{position:relative;height:0;border-top:3px dashed rgba(246,234,219,.35);margin:0 40px}
+.pf:before,.pf:after{content:"";position:absolute;top:-30px;width:58px;height:58px;border-radius:50%;background:#EDE3D6}
+.pf:before{left:-70px}.pf:after{right:-70px}
+.st{display:grid;grid-template-columns:1fr 1.2fr 1.6fr;gap:20px;padding:34px 60px 44px;text-align:left}
+.st .l{font:600 14px var(--f-sans);letter-spacing:.26em;text-transform:uppercase;color:#D8B878}
+.st .v{font:600 30px/1.2 var(--f-chan);margin-top:8px}
+.vuong .tk{left:70px;right:70px;top:60px;bottom:60px}.vuong .cir{width:200px;height:200px}.vuong .hw{margin-top:16px;font-size:calc(66px*var(--tay-co-4))}.vuong .mn{padding:40px 60px 26px}.vuong .ten{font-size:48px}.vuong .st{padding:26px 54px 32px}
+</style></head><body><div id="c"><div class="tk"><div class="mn"><div class="top"><span class="ld"><img data-f="logo" alt=""></span><span class="th" data-f="th"></span></div>
+<div class="cir"><img class="ph" data-f="anh" alt=""></div>
+<div class="hw">Chào mừng học viên mới</div>
+<div class="ten" data-f="ten" data-fit="2"></div>
+<div class="kh" data-f="khoa"></div></div>
+<div class="pf"></div>
+<div class="st"><div><div class="l">Lớp</div><div class="v" data-f="lop"></div></div><div><div class="l">Khai giảng</div><div class="v" data-f="ngayCham"></div></div><div><div class="l">Lịch học</div><div class="v" data-f="lich" data-fit="2"></div></div></div></div></div>
+<script>window.MAC_DINH={};</script>
+<script src="chung/qrcode.js"></script><script src="chung/mau.js"></script></body></html>

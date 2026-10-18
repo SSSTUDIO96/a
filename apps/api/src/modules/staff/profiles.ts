@@ -4,7 +4,7 @@ import { lockOrgAndRecheck } from '../../http/middleware';
 import { defineRoute, mustOrg, mustUser } from '../../http/route';
 import { AppError } from '../../lib/errors';
 import { writeAudit } from '../../lib/audit';
-import { fileRef, resolveAvatarUrls } from '../files/service';
+import { resolveAvatarUrls } from '../files/service';
 import { assertCanTouchMember } from '../orgs/guards';
 import { Phone } from '../schedule/customers';
 import { presentStaff, staffMemberSelect } from './common';
@@ -42,7 +42,7 @@ export const profileRoutes = [
       const avatarOf = await resolveAvatarUrls(
         deps.db,
         o.id,
-        rows.map((m) => m.staffProfile?.avatarUrl),
+        rows.map((m) => m.staffProfile),
       );
       return { body: { items: rows.map((m) => presentStaff(m, { showPhone, avatarOf })) } };
     },
@@ -118,7 +118,8 @@ export const profileRoutes = [
         }
         const data = {
           ...fields,
-          ...(avatarFileId === undefined ? {} : { avatarUrl: avatarFileId === null ? null : fileRef(avatarFileId) }),
+          // Gắn/bỏ ảnh tệp thì xoá luôn ảnh https nhập tay cũ (nếu có): một thợ chỉ một nguồn ảnh.
+          ...(avatarFileId === undefined ? {} : { avatarFileId, avatarUrl: null }),
         };
         await tx.staffProfile.upsert({
           where: { membershipId: target.id },
@@ -136,6 +137,7 @@ export const profileRoutes = [
             before: before
               ? {
                   displayName: before.displayName,
+                  avatarFileId: before.avatarFileId,
                   avatarUrl: before.avatarUrl,
                   phone: before.phone,
                   tierId: before.tier?.id ?? null,
@@ -148,7 +150,7 @@ export const profileRoutes = [
         });
         return tx.membership.findUniqueOrThrow({ where: { id: target.id }, select: staffMemberSelect });
       });
-      const avatarOf = await resolveAvatarUrls(deps.db, o.id, [member.staffProfile?.avatarUrl]);
+      const avatarOf = await resolveAvatarUrls(deps.db, o.id, [member.staffProfile]);
       return { body: presentStaff(member, { showPhone: o.permissions.has('staff.write'), avatarOf }) };
     },
   }),

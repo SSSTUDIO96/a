@@ -102,6 +102,64 @@ describe('Dialog', () => {
   });
 });
 
+describe('Dialog — tiêu điểm rơi ra ngoài hộp (nghiệm thu web 1, N1)', () => {
+  it('bấm chuột ra nền mờ (tiêu điểm về <body>) rồi Esc → hộp vẫn đóng, tiêu điểm về nút đã mở', async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    render(<Harness onClose={onClose} />);
+    await user.click(screen.getByText('Mở chi tiết gói'));
+    await user.click(document.querySelector('.ui-overlay')!);
+    expect(document.activeElement).toBe(document.body);
+    expect(screen.getByRole('dialog')).toBeTruthy(); // closeOnOverlay mặc định false: bấm nền không đóng
+    await user.keyboard('{Escape}');
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(document.activeElement).toBe(screen.getByText('Mở chi tiết gói'));
+  });
+
+  it('tiêu điểm ở <body>: Tab và Shift+Tab kéo tiêu điểm về trong hộp', async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+    await user.click(screen.getByText('Mở chi tiết gói'));
+    const dlg = screen.getByRole('dialog');
+    await user.click(document.querySelector('.ui-overlay')!);
+    await user.tab();
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Đóng' }));
+    await user.click(document.querySelector('.ui-overlay')!);
+    await user.tab({ shift: true });
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Lưu' }));
+    expect(dlg.contains(document.activeElement)).toBe(true);
+  });
+
+  it('hai hộp chồng, tiêu điểm ở <body>: Esc chỉ đóng hộp trên cùng; Esc lần nữa đóng hộp dưới', async () => {
+    const user = userEvent.setup();
+    function Nested() {
+      const [outer, setOuter] = useState(true);
+      const [inner, setInner] = useState(true);
+      return (
+        <>
+          <Dialog open={outer} onClose={() => setOuter(false)} title="Hộp dưới" footer={null}>
+            <input aria-label="Ô dưới" />
+          </Dialog>
+          <Dialog open={inner} onClose={() => setInner(false)} title="Hộp trên" size="sm" footer={null}>
+            <input aria-label="Ô trên" />
+          </Dialog>
+        </>
+      );
+    }
+    render(<Nested />);
+    const overlays = document.querySelectorAll('.ui-overlay');
+    await user.click(overlays[overlays.length - 1]!);
+    expect(document.activeElement).toBe(document.body);
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog', { name: 'Hộp trên' })).toBeNull();
+    expect(screen.getByRole('dialog', { name: 'Hộp dưới' })).toBeTruthy();
+    await user.click(document.querySelector('.ui-overlay')!);
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+});
+
 describe('BottomSheet', () => {
   it('Esc đóng, nhốt tiêu điểm', async () => {
     const user = userEvent.setup();
@@ -123,6 +181,23 @@ describe('BottomSheet', () => {
     await user.tab();
     await user.tab();
     expect(sheet.contains(document.activeElement)).toBe(true);
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('bấm ra ngoài ngăn kéo không đóng được (closeOnOverlay=false), tiêu điểm về <body> → Esc vẫn đóng', async () => {
+    const user = userEvent.setup();
+    function SheetHarness() {
+      const [open, setOpen] = useState(true);
+      return (
+        <BottomSheet open={open} onClose={() => setOpen(false)} title="Chọn thợ" closeOnOverlay={false}>
+          <input aria-label="Tìm thợ" />
+        </BottomSheet>
+      );
+    }
+    render(<SheetHarness />);
+    await user.click(document.querySelector('.ui-sheet-overlay')!);
+    expect(document.activeElement).toBe(document.body);
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('dialog')).toBeNull();
   });

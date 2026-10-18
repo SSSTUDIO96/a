@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
+import { SHOTS } from './anh';
 
-const SHOTS = 'e2e/anh';
 const shot = (page: Page, name: string) => page.screenshot({ path: `${SHOTS}/${name}.png`, fullPage: true });
 
 test('đăng ký → tạo tổ chức → khung → tải lại còn phiên → đăng xuất → tải lại về đăng nhập', async ({ page, context }) => {

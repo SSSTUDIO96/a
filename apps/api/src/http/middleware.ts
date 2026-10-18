@@ -5,7 +5,7 @@ import { isPermission, type Permission } from '@makeup/shared';
 import { z } from 'zod';
 import { AppError } from '../lib/errors';
 import { verifyAccessToken } from '../lib/tokens';
-import type { Deps, OrgContext } from './route';
+import type { Deps, IdempotencyCtx, OrgContext } from './route';
 
 export function requestId(req: Request, res: Response, next: NextFunction): void {
   const incoming = req.header('x-request-id');
@@ -94,6 +94,7 @@ export function errorHandler(deps: Deps) {
       appErr = databaseError(err) ?? new AppError('INTERNAL', '');
       // Ràng buộc database phải bắt được lỗi thì máy chủ đã để lọt dữ liệu sai — ghi lại để sửa ở khâu trước.
       if (appErr.code === 'VALIDATION_FAILED') deps.logger.warn({ requestId, path: req.path, pg: pgErrorCode(err) }, 'Database chặn dữ liệu sai');
+      if (isStaffOverlapViolation(err)) deps.logger.warn({ requestId, path: req.path }, 'Trùng lịch lọt tới lưới cuối: đường ghi chưa bọc guardOverlap');
     } else if (bodyErrorMessage(err)) {
       appErr = new AppError('VALIDATION_FAILED', bodyErrorMessage(err) ?? '');
     } else {
@@ -149,11 +150,34 @@ export function isExclusionViolation(err: unknown): boolean {
   return pgErrorCode(err) === '23P01';
 }
 
+// Tên ràng buộc EXCLUDE trong lời báo của database. Prisma để dấu nháy ở dạng \" (qua create/update) hoặc " (qua SQL thô).
+export function pgExclusionConstraint(err: unknown): string | null {
+  const text =
+    err instanceof Prisma.PrismaClientKnownRequestError
+      ? `${err.message} ${String((err.meta as { message?: unknown } | undefined)?.message ?? '')}`
+      : err instanceof Error
+        ? err.message
+        : '';
+  return /exclusion constraint \\?"([A-Za-z0-9_]+)\\?"/.exec(text)?.[1] ?? null;
+}
+
+const STAFF_OVERLAP_CONSTRAINT = 'appointment_staff_no_overlap';
+
+// Lỗi "một thợ hai khoảng bận chồng nhau" của database (khác lỗi bậc phí di chuyển chồng nhau — cũng là 23P01).
+export function isStaffOverlapViolation(err: unknown): boolean {
+  return isExclusionViolation(err) && pgExclusionConstraint(err) === STAFF_OVERLAP_CONSTRAINT;
+}
+
 // Đổi lỗi database đã biết thành lỗi có nghĩa. Lỗi lạ trả null để bộ bắt lỗi ghi log và trả 500.
 export function databaseError(err: unknown): AppError | null {
   switch (pgErrorCode(err)) {
     case '23P01':
-      return new AppError('CONFLICT', 'Trùng lịch: thợ đã có lịch khác trong khoảng thời gian này');
+      if (pgExclusionConstraint(err) === 'travel_tiers_no_overlap') {
+        return new AppError('CONFLICT', 'Các bậc phí di chuyển bị chồng nhau, vui lòng tải lại rồi thử lại');
+      }
+      // Lưới cuối: mọi đường ghi lịch đã bọc guardOverlap (modules/schedule/service.ts) để kèm danh sách lịch trùng.
+      // Lọt tới đây là có đường ghi mới chưa bọc — vẫn giữ đúng dạng hứa với web (details.conflicts là mảng).
+      return new AppError('CONFLICT', 'Trùng lịch: thợ đã có lịch khác trong khoảng thời gian này', { conflicts: [] });
     case 'P0001':
       return new AppError('CONFLICT', pgRaisedMessage(err) ?? 'Thao tác bị database từ chối');
     case '23514':
@@ -178,4 +202,35 @@ export async function lockOrgAndRecheck(
 ): Promise<OrgContext> {
   await tx.$queryRaw`SELECT id FROM organizations WHERE id = ${actor.id}::uuid FOR UPDATE`;
   return loadOrgContext(tx, actor.userId, actor.id, required);
+}
+
+// Chống gửi trùng cho đường TẠO TỔ CHỨC (biên bản nghiệm thu web 1, N2). Bảng idempotency_keys bắt buộc gắn một
+// tổ chức, mà trước khi tạo thì chưa có tổ chức nào — nên dòng khoá gắn vào CHÍNH tổ chức vừa tạo + người tạo,
+// ghi trong CÙNG transaction tạo tổ chức: có tổ chức thì có khoá, không có trạng thái "đang xử lý" kẹt lại.
+// app.ts (runNewOrgIdempotent) tra dòng này theo (người dùng, khoá) để trả lại đúng phản hồi lần đầu.
+export async function recordNewOrgIdempotency(
+  tx: Prisma.TransactionClient,
+  organizationId: string,
+  userId: string,
+  idem: IdempotencyCtx | null | undefined,
+  response: { status: number; body: unknown },
+): Promise<void> {
+  if (!idem) return;
+  // Khoá chính của bảng gồm cả organization_id nên không chặn được "cùng người + cùng khoá" ở hai tổ chức mới.
+  // Khoá tư vấn theo (người dùng, khoá) bắt hai yêu cầu cùng khoá xếp hàng; người sau thấy dòng của người trước.
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`idem-new-org:${userId}:${idem.key}`}, 0))`;
+  const taken = await tx.idempotencyKey.findFirst({ where: { userId, key: idem.key }, select: { routeKey: true } });
+  if (taken) throw new AppError('CONFLICT', 'Idempotency-Key này đã dùng cho một yêu cầu khác');
+  await tx.idempotencyKey.create({
+    data: {
+      organizationId,
+      userId,
+      key: idem.key,
+      routeKey: idem.routeKey,
+      requestHash: idem.requestHash,
+      responseStatus: response.status,
+      // Cất đúng dạng JSON đã gửi cho máy khách (ngày giờ thành chuỗi ISO) để lần gửi lại trả y hệt.
+      responseBody: JSON.parse(JSON.stringify(response.body ?? null)) as Prisma.InputJsonValue,
+    },
+  });
 }

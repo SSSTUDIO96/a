@@ -35,6 +35,14 @@ export interface UnitInputProps extends NativeInput, FieldMessages {
 
 const ALLOWED_TYPING = /^[\d.,\s  ]*$/u;
 
+/** Bỏ đơn vị gõ/dán kèm ở cuối ("12,5 km", "12,5KM") — hậu tố đã hiện sẵn ở mép phải. */
+function stripUnit(raw: string, unit: string): string {
+  const u = unit.trim();
+  if (!u) return raw;
+  const tail = raw.replace(/[\s\u00a0\u202f]+$/u, '');
+  return tail.toLowerCase().endsWith(u.toLowerCase()) ? tail.slice(0, -u.length).replace(/[\s\u00a0\u202f]+$/u, '') : raw;
+}
+
 /**
  * Ô số có đơn vị — như TextInput, căn phải, hậu tố 13px --faint ở mép phải (đệm phải 46).
  * km: dấu phẩy thập phân ("12,35"), tối đa 2 chữ số lẻ, tối đa 99.999,99.
@@ -62,6 +70,13 @@ export function UnitInput({
 
   const [draft, setDraft] = useState<string | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
+  // Như MoneyInput: form đặt giá trị mới từ ngoài → bỏ chữ đang gõ và lỗi cũ.
+  const [knownValue, setKnownValue] = useState<number | null>(value);
+  if (!Object.is(value, knownValue)) {
+    setKnownValue(value);
+    setDraft(null);
+    setLocalError(null);
+  }
 
   const reportRef = useRef(onInputError);
   useEffect(() => {
@@ -85,7 +100,7 @@ export function UnitInput({
   }
 
   function handleChange(e: ChangeEvent<HTMLInputElement>) {
-    const raw = e.target.value;
+    const raw = stripUnit(e.target.value, unit);
     if (!ALLOWED_TYPING.test(raw)) {
       setLocalError('Chỉ nhập chữ số.');
       return;
@@ -97,11 +112,15 @@ export function UnitInput({
       return;
     }
     setLocalError(null);
-    if (r.value !== value) onChange(r.value);
+    if (r.value !== value) {
+      setKnownValue(r.value);
+      onChange(r.value);
+    }
   }
 
   function handleFocus(e: FocusEvent<HTMLInputElement>) {
-    if (draft === null) setDraft(value === null ? '' : formatDecimal(value, fractionDigits));
+    // Đang sửa: không chèn dấu chấm ngăn nghìn ("2500", không phải "2.500") để chữ trong ô không tự thành dạng mơ hồ.
+    if (draft === null) setDraft(value === null ? '' : formatDecimal(value, fractionDigits, false));
     onFocus?.(e);
   }
 

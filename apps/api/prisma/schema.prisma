@@ -724,7 +724,9 @@ model StaffProfile {
   membershipId   String   @id @map("membership_id") @db.Uuid
   organizationId String   @map("organization_id") @db.Uuid
   displayName    String?  @map("display_name")
-  // Đường dẫn ảnh đại diện; tải ảnh lên làm cùng module lưu trữ tệp. Trống → giao diện hiện chữ viết tắt.
+  // Ảnh đại diện = tệp STAFF_AVATAR đã tải lên (module tệp). Trống cả hai → giao diện hiện chữ viết tắt.
+  avatarFileId   String?  @map("avatar_file_id") @db.Uuid
+  // CHỈ còn cho ảnh https nhập tay từ trước khi có module tệp (trả nguyên văn); mã mới không ghi cột này.
   avatarUrl      String?  @map("avatar_url")
   phone          String?
   tierId         String?  @map("tier_id") @db.Uuid
@@ -735,6 +737,8 @@ model StaffProfile {
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   membership   Membership   @relation(fields: [membershipId, organizationId], references: [id, organizationId], onDelete: Restrict)
   tier         StaffTier?   @relation(fields: [tierId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  // Khoá ngoại kép (tệp, tổ chức): database chặn gắn ảnh của tổ chức khác.
+  avatarFile   StoredFile?  @relation("StaffAvatar", fields: [avatarFileId, organizationId], references: [id, organizationId], onDelete: Restrict)
 
   @@unique([membershipId, organizationId])
   @@index([organizationId, tierId])
@@ -825,6 +829,7 @@ model StoredFile {
   profileLogos   OrganizationProfile[] @relation("ProfileLogo")
   profileAvatars OrganizationProfile[] @relation("ProfileAvatar")
   profileCovers  OrganizationProfile[] @relation("ProfileCover")
+  staffAvatars   StaffProfile[]        @relation("StaffAvatar")
 
   @@unique([id, organizationId])
   @@index([organizationId, purpose])

@@ -711,7 +711,7 @@ describe('ảnh đại diện thợ từ kho tệp', () => {
     const row = list.body.items.find((s: { membershipId: string }) => s.membershipId === mArtist2);
     expect(row.avatarUrl).toEqual(SIGNED);
     const stored = await deps.db.staffProfile.findUniqueOrThrow({ where: { membershipId: mArtist2 } });
-    expect(stored.avatarUrl).toBe(`file:${avatar}`);
+    expect(stored).toMatchObject({ avatarFileId: avatar, avatarUrl: null });
     await request(app).delete(`/api/v1/orgs/${orgA}/files/${avatar}`).set(bearer(ownerA)).expect(204);
     const after = await request(app).get(`/api/v1/orgs/${orgA}/staff`).set(bearer(ownerA)).expect(200);
     expect(after.body.items.find((s: { membershipId: string }) => s.membershipId === mArtist2).avatarUrl).toBeNull();

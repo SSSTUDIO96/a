@@ -4,7 +4,7 @@ import { vndFromBigInt } from '@makeup/shared';
 import { defineRoute, mustOrg, mustUser } from '../../http/route';
 import { AppError } from '../../lib/errors';
 import { writeAudit } from '../../lib/audit';
-import { resolveAvatarUrls } from '../files/service';
+import { avatarSelect, resolveAvatarUrls } from '../files/service';
 import { initialsOf } from './common';
 
 // Tiền công theo bậc cho MỘT gói hoặc MỘT dịch vụ. Màn hình: mỗi bậc một hàng — ảnh + tên các thợ thuộc bậc — ô nhập tiền.
@@ -58,7 +58,7 @@ async function buildSheet(tx: Prisma.TransactionClient, orgId: string, owner: Ow
         membershipId: true,
         tierId: true,
         displayName: true,
-        avatarUrl: true,
+        ...avatarSelect,
         membership: { select: { user: { select: { fullName: true } } } },
       },
     }),
@@ -67,14 +67,14 @@ async function buildSheet(tx: Prisma.TransactionClient, orgId: string, owner: Ow
   const avatarOf = await resolveAvatarUrls(
     tx,
     orgId,
-    profiles.map((p) => p.avatarUrl),
+    profiles,
   );
   const staffByTier = new Map<string, { membershipId: string; displayName: string; avatarUrl: string | null; initials: string }[]>();
   for (const p of profiles) {
     if (!p.tierId) continue;
     const displayName = p.displayName ?? p.membership.user.fullName;
     const list = staffByTier.get(p.tierId) ?? [];
-    list.push({ membershipId: p.membershipId, displayName, avatarUrl: avatarOf(p.avatarUrl), initials: initialsOf(displayName) });
+    list.push({ membershipId: p.membershipId, displayName, avatarUrl: avatarOf(p), initials: initialsOf(displayName) });
     staffByTier.set(p.tierId, list);
   }
   return {

@@ -88,6 +88,85 @@ describe('UnitInput km', () => {
   });
 });
 
+// Nghiệm thu web 1 — N7, N8 (và N6 cho ô km). Quy ước VN: km có phần lẻ bằng dấu phẩy (12,5).
+describe('UnitInput km — dấu chấm mơ hồ, đơn vị dán kèm, giá trị đặt từ ngoài (nghiệm thu web 1)', () => {
+  it('N7: gõ "2.500" → báo lỗi có chữ, KHÔNG thành 2.500 km', async () => {
+    const user = userEvent.setup();
+    const onValue = vi.fn();
+    render(<Harness onValue={onValue} />);
+    await user.click(input());
+    await user.keyboard('2.500');
+    expect(input().getAttribute('aria-invalid')).toBe('true');
+    expect(screen.getByRole('alert').textContent).toContain('Dấu chấm dễ nhầm');
+    expect(onValue).not.toHaveBeenCalledWith(2500);
+  });
+
+  it('N7: số lớn gõ liền "2500" → 2500 km; rời ô hiện "2.500", vào lại ô hiện "2500" (không tự sinh dạng mơ hồ)', async () => {
+    const user = userEvent.setup();
+    const onValue = vi.fn();
+    render(<Harness onValue={onValue} />);
+    await user.click(input());
+    await user.keyboard('2500');
+    expect(onValue).toHaveBeenLastCalledWith(2500);
+    await user.click(screen.getByText('Ô khác'));
+    expect(input().value).toBe('2.500');
+    await user.click(input());
+    expect(input().value).toBe('2500');
+    await user.keyboard(',5');
+    expect(onValue).toHaveBeenLastCalledWith(2500.5);
+    expect(input().hasAttribute('aria-invalid')).toBe(false);
+  });
+
+  it('N8: dán "12,5 km" (có đơn vị) → 12,5 km, không báo "Chỉ nhập chữ số"', async () => {
+    const user = userEvent.setup();
+    const onValue = vi.fn();
+    render(<Harness onValue={onValue} />);
+    await user.click(input());
+    await user.paste('12,5 km');
+    expect(onValue).toHaveBeenLastCalledWith(12.5);
+    expect(input().value).toBe('12,5');
+    expect(input().hasAttribute('aria-invalid')).toBe(false);
+  });
+
+  it('N8: "12,5KM", "12,5 Km " cũng nhận; "12,5 dặm" vẫn báo lỗi', async () => {
+    const user = userEvent.setup();
+    const onValue = vi.fn();
+    render(<Harness onValue={onValue} />);
+    for (const s of ['12,5KM', '7,25 Km ']) {
+      await user.clear(input());
+      await user.paste(s);
+      expect(input().hasAttribute('aria-invalid'), s).toBe(false);
+    }
+    expect(onValue).toHaveBeenLastCalledWith(7.25);
+    await user.clear(input());
+    await user.paste('12,5 dặm');
+    expect(screen.getByRole('alert').textContent).toContain('Chỉ nhập chữ số');
+  });
+
+  it('N6 (ô km): ô đang báo lỗi mà form đặt số mới → ô hiện số mới, hết lỗi', async () => {
+    const user = userEvent.setup();
+    function H() {
+      const [v, setV] = useState<number | null>(3);
+      return (
+        <>
+          <UnitInput aria-label="Số đo" unit="km" value={v} onChange={setV} />
+          <button type="button" onClick={() => setV(21.7)}>
+            Chọn địa chỉ khác
+          </button>
+        </>
+      );
+    }
+    render(<H />);
+    await user.click(input());
+    await user.clear(input());
+    await user.keyboard('2.500');
+    expect(input().getAttribute('aria-invalid')).toBe('true');
+    await user.click(screen.getByText('Chọn địa chỉ khác'));
+    expect(input().value).toBe('21,7');
+    expect(input().hasAttribute('aria-invalid')).toBe(false);
+  });
+});
+
 describe('UnitInput phút/lần', () => {
   it('chỉ nhận số nguyên', async () => {
     const user = userEvent.setup();

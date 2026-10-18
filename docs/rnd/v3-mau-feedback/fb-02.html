@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=1080">
+<title>Mẫu feedback fb-02 – Thẻ trắng nổi có sao</title>
+<!-- Makeup Pro · R&D vòng 3 · Mẫu feedback
+     Nguồn ý tưởng: Học từ ảnh 3–4 (thẻ trắng nổi, lời nhận xét, ảnh khách, sao đánh giá)
+     Ô dữ liệu: nd (Nội dung lời khen), sao (Số sao), a1 (Ảnh 1), kh (Tên khách/học viên), dv (Khoá học hoặc dịch vụ), logo (Logo), th (Tên thương hiệu), web (Website)
+     Phông: MP Chữ đậm có chân, MP Chữ không chân — khai báo ở ../v3-mau-chao-mung/phong/phong.css (phông viết tay là PHÔNG TẠM, thay một chỗ trong tệp đó).
+     Khổ: mặc định 1080×1350; thêm ?kho=vuong để ra 1080×1080. Thay dữ liệu bằng tham số đường dẫn (xem chung/mau.js).
+     Ảnh người và logo mặc định: vector do R&D tự vẽ. -->
+<link rel="stylesheet" href="../v3-mau-chao-mung/phong/phong.css"><link rel="stylesheet" href="../v3-mau-chao-mung/chung/mau.css">
+<style>
+#c{background:#EFE9E3;color:#231F1E}
+.w{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;padding:76px 80px 60px}
+.tt{font:italic 600 64px var(--f-chan2);color:#4A2B33;text-align:center}
+.cd{width:100%;background:#fff;border-radius:28px;box-shadow:0 30px 60px rgba(60,40,30,.10);margin-top:46px;padding:60px 64px 50px;display:flex;flex-direction:column;flex:1 1 0;min-height:0}
+.q{font:900 140px/0.6 var(--f-chan2);color:#C9A0A8;height:60px}
+.sao{color:#D9A441;margin-top:10px}
+.nd{font:400 32px/1.55 var(--f-sans);margin-top:24px;flex:1 1 0;min-height:0;overflow:hidden}
+.pr{display:flex;align-items:center;gap:20px;border-top:1px solid #EEE6DF;padding-top:28px}
+.pr .a{width:96px;height:96px;border-radius:50%;overflow:hidden;flex:none}
+.pr b{display:block;font:700 30px var(--f-sans)}.pr span{font:500 22px var(--f-sans);color:#7C7370}
+.ft{display:flex;align-items:center;gap:14px;margin-top:36px}.ft img{width:48px;height:48px}.ft span{font:600 18px var(--f-sans);letter-spacing:.24em;text-transform:uppercase}.ft i{font:400 20px var(--f-sans);color:#7C7370;font-style:normal}
+.vuong .w{padding:52px 80px 44px}.vuong .tt{font-size:52px}.vuong .cd{margin-top:30px;padding:44px 56px 38px}.vuong .nd{font-size:28px}
+.nd{display:flex;flex-direction:column;justify-content:center}
+</style></head><body><div id="c"><div class="w"><div class="tt">Cảm nhận của học viên</div>
+<div class="cd"><div class="q">“</div><div class="sao" data-sao></div><div class="nd" data-f="nd" data-fitc="46"></div>
+<div class="pr"><div class="a"><img class="ph" data-f="a1" alt=""></div><div><b data-f="kh"></b><span data-f="dv"></span></div></div></div>
+<div class="ft"><img data-f="logo" alt=""><span data-f="th"></span><i>· <span data-f="web"></span></i></div></div></div>
+<script>window.MAC_DINH={};</script>
+<script src="../v3-mau-chao-mung/chung/qrcode.js"></script><script src="../v3-mau-chao-mung/chung/mau.js"></script></body></html>

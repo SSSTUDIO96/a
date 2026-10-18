@@ -1,3 +1,5 @@
 test-results/
+# Ảnh e2e chụp mỗi lần chạy (ảnh tài liệu nằm ở e2e/anh/, chỉ cập nhật có chủ ý — xem e2e/anh.ts).
+e2e/anh-chay/
 playwright-report/
 .vite/

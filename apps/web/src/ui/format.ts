@@ -16,7 +16,8 @@ const SPACES = /[\s  ]/g;
 /** Chữ số có dấu chấm ngăn nghìn đúng nhóm 3 ("1.500.000") hoặc liền ("1500000"). */
 function readGroupedInteger(text: string): string | null {
   if (/^\d+$/.test(text)) return text;
-  if (/^\d{1,3}(\.\d{3})+$/.test(text)) return text.replace(/\./g, '');
+  // Nhóm đầu không bắt đầu bằng 0: "0.500" dễ là số thập phân viết kiểu Anh → không đoán.
+  if (/^[1-9]\d{0,2}(\.\d{3})+$/.test(text)) return text.replace(/\./g, '');
   return null;
 }
 
@@ -40,6 +41,8 @@ export function parseMoney(input: string): ParseResult<Vnd | null> {
   if (!Number.isSafeInteger(value)) return fail('Số tiền quá lớn.');
   return ok(value);
 }
+
+export const ERR_AMBIGUOUS_DOT = 'Dấu chấm dễ nhầm: gõ 2,5 hoặc 2500.';
 
 export interface DecimalRules {
   /** Số chữ số lẻ tối đa sau dấu phẩy (0 = chỉ số nguyên). */
@@ -73,6 +76,11 @@ export function parseDecimal(input: string, rules: DecimalRules): ParseResult<nu
   if (fracRaw.length > rules.maxFractionDigits) {
     return fail(`Tối đa ${rules.maxFractionDigits} chữ số sau dấu phẩy.`);
   }
+  // Ô có phần lẻ (km): "2.500" không có dấu phẩy là mơ hồ — 2,5 km viết kiểu Anh hay 2500 km? Không đoán, báo lỗi.
+  // Có dấu phẩy ("1.234,5") thì dấu chấm chắc chắn là ngăn nghìn.
+  if (rules.maxFractionDigits > 0 && parts.length === 1 && intRaw.includes('.') && readGroupedInteger(intRaw) !== null) {
+    return fail(ERR_AMBIGUOUS_DOT);
+  }
   const intDigits = intRaw === '' ? (fracRaw === '' ? null : '0') : readGroupedInteger(intRaw);
   if (intDigits === null) {
     return fail(
@@ -98,9 +106,12 @@ export function parseKm(input: string): ParseResult<number | null> {
   return parseDecimal(input, { maxFractionDigits: 2, max: MAX_DISTANCE_KM, unit: 'km' });
 }
 
-/** 1234.5 → "1.234,5" (dấu chấm ngăn nghìn, dấu phẩy thập phân). */
-export function formatDecimal(value: number, maxFractionDigits = 2): string {
-  return value.toLocaleString('vi-VN', { maximumFractionDigits: maxFractionDigits, useGrouping: true });
+/**
+ * 1234.5 → "1.234,5" (dấu chấm ngăn nghìn, dấu phẩy thập phân).
+ * grouping=false → "1234,5": dùng cho chữ trong ô đang sửa, để không tự sinh dạng mơ hồ "2.500".
+ */
+export function formatDecimal(value: number, maxFractionDigits = 2, grouping = true): string {
+  return value.toLocaleString('vi-VN', { maximumFractionDigits: maxFractionDigits, useGrouping: grouping });
 }
 
 /** 12.35 → "12,35 km". */

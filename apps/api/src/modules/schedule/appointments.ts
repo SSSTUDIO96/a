@@ -21,6 +21,7 @@ import {
   assertNoOverlap,
   assertTimeRange,
   createAppointmentTx,
+  guardOverlap,
   loadHistory,
   lockAppointment,
   presentAppointment,
@@ -214,39 +215,40 @@ export const appointmentRoutes = [
             body.staff.map((s) => s.membershipId).filter((id) => !kept.has(id)),
           );
         }
-        if (isBlocking && (timeChanged || body.staff)) {
-          await assertNoOverlap(
-            tx,
-            o.id,
-            staff.map((s) => s.membershipId),
-            block,
-            before.id,
-          );
+        const check = { orgId: o.id, membershipIds: staff.map((s) => s.membershipId), block, excludeAppointmentId: before.id };
+        const mayOverlap = isBlocking && (timeChanged || body.staff !== undefined);
+        if (mayOverlap) {
+          await assertNoOverlap(tx, check.orgId, check.membershipIds, check.block, check.excludeAppointmentId);
         }
-        if (body.staff) {
-          await tx.appointmentStaff.deleteMany({ where: { appointmentId: before.id, organizationId: o.id } });
-          if (body.staff.length > 0) {
-            await tx.appointmentStaff.createMany({
-              data: body.staff.map((s) => ({
-                organizationId: o.id,
-                appointmentId: before.id,
-                membershipId: s.membershipId,
-                role: s.role,
-                blockStart: block.blockStart,
-                blockEnd: block.blockEnd,
-                isBlocking,
-              })),
+        const write = async () => {
+          if (body.staff) {
+            await tx.appointmentStaff.deleteMany({ where: { appointmentId: before.id, organizationId: o.id } });
+            if (body.staff.length > 0) {
+              await tx.appointmentStaff.createMany({
+                data: body.staff.map((s) => ({
+                  organizationId: o.id,
+                  appointmentId: before.id,
+                  membershipId: s.membershipId,
+                  role: s.role,
+                  blockStart: block.blockStart,
+                  blockEnd: block.blockEnd,
+                  isBlocking,
+                })),
+              });
+            }
+          } else if (timeChanged) {
+            await tx.appointmentStaff.updateMany({
+              where: { appointmentId: before.id, organizationId: o.id },
+              data: { blockStart: block.blockStart, blockEnd: block.blockEnd },
             });
           }
-        } else if (timeChanged) {
-          await tx.appointmentStaff.updateMany({
-            where: { appointmentId: before.id, organizationId: o.id },
-            data: { blockStart: block.blockStart, blockEnd: block.blockEnd },
-          });
-        }
-
-        const { staff: _staff, ...fields } = body;
-        await tx.appointment.update({ where: { id: before.id }, data: fields });
+          const { staff: _staff, ...fields } = body;
+          // Trigger của database tính lại khoảng bận của thợ theo giờ mới ở câu này — chỗ hay chạm ràng buộc EXCLUDE nhất.
+          await tx.appointment.update({ where: { id: before.id }, data: fields });
+        };
+        // Bước kiểm trước có thể không thấy lịch của yêu cầu đua đang ghi dở; database chặn thì tra lại để kèm danh sách.
+        if (mayOverlap) await guardOverlap(tx, check, write);
+        else await write();
         await writeAudit(tx, {
           organizationId: o.id,
           actorUserId: uid,
