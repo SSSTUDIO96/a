@@ -4,6 +4,7 @@ import { vndFromBigInt } from '@makeup/shared';
 import { defineRoute, mustUser, type AnyRoute } from '../../http/route';
 import { AppError } from '../../lib/errors';
 import { writeAudit } from '../../lib/audit';
+import { MAX_MONEY_VND, MONEY_TOO_LARGE_MESSAGE } from '../../lib/money';
 import {
   DEFAULT_PLAN_CODE,
   GRACE_DAYS,
@@ -36,7 +37,7 @@ const Money = z
   .number({ error: 'Số tiền phải là số' })
   .int('Số tiền phải là số nguyên đồng')
   .nonnegative('Số tiền không được âm')
-  .max(Number.MAX_SAFE_INTEGER, 'Số tiền vượt ngưỡng cho phép');
+  .max(MAX_MONEY_VND, MONEY_TOO_LARGE_MESSAGE);
 const Limit = z.number().int('Giới hạn phải là số nguyên').min(0, 'Giới hạn không được âm').max(1_000_000_000).nullable();
 const PlanCode = z
   .string()

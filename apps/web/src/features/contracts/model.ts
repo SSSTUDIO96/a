@@ -361,7 +361,11 @@ export function groupTotal(l: GroupedContractLine<string | null>): Vnd {
 }
 
 // ---------------------------------------------------------------------------------------------
-// Cảnh báo thợ — 3 mức: rảnh (không dải) / vàng SAME_DAY "có lịch trong ngày" / đỏ OVERLAP "trùng giờ".
+// Cảnh báo thợ — rảnh (không dải) / vàng SAME_DAY "có lịch trong ngày" / xám-vàng DRAFT_HOLD "Giữ chỗ nháp ở HĐ-…"
+// / đỏ OVERLAP "trùng giờ".
+// Quyết định 15:14 (docs/NHAT-KY-QUYET-DINH-THAY.md): lịch nháp KHÔNG chiếm giờ thợ. Vì vậy giữ chỗ của hợp đồng NHÁP
+// khác chỉ là nhãn để biết (DRAFT_HOLD), KHÔNG khoá nút Xác nhận (biên bản web 2, T1 — sửa quyết định 5 cũ của thợ W5).
+// Đỏ chỉ khi trùng lịch ĐÃ chặn giờ (máy chủ trả trong overlaps) hoặc trùng giữa các dòng của chính hợp đồng này.
 export interface WarnRange {
   start: string;
   end: string;
@@ -369,14 +373,20 @@ export interface WarnRange {
   label: string;
 }
 
+export type WarnLevel = 'OVERLAP' | 'DRAFT_HOLD' | 'SAME_DAY';
+
 export interface LineWarning {
   membershipId: string;
-  level: 'OVERLAP' | 'SAME_DAY';
-  // Khoảng trùng giờ (OVERLAP) hoặc các ca trong ngày (SAME_DAY).
+  level: WarnLevel;
+  // Khoảng trùng giờ (OVERLAP, DRAFT_HOLD) hoặc các ca trong ngày (SAME_DAY).
   ranges: WarnRange[];
   // Số ca trong ngày (SAME_DAY).
   count: number;
+  // Mã các hợp đồng nháp đang giữ chỗ chồng giờ (DRAFT_HOLD), không trùng nhau.
+  holdCodes?: string[];
 }
+
+const LEVEL_RANK: Record<WarnLevel, number> = { OVERLAP: 0, DRAFT_HOLD: 1, SAME_DAY: 2 };
 
 function shiftLabel(s: AvailabilityShift): string {
   return [s.code, s.title, s.customerName].filter(Boolean).join(' · ');
@@ -389,24 +399,31 @@ function holdRange(h: DraftHold): WarnRange | null {
 
 /**
  * Cảnh báo máy chủ trả trong quote, bỏ phần giữ chỗ của CHÍNH hợp đồng đang sửa (quote chưa nhận excludeContractId nên
- * hợp đồng nháp đã lưu tự thấy mình là "giữ chỗ nháp"), rồi xếp lại mức đúng luật máy chủ (present.ts staffWarnings).
+ * hợp đồng nháp đã lưu tự thấy mình là "giữ chỗ nháp"), rồi xếp mức theo quyết định 15:14:
+ * trùng ca đã chặn giờ → OVERLAP; chỉ chồng giờ với giữ chỗ nháp → DRAFT_HOLD; cùng ngày → SAME_DAY.
+ * KHÔNG dùng `w.level` của máy chủ: máy chủ gán OVERLAP cả khi chỉ có giữ chỗ nháp (present.ts) — xem T1.
  */
 export function serverWarnings(list: StaffWarning[] | undefined, selfContractId: string | null): LineWarning[] {
   const out: LineWarning[] = [];
   for (const w of list ?? []) {
     const holds = w.draftHolds.filter((h) => h.contractId !== selfContractId);
     const overlapHolds = holds.filter((h) => h.overlaps);
-    const level: LineWarning['level'] | null =
-      w.overlaps.length > 0 || overlapHolds.length > 0 ? 'OVERLAP' : w.sameDay.length > 0 || holds.length > 0 ? 'SAME_DAY' : null;
+    const level: WarnLevel | null =
+      w.overlaps.length > 0 ? 'OVERLAP' : overlapHolds.length > 0 ? 'DRAFT_HOLD' : w.sameDay.length > 0 || holds.length > 0 ? 'SAME_DAY' : null;
     if (!level) continue;
     const ranges =
       level === 'OVERLAP'
-        ? [
-            ...w.overlaps.map((s) => ({ start: s.startsAt, end: s.endsAt, label: shiftLabel(s) })),
-            ...overlapHolds.map(holdRange).filter((r): r is WarnRange => r !== null),
-          ]
-        : [...w.sameDay.map((s) => ({ start: s.startsAt, end: s.endsAt, label: shiftLabel(s) })), ...holds.map(holdRange).filter((r): r is WarnRange => r !== null)];
-    out.push({ membershipId: w.membershipId, level, ranges, count: w.sameDay.length + holds.length });
+        ? w.overlaps.map((s) => ({ start: s.startsAt, end: s.endsAt, label: shiftLabel(s) }))
+        : level === 'DRAFT_HOLD'
+          ? overlapHolds.map(holdRange).filter((r): r is WarnRange => r !== null)
+          : [...w.sameDay.map((s) => ({ start: s.startsAt, end: s.endsAt, label: shiftLabel(s) })), ...holds.map(holdRange).filter((r): r is WarnRange => r !== null)];
+    out.push({
+      membershipId: w.membershipId,
+      level,
+      ranges,
+      count: w.sameDay.length + holds.length,
+      ...(overlapHolds.length > 0 ? { holdCodes: [...new Set(overlapHolds.map((h) => h.code))] } : {}),
+    });
   }
   return out;
 }
@@ -446,7 +463,7 @@ export function localOverlaps(draft: ContractDraft, subjectName: (id: string | n
   return out;
 }
 
-/** Gộp cảnh báo máy chủ và trùng giờ trong hợp đồng; mỗi thợ một dải, đỏ thắng vàng. Khoảng giờ trả "HH:mm". */
+/** Gộp cảnh báo máy chủ và trùng giờ trong hợp đồng; mỗi thợ một dải, đỏ thắng giữ chỗ nháp thắng vàng. Khoảng giờ trả "HH:mm". */
 export function mergeWarnings(server: LineWarning[], local: LocalOverlap[], tz: string): LineWarning[] {
   const byStaff = new Map<string, LineWarning>();
   for (const w of server) {
@@ -455,10 +472,10 @@ export function mergeWarnings(server: LineWarning[], local: LocalOverlap[], tz: 
   for (const o of local) {
     const prev = byStaff.get(o.membershipId);
     const range = { start: o.start, end: o.end, label: o.otherLabel };
-    if (!prev || prev.level === 'SAME_DAY') byStaff.set(o.membershipId, { membershipId: o.membershipId, level: 'OVERLAP', ranges: [range], count: 0 });
+    if (!prev || prev.level !== 'OVERLAP') byStaff.set(o.membershipId, { membershipId: o.membershipId, level: 'OVERLAP', ranges: [range], count: 0 });
     else prev.ranges.push(range);
   }
-  return [...byStaff.values()].sort((a, b) => (a.level === b.level ? 0 : a.level === 'OVERLAP' ? -1 : 1));
+  return [...byStaff.values()].sort((a, b) => LEVEL_RANK[a.level] - LEVEL_RANK[b.level]);
 }
 
 export function overlapLineCount(warnings: Map<string, LineWarning[]>): number {
@@ -469,6 +486,92 @@ export function overlapLineCount(warnings: Map<string, LineWarning[]>): number {
 
 export function confirmBlockedReason(overlapLines: number): string | null {
   return overlapLines > 0 ? `Còn ${overlapLines} dòng thợ trùng giờ. Đổi thợ hoặc đổi giờ trước khi xác nhận.` : null;
+}
+
+// ---------------------------------------------------------------------------------------------
+// S1 (biên bản web 2): xác nhận KHÔNG bị chặn khi dòng chưa có thợ — máy chủ sinh lịch cho MỌI dòng có giờ, dòng chưa
+// có thợ thành lịch ở hàng "Chưa có thợ". Màn chỉ nhắc một dòng vàng ở thanh tổng.
+export interface StaffGaps {
+  // Dòng có giờ nhưng chưa có thợ → lịch không thợ.
+  noStaff: number;
+  // Dòng chưa có giờ → chưa lên lịch được.
+  noTime: number;
+}
+
+export function staffGaps(draft: ContractDraft): StaffGaps {
+  let noStaff = 0;
+  let noTime = 0;
+  for (const l of draft.lines) {
+    if (!isPlaced(l)) continue;
+    if (!l.start || !l.end) noTime += 1;
+    else if (l.staff.length === 0) noStaff += 1;
+  }
+  return { noStaff, noTime };
+}
+
+export function staffGapText(g: StaffGaps): string | null {
+  const parts: string[] = [];
+  if (g.noStaff > 0) parts.push(`${g.noStaff} dòng chưa có thợ — lịch sẽ nằm ở hàng Chưa có thợ`);
+  if (g.noTime > 0) parts.push(`${g.noTime} dòng chưa có giờ — chưa lên lịch được`);
+  return parts.length > 0 ? parts.join(' · ') : null;
+}
+
+/** Sau khi xác nhận: đếm lịch máy chủ đã tạo (createdAppointments) và số lịch chưa có thợ (theo dòng của lịch). */
+export function confirmResultText(res: Pick<ContractDetail, 'lines'> & { createdAppointments?: { contractLineId: string | null }[] }): string {
+  const created = res.createdAppointments ?? [];
+  if (created.length === 0) return 'Đã xác nhận hợp đồng. Không có lịch nào được tạo (chưa dòng nào có giờ).';
+  const noStaff = created.filter((a) => {
+    const l = res.lines.find((x) => x.id === a.contractLineId);
+    return l !== undefined && (l.staff ?? []).length === 0;
+  }).length;
+  return `Đã xác nhận hợp đồng · đã tạo ${created.length} lịch${noStaff > 0 ? ` (${noStaff} lịch chưa có thợ — ở hàng Chưa có thợ)` : ''}.`;
+}
+
+// ---------------------------------------------------------------------------------------------
+// T2 (biên bản web 2): PATCH hợp đồng gửi kèm expectedUpdatedAt; máy chủ trả 409 STALE_VERSION khi bản đã đổi.
+export function isStaleVersion(err: unknown): boolean {
+  if (!(err instanceof ApiError) || err.status !== 409) return false;
+  return (err.details as { reason?: unknown } | undefined)?.reason === 'STALE_VERSION';
+}
+
+/** Những phần khác nhau giữa bản đang nhập và bản mới của máy chủ — để người dùng so trước khi chọn. */
+export function draftDiffs(mine: ContractDraft, theirs: ContractDraft, tz: string): string[] {
+  const out: string[] = [];
+  const money = (v: Vnd | null) => (v === null ? 'theo gợi ý' : formatVnd(v));
+  if (mine.discount !== theirs.discount) out.push(`Giảm giá: bản của bạn ${money(mine.discount)} · bản mới ${money(theirs.discount)}`);
+  if (mine.depositRequired !== theirs.depositRequired) {
+    out.push(`Cọc cần thu: bản của bạn ${money(mine.depositRequired)} · bản mới ${money(theirs.depositRequired)}`);
+  }
+  if (mine.eventDate !== theirs.eventDate) out.push('Ngày sự kiện');
+  if (mine.notes.trim() !== theirs.notes.trim()) out.push('Ghi chú hợp đồng');
+  const lines = (d: ContractDraft) => JSON.stringify(d.lines.map((l) => lineInput(l, d.eventDate, tz)));
+  if (lines(mine) !== lines(theirs)) out.push('Các dòng (gói, giờ, thợ, nơi làm hoặc khoản khác)');
+  return out;
+}
+
+// ---------------------------------------------------------------------------------------------
+// N8: lời lỗi tiền của máy chủ in số thô "Giảm giá hợp đồng (99000000) lớn hơn tổng các dòng (1950000)" → định dạng
+// tiền Việt và đặt dưới đúng ô (Giảm giá / Cọc cần thu). Chỉ đổi cách hiện số, không đổi nội dung.
+export function prettyMoneyText(text: string): string {
+  return text.replace(/\((\d{4,})\)/g, (_, n: string) => `(${formatVnd(Number(n))})`);
+}
+
+export function moneyFieldOf(err: unknown): { field: 'discount' | 'depositRequired'; message: string } | null {
+  if (!(err instanceof ApiError) || err.code !== 'VALIDATION_FAILED') return null;
+  const msg = err.message ?? '';
+  if (/^Giảm giá hợp đồng/.test(msg)) return { field: 'discount', message: prettyMoneyText(msg) };
+  if (/^Tiền cọc/.test(msg)) return { field: 'depositRequired', message: prettyMoneyText(msg) };
+  return null;
+}
+
+// N7: lỗi "sai" (không phải "còn thiếu") hiện ngay khi gõ, không đợi bấm Lưu — giờ ngược, phí di chuyển còn thiếu số
+// làm tiền hiện "—". Lỗi "chưa nhập" khác vẫn đợi bấm Lưu.
+export function liveErrors(local: Record<string, string>): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(local)) {
+    if (/^lines\.\d+\.travel\./.test(k) || (/^lines\.\d+\.scheduledEnd$/.test(k) && v.includes('phải sau'))) out[k] = v;
+  }
+  return out;
 }
 
 // Tên rút gọn trên hàng thợ: hai tiếng cuối ("Nguyễn Thu Hà" → "Thu Hà").

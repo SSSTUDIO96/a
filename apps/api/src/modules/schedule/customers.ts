@@ -4,6 +4,7 @@ import { normalizeVnPhone } from '@makeup/shared';
 import { defineRoute, mustOrg, mustUser } from '../../http/route';
 import { AppError } from '../../lib/errors';
 import { writeAudit } from '../../lib/audit';
+import { resolveAvatarUrls } from '../files/service';
 
 // Số điện thoại Việt Nam chuẩn hoá về 0xxxxxxxxx; sai định dạng → 400.
 export const Phone = z
@@ -35,9 +36,45 @@ const customerSelect = {
   phone: true,
   email: true,
   note: true,
+  avatarFileId: true,
   createdAt: true,
   updatedAt: true,
 } satisfies Prisma.CustomerSelect;
+
+type CustomerRow = Prisma.CustomerGetPayload<{ select: typeof customerSelect }>;
+
+// Ảnh khách = tệp CUSTOMER_AVATAR (customers.avatar_file_id). Đổi thành URL ký có hạn qua hàm dùng chung của module
+// tệp (một câu truy vấn tệp cho cả danh sách); tệp đã xoá / chưa tải xong → null. Khách không có ảnh nhập tay cũ.
+async function presentCustomers(db: Prisma.TransactionClient, orgId: string, rows: CustomerRow[]) {
+  const avatarOf = await resolveAvatarUrls(
+    db,
+    orgId,
+    rows.map((r) => ({ avatarFileId: r.avatarFileId, avatarUrl: null })),
+  );
+  return rows.map((r) => ({ ...r, avatarUrl: avatarOf({ avatarFileId: r.avatarFileId, avatarUrl: null }) }));
+}
+
+async function presentCustomer(db: Prisma.TransactionClient, orgId: string, row: CustomerRow) {
+  const [one] = await presentCustomers(db, orgId, [row]);
+  return one!;
+}
+
+// Tệp gắn làm ảnh khách: cùng tổ chức, đúng mục đích CUSTOMER_AVATAR, đã tải xong, chưa xoá.
+// Mã bịa và tệp của tổ chức khác nhận CÙNG một lời (không lộ "tệp này có tồn tại ở nơi khác").
+const AVATAR_INVALID = 'Ảnh khách không hợp lệ: cần tệp ảnh khách hàng đã tải xong của tổ chức';
+async function assertCustomerAvatar(tx: Prisma.TransactionClient, orgId: string, fileId: string) {
+  const file = await tx.storedFile.findFirst({
+    where: { id: fileId, organizationId: orgId, purpose: 'CUSTOMER_AVATAR', status: 'READY', deletedAt: null },
+    select: { id: true },
+  });
+  if (!file) {
+    throw new AppError('VALIDATION_FAILED', AVATAR_INVALID, {
+      field: 'avatarFileId',
+      avatarFileId: fileId,
+      issues: [{ path: 'avatarFileId', message: AVATAR_INVALID }],
+    });
+  }
+}
 
 // Phần số trong ô tìm kiếm, đổi đầu +84/84 về 0 để khớp số đã chuẩn hoá trong database.
 function phoneFragment(q: string): string | null {
@@ -75,7 +112,7 @@ export const customerRoutes = [
           take: query.pageSize,
         }),
       ]);
-      return { body: { items, page: query.page, pageSize: query.pageSize, total } };
+      return { body: { items: await presentCustomers(deps.db, o.id, items), page: query.page, pageSize: query.pageSize, total } };
     },
   }),
 
@@ -117,7 +154,7 @@ export const customerRoutes = [
         });
         return created;
       });
-      return { status: 201, body: customer };
+      return { status: 201, body: await presentCustomer(deps.db, o.id, customer) };
     },
   }),
 
@@ -136,7 +173,7 @@ export const customerRoutes = [
         select: customerSelect,
       });
       if (!customer) throw new AppError('NOT_FOUND', 'Không tìm thấy khách hàng');
-      return { body: customer };
+      return { body: await presentCustomer(deps.db, o.id, customer) };
     },
   }),
 
@@ -146,7 +183,7 @@ export const customerRoutes = [
     scope: 'org',
     permission: 'customers.write',
     tag: 'Khách hàng',
-    summary: 'Sửa thông tin khách hàng',
+    summary: 'Sửa thông tin khách hàng; avatarFileId = tệp CUSTOMER_AVATAR đã tải (null = bỏ ảnh, không gửi = giữ nguyên)',
     params: CustomerParams,
     body: z
       .object({
@@ -154,6 +191,8 @@ export const customerRoutes = [
         phone: Phone.nullable().optional(),
         email: Email.nullable().optional(),
         note: Note.nullable().optional(),
+        // Vắng mặt = giữ nguyên ảnh (KHÔNG dùng .default — sửa một phần không được đụng trường không gửi).
+        avatarFileId: z.uuid().nullable().optional(),
       })
       .refine((b) => Object.keys(b).length > 0, 'Không có gì để sửa'),
     handler: async ({ deps, org, params, body, userId, requestId }) => {
@@ -164,6 +203,7 @@ export const customerRoutes = [
           select: customerSelect,
         });
         if (!before) throw new AppError('NOT_FOUND', 'Không tìm thấy khách hàng');
+        if (body.avatarFileId) await assertCustomerAvatar(tx, o.id, body.avatarFileId);
         const after = await tx.customer.update({ where: { id: before.id }, data: body, select: customerSelect });
         await writeAudit(tx, {
           organizationId: o.id,
@@ -172,14 +212,14 @@ export const customerRoutes = [
           entityType: 'customer',
           entityId: before.id,
           data: {
-            before: { fullName: before.fullName, phone: before.phone, email: before.email, note: before.note },
+            before: { fullName: before.fullName, phone: before.phone, email: before.email, note: before.note, avatarFileId: before.avatarFileId },
             after: body,
           },
           requestId,
         });
         return after;
       });
-      return { body: customer };
+      return { body: await presentCustomer(deps.db, o.id, customer) };
     },
   }),
 ];

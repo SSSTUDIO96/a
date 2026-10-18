@@ -183,7 +183,7 @@ describe('cảnh báo thợ 3 mức', () => {
     expect(merged[0]?.ranges[0]).toMatchObject({ start: '05:00', end: '06:30' });
   });
 
-  it('giữ chỗ của CHÍNH hợp đồng đang sửa không tính; giữ chỗ chồng giờ của hợp đồng khác → đỏ', () => {
+  it('T1: giữ chỗ của CHÍNH hợp đồng không tính; giữ chỗ chồng giờ của hợp đồng NHÁP khác → DRAFT_HOLD (không đỏ, không chặn)', () => {
     const hold = (contractId: string, overlaps: boolean) => ({
       contractId,
       code: 'HĐ-2026-0139',
@@ -194,8 +194,22 @@ describe('cảnh báo thợ 3 mức', () => {
       overlaps,
     });
     expect(serverWarnings([w({ level: 'OVERLAP', draftHolds: [hold('toi', true)] })], 'toi')).toEqual([]);
-    expect(serverWarnings([w({ level: 'OVERLAP', draftHolds: [hold('khac', true)] })], 'toi')[0]?.level).toBe('OVERLAP');
+    // Máy chủ gán level OVERLAP khi chỉ có giữ chỗ nháp — web không tin mức đó (quyết định 15:14: nháp không chiếm giờ).
+    const held = serverWarnings([w({ level: 'OVERLAP', draftHolds: [hold('khac', true), hold('khac', true)] })], 'toi');
+    expect(held[0]).toMatchObject({ level: 'DRAFT_HOLD', holdCodes: ['HĐ-2026-0139'] });
+    const map = new Map<string, LineWarning[]>([['k', mergeWarnings(held, [], TZ)]]);
+    expect(overlapLineCount(map)).toBe(0);
+    expect(confirmBlockedReason(overlapLineCount(map))).toBeNull();
     expect(serverWarnings([w({ level: 'SAME_DAY', draftHolds: [hold('khac', false)] })], 'toi')[0]?.level).toBe('SAME_DAY');
+    // Có cả ca đã chặn giờ trùng → vẫn đỏ.
+    const both = serverWarnings([w({ level: 'OVERLAP', overlaps: [shift('2026-10-23T22:00:00Z', '2026-10-23T23:30:00Z')], draftHolds: [hold('khac', true)] })], 'toi');
+    expect(both[0]?.level).toBe('OVERLAP');
+  });
+
+  it('T1: trùng giữa hai dòng của cùng hợp đồng thắng giữ chỗ nháp → đỏ', () => {
+    const hold: LineWarning = { membershipId: 'm1', level: 'DRAFT_HOLD', ranges: [], count: 1, holdCodes: ['HĐ-1'] };
+    const merged = mergeWarnings([hold], [{ membershipId: 'm1', otherKey: 'k', otherLabel: 'Dòng Cô dâu của hợp đồng này', start: '04:30', end: '07:00' }], TZ);
+    expect(merged[0]?.level).toBe('OVERLAP');
   });
 
   it('một thợ gán cho hai dòng chồng giờ trong cùng hợp đồng → đỏ cả hai dòng, chặn xác nhận', () => {

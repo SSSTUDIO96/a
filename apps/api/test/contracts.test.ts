@@ -938,7 +938,9 @@ describe('thợ phụ trách, cảnh báo trùng giờ, lên lịch khi xác nh�
     expect(new Date(extra.createdAt).getTime()).toBeGreaterThanOrEqual(new Date(c.lines[0].createdAt).getTime());
   });
 
-  it('xác nhận tạo đúng số lịch, đúng thợ, đúng giờ, đúng nơi; dòng không có thợ thì không tạo lịch', async () => {
+  // Biên bản nghiệm thu web 2, S1 (quyết định điều phối): MỌI dòng có giờ hẹn đều sinh lịch khi xác nhận; dòng chưa có thợ
+  // sinh lịch KHÔNG thợ (hàng "Chưa có thợ" của Lịch). Trước đây dòng chưa có thợ không sinh lịch → hợp đồng đã chốt vắng khỏi lịch.
+  it('xác nhận tạo đúng số lịch, đúng thợ, đúng giờ, đúng nơi; dòng có giờ mà chưa có thợ → lịch không thợ; dòng không giờ không thợ → không lịch', async () => {
     const c = (
       await create(A.owner, A.orgId, {
         customerId: customerA,
@@ -951,18 +953,23 @@ describe('thợ phụ trách, cảnh báo trùng giờ, lên lịch khi xác nh�
             subjectId: A.guest,
           }),
           { kind: 'SERVICE', serviceId: A.party, quantity: 1, scheduledStart: '2027-06-01T06:00:00Z', scheduledEnd: '2027-06-01T07:00:00Z' },
+          { kind: 'SERVICE', serviceId: A.party, quantity: 1 },
         ],
       }).expect(201)
     ).body;
     const res = await confirm(c.id).expect(200);
     expect(res.body.status).toBe('CONFIRMED');
-    expect(res.body.createdAppointments).toHaveLength(2);
+    expect(res.body.createdAppointments).toHaveLength(3);
     const appts = await deps.db.appointment.findMany({
       where: { contractId: c.id },
       include: { staff: { select: { membershipId: true, role: true, isBlocking: true } } },
       orderBy: { startsAt: 'asc' },
     });
-    expect(appts).toHaveLength(2);
+    expect(appts).toHaveLength(3);
+    // Dòng thứ ba: có giờ, chưa có thợ → lịch đã xác nhận, KHÔNG thợ.
+    expect(appts[2]).toMatchObject({ status: 'CONFIRMED', contractLineId: c.lines[2].id, title: 'Makeup tiệc' });
+    expect(appts[2]!.staff).toEqual([]);
+    expect(appts[2]!.startsAt.toISOString()).toBe('2027-06-01T06:00:00.000Z');
     expect(appts[0]).toMatchObject({
       status: 'CONFIRMED',
       kind: 'MAKEUP',
@@ -983,7 +990,94 @@ describe('thợ phụ trách, cảnh báo trùng giờ, lên lịch khi xác nh�
     // Lịch của chính hợp đồng không bị coi là trùng khi xem lại hợp đồng.
     const detail = (await request(app).get(url(A.orgId, `/${c.id}`)).set(bearer(A.owner)).expect(200)).body;
     expect(detail.lines[0].staffWarnings).toEqual([]);
-    expect(detail.appointments).toHaveLength(2);
+    expect(detail.appointments).toHaveLength(3);
+  });
+
+  // Bài tái hiện của thợ chấm (bai-thu-web2/tai-hien.mjs, mục NGHIÊM TRỌNG) chuyển sang "ĐÃ HẾT": xác nhận → 200, số ca > 0.
+  it('S1: hợp đồng 2 dòng (1 có thợ, 1 chưa) → xác nhận sinh 2 lịch, lịch thứ hai không thợ; dòng phát sinh không thợ sau xác nhận cũng sinh lịch', async () => {
+    const c = (
+      await create(A.owner, A.orgId, {
+        customerId: customerA,
+        lines: [
+          staffLine('2027-08-01T01:00:00Z', '2027-08-01T02:00:00Z', [{ membershipId: m1, role: 'PRIMARY' }]),
+          staffLine('2027-08-01T08:00:00Z', '2027-08-01T09:00:00Z', []),
+        ],
+      }).expect(201)
+    ).body;
+    const res = await confirm(c.id).expect(200);
+    expect(res.body.createdAppointments).toHaveLength(2);
+    const list = (
+      await request(app)
+        .get(`/api/v1/orgs/${A.orgId}/appointments`)
+        .query({ from: '2027-08-01T00:00:00.000Z', to: '2027-08-02T00:00:00.000Z', contractId: c.id })
+        .set(bearer(A.owner))
+        .expect(200)
+    ).body.items as { contractLineId: string; staff: unknown[]; status: string }[];
+    console.log(`[S1 xác nhận không thợ] xác nhận → ${res.status}, số ca trên lịch = ${list.length} ⇒ ${list.length === 0 ? 'LỖI CÒN' : 'ĐÃ HẾT'}`);
+    expect(list).toHaveLength(2);
+    const byLine = new Map(list.map((a) => [a.contractLineId, a]));
+    expect(byLine.get(c.lines[0].id)!.staff).toHaveLength(1);
+    expect(byLine.get(c.lines[1].id)!.staff).toEqual([]);
+    expect(byLine.get(c.lines[1].id)!.status).toBe('CONFIRMED');
+    // Cửa sinh lịch thứ hai: dòng phát sinh sau xác nhận, có giờ, chưa có thợ.
+    const added = await request(app)
+      .post(url(A.orgId, `/${c.id}/lines`))
+      .set(bearer(A.owner))
+      .set('idempotency-key', idem())
+      .send(staffLine('2027-08-01T10:00:00Z', '2027-08-01T11:00:00Z', []))
+      .expect(201);
+    expect(added.body.createdAppointments).toHaveLength(1);
+    expect(await deps.db.appointmentStaff.count({ where: { appointmentId: added.body.createdAppointments[0].id } })).toBe(0);
+    // Dòng có giờ bắt đầu mà thiếu giờ kết thúc: không sinh được lịch → xác nhận 400 nêu tên dòng (không lặng lẽ bỏ qua).
+    const half = (await create(A.owner, A.orgId, { customerId: customerA, lines: [staffLine('2027-08-02T01:00:00Z', null, [])] }).expect(201)).body;
+    const r = await confirm(half.id);
+    expect([r.status, r.body.error.message]).toEqual([400, 'Dòng "Makeup tiệc" có giờ bắt đầu nhưng chưa có giờ kết thúc — thêm giờ kết thúc trước khi xác nhận']);
+  });
+
+  // Biên bản web 2, T2: hai thẻ trình duyệt cùng sửa một hợp đồng nháp — thẻ sau từng xoá im lặng giảm giá của thẻ trước.
+  it('T2: PATCH bắt buộc expectedUpdatedAt; bản cũ → 409 "Hợp đồng vừa được người khác sửa…", không ghi đè; hai lệnh cùng phiên bản → đúng 1 thắng', async () => {
+    const c = (await create(A.owner, A.orgId, { customerId: customerA, lines: [{ kind: 'CUSTOM', name: 'Gói', unitPrice: 2_000_000, quantity: 1 }] }).expect(201)).body;
+    const send = (b: object) => request(app).patch(url(A.orgId, `/${c.id}`)).set(bearer(A.owner)).send(b);
+    const missing = await send({ notes: 'không phiên bản' });
+    expect(missing.status).toBe(400);
+    const tab1 = await send({ expectedUpdatedAt: c.updatedAt, discount: 100_000 });
+    expect([tab1.status, tab1.body.discount]).toEqual([200, 100_000]);
+    expect(tab1.body.updatedAt).not.toBe(c.updatedAt);
+    const tab2 = await send({ expectedUpdatedAt: c.updatedAt, notes: 'tab 2' });
+    expect([tab2.status, tab2.body.error.code, tab2.body.error.message]).toEqual([409, 'CONFLICT', 'Hợp đồng vừa được người khác sửa — tải lại để xem bản mới']);
+    expect(tab2.body.error.details).toMatchObject({ reason: 'STALE_VERSION', currentUpdatedAt: tab1.body.updatedAt });
+    const now = (await request(app).get(url(A.orgId, `/${c.id}`)).set(bearer(A.owner)).expect(200)).body;
+    console.log(`[T2 hai thẻ ghi đè] giảm giá sau thẻ 1 = ${tab1.body.discount}, sau thẻ 2 = ${now.discount} ⇒ ${now.discount === 0 ? 'LỖI CÒN' : 'ĐÃ HẾT'}`);
+    expect([now.discount, now.notes]).toEqual([100_000, null]);
+    // Tải lại rồi sửa: được.
+    await send({ expectedUpdatedAt: now.updatedAt, notes: 'tab 2 sau khi tải lại' }).expect(200);
+    // Hai lệnh đồng thời trên CÙNG phiên bản: đúng 1 thắng, 5/5 lần.
+    const seen: string[] = [];
+    for (let i = 0; i < 5; i++) {
+      const v = await version(c.id);
+      const rs = await Promise.all([send({ expectedUpdatedAt: v, notes: `a${i}` }), send({ expectedUpdatedAt: v, notes: `b${i}` })]);
+      seen.push(rs.map((x) => x.status).sort().join('/'));
+    }
+    expect(seen).toEqual(Array(5).fill('200/409'));
+  });
+
+  // Biên bản web 2, T4 (quyết định điều phối): huỷ hợp đồng ĐÃ XÁC NHẬN cần contracts.adjust như huỷ một dòng.
+  it('T4: lễ tân (contracts.write, không contracts.adjust) huỷ được hợp đồng nháp, KHÔNG huỷ được hợp đồng đã xác nhận (403); chủ huỷ được', async () => {
+    const recep = await registerUser(app, 'hd-le-tan-t4');
+    await addMember(app, A.owner, A.orgId, recep, ['receptionist']);
+    const mk = async () => (await create(A.owner, A.orgId, { customerId: customerA, lines: [{ kind: 'CUSTOM', name: 'Gói', unitPrice: 500_000, quantity: 1 }] }).expect(201)).body;
+    const cancel = (u: TestUser, id: string) => request(app).post(url(A.orgId, `/${id}/status`)).set(bearer(u)).send({ to: 'CANCELLED', reason: 'thử' });
+    const draft = await mk();
+    expect((await cancel(recep, draft.id)).status).toBe(200);
+    const done = await mk();
+    await confirm(done.id).expect(200);
+    const v = await request(app).post(url(A.orgId, `/${done.id}/lines/${done.lines[0].id}/void`)).set(bearer(recep)).send({ reason: 'thử' });
+    const x = await cancel(recep, done.id);
+    console.log(`[T4 lễ tân] huỷ một dòng → ${v.status}, huỷ cả hợp đồng đã chốt → ${x.status} ⇒ ${v.status === 403 && x.status === 200 ? 'LỖI CÒN' : 'ĐÃ HẾT'}`);
+    expect([v.status, x.status]).toEqual([403, 403]);
+    expect(x.body.error).toMatchObject({ code: 'FORBIDDEN', message: 'Hợp đồng đã xác nhận: huỷ hợp đồng cần quyền điều chỉnh hợp đồng', details: { required: 'contracts.adjust' } });
+    expect((await deps.db.contract.findUniqueOrThrow({ where: { id: done.id } })).status).toBe('CONFIRMED');
+    expect((await cancel(A.owner, done.id)).status).toBe(200);
   });
 
   it('trùng giờ khi xác nhận → 409 kèm danh sách; hợp đồng vẫn nháp, không lịch nào được tạo', async () => {
@@ -1121,7 +1215,7 @@ describe('cách ly tổ chức', () => {
   it('chủ B không xem/sửa được hợp đồng A (qua đường của B → 404, qua đường của A → 404)', async () => {
     const viaB = (rest: string) => url(B.orgId, rest);
     expect((await request(app).get(viaB(`/${contractA.id}`)).set(bearer(B.owner))).status).toBe(404);
-    expect((await request(app).patch(viaB(`/${contractA.id}`)).set(bearer(B.owner)).send({ expectedUpdatedAt: contractA.updatedAt, notes: 'x' })).status).toBe(404);
+    expect((await request(app).patch(viaB(`/${contractA.id}`)).set(bearer(B.owner)).send({ expectedUpdatedAt: await version(contractA.id), notes: 'x' })).status).toBe(404);
     expect((await request(app).post(viaB(`/${contractA.id}/status`)).set(bearer(B.owner)).send({ to: 'CONFIRMED' })).status).toBe(404);
     expect(
       (

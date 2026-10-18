@@ -96,6 +96,7 @@
 .ct-wb__t { flex: 1; min-width: 0; }
 .ct-wb--red { background: var(--danger-bg); border-color: var(--danger-line); color: var(--danger); }
 .ct-wb--yel { background: var(--warn-bg); border-color: var(--warn-line); color: var(--warn); }
+.ct-wb--hold { background: var(--draft-bg); border-color: var(--line-hover); color: var(--muted); }
 .ct-wb .ui-tip { border-color: currentColor; color: inherit; }
 
 /* ---------- Thẻ phụ phí & khoản khác ---------- */

@@ -4,6 +4,7 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import request from 'supertest';
+import express from 'express';
 import { getUsage } from '../src/lib/quota';
 import { contractRoutes } from '../src/modules/contracts/routes';
 import { buildGateFixture, printReport, runIsolationGate, type GateFixture, type GateOrg, type GateReport, type RefSamples, type Samples } from './gate';
@@ -518,12 +519,34 @@ describe('sửa nháp không được hạ tổng xuống dưới số đã thu 
 // Hai lượt vì đường dẫn :contractId chỉ trỏ được MỘT hợp đồng: lượt 1 trên hợp đồng DỊCH VỤ của fixture (mọi đường),
 // lượt 2 trên một hợp đồng KHOÁ HỌC nháp (chỉ PATCH hợp đồng và thêm dòng — chỗ có trường lines[].courseClassId,
 // rulesTemplateId mà hợp đồng dịch vụ không nhận). Trường "chưa có mẫu" chỉ tính là vi phạm khi CẢ HAI lượt đều thiếu.
+// PATCH hợp đồng BẮT BUỘC expectedUpdatedAt (biên bản web 2, T2), mà mẫu của cửa gác là hàm đồng bộ, dựng thân TRƯỚC khi
+// biết phiên bản hiện hành. Lớp vỏ chỉ dùng trong bài thử: thân mang dấu HIEN_TAI thì thay bằng updatedAt hiện hành của
+// hợp đồng trong đường dẫn rồi chuyển nguyên cho app thật (máy chủ vẫn kiểm đủ). ĐỀ XUẤT cho gate.ts: cho mẫu chạy
+// bất đồng bộ (await sample(o)) để mẫu tự đọc phiên bản, hoặc chép lớp vỏ này.
+const HIEN_TAI = '__PHIEN_BAN_HIEN_TAI__';
+function withCurrentVersion(inner: App): App {
+  const w = express();
+  w.use(express.json({ limit: '100kb' }));
+  w.use(async (req, _res, next) => {
+    const m = /^\/api\/v1\/orgs\/[^/]+\/contracts\/([0-9a-f-]{36})$/.exec(req.path);
+    const b = req.body as { expectedUpdatedAt?: string } | undefined;
+    if (req.method === 'PATCH' && m && b?.expectedUpdatedAt === HIEN_TAI) {
+      const row = await db.contract.findUnique({ where: { id: m[1]! }, select: { updatedAt: true } });
+      b.expectedUpdatedAt = (row?.updatedAt ?? new Date(0)).toISOString();
+    }
+    next();
+  });
+  w.use(inner);
+  return w as unknown as App;
+}
+
 const COURSE_RUN_KEYS = ['PATCH /orgs/:orgId/contracts/:contractId', 'POST /orgs/:orgId/contracts/:contractId/lines'];
 
 // ĐỀ XUẤT thêm vào SAMPLES (gate-samples.ts): thân hợp lệ cho đường mới có tham số id.
 const S3_SAMPLES: Samples = {
   ...SAMPLES,
   'PATCH /orgs/:orgId/contract-texts/:textId': () => ({ name: 'Đổi tên thử' }),
+  'PATCH /orgs/:orgId/contracts/:contractId': () => ({ expectedUpdatedAt: HIEN_TAI, notes: 'Sửa thử' }),
 };
 
 const customLine = { kind: 'CUSTOM', name: 'Giáo trình', unitPrice: 100_000, quantity: 1 };
@@ -554,14 +577,22 @@ const S3_REF_SAMPLES: RefSamples = {
     }),
   ],
   // Hợp đồng dịch vụ: termsTemplateId đo ở đây; rulesTemplateId + lines[].courseClassId đo ở lượt hợp đồng khoá học.
-  'PATCH /orgs/:orgId/contracts/:contractId': [...REF_SAMPLES['PATCH /orgs/:orgId/contracts/:contractId']!, (o) => ({ termsTemplateId: o.ids.textId })],
+  'PATCH /orgs/:orgId/contracts/:contractId': [
+    ...REF_SAMPLES['PATCH /orgs/:orgId/contracts/:contractId']!.map((f) => (o: GateOrg) => ({ ...f(o), expectedUpdatedAt: HIEN_TAI })),
+    (o) => ({ expectedUpdatedAt: HIEN_TAI, termsTemplateId: o.ids.textId }),
+  ],
 };
 
 // Lượt 2 (đường dẫn trỏ hợp đồng KHOÁ HỌC nháp): trường của dòng khoá học và nội quy.
 const S3_COURSE_REF_SAMPLES: RefSamples = {
   'POST /orgs/:orgId/contracts/:contractId/lines': [(o) => ({ kind: 'COURSE', courseClassId: o.ids.class2Id })],
   'PATCH /orgs/:orgId/contracts/:contractId': [
-    (o) => ({ termsTemplateId: o.ids.textId, rulesTemplateId: o.ids.rulesTextId, lines: [{ kind: 'COURSE', courseClassId: o.ids.classId }, customLine] }),
+    (o) => ({
+      expectedUpdatedAt: HIEN_TAI,
+      termsTemplateId: o.ids.textId,
+      rulesTemplateId: o.ids.rulesTextId,
+      lines: [{ kind: 'COURSE', courseClassId: o.ids.classId }, customLine],
+    }),
   ],
 };
 
@@ -570,6 +601,7 @@ const S3_PARTIAL_SAMPLES: PartialSamples = {
   ...PARTIAL_SAMPLES,
   'PATCH /orgs/:orgId/contracts/:contractId': {
     full: (c) => ({
+      expectedUpdatedAt: HIEN_TAI,
       discount: 1000,
       depositRequired: 20000,
       eventDate: '2027-01-15T02:00:00.000Z',
@@ -577,7 +609,7 @@ const S3_PARTIAL_SAMPLES: PartialSamples = {
       termsTemplateId: c.o.ids.textId,
       rulesTemplateId: c.o.ids.rulesTextId,
     }),
-    one: () => ({ notes: 'Ghi chú đổi' }),
+    one: () => ({ expectedUpdatedAt: HIEN_TAI, notes: 'Ghi chú đổi' }),
     skip: {
       lines: 'gửi lines là THAY toàn bộ dòng (mã dòng mới) — không phải sửa một phần; cửa gác cách ly đã đo lines',
       terms: 'loại trừ với termsTemplateId (gửi cả hai → 400); mẫu chung hiện hành đã đo terms trên hợp đồng dịch vụ',
@@ -634,12 +666,13 @@ describe('cửa gác trên contractRoutes (mẫu đề xuất)', () => {
     await extendGateOrg(fx1.b);
     fx2 = { a: onCourseContract(fx1.a), b: onCourseContract(fx1.b) };
     // Sửa một phần chạy trên hợp đồng khoá học (đủ cả termsTemplateId lẫn rulesTemplateId).
-    partial = await runPartialPatchGate(app, db, contractRoutes, fx2, S3_PARTIAL_SAMPLES);
+    const gateApp = withCurrentVersion(app);
+    partial = await runPartialPatchGate(gateApp, db, contractRoutes, fx2, S3_PARTIAL_SAMPLES);
     printPartialReport(' (hợp đồng S3)', partial);
-    run1 = await runIsolationGate(app, contractRoutes, fx1, S3_SAMPLES, S3_REF_SAMPLES);
+    run1 = await runIsolationGate(gateApp, contractRoutes, fx1, S3_SAMPLES, S3_REF_SAMPLES);
     printReport(' (hợp đồng S3 — lượt 1, hợp đồng dịch vụ)', run1);
     const courseOnly = contractRoutes.filter((r) => COURSE_RUN_KEYS.includes(`${r.method.toUpperCase()} ${r.path}`));
-    run2 = await runIsolationGate(app, courseOnly, fx2, S3_SAMPLES, S3_COURSE_REF_SAMPLES);
+    run2 = await runIsolationGate(gateApp, courseOnly, fx2, S3_SAMPLES, S3_COURSE_REF_SAMPLES);
     printReport(' (hợp đồng S3 — lượt 2, hợp đồng khoá học)', run2);
   }, 300_000);
 
