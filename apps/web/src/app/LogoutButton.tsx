@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useSession } from '../lib/session';
+import { useSession } from './session';
 import { ErrorNotice } from './ErrorNotice';
 
 export function LogoutButton() {

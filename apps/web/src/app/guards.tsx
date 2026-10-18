@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router';
-import { useSession } from '../lib/session';
+import { useSession } from './session';
 
 export function Loading() {
   return <p>Đang tải…</p>;

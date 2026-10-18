@@ -1,4 +1,4 @@
-import { ApiError } from '../lib/api';
+import { ApiError, userMessage } from '../api/errors';
 
 // Hiện lỗi máy chủ đúng như máy chủ báo (tiếng Việt), kèm mã yêu cầu để tra log.
 export function ErrorNotice({ error }: { error: unknown }) {
@@ -6,7 +6,7 @@ export function ErrorNotice({ error }: { error: unknown }) {
   if (error instanceof ApiError) {
     return (
       <div role="alert">
-        <p>{error.message}</p>
+        <p>{userMessage(error)}</p>
         {error.requestId ? <p>Mã yêu cầu: {error.requestId}</p> : null}
       </div>
     );

@@ -1,9 +1,10 @@
 import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router';
-import { ErrorNotice, FieldError } from '../components/ErrorNotice';
-import { newIdempotencyKey } from '../lib/api';
-import { useSession } from '../lib/session';
-import { checkEmail, checkNewPassword, checkRequired, hasErrors, serverFieldErrors, type FieldErrors } from '../lib/validate';
+import { fieldErrors } from '../../api/errors';
+import { newIdempotencyKey } from '../../api/idempotency';
+import { ErrorNotice, FieldError } from '../../app/ErrorNotice';
+import { useSession } from '../../app/session';
+import { checkEmail, checkNewPassword, checkRequired, hasErrors, type FieldErrors } from './validate';
 
 type Field = 'fullName' | 'email' | 'password';
 
@@ -31,7 +32,7 @@ export function RegisterPage() {
     try {
       await register({ fullName: fullName.trim(), email: email.trim(), password }, newIdempotencyKey());
     } catch (err) {
-      setErrors(serverFieldErrors(err));
+      setErrors(fieldErrors(err));
       setSubmitError(err);
       setPending(false);
     }

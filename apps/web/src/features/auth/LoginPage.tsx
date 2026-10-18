@@ -1,8 +1,9 @@
 import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router';
-import { ErrorNotice, FieldError } from '../components/ErrorNotice';
-import { useSession } from '../lib/session';
-import { checkEmail, hasErrors, serverFieldErrors, type FieldErrors } from '../lib/validate';
+import { fieldErrors } from '../../api/errors';
+import { ErrorNotice, FieldError } from '../../app/ErrorNotice';
+import { useSession } from '../../app/session';
+import { checkEmail, hasErrors, type FieldErrors } from './validate';
 
 type Field = 'email' | 'password';
 
@@ -26,7 +27,7 @@ export function LoginPage() {
       // Thành công thì GuestOnly tự chuyển trang khi phiên đã được máy chủ xác nhận.
       await login(email.trim(), password);
     } catch (err) {
-      setErrors(serverFieldErrors(err));
+      setErrors(fieldErrors(err));
       setSubmitError(err);
       setPending(false);
     }

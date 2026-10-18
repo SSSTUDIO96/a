@@ -108,6 +108,7 @@ export function createApp(deps: Deps, routes: AnyRoute[] = ALL_ROUTES) {
 }
 
 const IdemKeySchema = /^[A-Za-z0-9_-]{8,128}$/;
+const IDEM_PENDING_TTL_MS = 2 * 60_000;
 
 // Chống gửi trùng: máy khách gửi kèm header Idempotency-Key (mỗi lần bấm "Lưu" một khoá mới).
 // Gửi lại cùng khoá + cùng nội dung → trả đúng kết quả lần đầu, không tạo bản ghi thứ hai.
@@ -123,7 +124,9 @@ async function runIdempotent(
   if (!key || !IdemKeySchema.test(key)) {
     throw new AppError('VALIDATION_FAILED', 'Thiếu hoặc sai header Idempotency-Key (8–128 ký tự chữ, số, - hoặc _)');
   }
-  const routeKey = `${route.method} ${route.path}`;
+  // So ĐƯỜNG DẪN THẬT (kèm id), không so mẫu: cùng khoá gửi vào hai hợp đồng khác nhau là hai yêu cầu khác nhau.
+  // (Biên bản nghiệm thu lát 1, lỗi T1: so mẫu đường → trả kết quả của hợp đồng đầu, báo thành công giả.)
+  const routeKey = `${route.method.toUpperCase()} ${req.baseUrl}${req.path}`;
   const requestHash = createHash('sha256').update(JSON.stringify(req.body ?? null)).digest('hex');
   const pk = { organizationId_userId_key: { organizationId, userId, key } };
   try {
@@ -138,7 +141,13 @@ async function runIdempotent(
       throw new AppError('CONFLICT', 'Idempotency-Key này đã dùng cho một yêu cầu khác');
     }
     if (prev.responseStatus === 0) {
-      throw new AppError('CONFLICT', 'Yêu cầu giống hệt đang được xử lý, vui lòng đợi');
+      // Máy chủ chết giữa lúc xử lý thì dòng "đang xử lý" kẹt lại. Quá hạn thì cho lấy lại khoá.
+      // Rủi ro còn lại (đã ghi sổ): nếu máy chủ chết SAU khi ghi dữ liệu và TRƯỚC khi lưu kết quả, gửi lại sẽ tạo bản thứ hai.
+      const stale = Date.now() - prev.createdAt.getTime() > IDEM_PENDING_TTL_MS;
+      if (!stale) throw new AppError('CONFLICT', 'Yêu cầu giống hệt đang được xử lý, vui lòng đợi');
+      const taken = await deps.db.idempotencyKey.deleteMany({ where: { ...pk.organizationId_userId_key, responseStatus: 0, createdAt: prev.createdAt } });
+      if (taken.count !== 1) throw new AppError('CONFLICT', 'Yêu cầu giống hệt đang được xử lý, vui lòng đợi');
+      return runIdempotent(deps, req, organizationId, userId, route, run);
     }
     return { status: prev.responseStatus, body: prev.responseBody };
   }

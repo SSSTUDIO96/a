@@ -1,10 +1,12 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { ErrorNotice, FieldError } from '../components/ErrorNotice';
-import { LogoutButton } from '../components/LogoutButton';
-import { api, ApiError, newIdempotencyKey, type CreatedOrganization, type OrgKind } from '../lib/api';
-import { useSession } from '../lib/session';
-import { checkRequired, checkSlug, hasErrors, serverFieldErrors, slugify, type FieldErrors } from '../lib/validate';
+import { createOrganization, type CreatedOrganization, type OrgKind } from '../../api/auth';
+import { ApiError, conflictFields, fieldErrors } from '../../api/errors';
+import { newIdempotencyKey } from '../../api/idempotency';
+import { ErrorNotice, FieldError } from '../../app/ErrorNotice';
+import { LogoutButton } from '../../app/LogoutButton';
+import { useSession } from '../../app/session';
+import { checkRequired, checkSlug, hasErrors, slugify, type FieldErrors } from './validate';
 
 type Field = 'name' | 'slug' | 'kind';
 
@@ -15,9 +17,7 @@ const KIND_OPTIONS: { value: OrgKind; label: string }[] = [
 ];
 
 function slugTakenError(err: unknown): string | undefined {
-  if (!(err instanceof ApiError) || err.code !== 'CONFLICT') return undefined;
-  const fields = (err.details as { fields?: unknown } | undefined)?.fields;
-  return Array.isArray(fields) && fields.includes('slug') ? 'Đường dẫn này đã có tổ chức khác dùng' : undefined;
+  return conflictFields(err).includes('slug') ? 'Đường dẫn này đã có tổ chức khác dùng' : undefined;
 }
 
 export function CreateOrgPage() {
@@ -51,13 +51,10 @@ export function CreateOrgPage() {
     const idempotencyKey = newIdempotencyKey();
     let created: CreatedOrganization;
     try {
-      created = await api.create<CreatedOrganization>(
-        '/orgs',
-        { name: name.trim(), slug: slug.trim().toLowerCase(), kind },
-        idempotencyKey,
-      );
+      created = await createOrganization({ name: name.trim(), slug: slug.trim().toLowerCase(), kind }, idempotencyKey);
     } catch (err) {
-      setErrors({ ...serverFieldErrors(err), slug: slugTakenError(err) ?? serverFieldErrors(err).slug });
+      const fe = fieldErrors(err);
+      setErrors({ ...fe, slug: slugTakenError(err) ?? fe.slug });
       setSubmitError(err);
       setPending(false);
       return;

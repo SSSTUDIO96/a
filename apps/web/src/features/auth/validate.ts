@@ -1,5 +1,3 @@
-import { ApiError } from './api';
-
 // Khớp luật của máy chủ (apps/api/src/modules/auth/routes.ts, orgs/routes.ts) để báo lỗi sớm, máy chủ vẫn kiểm lại.
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export const SLUG_RE = /^[a-z0-9]([a-z0-9-]{1,46})[a-z0-9]$/;
@@ -50,18 +48,4 @@ export function slugify(name: string): string {
 
 export function hasErrors<K extends string>(errors: FieldErrors<K>): boolean {
   return Object.values(errors).some(Boolean);
-}
-
-// Lỗi kiểm dữ liệu của máy chủ: details = { formErrors: string[], fieldErrors: { tên_ô: string[] } }.
-export function serverFieldErrors(err: unknown): Record<string, string> {
-  const out: Record<string, string> = {};
-  if (!(err instanceof ApiError) || err.code !== 'VALIDATION_FAILED') return out;
-  const d = err.details;
-  if (typeof d !== 'object' || d === null || !('fieldErrors' in d)) return out;
-  const fe = (d as { fieldErrors: unknown }).fieldErrors;
-  if (typeof fe !== 'object' || fe === null) return out;
-  for (const [k, v] of Object.entries(fe)) {
-    if (Array.isArray(v) && typeof v[0] === 'string') out[k] = v[0];
-  }
-  return out;
 }

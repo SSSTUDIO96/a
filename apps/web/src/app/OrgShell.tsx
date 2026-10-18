@@ -1,9 +1,10 @@
 import { useEffect } from 'react';
 import { Link, Navigate, NavLink, Outlet, useParams } from 'react-router';
-import { LogoutButton } from '../components/LogoutButton';
-import { useSession } from '../lib/session';
+import { LogoutButton } from './LogoutButton';
+import { useSession } from './session';
 
-export const SECTIONS = [
+// Mục điều hướng tạm cho khung chưa định kiểu; gói W3 (src/layout/nav.ts) thay bằng điều hướng theo quyền.
+const SECTIONS = [
   { path: 'lich', label: 'Lịch' },
   { path: 'bang-gia', label: 'Bảng giá' },
   { path: 'hop-dong', label: 'Hợp đồng' },
@@ -12,7 +13,7 @@ export const SECTIONS = [
   { path: 'cai-dat', label: 'Cài đặt' },
 ] as const;
 
-// Khung đã đăng nhập của một tổ chức. Chưa định kiểu — chờ bản vẽ thông số.
+// Khung tạm của một tổ chức, chưa định kiểu. Gói W3 (src/layout/AppShell.tsx) thay khung này.
 export function OrgShell() {
   const { orgSlug } = useParams();
   const { user, organizations, currentOrg, selectOrg } = useSession();

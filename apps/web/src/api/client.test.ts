@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-type ApiModule = typeof import('./api');
+type ClientModule = typeof import('./client');
+type ErrorsModule = typeof import('./errors');
 
 interface Call {
   url: string;
@@ -38,9 +39,11 @@ function installServer(opts: { refresh?: () => Promise<Response> | Response; del
   return fetchMock;
 }
 
-async function freshApi(): Promise<ApiModule> {
+// Mỗi bài một bản module mới: thẻ trong bộ nhớ và hàng đợi refresh không lây sang bài khác.
+async function freshApi(): Promise<ClientModule & ErrorsModule & { newIdempotencyKey: () => string }> {
   vi.resetModules();
-  return import('./api');
+  const [client, errors, idem] = await Promise.all([import('./client'), import('./errors'), import('./idempotency')]);
+  return { ...client, ...errors, newIdempotencyKey: idem.newIdempotencyKey };
 }
 
 const refreshCalls = () => calls.filter((c) => c.url === '/api/v1/auth/refresh');

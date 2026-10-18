@@ -1,61 +1,9 @@
+import { ApiError, isServerErrorBody, NETWORK_MESSAGE } from './errors';
+
 // Máy khách API: gọi đường tương đối /api/v1 (cùng tên miền với trang web).
 // Access token chỉ nằm trong biến của module này — tải lại trang là mất, khôi phục bằng refresh (cookie httpOnly).
 
 export const API_BASE = '/api/v1';
-const NETWORK_MESSAGE = 'Không kết nối được máy chủ. Vui lòng kiểm tra mạng rồi thử lại.';
-
-export class ApiError extends Error {
-  override readonly name = 'ApiError';
-  constructor(
-    readonly code: string,
-    message: string,
-    readonly status: number,
-    readonly requestId: string | null,
-    readonly details: unknown = undefined,
-  ) {
-    super(message);
-  }
-}
-
-// ---- Kiểu dữ liệu trả về (khớp apps/api/src/modules/auth/routes.ts và orgs/routes.ts) ----
-export type OrgKind = 'INDIVIDUAL' | 'TEAM' | 'ACADEMY';
-
-export interface AuthUser {
-  id: string;
-  email: string;
-  fullName: string;
-}
-
-export interface MyOrganization {
-  membershipId: string;
-  id: string;
-  name: string;
-  slug: string;
-  kind: OrgKind;
-  roles: { key: string; name: string }[];
-}
-
-export interface Me extends AuthUser {
-  organizations: MyOrganization[];
-}
-
-export interface AuthResult {
-  user: AuthUser;
-  accessToken: string;
-  expiresIn: number;
-}
-
-export interface RefreshResult {
-  accessToken: string;
-  expiresIn: number;
-}
-
-export interface CreatedOrganization {
-  id: string;
-  name: string;
-  slug: string;
-  kind: OrgKind;
-}
 
 // ---- Phiên trong bộ nhớ ----
 let accessToken: string | null = null;
@@ -77,11 +25,7 @@ export function setSessionExpiredHandler(handler: (() => void) | null): void {
   onSessionExpired = handler;
 }
 
-export function newIdempotencyKey(): string {
-  return crypto.randomUUID();
-}
-
-type Method = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
+export type Method = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
 
 export interface RequestOptions {
   body?: unknown;
@@ -90,17 +34,6 @@ export interface RequestOptions {
   // false: đường đăng nhập/đăng ký/refresh — 401 là câu trả lời thật, không tự refresh.
   auth?: boolean;
   signal?: AbortSignal;
-}
-
-function isErrorBody(v: unknown): v is { error: { code: string; message: string; details?: unknown; requestId?: string } } {
-  if (typeof v !== 'object' || v === null || !('error' in v)) return false;
-  const e = (v as { error: unknown }).error;
-  return (
-    typeof e === 'object' &&
-    e !== null &&
-    typeof (e as { code?: unknown }).code === 'string' &&
-    typeof (e as { message?: unknown }).message === 'string'
-  );
 }
 
 async function send(method: Method, path: string, opts: RequestOptions, token: string | null): Promise<Response> {
@@ -136,7 +69,7 @@ async function readResult<T>(res: Response): Promise<T> {
     }
   }
   if (!res.ok) {
-    if (isErrorBody(parsed)) {
+    if (isServerErrorBody(parsed)) {
       const e = parsed.error;
       throw new ApiError(e.code, e.message, res.status, e.requestId ?? headerRequestId, e.details);
     }
@@ -157,7 +90,7 @@ async function withCrossTabLock<T>(fn: () => Promise<T>): Promise<T> {
 
 async function doRefresh(): Promise<void> {
   const res = await send('POST', '/auth/refresh', { body: {} }, null);
-  const data = await readResult<RefreshResult>(res);
+  const data = await readResult<{ accessToken: string; expiresIn: number }>(res);
   accessToken = data.accessToken;
 }
 
