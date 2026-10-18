@@ -24,14 +24,14 @@ Cập nhật: 18/10/2026. Kho: `SSSTUDIO96/a`, nhánh `claude/nen-mong-makeup`.
 | Mã | Việc | Ai | Tình trạng |
 |---|---|---|---|
 | T1 | Chống gửi trùng so đường dẫn thật | điều phối | Đã sửa, có bài thử, đã phá thử (đỏ 2 bài) |
-| T2 | Quản lý tự nâng bậc lương | thợ B | Đã sửa (staff.test 27/27) |
-| T3 | Cửa gác mù với mã tổ chức khác trong thân/tham số lọc | điều phối | **Đang làm**: phép kiểm "crossRef" trong `apps/api/test/gate.ts`. Còn thiếu mẫu `REF_SAMPLES` trong `tenant-isolation.test.ts` và đột biến của thợ chấm trong `gate-mutants.test.ts`. |
-| N1 | Dòng có địa chỉ mà không chọn loại địa điểm | thợ D | Đang làm |
+| T2 | Quản lý tự nâng bậc lương | thợ B | Đã sửa, lưu kho db67ade |
+| T3 | Cửa gác mù với mã tổ chức khác trong thân/tham số lọc | điều phối | Đã sửa: crossRef 42/42, 3 đột biến mới bị bắt (db67ade) |
+| N1 | Dòng có địa chỉ mà không chọn loại địa điểm | thợ D | Đã sửa (db67ade) |
 | N2 | Thợ tắt nhận lịch vẫn bị xếp | thợ B | Đã sửa |
 | N3 | Khoá tiền hợp đồng ở database | điều phối | Đã sửa (migration `20261018170000_khoa_tien_hop_dong`) |
 | N4 | Tài liệu chậm hơn mã | thợ C | Chưa giao. Giao sau cùng. |
-| G1 | Huỷ hợp đồng thì huỷ lịch đã gắn | B xong hàm; D đang ráp | Đang làm |
-| G2 | Quyền `contracts.adjust` | thợ D | Đang làm |
+| G1 | Huỷ hợp đồng thì huỷ lịch đã gắn | B + D | Đã sửa (db67ade) |
+| G2 | Quyền `contracts.adjust` | thợ D | Đã sửa (db67ade) |
 | G3 | Kế toán chỉ xem tiền công | điều phối | Đã sửa |
 | G5 | Ẩn số điện thoại thợ | thợ B | Đã sửa |
 
@@ -39,13 +39,13 @@ Cập nhật: 18/10/2026. Kho: `SSSTUDIO96/a`, nhánh `claude/nen-mong-makeup`.
 | Gói | Tình trạng |
 |---|---|
 | Móng + lõi W1 (thợ E) | Xong: 32/32 bài thử, E2E luồng phiên |
-| W1 phần còn lại (types, catalog, contracts, schedule, staff, useQuote) | Thợ E đang làm |
+| W1 phần còn lại (types, catalog, contracts, schedule, staff, useQuote) | Xong (db67ade). Đang thêm api.put, lỗi theo đường dẫn lồng. |
 | W2 (token, phông, component) | Thợ F đang làm |
 | W3 khung → W4 Bảng giá, W5 Hợp đồng, W6 Lịch (3 chế độ, mặc định C) → W7 kiểm thử 3 khổ | Chưa bắt đầu |
 
 ## Bước tiếp (theo thứ tự)
-1. Nhận báo cáo D (N1, G1, G2), E (W1), F (W2). Chạy `pnpm test` ở gốc kho, lưu bản đã kiểm.
-2. Hoàn tất T3 (mẫu tham chiếu chéo + đột biến). Giao thợ C cập nhật tài liệu (N4). Cho thợ chấm chấm lại.
+1. Nhận báo cáo F (W2), A và B (bật chống gửi trùng cho 7 đường tạo), E (api.put). Chạy `pnpm test` ở gốc kho, lưu bản đã kiểm.
+2. Giao thợ C cập nhật tài liệu (N4). Cho thợ chấm chấm lại mốc 2 (T3, N4) và lát 1.
 3. Giao W3, rồi W4, W5, W6 song song, rồi W7. Mỗi gói xuất ảnh 3 khổ và đặt cạnh ảnh bản mẫu C.
 4. Mốc 6: trang quản trị nền tảng giống SS Pro. Qua R&D trước.
 5. R&D đề xuất 6 trường mới, chờ anh Chiến quyết (mục 8 trong `docs/rnd/BAN-VE-C.md`).

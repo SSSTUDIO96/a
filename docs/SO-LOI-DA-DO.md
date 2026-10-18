@@ -62,6 +62,13 @@ Mỗi lỗi ghi đủ: triệu chứng · gốc bệnh · số đo · cách ch�
 - **Triệu chứng:** sau khi sửa bản vẽ dữ liệu bằng lệnh tự động, Prisma báo "dòng không hợp lệ". Ra là dấu `"` bị biến thành `\"`.
 - **Cách chặn:** sau mỗi lần sửa bằng lệnh tự động, chạy kiểm tra hợp lệ ngay; dò toàn tệp xem còn dấu `\` nào không.
 
+### 12. Thước đo "không lộ dữ liệu" đặt sai tiêu chí, đỏ nhầm 23 chỗ
+- **Triệu chứng:** phép kiểm tham chiếu chéo mới báo 23 vi phạm. Phần lớn là "lộ 1 giá trị của A" trong câu báo lỗi 400.
+- **Gốc bệnh:** giá trị bị coi là "lộ" chính là mã người gửi vừa đưa lên; máy chủ chỉ nhắc lại trong câu báo lỗi. Thước đếm nhầm việc *nhắc lại điều người hỏi đã biết* thành *lộ dữ liệu*.
+- **Tiêu chí đúng:** gửi mã thật của tổ chức khác, rồi gửi một mã bịa không tồn tại. Hai phản hồi phải **giống hệt nhau**. Khác nhau nghĩa là máy chủ để lộ "bản ghi kia có tồn tại", dù không trả dữ liệu nào.
+- **Chứng minh thước mới không mù:** cài 3 lỗi (xem trước lộ khách, lọc danh sách quên tổ chức, báo "thuộc tổ chức khác" thay vì "không tìm thấy"). Cả 3 bị bắt.
+- **Bài học cho studio khác:** đổi tiêu chí của thước theo hướng *nới* thì bắt buộc cài lỗi để chứng minh thước vẫn bắt được. Nới mà không chứng minh là tự che lỗi của mình.
+
 ---
 
 ## Phần CỦA RIÊNG DỰ ÁN NÀY
