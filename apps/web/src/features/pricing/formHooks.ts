@@ -2,13 +2,16 @@ import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } fro
 import { newIdempotencyKey } from '../../api/idempotency';
 
 // Lỗi tự phát hiện của ô tiền / ô số (gõ chữ, số lẻ…): ghi lại theo khoá ô để chặn lưu cho tới khi sửa xong.
+// `count` là số ô đang lỗi (có vẽ lại) — để form hiện nút "Huỷ" cả khi chỉ có ô đang gõ sai mà giá trị chưa đổi.
 export function useInputErrors() {
   const map = useRef(new Map<string, string>());
+  const [count, setCount] = useState(0);
   const report = useCallback((key: string, message: string | null) => {
     if (message) map.current.set(key, message);
     else map.current.delete(key);
+    setCount(map.current.size);
   }, []);
-  return useMemo(() => ({ report, any: () => map.current.size > 0 }), [report]);
+  return useMemo(() => ({ report, any: () => map.current.size > 0, count }), [report, count]);
 }
 
 // Khoá chống gửi trùng: giữ nguyên cho cùng một nội dung (bấm Lưu lại sau lỗi mạng), đổi khi nội dung đổi.

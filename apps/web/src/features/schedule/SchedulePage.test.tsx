@@ -303,3 +303,62 @@ describe('409 trùng lịch', () => {
     expect(document.querySelector('[data-cell="m-ha|2026-10-24"]')?.className).not.toContain('is-conf');
   });
 });
+
+// Biên bản web 2, T3 (sửa quyết định 7 cũ của thợ W6): giờ kết thúc ≤ giờ bắt đầu là lỗi, trừ khi tick "Kết thúc hôm sau".
+describe('T3: giờ kết thúc trước giờ bắt đầu', () => {
+  async function openCreate() {
+    setupServer();
+    renderScreen(OWNER);
+    await screen.findByTestId('che-do-C');
+    fireEvent.click(screen.getByRole('button', { name: 'Thêm lịch' }));
+    const dlg = await screen.findByRole('dialog');
+    fireEvent.change(within(dlg).getByLabelText(/^Ngày/), { target: { value: '24/10/2026' } });
+    fireEvent.change(within(dlg).getByLabelText('Giờ bắt đầu'), { target: { value: '09:00' } });
+    fireEvent.change(within(dlg).getByLabelText('Giờ kết thúc'), { target: { value: '08:30' } });
+    return dlg;
+  }
+
+  it('09:00 – 08:30 không tick → báo lỗi dưới ô NGAY, bấm Lưu không gửi gì', async () => {
+    const dlg = await openCreate();
+    expect(within(dlg).getByText('Giờ kết thúc phải sau giờ bắt đầu')).toBeTruthy();
+    expect(within(dlg).queryByText(/Kết thúc Chủ nhật/)).toBeNull();
+    await act(async () => {
+      fireEvent.click(within(dlg).getByRole('button', { name: 'Lưu lịch' }));
+    });
+    expect(calls.some((c) => c.method === 'POST')).toBe(false);
+    expect(screen.getByRole('dialog')).toBe(dlg);
+  });
+
+  it('tick "Kết thúc hôm sau" → hết lỗi, ghi rõ ngày kết thúc, gửi endsAt ngày hôm sau', async () => {
+    const dlg = await openCreate();
+    fireEvent.click(within(dlg).getByRole('checkbox', { name: 'Kết thúc hôm sau' }));
+    expect(within(dlg).queryByText('Giờ kết thúc phải sau giờ bắt đầu')).toBeNull();
+    expect(within(dlg).getByText('Kết thúc Chủ nhật 25/10')).toBeTruthy();
+    await act(async () => {
+      fireEvent.click(within(dlg).getByRole('button', { name: 'Lưu lịch' }));
+    });
+    const post = calls.find((c) => c.method === 'POST');
+    expect(post?.body).toMatchObject({ startsAt: '2026-10-24T09:00:00+07:00', endsAt: '2026-10-25T08:30:00+07:00' });
+  });
+
+  it('đã tick mà giờ kết thúc muộn hơn giờ bắt đầu (ca > 24 giờ) → báo lỗi, không gửi', async () => {
+    const dlg = await openCreate();
+    fireEvent.click(within(dlg).getByRole('checkbox', { name: 'Kết thúc hôm sau' }));
+    fireEvent.change(within(dlg).getByLabelText('Giờ kết thúc'), { target: { value: '10:00' } });
+    expect(within(dlg).getByText(/Ca qua đêm tối đa 24 giờ/)).toBeTruthy();
+    await act(async () => {
+      fireEvent.click(within(dlg).getByRole('button', { name: 'Lưu lịch' }));
+    });
+    expect(calls.some((c) => c.method === 'POST')).toBe(false);
+  });
+
+  it('09:00 – 10:00 bình thường: không lỗi, không tick, cùng ngày', async () => {
+    const dlg = await openCreate();
+    fireEvent.change(within(dlg).getByLabelText('Giờ kết thúc'), { target: { value: '10:00' } });
+    expect(within(dlg).queryByText('Giờ kết thúc phải sau giờ bắt đầu')).toBeNull();
+    await act(async () => {
+      fireEvent.click(within(dlg).getByRole('button', { name: 'Lưu lịch' }));
+    });
+    expect(calls.find((c) => c.method === 'POST')?.body).toMatchObject({ endsAt: '2026-10-24T10:00:00+07:00' });
+  });
+});

@@ -14,6 +14,7 @@ import {
   daysOf,
   DEFAULT_MODE,
   indexByCell,
+  laneShortNames,
   layoutLanes,
   MODE_OPTIONS,
   nextStatuses,
@@ -291,5 +292,20 @@ describe('màu ca theo nhân vật (subjectName)', () => {
     });
     const lanes = buildStaffLanes({ staff: null, appointments: [a], readAll: true, self: { membershipId: 'chu', name: 'Chủ' } });
     expect(lanes).toEqual([{ membershipId: 'm9', name: 'Bảo Vy', avatarUrl: 'https://anh.test/vy.png', tierName: null }]);
+  });
+});
+
+describe('N3: tên ngắn ở đầu hàng thợ', () => {
+  it('"Nguyễn Thu Hà" → "Thu Hà"; hai thợ trùng tên ngắn thì giữ tên đầy đủ', () => {
+    const m = laneShortNames([
+      { membershipId: 'a', name: 'Nguyễn Thu Hà' },
+      { membershipId: 'b', name: 'Trần Khánh Linh' },
+      { membershipId: 'c', name: 'Lê Khánh Linh' },
+      { membershipId: 'd', name: 'Tú' },
+    ]);
+    expect(m.get('a')).toBe('Thu Hà');
+    expect(m.get('b')).toBe('Trần Khánh Linh');
+    expect(m.get('c')).toBe('Lê Khánh Linh');
+    expect(m.get('d')).toBe('Tú');
   });
 });

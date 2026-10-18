@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { CONTRACT_STATUSES, TRAVEL_FEE_MODES } from '@makeup/shared';
+import { MAX_MONEY_VND, MONEY_TOO_LARGE_MESSAGE } from '../../lib/money';
 
 // Không âm thầm bỏ trường lạ: gửi nhầm thì báo rõ.
 function strict<S extends z.ZodRawShape>(shape: S) {
@@ -12,7 +13,8 @@ export const Money = z
   .number({ error: 'Số tiền phải là số' })
   .int('Số tiền phải là số nguyên đồng, không có phần lẻ')
   .nonnegative('Số tiền không được âm')
-  .max(Number.MAX_SAFE_INTEGER, 'Số tiền vượt ngưỡng cho phép');
+  // Trần chung của mọi số tiền nhập tay (lib/money.ts, 100 tỷ đ) — không chép số sang đây.
+  .max(MAX_MONEY_VND, MONEY_TOO_LARGE_MESSAGE);
 
 const Quantity = z.number({ error: 'Số lượng phải là số' }).int('Số lượng phải là số nguyên').min(1).max(1000);
 const Note = z.string().trim().min(1).max(1000);

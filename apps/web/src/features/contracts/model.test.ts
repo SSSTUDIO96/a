@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { SYSTEM_ROLES, type Permission } from '@makeup/shared';
 import { ApiError } from '../../api/errors';
-import type { AvailabilityShift } from '../../api/types';
+import type { AvailabilityShift, StaffMember } from '../../api/types';
+import { pickableStaff } from './useStaffAvailability';
 import {
   EMPTY_DRAFT,
   buildBody,
@@ -286,5 +287,37 @@ describe('lỗi máy chủ', () => {
   it('400 của một dòng: details.line', () => {
     expect(errorLineOf(new ApiError('VALIDATION_FAILED', 'Cần số km', 400, 'r', { line: 2 }))).toBe(2);
     expect(errorLineOf(new ApiError('FORBIDDEN', 'Không có quyền', 403, 'r'))).toBeNull();
+  });
+});
+
+describe('N9: ô chọn thợ dùng cùng luật với Lịch', () => {
+  const av = (membershipId: string) => ({ membershipId, displayName: membershipId, avatarUrl: null, initials: 'X', tier: null, isBookable: true, level: 'FREE' as const, overlaps: [], sameDay: [], draftHolds: [] });
+  const mem = (membershipId: string, over: Partial<StaffMember> = {}): StaffMember => ({
+    membershipId,
+    userId: membershipId,
+    fullName: membershipId,
+    displayName: membershipId,
+    initials: 'X',
+    avatarUrl: null,
+    phone: null,
+    tier: null,
+    isBookable: true,
+    hasProfile: false,
+    status: 'ACTIVE',
+    roleKeys: [],
+    ...over,
+  });
+
+  it('chỉ thợ có hồ sơ / vai trò thợ; chủ, lễ tân, kế toán không hiện — trừ người đã gán sẵn', () => {
+    const items = ['ha', 'tu', 'chu', 'letan'].map(av);
+    const members = [mem('ha', { hasProfile: true }), mem('tu', { roleKeys: ['assistant'] }), mem('chu', { roleKeys: ['owner'] }), mem('letan', { roleKeys: ['receptionist'] })];
+    expect(pickableStaff(items, members, new Set()).map((s) => s.membershipId)).toEqual(['ha', 'tu']);
+    expect(pickableStaff(items, members, new Set(['chu'])).map((s) => s.membershipId)).toEqual(['ha', 'tu', 'chu']);
+  });
+
+  it('studio một người (không ai là thợ) → mọi người đang nhận lịch; không đọc được danh sách → không lọc', () => {
+    const items = ['chu'].map(av);
+    expect(pickableStaff(items, [mem('chu', { roleKeys: ['owner'] })], new Set()).map((s) => s.membershipId)).toEqual(['chu']);
+    expect(pickableStaff(items, null, new Set())).toEqual(items);
   });
 });

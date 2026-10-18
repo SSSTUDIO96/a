@@ -4,6 +4,7 @@ import { createMemoryRouter, RouterProvider } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SYSTEM_ROLES } from '@makeup/shared';
 import { routes } from '../../app/routes';
+import { SURCHARGE_DURATION_MINUTES } from './logic';
 
 // Lần tải đầu (khung + phiên + quyền + 3 đường bảng giá) có lúc quá 1 giây khi cả bộ thử chạy song song.
 configure({ asyncUtilTimeout: 5000 });
@@ -508,5 +509,43 @@ describe('Bổ sung theo duyệt của điều phối: nhân vật chưa có gó
     const dlg = await screen.findByRole('dialog', { name: 'Makeup cô dâu' });
     expect(dlg.querySelector('.ui-dialog__eyebrow')?.textContent).toBe('Dịch vụ trong gói · MCD');
     expect(within(dlg).getByRole('switch', { name: 'Đang bán' })).toBeTruthy();
+  });
+});
+
+// Biên bản web 2 (thợ T) + N-J1 (thợ R thêm resetKey).
+describe('biên bản web 2: bảng giá', () => {
+  it('N-J1: ô "Mức cố định" đang lỗi "-5" (giá trị chưa đổi) → vẫn có nút Huỷ; bấm Huỷ → ô hiện số cũ, hết lỗi', async () => {
+    const user = userEvent.setup();
+    setupServer(OWNER);
+    renderAt('/chien/bang-gia/di-chuyen');
+    const box = (await screen.findByLabelText('Mức cố định mỗi lần đi')) as HTMLInputElement;
+    // Chọn hết rồi gõ "-5": ô báo lỗi, giá trị form KHÔNG đổi (vẫn 150.000) — form chỉ biết qua onInputError.
+    await user.tripleClick(box);
+    await user.keyboard('-5');
+    expect(await screen.findByText('Số tiền không được âm.')).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Huỷ' }));
+    await waitFor(() => expect(screen.queryByText('Số tiền không được âm.')).toBeNull());
+    expect((screen.getByLabelText('Mức cố định mỗi lần đi') as HTMLInputElement).value).toBe('150.000 ₫');
+    expect(screen.queryByRole('button', { name: 'Lưu' })).toBeNull();
+  });
+
+  it('N5: phụ phí không hiện "· n phút" ở danh sách và không hỏi thời lượng; tạo phụ phí gửi thời lượng mặc định của máy chủ', async () => {
+    const user = userEvent.setup();
+    const calls = setupServer(OWNER, (m, p, b) =>
+      m === 'POST' && p === '/orgs/org-1/services' ? json(201, { ...svc('moi', 'SURCHARGE', 'Phụ phí ngoài giờ', 300_000), ...(b as object) }) : undefined,
+    );
+    renderAt('/chien/bang-gia/dich-vu');
+    const row = await screen.findByRole('button', { name: /Phụ phí ngày lễ/ });
+    expect([...row.children].map((c) => c.textContent)).toEqual(['Phụ phí ngày lễ', '', '200.000 ₫']);
+    await user.click(screen.getByRole('button', { name: 'Thêm phụ phí' }));
+    const dlg = await screen.findByRole('dialog');
+    expect(within(dlg).queryByLabelText('Thời lượng')).toBeNull();
+    await user.type(within(dlg).getByLabelText('Tên'), 'Phụ phí ngoài giờ');
+    await user.type(within(dlg).getByLabelText('Mã'), 'PP-NG');
+    await user.type(within(dlg).getByLabelText('Giá niêm yết'), '300000');
+    await user.click(within(dlg).getByRole('button', { name: 'Lưu' }));
+    await waitFor(() => expect(calls.some((c) => c.method === 'POST' && c.path === '/orgs/org-1/services')).toBe(true));
+    const body = calls.find((c) => c.method === 'POST' && c.path === '/orgs/org-1/services')?.body as Record<string, unknown>;
+    expect(body).toMatchObject({ kind: 'SURCHARGE', name: 'Phụ phí ngoài giờ', durationMinutes: SURCHARGE_DURATION_MINUTES, listPrice: 300_000 });
   });
 });

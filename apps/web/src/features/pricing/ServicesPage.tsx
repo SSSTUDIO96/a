@@ -3,7 +3,7 @@ import { listServices } from '../../api/catalog';
 import type { Service, ServiceKind } from '../../api/types';
 import { Button, Card, Chip, formatVnd, IconPlus, Skeleton, StatusTag, Tooltip } from '../../ui';
 import { useOrgId, usePricingPerms, useResource } from './hooks';
-import { fetchAllPages, filterActive, formatDuration } from './logic';
+import { fetchAllPages, filterActive, formatDuration, hasDuration } from './logic';
 import { LoadError } from './parts';
 import { PricingHeader } from './PricingHeader';
 import { ServiceDialog, type ServiceTarget } from './ServiceDialog';
@@ -77,7 +77,7 @@ export function ServicesPage() {
                         {svc.name}
                         {!svc.isActive && <StatusTag className="pr-off">Ngừng bán</StatusTag>}
                       </span>
-                      <span className="pr-row__meta">{formatDuration(svc.durationMinutes)}</span>
+                      <span className="pr-row__meta">{hasDuration(svc.kind) ? formatDuration(svc.durationMinutes) : ''}</span>
                       <b className="pr-row__price num">{svc.currentPrice ? formatVnd(svc.currentPrice.unitPrice) : 'Chưa có giá'}</b>
                     </button>
                   </li>

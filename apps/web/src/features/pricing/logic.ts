@@ -551,11 +551,22 @@ export function serviceToForm(s: Service | null): ServiceForm {
   };
 }
 
-export function validateServiceForm(f: ServiceForm): FormErrors {
+// N5 (biên bản web 2): phụ phí (ngày lễ, ngoài giờ…) không có thời lượng — màn không hỏi, không hiện "· 1 phút".
+// Máy chủ còn bắt buộc durationMinutes ≥ 1 (catalog/common.ts Duration) → khi tạo phụ phí gửi mức nhỏ nhất máy chủ nhận.
+// Phiếu vướng: máy chủ cho phụ phí bỏ trống thời lượng thì bỏ hằng này.
+export const SURCHARGE_DURATION_MINUTES = 1;
+
+export function hasDuration(kind: ServiceKind): boolean {
+  return kind !== 'SURCHARGE';
+}
+
+export function validateServiceForm(f: ServiceForm, kind: ServiceKind = 'MAIN'): FormErrors {
   const e: FormErrors = {};
   if (!f.code.trim()) e.code = 'Nhập mã.';
   if (!f.name.trim()) e.name = 'Nhập tên.';
-  if (f.durationMinutes === null) e.durationMinutes = 'Nhập thời lượng.';
+  if (!hasDuration(kind)) {
+    // Phụ phí: không kiểm thời lượng.
+  } else if (f.durationMinutes === null) e.durationMinutes = 'Nhập thời lượng.';
   else if (f.durationMinutes < 1 || f.durationMinutes > 1440) e.durationMinutes = 'Thời lượng từ 1 đến 1440 phút.';
   if (f.listPrice === null) e.listPrice = 'Nhập giá niêm yết.';
   return e;
@@ -572,6 +583,7 @@ export function buildServicePatch(original: Service, f: ServiceForm): ServiceUpd
 }
 
 export function buildServiceCreate(kind: ServiceKind, f: ServiceForm): ServiceCreateInput {
-  if (f.durationMinutes === null || f.listPrice === null) throw new Error('Gọi validateServiceForm trước khi dựng thân tạo dịch vụ');
-  return { kind, code: f.code.trim(), name: f.name.trim(), isActive: f.isActive, durationMinutes: f.durationMinutes, listPrice: f.listPrice, salePrice: f.salePrice };
+  const durationMinutes = hasDuration(kind) ? f.durationMinutes : SURCHARGE_DURATION_MINUTES;
+  if (durationMinutes === null || f.listPrice === null) throw new Error('Gọi validateServiceForm trước khi dựng thân tạo dịch vụ');
+  return { kind, code: f.code.trim(), name: f.name.trim(), isActive: f.isActive, durationMinutes, listPrice: f.listPrice, salePrice: f.salePrice };
 }

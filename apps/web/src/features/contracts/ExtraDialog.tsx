@@ -27,9 +27,12 @@ export function ExtraDialog({ target, surcharges, onClose, onSave, onRemove, sav
   const [note, setNote] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  // Hộp tự điền lại giá trị theo khoản mới mở → ô tiền bỏ chữ lỗi cũ dù số không đổi (N-J1).
+  const [resetKey, setResetKey] = useState(0);
 
   useEffect(() => {
     if (!target) return;
+    setResetKey((k) => k + 1);
     setErrors({});
     setBusy(false);
     if (target.kind === 'SURCHARGE') {
@@ -126,6 +129,7 @@ export function ExtraDialog({ target, surcharges, onClose, onSave, onRemove, sav
               aria-label="Giá"
               value={price}
               onChange={setPrice}
+              resetKey={resetKey}
               placeholder={svc?.currentPrice ? `Theo bảng giá ${formatVnd(svc.currentPrice.unitPrice)}` : 'Theo bảng giá'}
             />
           </SettingRow>
@@ -136,7 +140,7 @@ export function ExtraDialog({ target, surcharges, onClose, onSave, onRemove, sav
             <TextInput aria-label="Tên khoản" value={name} onChange={(ev) => setName(ev.target.value)} error={errors.name} />
           </SettingRow>
           <SettingRow label="Số tiền" controlWidth={180}>
-            <MoneyInput aria-label="Số tiền" value={price} onChange={setPrice} error={errors.unitPrice} />
+            <MoneyInput aria-label="Số tiền" value={price} onChange={setPrice} resetKey={resetKey} error={errors.unitPrice} />
           </SettingRow>
           <SettingRow label="Số lượng">
             <Qty value={qty} onChange={setQty} label="Số lượng" />

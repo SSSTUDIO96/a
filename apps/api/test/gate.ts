@@ -4,7 +4,8 @@ import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import { z } from 'zod';
 import type { AnyRoute } from '../src/http/route';
-import { addMember, bearer, createOrg, registerUser, type App, type TestUser } from './helpers';
+import type { Db } from '../src/lib/prisma';
+import { addMember, bearer, createAcademyOrg, grantUnlimitedPlan, makeDeps, registerUser, type App, type TestUser } from './helpers';
 import { makePng } from './png';
 
 export interface GateOrg {
@@ -40,6 +41,36 @@ export type GateReport = Record<
 // Cửa gác thay lần lượt TỪNG trường mã bằng mã của tổ chức khác. (Biên bản nghiệm thu lát 1, lỗi T3.)
 export type RefSamples = Record<string, ((self: GateOrg) => Record<string, unknown>)[]>;
 
+// Mẫu tham chiếu chéo chạy trên MỘT BẢN GHI KHÁC trong đường dẫn (vd. :contractId trỏ hợp đồng KHOÁ HỌC thay vì hợp đồng
+// dịch vụ mặc định của fixture) — cho trường chỉ hợp lệ với loại bản ghi đó (lines[].courseClassId, rulesTemplateId…).
+// pathIds: tham số đường dẫn → mã trong CHÍNH tổ chức `self`. Trường đo ở biến thể được tính là đã có mẫu.
+export type RefVariants = Record<
+  string,
+  { pathIds: (self: GateOrg) => Record<string, string>; samples: ((self: GateOrg) => Record<string, unknown>)[] }[]
+>;
+
+// Dấu "phiên bản hiện hành" trong thân mẫu: đường bắt buộc expectedUpdatedAt (PATCH hợp đồng — biên bản web 2, T2) nhận
+// dấu này, cửa gác thay bằng updatedAt THẬT của bản ghi trong đường dẫn ngay trước khi gửi (đọc bằng chủ của tổ chức sở
+// hữu bản ghi) — để phép "id chéo" chỉ còn bị chặn bởi điều kiện tổ chức, không phải bởi lệch phiên bản.
+export const CURRENT_VERSION = '__PHIEN_BAN_HIEN_TAI__';
+
+const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/g;
+
+export async function resolveBody(app: App, fx: GateFixture, url: string, body: unknown): Promise<unknown> {
+  if (!body || typeof body !== 'object' || (body as { expectedUpdatedAt?: unknown }).expectedUpdatedAt !== CURRENT_VERSION) return body;
+  const id = [...url.split('?')[0]!.matchAll(UUID_RE)].pop()?.[0];
+  const owner = [fx.a, fx.b].find((o) => id && Object.values(o.ids).includes(id));
+  let version = new Date(0).toISOString();
+  if (owner) {
+    const own = url.split('?')[0]!.replace(/\/orgs\/[^/]+\//, `/orgs/${owner.orgId}/`);
+    const res = await request(app).get(own).set(bearer(owner.owner));
+    const v = (res.body as { updatedAt?: string }).updatedAt;
+    if (res.status !== 200 || !v) throw new Error(`Cửa gác: không đọc được phiên bản hiện hành ${own} → ${res.status}`);
+    version = v;
+  }
+  return { ...(body as Record<string, unknown>), expectedUpdatedAt: version };
+}
+
 // Các đường dẫn trường "…Id"/"…Ids" trong thân và tham số truy vấn của một route (vd "lines[].addons[].serviceId").
 export function refFieldPaths(route: AnyRoute): string[] {
   const out = new Set<string>();
@@ -48,7 +79,9 @@ export function refFieldPaths(route: AnyRoute): string[] {
     const n = node as Record<string, unknown>;
     if (n.properties && typeof n.properties === 'object') {
       for (const [k, v] of Object.entries(n.properties as Record<string, unknown>)) {
-        if (/Ids?$/.test(k)) out.add(`${prefix}${k}`);
+        // Trường MẢNG mã (photoFileIds…) → đường "k[]": cửa gác thay từng phần tử bằng mã của tổ chức khác.
+        const isArr = !!v && typeof v === 'object' && ((v as { type?: unknown }).type === 'array' || 'items' in (v as object));
+        if (/Ids?$/.test(k)) out.add(isArr ? `${prefix}${k}[]` : `${prefix}${k}`);
         walk(v, `${prefix}${k}.`);
       }
     }
@@ -82,7 +115,8 @@ function setPath(obj: unknown, segs: string[], value: (old: unknown) => unknown)
   const name = isArr ? head.slice(0, -2) : head;
   const rec = obj as Record<string, unknown>;
   if (rest.length === 0) {
-    rec[name] = value(rec[name]);
+    const cur = rec[name];
+    rec[name] = isArr && Array.isArray(cur) ? cur.map((x) => value(x)) : value(cur);
     return;
   }
   const v = rec[name];
@@ -94,7 +128,7 @@ const splitPath = (p: string) => p.split('.').map((x) => x);
 
 const key = (r: AnyRoute) => `${r.method.toUpperCase()} ${r.path}`;
 
-async function post(app: App, owner: TestUser, path: string, body: unknown): Promise<string> {
+async function postBody(app: App, owner: TestUser, path: string, body: unknown): Promise<Record<string, unknown>> {
   const res = await request(app)
     .post(`/api/v1${path}`)
     .set(bearer(owner))
@@ -103,6 +137,11 @@ async function post(app: App, owner: TestUser, path: string, body: unknown): Pro
   if (res.status !== 201 && res.status !== 200) {
     throw new Error(`Cửa gác: tạo dữ liệu mẫu ${path} thất bại ${res.status}: ${JSON.stringify(res.body)}`);
   }
+  return res.body as Record<string, unknown>;
+}
+
+async function post(app: App, owner: TestUser, path: string, body: unknown): Promise<string> {
+  const res = { body: await postBody(app, owner, path, body) };
   const id = (res.body as { id?: string }).id;
   if (!id) throw new Error(`Cửa gác: ${path} không trả id`);
   return id;

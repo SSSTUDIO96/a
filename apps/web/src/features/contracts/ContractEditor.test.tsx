@@ -541,7 +541,9 @@ describe('biên bản web 2', () => {
     await userEvent.clear(end);
     await userEvent.type(end, '04:00');
     await userEvent.tab();
-    expect(await screen.findByText('Giờ kết thúc phải sau giờ bắt đầu.')).toBeTruthy();
+    const msgs = await screen.findAllByText('Giờ kết thúc phải sau giờ bắt đầu.');
+    // Một dưới ô giờ kết thúc (lỗi), một ở hàng thợ (lý do khoá nút).
+    expect(msgs.some((m) => m.getAttribute('data-o') !== 'ly-do-khoa-tho')).toBe(true);
     expect(screen.getByText('Giờ kết thúc phải sau giờ bắt đầu.', { selector: '[data-o="ly-do-khoa-tho"]' })).toBeTruthy();
   });
 

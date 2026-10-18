@@ -17,6 +17,7 @@ import {
   payRatesToForm,
   serviceToForm,
   validateServiceForm,
+  hasDuration,
   type FormErrors,
   type PricingPerms,
   type SaveStep,
@@ -102,7 +103,7 @@ export function ServiceDialog({
 
   async function save() {
     setBanner(null);
-    const v = validateServiceForm(form);
+    const v = validateServiceForm(form, kind);
     setErrors(v);
     if (Object.keys(v).length > 0 || inputErrors.any()) {
       focusFirstError();
@@ -184,19 +185,21 @@ export function ServiceDialog({
           <SettingRow label="Mã" htmlFor={`${id}-ma`} controlWidth={180}>
             <TextInput id={`${id}-ma`} value={form.code} maxLength={32} onChange={(e) => set({ code: e.target.value })} error={errors.code} disabled={!canInfo} />
           </SettingRow>
-          <SettingRow label="Thời lượng" htmlFor={`${id}-tl`} controlWidth={180}>
-            <UnitInput
-              id={`${id}-tl`}
-              unit="phút"
-              min={1}
-              max={1440}
-              value={form.durationMinutes}
-              onChange={(v) => set({ durationMinutes: v })}
-              onInputError={(m) => inputErrors.report('durationMinutes', m)}
-              error={errors.durationMinutes}
-              disabled={!canInfo}
-            />
-          </SettingRow>
+          {hasDuration(kind) && (
+            <SettingRow label="Thời lượng" htmlFor={`${id}-tl`} controlWidth={180}>
+              <UnitInput
+                id={`${id}-tl`}
+                unit="phút"
+                min={1}
+                max={1440}
+                value={form.durationMinutes}
+                onChange={(v) => set({ durationMinutes: v })}
+                onInputError={(m) => inputErrors.report('durationMinutes', m)}
+                error={errors.durationMinutes}
+                disabled={!canInfo}
+              />
+            </SettingRow>
+          )}
           <SettingRow label="Giá niêm yết" htmlFor={`${id}-gny`} controlWidth={180}>
             <MoneyInput
               id={`${id}-gny`}

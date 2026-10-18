@@ -91,7 +91,17 @@ function TravelPolicyForm({ orgId, policy, canWrite, onSaved }: { orgId: string;
   const inputErrors = useInputErrors();
   const ref = useRef<HTMLDivElement>(null);
   const focusFirstError = useFirstErrorFocus(ref);
-  const dirty = policy === null || travelDirty(policy, form);
+  // Ô đang gõ sai (chưa thành giá trị) cũng tính là đang sửa → có nút Huỷ để bỏ chữ sai.
+  const dirty = policy === null || travelDirty(policy, form) || inputErrors.count > 0;
+  // Đổi mỗi lần bấm Huỷ (đặt lại đúng giá cũ) → ô tiền/km bỏ chữ lỗi dù số không đổi (N-J1).
+  const [resetKey, setResetKey] = useState(0);
+  const cancel = () => {
+    if (!policy) return;
+    setForm(travelToForm(policy));
+    setErrors({});
+    setBanner(null);
+    setResetKey((k) => k + 1);
+  };
 
   const set = (patch: Partial<TravelForm>) => {
     setForm((f) => ({ ...f, ...patch }));
@@ -136,6 +146,7 @@ function TravelPolicyForm({ orgId, policy, canWrite, onSaved }: { orgId: string;
         value={form[key]}
         onChange={(v) => set({ [key]: v })}
         onInputError={(m) => inputErrors.report(key, m)}
+        resetKey={resetKey}
         error={errors[key]}
         disabled={!canWrite}
       />
@@ -151,7 +162,7 @@ function TravelPolicyForm({ orgId, policy, canWrite, onSaved }: { orgId: string;
             <span />
             <span className="pr-actions">
               {policy && (
-                <Button onClick={() => setForm(travelToForm(policy))} disabled={saving}>
+                <Button onClick={cancel} disabled={saving}>
                   Huỷ
                 </Button>
               )}
@@ -188,6 +199,7 @@ function TravelPolicyForm({ orgId, policy, canWrite, onSaved }: { orgId: string;
               value={form.freeKm}
               onChange={(v) => set({ freeKm: v })}
               onInputError={(m) => inputErrors.report('freeKm', m)}
+              resetKey={resetKey}
               error={errors.freeKm}
               disabled={!canWrite}
             />
@@ -215,6 +227,7 @@ function TravelPolicyForm({ orgId, policy, canWrite, onSaved }: { orgId: string;
                 value={t.fromKm}
                 onChange={(v) => setTier(i, { fromKm: v })}
                 onInputError={(m) => inputErrors.report(`tiers.${i}.fromKm`, m)}
+                resetKey={resetKey}
                 error={errors[`tiers.${i}.fromKm`]}
                 disabled={!canWrite}
               />
@@ -229,6 +242,7 @@ function TravelPolicyForm({ orgId, policy, canWrite, onSaved }: { orgId: string;
                 value={t.toKm}
                 onChange={(v) => setTier(i, { toKm: v })}
                 onInputError={(m) => inputErrors.report(`tiers.${i}.toKm`, m)}
+                resetKey={resetKey}
                 error={errors[`tiers.${i}.toKm`]}
                 disabled={!canWrite}
               />
@@ -238,6 +252,7 @@ function TravelPolicyForm({ orgId, policy, canWrite, onSaved }: { orgId: string;
                 value={t.amount}
                 onChange={(v) => setTier(i, { amount: v })}
                 onInputError={(m) => inputErrors.report(`tiers.${i}.amount`, m)}
+                resetKey={resetKey}
                 error={errors[`tiers.${i}.amount`]}
                 disabled={!canWrite}
               />

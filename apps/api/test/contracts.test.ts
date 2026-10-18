@@ -1460,3 +1460,35 @@ describe('chụp số liệu phí di chuyển vào dòng đã lưu', () => {
   });
 
 });
+
+// Trần chung số tiền (lib/money.ts MAX_MONEY_VND = 100 tỷ đ) cho mọi số tiền của hợp đồng / dòng — vượt → 400 đúng trường.
+describe('trần số tiền của hợp đồng (MAX_MONEY_VND)', () => {
+  it('biên: đúng trần → nhận; trần + 1 → 400 "Số tiền quá lớn (tối đa …)" chỉ đúng trường (đơn giá, giảm giá, cọc, phí di chuyển nhập tay, giảm giá dòng, ghi đè phụ phí)', async () => {
+    const { MAX_MONEY_VND, MONEY_TOO_LARGE_MESSAGE } = await import('../src/lib/money');
+    expect(MONEY_TOO_LARGE_MESSAGE).toMatch(/^Số tiền quá lớn \(tối đa /);
+    const custom = (unitPrice: number) => ({ kind: 'CUSTOM', name: 'Khoản lớn', unitPrice, quantity: 1 });
+    const ok = await create(A.owner, A.orgId, { customerId: customerA, lines: [custom(MAX_MONEY_VND)], depositRequired: MAX_MONEY_VND });
+    expect([ok.status, ok.body.total, ok.body.depositRequired]).toEqual([201, MAX_MONEY_VND, MAX_MONEY_VND]);
+    const over = MAX_MONEY_VND + 1;
+    const pkgLine = (extra: object) => ({ kind: 'SERVICE', serviceId: A.party, quantity: 1, locationType: 'OTHER', address: 'Hà Nội', travel: { mode: 'MANUAL', amount: 0 }, ...extra });
+    const cases: [string, object][] = [
+      ['lines.0.unitPrice', { customerId: customerA, lines: [custom(over)] }],
+      ['discount', { customerId: customerA, discount: over, lines: [custom(1000)] }],
+      ['depositRequired', { customerId: customerA, depositRequired: over, lines: [custom(1000)] }],
+      ['lines.0.travel.amount', { customerId: customerA, lines: [pkgLine({ travel: { mode: 'MANUAL', amount: over } })] }],
+      ['lines.0.lineDiscount', { customerId: customerA, lines: [pkgLine({ lineDiscount: over })] }],
+      ['lines.0.unitPrice', { customerId: customerA, lines: [{ kind: 'SURCHARGE', serviceId: A.early, quantity: 1, unitPrice: over, note: 'ghi đè' }] }],
+    ];
+    for (const [path, body] of cases) {
+      for (const r of [await create(A.owner, A.orgId, body), await quote(A.owner, A.orgId, body)]) {
+        expect(r.status, path).toBe(400);
+        expect(r.body.error.details.issues, path).toEqual([{ path, message: MONEY_TOO_LARGE_MESSAGE }]);
+      }
+    }
+    // Thêm dòng và sửa nháp đi qua cùng trần.
+    const add = await request(app).post(url(A.orgId, `/${ok.body.id}/lines`)).set(bearer(A.owner)).set('idempotency-key', idem()).send(custom(over));
+    expect([add.status, add.body.error.details.issues]).toEqual([400, [{ path: 'unitPrice', message: MONEY_TOO_LARGE_MESSAGE }]]);
+    const patch = await request(app).patch(url(A.orgId, `/${ok.body.id}`)).set(bearer(A.owner)).send({ expectedUpdatedAt: ok.body.updatedAt, discount: over });
+    expect([patch.status, patch.body.error.details.issues]).toEqual([400, [{ path: 'discount', message: MONEY_TOO_LARGE_MESSAGE }]]);
+  });
+});
