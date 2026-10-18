@@ -11,6 +11,7 @@ import { PeriodFilter } from './PeriodFilter';
 import { RevenueByContractTable } from './RevenueByContractTable';
 import { RevenueChart } from './RevenueChart';
 import { usePeriodParam } from './usePeriodParam';
+import '../payments/payments.css';
 import './reports.css';
 
 type ContractReport = Extract<RevenueReport, { groupBy: 'contract' }> & { totalsOverflow?: boolean };

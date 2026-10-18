@@ -38,29 +38,33 @@ export const DEFAULT_PLAN_CODE = 'trial';
 export const VN_TZ = 'Asia/Ho_Chi_Minh';
 const VN_OFFSET_MS = 7 * 3600_000;
 
-const dateFmt = new Intl.DateTimeFormat('vi-VN', { timeZone: VN_TZ, day: '2-digit', month: '2-digit', year: 'numeric' });
-const shortFmt = new Intl.DateTimeFormat('vi-VN', { timeZone: VN_TZ, day: '2-digit', month: '2-digit' });
-const timeFmt = new Intl.DateTimeFormat('vi-VN', { timeZone: VN_TZ, hour: '2-digit', minute: '2-digit', hour12: false });
+const pad2 = (n: number) => String(n).padStart(2, '0');
+
+/** Các phần ngày giờ theo giờ Việt Nam (UTC+7, không đổi giờ mùa hè). Tự tính để không phụ thuộc Intl của trình duyệt. */
+function vnParts(iso: string | null | undefined): { d: string; m: string; y: number; hh: string; mm: string } | null {
+  if (!iso) return null;
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return null;
+  const v = new Date(t + VN_OFFSET_MS);
+  return { d: pad2(v.getUTCDate()), m: pad2(v.getUTCMonth() + 1), y: v.getUTCFullYear(), hh: pad2(v.getUTCHours()), mm: pad2(v.getUTCMinutes()) };
+}
 
 /** "2026-11-12T03:00:00Z" → "12/11/2026" (giờ Việt Nam). */
 export function fmtDate(iso: string | null | undefined): string {
-  if (!iso) return '';
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? '' : dateFmt.format(d);
+  const p = vnParts(iso);
+  return p ? `${p.d}/${p.m}/${p.y}` : '';
 }
 
 /** → "12/11" */
 export function fmtShort(iso: string | null | undefined): string {
-  if (!iso) return '';
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? '' : shortFmt.format(d);
+  const p = vnParts(iso);
+  return p ? `${p.d}/${p.m}` : '';
 }
 
 /** → "18/10/2026 15:40" */
 export function fmtDateTime(iso: string | null | undefined): string {
-  if (!iso) return '';
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? '' : `${dateFmt.format(d)} ${timeFmt.format(d)}`;
+  const p = vnParts(iso);
+  return p ? `${p.d}/${p.m}/${p.y} ${p.hh}:${p.mm}` : '';
 }
 
 /** Ngày (YYYY-MM-DD) theo giờ Việt Nam của một thời điểm. */

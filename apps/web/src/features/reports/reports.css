@@ -1,0 +1,111 @@
+/*
+ * Báo cáo › Doanh thu, Sổ thu (bản vẽ C2 mục 3.4–3.5, bản mẫu docs/rnd/v4-thu-tien.html #doanh-thu, #so-thu).
+ * Chỉ dùng token ở src/styles/tokens.css. Điểm gãy: máy tính bảng ≤ 1180px, điện thoại ≤ 640px.
+ */
+.rp-page { min-width: 0; }
+.rp-ph-sub { font-size: 13.5px; font-weight: 400; color: var(--muted); margin-left: 8px; }
+.rp-phone-actions { display: none; }
+.rp-ld > .ui-ld__detail { gap: 16px; }
+
+/* Bộ lọc */
+.rp-filter .ui-card__body { display: flex; flex-direction: column; gap: 8px; padding: 12px 18px 16px; }
+.rp-grp { font-weight: 600; padding: 6px 0 6px; border-bottom: 1px solid var(--line-2); margin-top: 6px; }
+.rp-grp:first-child { margin-top: 0; }
+.rp-select { width: 100%; }
+.rp-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Bảng */
+.rp-wrapx { overflow-x: auto; min-width: 0; }
+.rp-tbl { width: 100%; border-collapse: collapse; font-size: 14px; }
+.rp-tbl th {
+  text-align: left;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: var(--soft);
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+.rp-tbl td { padding: 12px 14px; border-bottom: 1px solid var(--line-2); vertical-align: middle; }
+.rp-tbl tr:last-child td { border-bottom: 0; }
+.rp-r { text-align: right; }
+.rp-num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rp-b { font-weight: 700; }
+.rp-fx { display: block; font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+.rp-code { font-weight: 700; color: var(--text); }
+.rp-cell-main { min-width: 140px; }
+.rp-cell-main .ui-tag { margin-left: 2px; }
+.rp-muted td, .rp-muted .rp-code, .rp-muted a { color: var(--muted); }
+.rp-strike { text-decoration: line-through; }
+.rp-tbl a { color: var(--accent); }
+.rp-pager { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 10px 14px; border-top: 1px solid var(--line-2); font-size: 12.5px; color: var(--muted); }
+.rp-pager__btns { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.rp-empty { padding: 14px 18px; }
+.rp-pad { padding: 14px 18px; }
+.rp-err { color: var(--danger); margin: 0; }
+
+/* Biểu đồ */
+.rp-chart { padding: 2px 0 6px; }
+.rp-chart__top { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; font-size: 12.5px; color: var(--muted); margin-bottom: 10px; }
+.rp-lg { display: inline-flex; align-items: center; gap: 6px; }
+.rp-sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; }
+.rp-sw--sales { background: var(--kind-bride); }
+.rp-sw--paid { background: var(--kind-event); }
+.rp-readout {
+  margin-left: auto;
+  background: var(--tip-bg);
+  color: var(--tip-text);
+  font-size: 12px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  font-variant-numeric: tabular-nums;
+}
+.rp-bars { display: grid; grid-template-columns: 36px minmax(0, 1fr); height: 220px; }
+.rp-ax { display: flex; flex-direction: column; justify-content: space-between; font-size: 11px; color: var(--faint); margin: -6px 0; }
+.rp-plot { position: relative; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); border-bottom: 1px solid var(--line); min-width: 0; }
+.rp-gl { position: absolute; left: 0; right: 0; border-top: 1px dashed var(--line-2); pointer-events: none; }
+.rp-g {
+  position: relative;
+  display: flex;
+  gap: 2px;
+  justify-content: center;
+  align-items: flex-end;
+  height: 100%;
+  border: 0;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+  border-radius: 6px 6px 0 0;
+}
+.rp-g:hover, .rp-g--on { background: var(--soft); }
+.rp-g:focus-visible { outline: var(--focus-ring); outline-offset: -2px; }
+.rp-bar { display: block; width: min(26px, 32%); border-radius: 4px 4px 0 0; }
+.rp-xl { display: grid; grid-template-columns: 36px repeat(6, minmax(0, 1fr)); font-size: 12px; color: var(--muted); text-align: center; margin-top: 6px; }
+
+/* ----- Máy tính bảng ----- */
+@media (max-width: 1180px) {
+  .rp-t-hide { display: none; }
+}
+
+/* ----- Điện thoại: bộ lọc ở trên, số liệu dưới (không tách màn) ----- */
+@media (max-width: 640px) {
+  .rp-ph-sub { display: none; }
+  .rp-phone-actions { display: flex; justify-content: flex-end; margin-bottom: 10px; }
+  .rp-ld.ui-ld[data-mobile='list'] > .ui-ld__detail { display: flex; }
+  .rp-bars { height: 180px; }
+  .rp-readout { margin-left: 0; }
+  /* Bảng thành thẻ */
+  .rp-cards, .rp-cards tbody, .rp-cards tr, .rp-cards td { display: block; width: 100%; }
+  .rp-cards thead { display: none; }
+  .rp-cards tr { padding: 10px 14px; border-bottom: 1px solid var(--line-2); }
+  .rp-cards tr:last-child { border-bottom: 0; }
+  .rp-cards td { padding: 2px 0; border: 0; text-align: left; display: flex; justify-content: space-between; gap: 12px; }
+  .rp-cards td.rp-cell-main { display: block; padding-bottom: 6px; }
+  .rp-cards td[data-l]::before { content: attr(data-l); color: var(--muted); font-size: 12.5px; flex: none; }
+  .rp-cards td.rp-t-hide { display: flex; }
+  .rp-ledger td[data-l='Hợp đồng'] { display: block; }
+  .rp-ledger td[data-l='Hợp đồng']::before { display: block; }
+}

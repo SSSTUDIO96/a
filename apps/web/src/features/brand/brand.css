@@ -1,0 +1,127 @@
+/* Hồ sơ thương hiệu — bản vẽ C2 mục 4.2 (phương án C), bản mẫu docs/rnd/v4-thuong-hieu.html #c. Token: BAN-VE-C mục 1. */
+.br-page { min-width: 0; }
+.br-sp { flex: 1; }
+.br-muted { color: var(--muted); margin: 0; }
+.br-err { display: block; color: var(--danger); font-size: 12px; margin: 4px 0 0; overflow-wrap: anywhere; }
+
+/* Thanh xuất bản */
+.br-pub { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; padding: 12px 18px; margin-bottom: 16px; min-width: 0; }
+.br-pub__url { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; flex: 1 1 200px; min-width: 0; }
+.br-pub__url b { color: var(--text); font-weight: 600; }
+.br-pub__actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.br-pub__open { text-decoration: none; color: var(--text); }
+.br-pub__msg { flex-basis: 100%; }
+.br-btn-danger-line { color: var(--danger); border-color: var(--danger-line); }
+.br-btn-danger-line:hover:not(:disabled) { border-color: var(--danger); background: var(--danger-bg); }
+
+/* Dải thông báo */
+.br-banner { padding: 10px 14px; border: 1px solid var(--line); border-radius: 10px; margin-bottom: 12px; font-size: 13.5px; overflow-wrap: anywhere; }
+.br-banner--grey { background: var(--soft); color: var(--muted); }
+.br-banner--danger { background: var(--danger-bg); color: var(--danger); border-color: var(--danger-line); }
+.br-banner--warn { background: var(--warn-bg); color: var(--warn); border-color: var(--warn-line); }
+
+/* Thân hai cột: 1fr | 420 (máy tính bảng 1fr | 340), khe 20 */
+.br-cols { display: grid; grid-template-columns: minmax(0, 1fr) 420px; gap: 20px; align-items: start; }
+.br-main { min-width: 0; }
+.br-form { min-width: 0; }
+.br-form__body { padding: 2px 18px 14px; }
+.br-grp { display: flex; align-items: center; gap: 6px; font-size: var(--fs-group); font-weight: 700; margin: 0; padding: 16px 0 6px; border-bottom: 1px solid var(--line); }
+.br-group:first-child .br-grp { padding-top: 12px; }
+.br-row.ui-row:first-of-type { border-top: 0; }
+
+/* Phong cách */
+.br-styles { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; width: 100%; min-width: 0; }
+.br-style {
+  display: inline-flex; align-items: center; gap: 2px; padding: 3px 4px 3px 10px; border-radius: 999px;
+  background: var(--accent-soft); border: 1px solid var(--accent-line); color: var(--accent); font-size: 13px; font-weight: 500;
+  max-width: 100%; overflow-wrap: anywhere;
+}
+.br-style__x { display: inline-grid; place-items: center; width: 20px; height: 20px; border: 0; border-radius: 50%; background: none; color: var(--faint); cursor: pointer; padding: 0; }
+.br-style__x .ui-ico { width: 12px; height: 12px; }
+.br-style__x:hover:not(:disabled) { color: var(--accent); background: #fff; }
+.br-style__x:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.br-style-add { width: 160px; }
+.br-styles .br-err { flex-basis: 100%; margin: 0; }
+
+/* Ảnh */
+.br-imgs { padding: 10px 0; }
+.br-img { min-width: 0; }
+
+/* Giờ làm việc */
+.br-wh { display: grid; grid-template-columns: 84px 44px minmax(0, 1fr); gap: 8px; align-items: center; padding: 7px 0; border-top: 1px solid var(--line-2); }
+.br-grp + .br-wh, .br-grp + .br-err + .br-wh { border-top: 0; }
+.br-wh__day { font-weight: 600; font-size: 13.5px; }
+.br-wh__shifts { display: flex; gap: 6px 10px; align-items: center; flex-wrap: wrap; min-width: 0; }
+.br-wh__shift { display: inline-flex; gap: 6px; align-items: center; }
+.br-wh__time { width: 92px; flex: none; }
+.br-wh__dash { color: var(--muted); }
+.br-wh__off { color: var(--faint); font-size: 13px; }
+.br-wh__err { grid-column: 3; margin: 0; }
+
+/* Gói hiện trên trang */
+.br-pk { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 4px 12px; align-items: center; padding: 9px 0; border-top: 1px solid var(--line-2); }
+.br-grp + .br-pk { border-top: 0; }
+.br-pk__name { font-weight: 500; overflow-wrap: anywhere; }
+.br-pk__price { color: var(--muted); font-size: 12.5px; white-space: nowrap; }
+.br-pk__err { grid-column: 1 / -1; margin: 0; }
+.br-pk-skel { display: flex; flex-direction: column; gap: 10px; padding: 12px 0; }
+.br-pk-err { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 10px 0; }
+.br-pk-err .br-err { margin: 0; }
+.br-group > .br-muted { padding: 10px 0; font-size: 13px; }
+
+/* Xem trước */
+.br-pvw { position: sticky; top: 16px; min-width: 0; }
+.br-pvw__bar { display: flex; gap: 6px; align-items: center; margin-bottom: 8px; }
+.br-pvw__frame {
+  border: 1px solid var(--line); border-radius: var(--r-card, 12px); overflow-x: hidden; overflow-y: auto;
+  max-height: calc(100vh - 120px); background: var(--soft);
+}
+.br-pvw__phone { margin: 0 auto; background: var(--surface); min-height: 100%; }
+.br-pvw__scaled { overflow: hidden; background: var(--surface); }
+.br-pvw--compact { position: static; }
+.br-pvw--compact .br-pvw__frame { max-height: none; overflow: hidden; }
+
+/* Thanh lưu dính đáy (chỉ khi có thay đổi) */
+.br-save {
+  position: sticky; bottom: 0; z-index: 15; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+  padding: 12px 18px; margin-top: 16px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card, 12px);
+}
+.br-save__t { flex: 1; color: var(--muted); font-size: 12.5px; min-width: 0; }
+
+/* Chưa có hồ sơ */
+.br-empty { display: flex; flex-direction: column; gap: 10px; align-items: center; text-align: center; padding: 28px 16px; }
+.br-empty__input { width: 100%; max-width: 360px; }
+.br-tabs { margin-bottom: 12px; }
+
+/* Tải lần đầu */
+.br-skel__bar { display: flex; gap: 14px; align-items: center; padding: 14px 18px; margin-bottom: 16px; }
+.br-skel__form { padding: 8px 18px 16px; display: flex; flex-direction: column; gap: 18px; }
+.br-skel__grp { display: flex; flex-direction: column; gap: 8px; }
+.br-skel__pvw { height: 520px; border-radius: 12px; background: var(--line-2); }
+
+@media (max-width: 1180px) {
+  .br-cols { grid-template-columns: minmax(0, 1fr) 340px; gap: 14px; }
+}
+
+@media (max-width: 640px) {
+  .br-page { padding-bottom: 72px; }
+  .br-pub { padding: 12px 14px; gap: 8px 12px; }
+  .br-pub__url { flex-basis: 100%; order: 2; }
+  .br-pub__actions { order: 3; }
+  .br-cols { grid-template-columns: minmax(0, 1fr); }
+  .br-form__body { padding: 2px 14px 12px; }
+  /* Điện thoại: nhãn trên, ô dưới, kéo hết bề ngang (bản mẫu #c điện thoại) */
+  .br-row.ui-row { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  .br-row .ui-row__ctl { justify-content: stretch; }
+  .br-row .ui-row__ctl > * { width: 100%; }
+  .br-wh { grid-template-columns: 70px 44px minmax(0, 1fr); }
+  .br-wh__shift { flex-wrap: wrap; }
+  .br-wh__time { width: 84px; }
+  .br-skel__pvw { display: none; }
+  .br-save {
+    position: fixed; left: 0; right: 0; bottom: var(--h-bottomnav, 64px); margin: 0; border-radius: 0; border-left: 0; border-right: 0;
+    padding: 10px 12px; z-index: 25; flex-wrap: nowrap;
+  }
+  .br-save__t { font-size: 12px; }
+  .br-save__pub { display: none; }
+}

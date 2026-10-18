@@ -5,6 +5,7 @@ import * as contracts from './contracts';
 import * as files from './files';
 import * as org from './org';
 import * as payments from './payments';
+import * as platform from './platform';
 import * as profile from './profile';
 import * as schedule from './schedule';
 import * as staff from './staff';
@@ -216,6 +217,46 @@ const cases: Case[] = [
   { name: 'publishBrandProfile', call: () => profile.publishBrandProfile(ORG), method: 'POST', url: `${P}/profile/publish` },
   { name: 'unpublishBrandProfile', call: () => profile.unpublishBrandProfile(ORG), method: 'POST', url: `${P}/profile/unpublish` },
   { name: 'getPublicSite', call: () => profile.getPublicSite('hoa-makeup'), method: 'GET', url: '/api/v1/public/sites/hoa-makeup', noAuth: true },
+  // ---- platform (quản trị nền tảng, W13) — đường KHÔNG có /orgs/:orgId; POST không khai idempotent trên máy chủ ----
+  { name: 'getPlatformStats', call: () => platform.getPlatformStats(), method: 'GET', url: '/api/v1/platform/stats' },
+  {
+    name: 'listPlatformOrganizations',
+    call: () => platform.listPlatformOrganizations({ subscriptionStatus: 'EXPIRED', pageSize: 20, q: 'mai anh', planCode: '' }),
+    method: 'GET',
+    url: '/api/v1/platform/organizations?subscriptionStatus=EXPIRED&pageSize=20&q=mai+anh',
+  },
+  { name: 'getPlatformOrganization', call: () => platform.getPlatformOrganization('o1'), method: 'GET', url: '/api/v1/platform/organizations/o1' },
+  {
+    name: 'addSubscription',
+    call: () => platform.addSubscription('o1', { planId: 'p1', status: 'ACTIVE', startsAt: '2026-11-12T03:00:00.000Z', months: 12 }),
+    method: 'POST',
+    url: '/api/v1/platform/organizations/o1/subscriptions',
+    body: { planId: 'p1', status: 'ACTIVE', startsAt: '2026-11-12T03:00:00.000Z', months: 12 },
+  },
+  {
+    name: 'setOrganizationStatus',
+    call: () => platform.setOrganizationStatus('o1', { status: 'SUSPENDED', reason: 'Quá hạn 30 ngày' }),
+    method: 'PATCH',
+    url: '/api/v1/platform/organizations/o1',
+    body: { status: 'SUSPENDED', reason: 'Quá hạn 30 ngày' },
+  },
+  { name: 'listPlans', call: () => platform.listPlans(), method: 'GET', url: '/api/v1/platform/plans' },
+  {
+    name: 'createPlan',
+    call: () =>
+      platform.createPlan({
+        code: 'doi_nho', name: 'Đội nhỏ', priceMonthly: 299_000, maxStaff: 10, maxAppointmentsPerMonth: 600, maxStorageMb: 5120,
+        maxStudents: null, maxCourses: null, customDomain: false, features: ['Lịch'], isActive: true, sortOrder: 2,
+      }),
+    method: 'POST',
+    url: '/api/v1/platform/plans',
+    body: {
+      code: 'doi_nho', name: 'Đội nhỏ', priceMonthly: 299_000, maxStaff: 10, maxAppointmentsPerMonth: 600, maxStorageMb: 5120,
+      maxStudents: null, maxCourses: null, customDomain: false, features: ['Lịch'], isActive: true, sortOrder: 2,
+    },
+  },
+  // Sửa gói: thân chỉ có trường đã đổi.
+  { name: 'updatePlan', call: () => platform.updatePlan('p1', { priceMonthly: 399_000 }), method: 'PATCH', url: '/api/v1/platform/plans/p1', body: { priceMonthly: 399_000 } },
 ];
 
 describe('mỗi hàm gọi đúng đường API', () => {
@@ -232,8 +273,8 @@ describe('mỗi hàm gọi đúng đường API', () => {
     else expect(s?.headers['Idempotency-Key']).toBeUndefined();
   });
 
-  it('đủ mọi hàm xuất ra của catalog/contracts/schedule/staff/payments/files/profile đều có bài thử', () => {
-    const exported = [catalog, contracts, schedule, staff, payments, files, profile].flatMap((m) => Object.keys(m)).sort();
+  it('đủ mọi hàm xuất ra của catalog/contracts/schedule/staff/payments/files/profile/platform đều có bài thử', () => {
+    const exported = [catalog, contracts, schedule, staff, payments, files, profile, platform].flatMap((m) => Object.keys(m)).sort();
     expect(cases.map((c) => c.name).sort()).toEqual(exported);
   });
 

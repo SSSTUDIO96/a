@@ -19,7 +19,6 @@
 .pf-err { color: var(--danger); font-size: 13px; margin-bottom: 8px; }
 .pf-pad { padding: 12px 18px; }
 .pf-mb { margin-bottom: 6px; }
-.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
 
 /* Dải thông báo trong thẻ / hộp thoại */
 .pf-band {
