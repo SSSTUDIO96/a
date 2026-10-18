@@ -620,6 +620,12 @@ export interface ContractVoidResult extends ContractDetail {
   adjustments: ContractAdjustment[];
 }
 
+// Đổi trạng thái: huỷ hợp đồng thì máy chủ huỷ luôn các lịch đã gắn và liệt kê ở cancelledAppointments
+// (đổi sang trạng thái khác thì mảng rỗng). Còn lịch đang làm → 409, error.details = { appointments: [{id, code, status}] }.
+export interface ContractStatusResult extends ContractDetail {
+  cancelledAppointments: ContractDetail['appointments'];
+}
+
 // ======================= Nhân sự, tiền công (staff) =======================
 
 // staff/tiers.ts — presentTier.

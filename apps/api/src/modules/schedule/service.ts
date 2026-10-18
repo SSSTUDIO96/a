@@ -495,7 +495,7 @@ export async function cancelAppointmentsOfContractTx(
     orderBy: { code: 'asc' },
   });
   const blocking = rows.filter((r) => !isTerminalStatus(r.status) && !canTransition(r.status, 'CANCELLED')).map((r) => r.id);
-  
+  if (blocking.length > 0) return { cancelled: [], blocking };
   const toCancel = rows.filter((r) => canTransition(r.status, 'CANCELLED'));
   for (const row of toCancel) {
     await applyStatusChangeTx(tx, ctx, row, 'CANCELLED', reason, { via: 'contract.cancelled', contractId });

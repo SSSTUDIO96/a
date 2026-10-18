@@ -7,7 +7,7 @@ import { defineRoute, mustOrg, type AnyRoute } from '../src/http/route';
 import { AppError } from '../src/lib/errors';
 import { buildGateFixture, runIsolationGate, type GateReport } from './gate';
 import { makeApp, makeDeps } from './helpers';
-import { SAMPLES } from './tenant-isolation.test';
+import { REF_SAMPLES, SAMPLES } from './gate-samples';
 import { createApp } from '../src/app';
 
 const deps = makeDeps();
@@ -24,7 +24,7 @@ function replace(m: AnyRoute): AnyRoute[] {
 async function gateOn(routes: AnyRoute[]): Promise<GateReport> {
   const app = createApp(deps, routes);
   const fx = await buildGateFixture(makeApp(deps));
-  return runIsolationGate(app, routes, fx, SAMPLES);
+  return runIsolationGate(app, routes, fx, SAMPLES, REF_SAMPLES);
 }
 
 describe('cửa gác chuyển đỏ với từng kiểu lỗi', () => {
@@ -104,5 +104,58 @@ describe('cửa gác chuyển đỏ với từng kiểu lỗi', () => {
     });
     const r = await gateOn(replace(mutant));
     expect(r.keep.violations.some((v) => v.includes('PATCH /orgs/:orgId →'))).toBe(true);
+  });
+
+  // Ba đột biến dưới đây: mã của tổ chức khác nằm trong THÂN hoặc THAM SỐ LỌC (biên bản lát 1, lỗi T3).
+  it('Đột biến 6 — xem trước hợp đồng tra khách chỉ theo id (lộ tên khách studio khác) → phép crossRef đỏ', async () => {
+    const original = ALL_ROUTES.find((r) => r.method === 'post' && r.path === '/orgs/:orgId/contracts/quote');
+    if (!original) throw new Error('Không có route quote');
+    const mutant = { ...original, handler: async (ctx: Parameters<typeof original.handler>[0]) => {
+      const body = ctx.body as { customerId?: string };
+      if (body.customerId) {
+        const c = await ctx.deps.db.customer.findFirst({ where: { id: body.customerId } });
+        if (c) return { body: { customer: { id: c.id, fullName: c.fullName } } };
+      }
+      return original.handler(ctx);
+    } } as AnyRoute;
+    const r = await gateOn(replace(mutant));
+    console.log(`[đột biến 6] crossRef vi phạm: ${r.crossRef.violations.length}/${r.crossRef.total}`);
+    expect(r.crossRef.violations.some((v) => v.startsWith('POST /orgs/:orgId/contracts/quote [customerId'))).toBe(true);
+  });
+
+  it('Đột biến 7 — lọc danh sách hợp đồng theo customerId mà quên điều kiện tổ chức → phép crossRef đỏ', async () => {
+    const mutant = defineRoute({
+      method: 'get',
+      path: '/orgs/:orgId/contracts',
+      scope: 'org',
+      permission: 'contracts.read',
+      tag: 't',
+      summary: 'ĐỘT BIẾN',
+      query: z.object({ customerId: z.uuid().optional() }),
+      handler: async ({ deps: d, query, org }) => {
+        const o = mustOrg(org);
+        const where = query.customerId ? { customerId: query.customerId } : { organizationId: o.id };
+        return { body: { items: await d.db.contract.findMany({ where, select: { id: true, code: true } }) } };
+      },
+    });
+    const r = await gateOn(replace(mutant));
+    console.log(`[đột biến 7] crossRef vi phạm: ${r.crossRef.violations.length}/${r.crossRef.total}`);
+    expect(r.crossRef.violations.some((v) => v.startsWith('GET /orgs/:orgId/contracts [customerId'))).toBe(true);
+  });
+
+  it('Đột biến 8 — báo "bậc thuộc tổ chức khác" khác với "không tồn tại" (lộ sự tồn tại) → phép crossRef đỏ', async () => {
+    const original = ALL_ROUTES.find((r) => r.method === 'patch' && r.path === '/orgs/:orgId/staff/:membershipId');
+    if (!original) throw new Error('Không có route sửa hồ sơ thợ');
+    const mutant = { ...original, handler: async (ctx: Parameters<typeof original.handler>[0]) => {
+      const body = ctx.body as { tierId?: string | null };
+      if (body.tierId) {
+        const t = await ctx.deps.db.staffTier.findUnique({ where: { id: body.tierId } });
+        if (t && t.organizationId !== mustOrg(ctx.org).id) throw new AppError('VALIDATION_FAILED', 'Bậc này thuộc tổ chức khác');
+      }
+      return original.handler(ctx);
+    } } as AnyRoute;
+    const r = await gateOn(replace(mutant));
+    console.log(`[đột biến 8] crossRef vi phạm: ${r.crossRef.violations.length}/${r.crossRef.total}`);
+    expect(r.crossRef.violations.some((v) => v.startsWith('PATCH /orgs/:orgId/staff/:membershipId [tierId'))).toBe(true);
   });
 });

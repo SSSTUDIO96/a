@@ -7,11 +7,14 @@ import { writeAudit } from '../../lib/audit';
 import { assertCanEditRole, assertCanGrant, assertCanTouchMember, assertKeepsAnOwner } from './guards';
 import { lockOrgAndRecheck } from '../../http/middleware';
 
+// Tên trang của web không được dùng làm đường dẫn tổ chức (web dùng /:orgSlug/...).
+const RESERVED_SLUGS = new Set(['dang-nhap', 'dang-ky', 'tao-to-chuc', 'api', 'admin', 'quan-tri', 'www', 'app', 'static', 'assets']);
 const Slug = z
   .string()
   .trim()
   .toLowerCase()
-  .regex(/^[a-z0-9]([a-z0-9-]{1,46})[a-z0-9]$/, 'Đường dẫn chỉ gồm chữ thường không dấu, số, gạch ngang; 3–48 ký tự');
+  .regex(/^[a-z0-9]([a-z0-9-]{1,46})[a-z0-9]$/, 'Đường dẫn chỉ gồm chữ thường không dấu, số, gạch ngang; 3–48 ký tự')
+  .refine((s) => !RESERVED_SLUGS.has(s), 'Đường dẫn này trùng tên trang của hệ thống, chọn tên khác');
 const Timezone = z.string().refine((tz) => {
   try {
     new Intl.DateTimeFormat('en-US', { timeZone: tz });
@@ -83,12 +86,14 @@ export const orgRoutes = [
     tag: 'Tổ chức',
     summary: 'Tạo tổ chức mới; người tạo thành chủ tài khoản',
     body: z.object({
-      name: z.string().trim().min(1).max(120),
+      name: z.string().trim().min(1, 'Nhập tên tổ chức').max(120, 'Tên tổ chức tối đa 120 ký tự'),
       slug: Slug,
       kind: z.enum(['INDIVIDUAL', 'TEAM', 'ACADEMY']),
     }),
     handler: async ({ deps, body, userId, requestId }) => {
       const uid = mustUser(userId);
+      const taken = await deps.db.organization.findUnique({ where: { slug: body.slug }, select: { id: true } });
+      if (taken) throw new AppError('CONFLICT', 'Đường dẫn tổ chức đã có người dùng, chọn tên khác', { fields: ['slug'] });
       const org = await deps.db.$transaction(async (tx) => {
         const created = await tx.organization.create({ data: body });
         for (const key of SYSTEM_ROLE_KEYS) {

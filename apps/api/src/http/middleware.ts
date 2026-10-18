@@ -83,7 +83,11 @@ export function errorHandler(deps: Deps) {
     if (err instanceof AppError) {
       appErr = err;
     } else if (err instanceof z.ZodError) {
-      appErr = new AppError('VALIDATION_FAILED', 'Dữ liệu gửi lên không hợp lệ', z.flattenError(err));
+      // Trả cả đường dẫn đầy đủ của từng lỗi (vd "lines.0.travel.amount") để giao diện đặt lỗi đúng ô.
+      appErr = new AppError('VALIDATION_FAILED', 'Dữ liệu gửi lên không hợp lệ', {
+        ...z.flattenError(err),
+        issues: err.issues.map((i) => ({ path: i.path.map(String).join('.'), message: i.message })),
+      });
     } else if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
       appErr = new AppError('CONFLICT', 'Dữ liệu bị trùng', { fields: err.meta?.target });
     } else if (databaseError(err)) {

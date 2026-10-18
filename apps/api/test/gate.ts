@@ -2,6 +2,7 @@
 // Một cửa gác chưa từng chuyển đỏ trước lỗi thật thì chưa được tin.
 import { randomUUID } from 'node:crypto';
 import request from 'supertest';
+import { z } from 'zod';
 import type { AnyRoute } from '../src/http/route';
 import { addMember, bearer, createOrg, registerUser, type App, type TestUser } from './helpers';
 
@@ -30,9 +31,65 @@ export interface GateCheck {
 }
 
 export type GateReport = Record<
-  'scope' | 'outsider' | 'noPerms' | 'unauth' | 'crossId' | 'leak' | 'keep',
+  'scope' | 'outsider' | 'noPerms' | 'unauth' | 'crossId' | 'leak' | 'refBase' | 'crossRef' | 'keep',
   GateCheck
 >;
+
+// Thân/tham số HỢP LỆ dùng toàn mã của CHÍNH tổ chức `self` — mỗi đường có thể có nhiều mẫu (thân dạng hợp).
+// Cửa gác thay lần lượt TỪNG trường mã bằng mã của tổ chức khác. (Biên bản nghiệm thu lát 1, lỗi T3.)
+export type RefSamples = Record<string, ((self: GateOrg) => Record<string, unknown>)[]>;
+
+// Các đường dẫn trường "…Id"/"…Ids" trong thân và tham số truy vấn của một route (vd "lines[].addons[].serviceId").
+export function refFieldPaths(route: AnyRoute): string[] {
+  const out = new Set<string>();
+  const walk = (node: unknown, prefix: string) => {
+    if (!node || typeof node !== 'object') return;
+    const n = node as Record<string, unknown>;
+    if (n.properties && typeof n.properties === 'object') {
+      for (const [k, v] of Object.entries(n.properties as Record<string, unknown>)) {
+        if (/Ids?$/.test(k)) out.add(`${prefix}${k}`);
+        walk(v, `${prefix}${k}.`);
+      }
+    }
+    if (n.items) walk(n.items, `${prefix.replace(/\.$/, '')}[].`);
+    for (const k of ['anyOf', 'oneOf', 'allOf'] as const) {
+      const arr = n[k];
+      if (Array.isArray(arr)) for (const x of arr) walk(x, prefix);
+    }
+  };
+  for (const schema of [route.body, route.query]) {
+    if (schema) walk(z.toJSONSchema(schema, { io: 'input', unrepresentable: 'any' }), '');
+  }
+  return [...out].sort();
+}
+
+// Đọc/ghi giá trị theo đường dẫn có "[]" (áp cho mọi phần tử mảng).
+function pathValues(obj: unknown, segs: string[]): unknown[] {
+  if (segs.length === 0) return [obj];
+  if (!obj || typeof obj !== 'object') return [];
+  const [head, ...rest] = segs as [string, ...string[]];
+  const isArr = head.endsWith('[]');
+  const v = (obj as Record<string, unknown>)[isArr ? head.slice(0, -2) : head];
+  if (isArr) return Array.isArray(v) ? v.flatMap((x) => pathValues(x, rest)) : [];
+  return pathValues(v, rest);
+}
+
+function setPath(obj: unknown, segs: string[], value: (old: unknown) => unknown): void {
+  if (!obj || typeof obj !== 'object' || segs.length === 0) return;
+  const [head, ...rest] = segs as [string, ...string[]];
+  const isArr = head.endsWith('[]');
+  const name = isArr ? head.slice(0, -2) : head;
+  const rec = obj as Record<string, unknown>;
+  if (rest.length === 0) {
+    rec[name] = value(rec[name]);
+    return;
+  }
+  const v = rec[name];
+  if (isArr && Array.isArray(v)) v.forEach((x) => setPath(x, rest, value));
+  else setPath(v, rest, value);
+}
+
+const splitPath = (p: string) => p.split('.').map((x) => x);
 
 const key = (r: AnyRoute) => `${r.method.toUpperCase()} ${r.path}`;
 
@@ -61,6 +118,13 @@ async function setupOrg(app: App, label: string): Promise<GateOrg> {
   const categoryId = await post(app, owner, `${o}/service-categories`, { name: `Nhóm ${label}` });
   const subjectId = await post(app, owner, `${o}/makeup-subjects`, { name: `Nhân vật ${label}` });
   const locationId = await post(app, owner, `${o}/studio-locations`, { name: `Studio ${label}`, address: 'Hà Nội' });
+  const addonId = await post(app, owner, `${o}/services`, {
+    code: `PH${label}`,
+    name: `Dịch vụ phụ ${label}`,
+    kind: 'ADDON',
+    durationMinutes: 30,
+    listPrice: 100000,
+  });
   const serviceId = await post(app, owner, `${o}/services`, {
     code: `DV${label}`,
     name: `Dịch vụ ${label}`,
@@ -86,9 +150,19 @@ async function setupOrg(app: App, label: string): Promise<GateOrg> {
     customerId,
     lines: [{ kind: 'CUSTOM', name: `Phụ phí ${label}`, unitPrice: 100000, quantity: 1 }],
   });
-  const contract = await request(app).get(`/api/v1${o}/contracts/${contractId}`).set(bearer(owner)).expect(200);
-  const lineId = (contract.body as { lines: { id: string }[] }).lines[0]?.id;
-  if (!lineId) throw new Error('Cửa gác: hợp đồng mẫu không có dòng');
+  const firstLine = async (cid: string) => {
+    const c = await request(app).get(`/api/v1${o}/contracts/${cid}`).set(bearer(owner)).expect(200);
+    const id = (c.body as { lines: { id: string }[] }).lines[0]?.id;
+    if (!id) throw new Error('Cửa gác: hợp đồng mẫu không có dòng');
+    return id;
+  };
+  const lineId = await firstLine(contractId);
+  // Hợp đồng thứ hai dành riêng cho việc gắn lịch — hợp đồng có lịch gắn thì không thay được toàn bộ dòng.
+  const contract2Id = await post(app, owner, `${o}/contracts`, {
+    customerId,
+    lines: [{ kind: 'CUSTOM', name: `Phụ phí 2 ${label}`, unitPrice: 100000, quantity: 1 }],
+  });
+  const line2Id = await firstLine(contract2Id);
   return {
     orgId,
     owner,
@@ -107,6 +181,9 @@ async function setupOrg(app: App, label: string): Promise<GateOrg> {
       contractId,
       lineId,
       tierId,
+      addonId,
+      contract2Id,
+      line2Id,
     },
   };
 }
@@ -147,6 +224,7 @@ export async function runIsolationGate(
   routes: AnyRoute[],
   fx: GateFixture,
   samples: Samples,
+  refSamples: RefSamples = {},
 ): Promise<GateReport> {
   const report: GateReport = {
     scope: check(),
@@ -155,6 +233,8 @@ export async function runIsolationGate(
     unauth: check(),
     crossId: check(),
     leak: check(),
+    refBase: check(),
+    crossRef: check(),
     keep: check(),
   };
   const orgRoutes = routes.filter((r) => r.scope === 'org');
@@ -200,7 +280,62 @@ export async function runIsolationGate(
     const leaked = secretsOfA.filter((s) => text.includes(s));
     record(report.leak, leaked.length === 0, `${key(r)} lộ ${leaked.length} giá trị của A`);
   }
-  // 7. GIỮ: chủ A dùng thật phải được trả lời đúng nghĩa — xem: 200; gửi thân rỗng: 400 (lỗi dữ liệu,
+  // 7. THAM CHIẾU CHÉO: mã của A nằm trong THÂN hoặc THAM SỐ LỌC của yêu cầu chủ B gửi vào B.
+  //    Mẫu gốc (toàn mã của B) phải chạy được; thay TỪNG trường mã bằng mã của A → phải bị từ chối (4xx)
+  //    với đường ghi, và KHÔNG lộ dữ liệu của A với mọi đường. Trường mã nào chưa có mẫu → vi phạm.
+  //    Đường sửa hợp đồng chạy sau cùng vì nó thay toàn bộ dòng (đổi mã dòng mẫu).
+  const refRoutes = orgRoutes
+    .filter((r) => refFieldPaths(r).length > 0)
+    .sort((x, y) => Number(key(x) === 'PATCH /orgs/:orgId/contracts/:contractId') - Number(key(y) === 'PATCH /orgs/:orgId/contracts/:contractId'));
+  for (const r of refRoutes) {
+    const bases = refSamples[key(r)] ?? [];
+    const covered = new Set<string>();
+    for (const make of bases) {
+      const base = make(fx.b);
+      const baseRes = await send(app, r, fill(r, fx.b.ids), bearer(fx.b.owner), base);
+      record(report.refBase, baseRes.status >= 200 && baseRes.status < 300, `${key(r)} mẫu gốc → ${baseRes.status} ${JSON.stringify(baseRes.body).slice(0, 160)}`);
+      for (const path of refFieldPaths(r)) {
+        const segs = splitPath(path);
+        const current = pathValues(base, segs).filter((v) => v !== undefined);
+        if (current.length === 0 || current.some((v) => typeof v !== 'string')) continue;
+        covered.add(path);
+        // Thay mã của B ở trường này bằng (a) mã thật của A, (b) một mã bịa không tồn tại.
+        // Đúng = hai phản hồi GIỐNG HỆT nhau (cùng mã trạng thái, cùng nội dung sau khi che mã vừa gửi):
+        // khác nhau nghĩa là máy chủ để lộ "A có bản ghi này" hoặc trả dữ liệu của A.
+        const swapTo = (pick: (k: string) => string) => {
+          const body = structuredClone(base);
+          setPath(body, segs, (old) => {
+            if (old === undefined) return undefined;
+            const k = Object.keys(fx.b.ids).find((x) => fx.b.ids[x] === old);
+            if (!k) throw new Error(`Cửa gác: ${key(r)} trường ${path} dùng giá trị không phải mã mẫu của tổ chức`);
+            return pick(k);
+          });
+          return body;
+        };
+        const fake = randomUUID();
+        const real = await send(app, r, fill(r, fx.b.ids), bearer(fx.b.owner), swapTo((k) => fx.a.ids[k] ?? ''));
+        const probe = await send(app, r, fill(r, fx.b.ids), bearer(fx.b.owner), swapTo(() => fake));
+        const norm = (res: request.Response, sent: string[]) => {
+          let t = JSON.stringify(res.body ?? '');
+          for (const x of sent) t = t.split(x).join('<MÃ>');
+          return t.replace(/"requestId":"[^"]+"/g, '');
+        };
+        const sentA = Object.values(fx.a.ids).filter((x) => JSON.stringify(swapTo((k) => fx.a.ids[k] ?? '')).includes(x));
+        const same = real.status === probe.status && norm(real, sentA) === norm(probe, [fake]);
+        const leaked = secretsOfA.filter((x) => !sentA.includes(x) && JSON.stringify(real.body ?? '').includes(x)).length;
+        const statusOk = r.method === 'get' ? real.status === 200 || (real.status >= 400 && real.status < 500) : real.status >= 400 && real.status < 500;
+        record(
+          report.crossRef,
+          statusOk && same && leaked === 0,
+          `${key(r)} [${path}=mã của A] → ${real.status} (mã bịa → ${probe.status})${same ? '' : ', KHÁC phản hồi mã bịa'}, lộ ${leaked} giá trị khác của A`,
+        );
+      }
+    }
+    for (const path of refFieldPaths(r)) {
+      if (!covered.has(path)) record(report.crossRef, false, `${key(r)}: trường ${path} chưa có mẫu tham chiếu chéo`);
+    }
+  }
+  // 8. GIỮ: chủ A dùng thật phải được trả lời đúng nghĩa — xem: 200; gửi thân rỗng: 400 (lỗi dữ liệu,
   //    không phải 404/409/500); xoá: 2xx. Phép này chạy cuối vì có thể xoá thật.
   for (const r of orgRoutes) {
     const body = r.method === 'get' ? samples[key(r)]?.(fx.a) : {};

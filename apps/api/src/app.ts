@@ -1,4 +1,5 @@
 import express, { type Request, type Response } from 'express';
+import { z } from 'zod';
 import cors from 'cors';
 import helmet from 'helmet';
 import { pinoHttp } from 'pino-http';
@@ -15,6 +16,9 @@ import { contractRoutes } from './modules/contracts/routes';
 import { staffRoutes } from './modules/staff/routes';
 import { createHash } from 'node:crypto';
 import { Prisma } from '@prisma/client';
+
+// Lời báo lỗi mặc định của zod bằng tiếng Việt (lời riêng trong từng schema vẫn được ưu tiên).
+z.config(z.locales.vi());
 
 export const ALL_ROUTES: AnyRoute[] = [...authRoutes, ...orgRoutes, ...catalogRoutes, ...scheduleRoutes, ...contractRoutes, ...staffRoutes];
 

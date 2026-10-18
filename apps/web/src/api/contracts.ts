@@ -7,6 +7,7 @@ import type {
   ContractListQuery,
   ContractQuote,
   ContractStatusInput,
+  ContractStatusResult,
   ContractSummary,
   ContractUpdateInput,
   ContractVoidResult,
@@ -48,6 +49,7 @@ export function voidContractLine(orgId: string, contractId: string, lineId: stri
   return api.post<ContractVoidResult>(orgPath(orgId, `/contracts/${idSeg(contractId)}/lines/${idSeg(lineId)}/void`), input);
 }
 
+// Huỷ (bắt buộc reason) kéo theo huỷ các lịch đã gắn.
 export function changeContractStatus(orgId: string, contractId: string, input: ContractStatusInput) {
-  return api.post<ContractDetail>(orgPath(orgId, `/contracts/${idSeg(contractId)}/status`), input);
+  return api.post<ContractStatusResult>(orgPath(orgId, `/contracts/${idSeg(contractId)}/status`), input);
 }
