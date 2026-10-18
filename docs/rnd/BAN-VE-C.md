@@ -534,3 +534,19 @@ Chi tiết lý do ở /home/user/a/docs/rnd/BAO-CAO-RND-02.md, mục 9.
 4. Sổ thu cọc.
 5. `GET /appointments` trả thêm avatar và chữ viết tắt của thợ.
 6. `newCustomer` nhận thêm email và ghi chú.
+
+---
+
+## 9. Ký duyệt của điều phối (kiến trúc sư trưởng) — 18/10/2026
+
+Bản vẽ được **duyệt có điều chỉnh**. Ba điều chỉnh dưới đây đè lên chữ ở mục 7; giữ nguyên chữ cũ phía trên để thấy đã đổi gì.
+
+| # | Bản vẽ ghi | Điều chỉnh | Vì sao |
+|---|---|---|---|
+| 1 | React 18 | **React 19** | Phiếu móng web (thợ E) đã ghim React 19; React 19 đã ổn định. Dùng hai bản trong một dự án là sai. |
+| 2 | Đường `/lich`, `/hop-dong`, `/bang-gia/:nhom` | **`/:orgSlug/lich`, `/:orgSlug/hop-dong`, `/:orgSlug/hop-dong/:id`, `/:orgSlug/bang-gia/:nhom`** | Một người làm cho nhiều tổ chức; đường dẫn phải nói rõ đang ở tổ chức nào. Thêm `/dang-nhap`, `/dang-ky`, `/tao-to-chuc`. |
+| 3 | W0 gồm cả khung dự án lẫn định kiểu; W1 gồm lõi gọi API | W0 và lõi W1 (`src/api/client.ts`, `errors.ts`, `idempotency.ts`, `auth.ts`, `src/app/session.tsx`, `routes.tsx`) do **thợ E** làm trước. Phần định kiểu của W0 (`src/styles/*`, `public/fonts/*`) gộp vào **W2**. Phần còn lại của W1 (`catalog.ts`, `contracts.ts`, `schedule.ts`, `staff.ts`, `types.ts`) làm sau, dựa trên lõi của E. | Thợ E đã bắt đầu trước khi có bản vẽ. Chia lại theo tệp để không ai giẫm lên tệp của người khác. |
+
+**Thứ tự chạy sau ký:** E (móng + lõi W1) → (W1-phần còn lại và W2 song song) → W3 → (W4, W5, W6 song song) → W7.
+
+**Nguồn bên thứ ba đi vào bản phát hành** (ghi chép theo luật 15): phông chữ Be Vietnam Pro tự chứa trong `public/fonts` (giấy phép SIL Open Font License 1.1, phải kèm tệp giấy phép trong thư mục phông).
