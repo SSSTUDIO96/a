@@ -277,45 +277,6 @@ export function CourseDialog({ orgId, target, groups, pickers, can, onClose, onS
           />
         </SettingRow>
         {capacityInInfo && capacityRow}
-        <SettingRow label="Số buổi" tip="Không bắt buộc. Hiện ở trang khoá, ví dụ 8 buổi × 4 giờ." controlWidth={260}>
-          <div className="ui-field kc-range-field">
-            <div className="kc-range">
-              <UnitInput
-                aria-label="Số buổi"
-                unit="buổi"
-                value={form.sessionCount}
-                onInputError={(m) => inputErrs.report('sessions', m)}
-                onChange={(v) => set({ sessionCount: v }, ['session'])}
-              />
-              <span className="kc-range__sep" aria-hidden="true">
-                ×
-              </span>
-              <UnitInput
-                aria-label="Số phút mỗi buổi"
-                unit="phút"
-                value={form.sessionMinutes}
-                onInputError={(m) => inputErrs.report('minutes', m)}
-                onChange={(v) => set({ sessionMinutes: v }, ['session'])}
-              />
-            </div>
-            {errors.session && (
-              <div className="ui-field__error" role="alert">
-                {errors.session}
-              </div>
-            )}
-          </div>
-        </SettingRow>
-        <SettingRow label="Mô tả" htmlFor="kc-desc" stack>
-          <Textarea
-            id="kc-desc"
-            value={form.description}
-            maxLength={2000}
-            placeholder="Ví dụ: Kỹ thuật nền mỏng, tạo khối, makeup ảnh cưới ngoại cảnh."
-            error={errors.description}
-            onChange={(e) => set({ description: e.target.value }, ['description'])}
-          />
-        </SettingRow>
-
         {showSchedule && (
           <>
             {multi && !editing ? (
@@ -332,6 +293,7 @@ export function CourseDialog({ orgId, target, groups, pickers, can, onClose, onS
                 htmlFor="kc-class-name"
                 tip={editing ? 'Lớp hiện tại thành lớp đầu tiên của khoá — đặt tên, ví dụ Nâng cao K1.' : 'Gợi ý: tên khoá + K và số thứ tự.'}
                 controlWidth={240}
+                className="kc-row--phone-stack"
               >
                 <TextInput
                   id="kc-class-name"
@@ -370,6 +332,46 @@ export function CourseDialog({ orgId, target, groups, pickers, can, onClose, onS
             />
           </>
         )}
+
+        <h3 className="kc-grp">Thông tin thêm</h3>
+        <SettingRow label="Số buổi" tip="Không bắt buộc. Hiện ở trang khoá, ví dụ 8 buổi × 4 giờ." controlWidth={260} className="kc-row--phone-stack">
+          <div className="ui-field kc-range-field">
+            <div className="kc-range">
+              <UnitInput
+                aria-label="Số buổi"
+                unit="buổi"
+                value={form.sessionCount}
+                onInputError={(m) => inputErrs.report('sessions', m)}
+                onChange={(v) => set({ sessionCount: v }, ['session'])}
+              />
+              <span className="kc-range__sep" aria-hidden="true">
+                ×
+              </span>
+              <UnitInput
+                aria-label="Số phút mỗi buổi"
+                unit="phút"
+                value={form.sessionMinutes}
+                onInputError={(m) => inputErrs.report('minutes', m)}
+                onChange={(v) => set({ sessionMinutes: v }, ['session'])}
+              />
+            </div>
+            {errors.session && (
+              <div className="ui-field__error" role="alert">
+                {errors.session}
+              </div>
+            )}
+          </div>
+        </SettingRow>
+        <SettingRow label="Mô tả" htmlFor="kc-desc" stack>
+          <Textarea
+            id="kc-desc"
+            value={form.description}
+            maxLength={2000}
+            placeholder="Ví dụ: Kỹ thuật nền mỏng, tạo khối, makeup ảnh cưới ngoại cảnh."
+            error={errors.description}
+            onChange={(e) => set({ description: e.target.value }, ['description'])}
+          />
+        </SettingRow>
       </div>
     </Dialog>
   );

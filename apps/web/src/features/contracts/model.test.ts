@@ -197,7 +197,10 @@ describe('cảnh báo thợ: đỏ / giữ chỗ nháp / vàng', () => {
     const map = new Map<string, LineWarning[]>([['k', displayWarnings(held, TZ)]]);
     expect(overlapLineCount(map)).toBe(0);
     expect(confirmBlockedReason(overlapLineCount(map))).toBeNull();
-    expect(serverWarnings([w({ level: 'SAME_DAY', draftHolds: [hold(false)] })])[0]?.level).toBe('SAME_DAY');
+    // Máy chủ mới trả level DRAFT_HOLD; giữ chỗ cùng ngày khác giờ → xám "cùng ngày, khác giờ"; có thêm ca thật cùng ngày → vàng.
+    expect(serverWarnings([w({ level: 'DRAFT_HOLD', draftHolds: [hold(true)] })])[0]).toMatchObject({ level: 'DRAFT_HOLD', holdSameDayOnly: false });
+    expect(serverWarnings([w({ level: 'DRAFT_HOLD', draftHolds: [hold(false)] })])[0]).toMatchObject({ level: 'DRAFT_HOLD', holdSameDayOnly: true, holdCodes: ['HĐ-2026-0139'] });
+    expect(serverWarnings([w({ level: 'SAME_DAY', sameDay: [shift('2026-10-24T03:00:00Z', '2026-10-24T04:00:00Z')], draftHolds: [hold(false)] })])[0]).toMatchObject({ level: 'SAME_DAY', count: 2 });
     // Có cả ca đã chặn giờ trùng → vẫn đỏ.
     const both = serverWarnings([w({ level: 'OVERLAP', overlaps: [shift('2026-10-23T22:00:00Z', '2026-10-23T23:30:00Z')], draftHolds: [hold(true)] })]);
     expect(both[0]?.level).toBe('OVERLAP');

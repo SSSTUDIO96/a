@@ -197,11 +197,23 @@ describe('assertQuota', () => {
     expect((await caught(assertQuota(db, orgId, 'appointmentsPerMonth'))).status).toBe(409);
   });
 
-  it('học viên / khoá học có giới hạn mà chưa có bảng → lỗi lắp ráp (không âm thầm cho qua)', async () => {
+  // Trước gói M7 bài này khẳng định "chưa có bộ đếm → lỗi lắp ráp". Nay đã có bộ đếm (BAN-VE-C3 mục 1.0): khẳng định nó
+  // ĐẾM THẬT (không âm thầm trả 0, không ném lỗi). Phủ đủ hơn ở test/han-muc-dao-tao.test.ts (API, đua 10 lượt).
+  it('học viên / khoá học có giới hạn → đếm thật: khoá chưa lưu trữ, khách khác nhau có ghi danh ACTIVE', async () => {
     const orgId = await createOrg(app, owner, 'quota-hv');
-    const p = await plan({ maxStudents: 5 });
+    const p = await plan({ maxStudents: 1, maxCourses: 1 });
     await sub(orgId, p.id, new Date(Date.now() - DAY), null);
-    await expect(assertQuota(db, orgId, 'students')).rejects.toThrow(/Chưa có bộ đếm/);
+    await assertQuota(db, orgId, 'students');
+    await assertQuota(db, orgId, 'courses');
+    await db.course.create({
+      data: { organizationId: orgId, code: `KH-${randomUUID().slice(0, 6)}`, name: 'Khoá Q', mode: 'MULTI_CLASS', tuitionFee: 1_000n, defaultCapacity: 5, createdById: owner.id },
+    });
+    expect(await getUsage(db, orgId, 'courses')).toBe(1);
+    const err = await caught(assertQuota(db, orgId, 'courses'));
+    expect(err.status).toBe(409);
+    expect(err.details).toMatchObject({ reason: 'QUOTA_EXCEEDED', kind: 'courses', limit: 1, used: 1 });
+    expect(await getUsage(db, orgId, 'students')).toBe(0);
+    await assertQuota(db, orgId, 'students');
   });
 
   it('hai yêu cầu thêm cùng lúc khi còn 1 chỗ → chỉ một yêu cầu qua', async () => {

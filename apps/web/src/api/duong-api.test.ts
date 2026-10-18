@@ -3,6 +3,7 @@ import * as catalog from './catalog';
 import { setAccessToken } from './client';
 import * as contracts from './contracts';
 import * as courses from './courses';
+import * as designs from './designs';
 import * as files from './files';
 import * as org from './org';
 import * as payments from './payments';
@@ -374,5 +375,41 @@ describe('courses.ts: mỗi hàm gọi đúng đường API', () => {
 
   it('đủ mọi hàm xuất ra của courses đều có bài thử', () => {
     expect(courseCases.map((c) => c.name).sort()).toEqual(Object.keys(courses).sort());
+  });
+});
+
+// Mẫu thiết kế và thẻ (designs.ts — thợ W-MTK, C3 mục 1.3). Đường GET trả mảng; POST tạo có Idempotency-Key.
+describe('designs.ts: mẫu thiết kế, câu chúc, thẻ', () => {
+  const card = { kind: 'FEEDBACK' as const, templateCode: 'fb-05', contractId: 'c1', body: 'Cảm ơn', photoFileIds: ['f1', 'f2'], size: '1080x1350' as const };
+  const designCases: Case[] = [
+    { name: 'listDesignTemplates', call: () => designs.listDesignTemplates(ORG, { kind: 'FEEDBACK', contractKind: 'SERVICE' }), method: 'GET', url: `${P}/design-templates?kind=FEEDBACK&contractKind=SERVICE` },
+    { name: 'getDesignData', call: () => designs.getDesignData(ORG, 'c1', { courseClassId: 'k1' }), method: 'GET', url: `${P}/contracts/c1/design-data?courseClassId=k1` },
+    { name: 'listSourceContracts', call: () => designs.listSourceContracts(ORG, { kind: 'COURSE', pageSize: 100 }), method: 'GET', url: `${P}/contracts?kind=COURSE&pageSize=100` },
+    { name: 'listGreetingPhrases', call: () => designs.listGreetingPhrases(ORG, { contractKind: 'SERVICE', includeInactive: true }), method: 'GET', url: `${P}/greeting-phrases?contractKind=SERVICE&includeInactive=true` },
+    { name: 'createGreetingPhrase', call: () => designs.createGreetingPhrase(ORG, { name: 'Ngày cưới', appliesTo: ['SERVICE'], title: 'Trăm năm', body: 'Chúc' }, KEY), method: 'POST', url: `${P}/greeting-phrases`, body: { name: 'Ngày cưới', appliesTo: ['SERVICE'], title: 'Trăm năm', body: 'Chúc' }, idem: true },
+    { name: 'updateGreetingPhrase', call: () => designs.updateGreetingPhrase(ORG, 'p1', { isActive: false }), method: 'PATCH', url: `${P}/greeting-phrases/p1`, body: { isActive: false } },
+    { name: 'createDesignCard', call: () => designs.createDesignCard(ORG, card, KEY), method: 'POST', url: `${P}/design-cards`, body: card, idem: true },
+    { name: 'updateDesignCard', call: () => designs.updateDesignCard(ORG, 'd1', { fontOverride: 'ky-2' }), method: 'PATCH', url: `${P}/design-cards/d1`, body: { fontOverride: 'ky-2' } },
+    { name: 'setDesignCardOutput', call: () => designs.setDesignCardOutput(ORG, 'd1', 'f9'), method: 'PUT', url: `${P}/design-cards/d1/output`, body: { fileId: 'f9' } },
+    { name: 'listDesignCards', call: () => designs.listDesignCards(ORG, { kind: 'GREETING', contractId: 'c1' }), method: 'GET', url: `${P}/design-cards?kind=GREETING&contractId=c1` },
+    { name: 'deleteDesignCard', call: () => designs.deleteDesignCard(ORG, 'd1'), method: 'DELETE', url: `${P}/design-cards/d1` },
+    { name: 'uploadDesignFile', call: () => designs.uploadDesignFile(ORG, 'DESIGN_CARD', 'fb-05.png', new Blob([PNG_BYTES]), KEY), method: 'POST', url: `${P}/files?purpose=DESIGN_CARD&name=fb-05.png`, idem: true },
+    { name: 'setCustomerAvatar', call: () => designs.setCustomerAvatar(ORG, 'k1', 'f3'), method: 'PATCH', url: `${P}/customers/k1`, body: { avatarFileId: 'f3' } },
+  ];
+
+  it.each(designCases.map((c) => [c.name, c] as const))('%s', async (_name, c) => {
+    await c.call();
+    expect(seen).toHaveLength(1);
+    const s = seen[0];
+    expect(s?.method).toBe(c.method);
+    expect(s?.url).toBe(c.url);
+    expect(s?.body).toEqual(c.body);
+    expect(s?.headers.Authorization).toBe('Bearer tok');
+    if (c.idem) expect(s?.headers['Idempotency-Key']).toBe(KEY);
+    else expect(s?.headers['Idempotency-Key']).toBeUndefined();
+  });
+
+  it('đủ mọi hàm xuất ra của designs.ts đều có bài thử', () => {
+    expect(designCases.map((c) => c.name).sort()).toEqual(Object.keys(designs).sort());
   });
 });

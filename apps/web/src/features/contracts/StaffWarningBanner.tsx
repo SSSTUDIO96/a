@@ -31,6 +31,7 @@ export function StaffWarningBanner({ warnings, nameOf }: { warnings: LineWarning
               <IconClock />
               <span className="ct-wb__t">
                 {lastName(name)} · Giữ chỗ nháp ở {codes}
+                {w.holdSameDayOnly ? ' · cùng ngày, khác giờ' : ''}
               </span>
               <Tooltip
                 label={`Giữ chỗ nháp của ${name}`}

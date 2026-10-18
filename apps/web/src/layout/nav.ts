@@ -94,6 +94,8 @@ export const NAV_ITEMS: readonly NavItem[] = [
       { key: 'so-thu', path: 'bao-cao/so-thu', label: 'Sổ thu', permission: 'payments.read' },
     ],
   },
+  { key: 'dao-tao', path: 'dao-tao', label: 'Đào tạo', shortLabel: 'Khoá học', icon: 'khoa-hoc', permission: 'courses.read', orgKinds: ['ACADEMY'] },
+  { key: 'mau-thiet-ke', path: 'mau-thiet-ke', label: 'Mẫu thiết kế', shortLabel: 'Mẫu', icon: 'mau', permission: 'designs.read' },
   {
     key: 'cai-dat',
     path: 'cai-dat',

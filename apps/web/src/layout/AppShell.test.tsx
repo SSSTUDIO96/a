@@ -100,10 +100,10 @@ afterEach(() => {
 });
 
 describe('ẩn mục điều hướng theo quyền (bản vẽ C mục 6, C2 mục 3.1)', () => {
-  it('chủ tổ chức thấy đủ 7 mục, thanh dưới có Lịch · Hợp đồng · Bảng giá · Khách · Thêm; vùng nội dung có màn, không có dải 403', async () => {
+  it('chủ tổ chức thấy đủ 8 mục, thanh dưới có Lịch · Hợp đồng · Bảng giá · Khách · Thêm; vùng nội dung có màn, không có dải 403', async () => {
     setupServer(OWNER);
     renderAt('/hoa-dao/lich');
-    expect(await mainMenuLinks()).toEqual(['Lịch makeup', 'Hợp đồng', 'Bảng giá', 'Khách hàng', 'Thợ makeup', 'Báo cáo', 'Cài đặt']);
+    expect(await mainMenuLinks()).toEqual(['Lịch makeup', 'Hợp đồng', 'Bảng giá', 'Khách hàng', 'Thợ makeup', 'Báo cáo', 'Mẫu thiết kế', 'Cài đặt']);
     expect(phoneNavItems()).toEqual(['Lịch', 'Hợp đồng', 'Bảng giá', 'Khách', 'Thêm']);
     expect(activeMenu()).toEqual(['Lịch makeup']);
     expect(within(shellMain()).queryByRole('alert', { name: /không có quyền/ })).toBeNull();
@@ -240,15 +240,15 @@ describe('menu con theo quyền (C2 mục 1.1, 3.1, 4.1)', () => {
 });
 
 describe('thanh dưới điện thoại theo loại tổ chức (C3 mục 1.0)', () => {
-  it('ACADEMY: Lịch · Hợp đồng · Thu tiền · Thêm (Khoá học chưa có màn nên chưa hiện); ở /thu-tien ô "Thu tiền" đang chọn', async () => {
+  it('ACADEMY: Lịch · Hợp đồng · Thu tiền · Khoá học · Thêm (màn Khoá & lớp đã có); ở /thu-tien ô "Thu tiền" đang chọn', async () => {
     setupServer(OWNER, { kind: 'ACADEMY' });
     renderAt('/hoa-dao/thu-tien');
     await mainMenuLinks();
-    expect(phoneNavItems()).toEqual(['Lịch', 'Hợp đồng', 'Thu tiền', 'Thêm']);
+    expect(phoneNavItems()).toEqual(['Lịch', 'Hợp đồng', 'Thu tiền', 'Khoá học', 'Thêm']);
     expect(phoneActive()).toEqual(['Thu tiền']);
   });
 
-  it('ACADEMY: ngăn "Thêm" có Bảng giá, Khách hàng, Thợ makeup, Báo cáo, Cài đặt', async () => {
+  it('ACADEMY: ngăn "Thêm" có Bảng giá, Khách hàng, Thợ makeup, Báo cáo, Mẫu thiết kế, Cài đặt', async () => {
     setupServer(OWNER, { kind: 'ACADEMY' });
     renderAt('/hoa-dao/hop-dong');
     await mainMenuLinks();
@@ -256,7 +256,7 @@ describe('thanh dưới điện thoại theo loại tổ chức (C3 mục 1.0)',
     fireEvent.click(within(screen.getByRole('navigation', { name: 'Mục chính (điện thoại)' })).getByRole('button', { name: 'Thêm' }));
     const sheet = await screen.findByRole('dialog', { name: 'Thêm' });
     const list = sheet.querySelector('.sh-more__list');
-    expect([...(list?.querySelectorAll('a') ?? [])].map((a) => a.textContent)).toEqual(['Bảng giá', 'Khách hàng', 'Thợ makeup', 'Báo cáo', 'Cài đặt']);
+    expect([...(list?.querySelectorAll('a') ?? [])].map((a) => a.textContent)).toEqual(['Bảng giá', 'Khách hàng', 'Thợ makeup', 'Báo cáo', 'Mẫu thiết kế', 'Cài đặt']);
   });
 
   it('INDIVIDUAL: Lịch · Hợp đồng · Bảng giá · Khách · Thêm; ở /thu-tien ô "Hợp đồng" đang chọn', async () => {
@@ -372,6 +372,8 @@ describe('nav.ts', () => {
           ['bao-cao/so-thu', 'payments.read'],
         ],
       ],
+      ['dao-tao', 'courses.read', []],
+      ['mau-thiet-ke', 'designs.read', []],
       ['cai-dat', 'org.update', [['cai-dat/thuong-hieu', 'org.update']]],
     ]);
     expect(visibleNav(() => false)).toEqual([]);
@@ -383,9 +385,11 @@ describe('nav.ts', () => {
       const leaf = matchRoutes(routes, `/hoa-dao/${p}`)?.at(-1);
       expect(leaf?.route.path, p).not.toBe('*');
     }
-    // Mục chưa có màn chưa đưa vào.
-    expect(NAV_ITEMS.map((i) => i.key)).not.toContain('dao-tao');
-    expect(NAV_ITEMS.map((i) => i.key)).not.toContain('mau-thiet-ke');
+    // Đào tạo đã có màn (Khoá & lớp) → đã vào bảng điều hướng, chỉ cho tổ chức ACADEMY. Mục chưa có màn chưa đưa vào.
+    expect(NAV_ITEMS.find((i) => i.key === 'dao-tao')).toMatchObject({ path: 'dao-tao', permission: 'courses.read', orgKinds: ['ACADEMY'] });
+    // Mẫu thiết kế đã có màn → có ở MỌI loại tổ chức (Feedback, Lời chúc dùng cho hợp đồng dịch vụ; C3 mục 1.0).
+    expect(NAV_ITEMS.find((i) => i.key === 'mau-thiet-ke')).toEqual({ key: 'mau-thiet-ke', path: 'mau-thiet-ke', label: 'Mẫu thiết kế', shortLabel: 'Mẫu', icon: 'mau', permission: 'designs.read' });
+    expect(matchRoutes(routes, '/hoa-dao/mau-thiet-ke/feedback')?.at(-1)?.route.path).toBe('mau-thiet-ke/*');
   });
 
   it('mục đang chọn và mục con đang chọn theo đường', () => {
@@ -418,7 +422,7 @@ describe('nav.ts', () => {
     const items = [...visibleNav(() => true, 'ACADEMY'), daoTao];
     const academy = bottomNav(items, 'ACADEMY');
     expect(academy.main.map((m) => m.shortLabel)).toEqual(['Lịch', 'Hợp đồng', 'Thu tiền', 'Khoá học']);
-    expect(academy.rest.map((i) => i.key)).toEqual(['bang-gia', 'khach-hang', 'nhan-su', 'bao-cao', 'cai-dat']);
+    expect(academy.rest.map((i) => i.key)).toEqual(['bang-gia', 'khach-hang', 'nhan-su', 'bao-cao', 'mau-thiet-ke', 'cai-dat']);
     expect(activeBottomKey(academy.main, activeNavItem('thu-tien'), activeNavChild(activeNavItem('thu-tien'), 'thu-tien'))).toBe('thu-tien');
     expect(bottomNav(visibleNav(() => true, 'INDIVIDUAL'), 'INDIVIDUAL').main.map((m) => m.shortLabel)).toEqual(['Lịch', 'Hợp đồng', 'Bảng giá', 'Khách']);
   });

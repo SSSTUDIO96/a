@@ -1,0 +1,146 @@
+/* Màn Mẫu thiết kế (C3 mục 2.6). Máy tính: 3 cột 260 · xem trước · 360. Máy tính bảng: 2 cột, ô điền xuống dưới.
+   Điện thoại: xem trước → lưới mẫu 5 cột → ô điền → nút tải dính đáy. */
+
+.mtk-tabs {
+  display: flex;
+  gap: 4px;
+  margin: -6px 0 16px;
+  border-bottom: 1px solid var(--line);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.mtk-tabs__a {
+  flex: none;
+  padding: 8px 12px;
+  color: var(--muted);
+  text-decoration: none;
+  font-weight: 500;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  white-space: nowrap;
+}
+.mtk-tabs__a[aria-current='page'] { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+
+.mtk-hint { font-size: var(--fs-fx); color: var(--muted); margin: 4px 0 0; }
+.mtk-err { font-size: var(--fs-fx); color: var(--danger); margin: 4px 0 0; }
+.mtk-done { color: var(--ok); background: var(--ok-bg); border-radius: var(--r-ctl); padding: 8px 12px; margin: 0; font-size: 13.5px; }
+.mtk-meta { grid-area: meta; margin: 0; color: var(--muted); font-size: 13px; }
+.mtk-stack { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+
+.mtk-studio {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr) 360px;
+  grid-template-areas: 'meta meta meta' 'grid prev form';
+  gap: 16px;
+  align-items: start;
+}
+.mtk-col-grid { grid-area: grid; min-width: 0; }
+.mtk-col-prev { grid-area: prev; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.mtk-col-form { grid-area: form; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+
+/* ---- Lưới mẫu ---- */
+.mtk-grid { padding: 10px; }
+.mtk-grid__scope { display: flex; flex-direction: column; gap: 2px; margin-bottom: 10px; }
+.mtk-grid__tab {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  border: 0; background: none; padding: 8px 10px; border-radius: var(--r-ctl);
+  font: inherit; color: var(--text); cursor: pointer; text-align: left;
+}
+.mtk-grid__tab[aria-selected='true'] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.mtk-grid__n { font-size: var(--fs-fx); color: var(--muted); }
+.mtk-grid__list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.mtk-grid__list > li { min-width: 0; }
+.mtk-grid__list .ui-tip-anchor { display: block; }
+.mtk-thumb {
+  position: relative; display: block; width: 100%; padding: 0; border: 1px solid var(--line);
+  border-radius: 8px; overflow: hidden; background: var(--soft); cursor: pointer;
+}
+.mtk-thumb img { display: block; width: 100%; height: auto; aspect-ratio: 4 / 5; object-fit: cover; }
+.mtk-thumb[aria-pressed='true'] { outline: 2px solid var(--accent); outline-offset: 1px; }
+.mtk-thumb[aria-disabled='true'] { opacity: .38; cursor: not-allowed; }
+.mtk-thumb__code {
+  position: absolute; left: 4px; bottom: 4px; font-size: 10.5px; font-weight: 600;
+  background: rgba(255, 255, 255, .88); color: var(--text); border-radius: 4px; padding: 1px 4px;
+}
+
+/* ---- Xem trước ---- */
+.mtk-prev { padding: 16px; }
+.mtk-frame { position: relative; width: 100%; overflow: hidden; background: var(--line-2); border-radius: 4px; }
+.mtk-frame__ifr { position: absolute; left: 0; top: 0; border: 0; transform-origin: 0 0; background: #fff; }
+.mtk-frame__wait {
+  position: absolute; inset: 0; display: grid; place-items: center; padding: 16px; text-align: center;
+  color: var(--muted); background: var(--soft); font-size: 13.5px;
+}
+.mtk-prev__bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.mtk-prev__cap { flex: 1 1 200px; min-width: 0; color: var(--muted); font-size: 13px; }
+.mtk-font { display: inline-flex; align-items: center; gap: 6px; }
+.mtk-font .ui-field { width: 130px; }
+
+/* ---- Ô điền ---- */
+.mtk-auto {
+  display: flex; flex-wrap: wrap; gap: 4px 14px; padding: 10px 12px; margin: 4px 0 8px;
+  background: var(--soft); border: 1px solid var(--line-2); border-radius: var(--r-ctl); font-size: 13px; color: var(--muted);
+}
+.mtk-auto__it b { color: var(--text); font-weight: 600; }
+.mtk-auto__it b.mtk-auto__none { color: var(--warn); font-weight: 500; }
+.mtk-auto__miss { flex-basis: 100%; display: inline-flex; align-items: center; gap: 6px; color: var(--warn); }
+.mtk-count { display: flex; align-items: center; justify-content: space-between; margin-top: 4px; font-size: var(--fs-fx); color: var(--muted); }
+.mtk-avatar { width: 88px; height: 88px; border-radius: 50%; object-fit: cover; }
+
+.mtk-photos__list { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 10px; }
+.mtk-photo { position: relative; width: 88px; height: 88px; border-radius: 8px; overflow: hidden; border: 1px solid var(--line); }
+.mtk-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.mtk-photo__x {
+  position: absolute; top: 4px; right: 4px; width: 24px; height: 24px; border-radius: 50%; border: 0;
+  display: grid; place-items: center; background: rgba(34, 28, 25, .72); color: #fff; cursor: pointer; padding: 0;
+}
+.mtk-photo__x .ui-ico, .mtk-photo__x svg { width: 12px; height: 12px; }
+
+.mtk-phrases { display: flex; flex-direction: column; gap: 8px; }
+.mtk-phrase {
+  display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--line);
+  border-radius: var(--r-ctl); cursor: pointer;
+}
+.mtk-phrase[data-on] { border-color: var(--accent-line); background: var(--accent-soft); }
+.mtk-phrase input { margin-top: 3px; accent-color: var(--accent); }
+.mtk-phrase span { display: flex; flex-direction: column; min-width: 0; }
+.mtk-phrase small { color: var(--muted); font-size: 12.5px; }
+
+.mtk-export { z-index: 2; }
+
+/* ---- Thẻ đã tạo ---- */
+.mtk-cards { padding: 14px; }
+.mtk-cards__filters { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 14px; }
+.mtk-cards__filters .ui-field { width: 260px; max-width: 100%; }
+.mtk-cards__list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 12px; }
+.mtk-card { display: flex; gap: 12px; padding: 10px; border: 1px solid var(--line); border-radius: 10px; min-width: 0; }
+.mtk-card__img { flex: none; width: 96px; aspect-ratio: 4 / 5; object-fit: cover; border-radius: 6px; background: var(--soft); }
+.mtk-card__noimg { display: grid; place-items: center; font-size: 11.5px; color: var(--muted); text-align: center; border: 1px dashed var(--line); }
+.mtk-card__txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: 13px; overflow-wrap: anywhere; }
+.mtk-card__act { display: flex; gap: 6px; margin-top: auto; padding-top: 6px; }
+
+/* ---- Câu chúc soạn sẵn ---- */
+.mtk-phr__list { list-style: none; margin: 0; padding: 0; }
+.mtk-phr__row { display: flex; gap: 12px; align-items: flex-start; padding: 12px 0; border-bottom: 1px solid var(--line-2); }
+.mtk-phr__row[data-off] .mtk-phr__txt { opacity: .55; }
+.mtk-phr__txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.mtk-phr__body { font-size: 13px; color: var(--text); overflow-wrap: anywhere; }
+.mtk-phr__act { display: flex; align-items: center; gap: 6px; flex: none; }
+
+@media (max-width: 1180px) {
+  .mtk-studio { grid-template-columns: 240px minmax(0, 1fr); grid-template-areas: 'meta meta' 'grid prev' 'form form'; }
+}
+@media (max-width: 640px) {
+  .mtk-studio { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'meta' 'prev' 'grid' 'form'; gap: 12px; }
+  .mtk-prev { padding: 10px; }
+  .mtk-grid__scope { flex-direction: row; }
+  .mtk-grid__list { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+  .mtk-thumb__code { display: none; }
+  /* Điện thoại: nút tải dính đáy, trên thanh dưới (64px). */
+  .mtk-export { position: sticky; bottom: 72px; padding: 8px 0; background: linear-gradient(transparent, var(--bg) 30%); }
+  .mtk-phr__row { flex-direction: column; }
+}
+
+/* Ô điền xếp dọc (nhãn trên, điều khiển dưới) chiếm hết bề ngang cột. */
+.mtk-form .ui-row--stack .ui-row__ctl,
+.mtk-dlg .ui-row--stack .ui-row__ctl { flex-direction: column; align-items: stretch; }

@@ -60,7 +60,7 @@ export function ScheduleRows({
       <SettingRow label={<span id={wdLabel}>Lịch học</span>} required controlWidth={360} className="kc-row--phone-stack">
         <WeekdayChips value={value.weekdays} onChange={(weekdays) => onChange({ weekdays })} error={errors.weekdays} labelledBy={wdLabel} />
       </SettingRow>
-      <SettingRow label="Giờ học" tip="Để trống nếu lớp chưa chốt giờ." controlWidth={260}>
+      <SettingRow label="Giờ học" tip="Để trống nếu lớp chưa chốt giờ." controlWidth={260} className="kc-row--phone-stack">
         <TimeRange
           start={value.startTime}
           end={value.endTime}

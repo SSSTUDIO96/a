@@ -42,11 +42,14 @@ export async function renderTemplatePng(src: string, size: DesignSize): Promise<
     const win = frame.contentWindow as FrameWindow | null;
     if (!win?.MAU_XUAT_PNG) throw new Error('Tệp vẽ mẫu chưa có bộ xuất ảnh.');
     const res = await Promise.race([win.MAU_XUAT_PNG(), timeout]);
-    const real = (await pngSize(res.blob)) ?? { width: res.width, height: res.height };
+    // Blob sinh trong iframe thuộc "thế giới JS" của iframe (instanceof Blob ở trang chính là false) → chép sang Blob
+    // của trang chính trước khi băm SHA-256 / tải lên, và để iframe gỡ đi không kéo theo dữ liệu.
+    const blob = new Blob([await res.blob.arrayBuffer()], { type: 'image/png' });
+    const real = (await pngSize(blob)) ?? { width: res.width, height: res.height };
     if (real.width !== width || real.height !== height) {
       throw new Error(`Ảnh vẽ ra ${real.width}×${real.height}, khác khổ ${width}×${height}. Chưa tải lên.`);
     }
-    return res.blob;
+    return blob;
   } finally {
     if (timer) clearTimeout(timer);
     frame.remove();

@@ -434,6 +434,15 @@ describe('biên bản web 2', () => {
     expect(((await confirmButton()) as HTMLButtonElement).disabled).toBe(false);
   });
 
+  it('T1 (máy chủ mới, level DRAFT_HOLD, giữ chỗ cùng ngày khác giờ): dải xám "… · cùng ngày, khác giờ", không chặn', async () => {
+    api.getContract.mockResolvedValue(detail('DRAFT') as never);
+    const sameDayHold = { ...HOLD, level: 'DRAFT_HOLD', draftHolds: [{ ...HOLD.draftHolds[0]!, overlaps: false }] };
+    api.quoteContract.mockResolvedValue(quote([sameDayHold]) as never);
+    renderEditor(OWNER);
+    expect(await screen.findByText(/Giữ chỗ nháp ở HĐ-2026-0139 · cùng ngày, khác giờ/)).toBeTruthy();
+    expect(((await confirmButton()) as HTMLButtonElement).disabled).toBe(false);
+  });
+
   it('S1: dòng có giờ chưa có thợ → dòng vàng ở thanh tổng, KHÔNG chặn xác nhận; xác nhận xong báo số lịch máy chủ đã tạo', async () => {
     const noStaff = detail('DRAFT', { lines: [line({ staff: [] })] });
     api.getContract.mockResolvedValue(noStaff as never);
@@ -541,9 +550,11 @@ describe('biên bản web 2', () => {
     await userEvent.clear(end);
     await userEvent.type(end, '04:00');
     await userEvent.tab();
-    const msgs = await screen.findAllByText('Giờ kết thúc phải sau giờ bắt đầu.');
-    // Một dưới ô giờ kết thúc (lỗi), một ở hàng thợ (lý do khoá nút).
-    expect(msgs.some((m) => m.getAttribute('data-o') !== 'ly-do-khoa-tho')).toBe(true);
+    // Lỗi gắn đúng ô giờ kết thúc (aria-invalid + aria-describedby trỏ tới lời lỗi), chưa bấm Lưu.
+    await waitFor(() => expect(end.getAttribute('aria-invalid')).toBe('true'));
+    const described = (end.getAttribute('aria-describedby') ?? '').split(/\s+/).map((id) => document.getElementById(id)?.textContent ?? '');
+    expect(described).toContain('Giờ kết thúc phải sau giờ bắt đầu.');
+    expect(api.updateContract).not.toHaveBeenCalled();
     expect(screen.getByText('Giờ kết thúc phải sau giờ bắt đầu.', { selector: '[data-o="ly-do-khoa-tho"]' })).toBeTruthy();
   });
 

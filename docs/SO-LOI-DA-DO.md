@@ -129,6 +129,13 @@ Mỗi lỗi ghi đủ: triệu chứng · gốc bệnh · số đo · cách ch�
 - **Cách chặn:** mỗi thợ ghi PID ngay lúc bật máy chủ, và chỉ tắt đúng PID đó. Đầu bài mọi gói việc giữ câu "KHÔNG pkill -f". Đề xuất cho bộ luật: thêm cửa gác chặn lệnh `pkill -f` trong môi trường nhiều thợ.
 - **Bài học cho studio khác:** khi nhiều người dùng chung một máy, lệnh "tắt mọi thứ tên X" là lệnh phá việc người khác, dù người gõ chỉ định dọn đồ của mình.
 
+### 22. Thêm chốt mới vào database: dữ liệu cũ vi phạm làm hỏng lần nâng cấp
+- **Triệu chứng:** thợ thêm chốt "mọi số tiền ≤ 100 tỷ đ" cho 22 cột tiền. Thử trên một database có dữ liệu cũ thì cả lần nâng cấp bị huỷ, vì 2 phiếu thu thử cũ ghi 5 triệu tỷ đ.
+- **Gốc bệnh:** chốt mới kiểm cả dữ liệu đã có. Dữ liệu cũ do chính các bài thử trước tạo ra để thử lỗi "số khổng lồ". Đúng loại dữ liệu bẩn mà chốt mới sinh ra để cấm.
+- **Số đo:** 19 database thử của các thợ còn chứa dòng vượt trần (từ 1 đến 53 dòng mỗi database). Database phát triển có 0 dòng. Nâng cấp trên các database đó sẽ dừng và đánh dấu "nâng cấp lỗi".
+- **Cách chặn:** (1) Trước khi thêm chốt kiểm dữ liệu, đếm số dòng vi phạm trên đúng database sẽ nâng cấp. Database thật thì đếm và dọn có biên bản trước, không bao giờ để lần nâng cấp tự phát hiện. (2) Bài thử cố ý tạo dữ liệu bẩn phải tự dọn, hoặc chạy trên database riêng dùng một lần. (3) Nâng cấp đặt trong một giao dịch: lỗi thì huỷ sạch, không áp dở (đã kiểm: 0 chốt còn sót).
+- **Bài học cho studio khác:** mỗi luật mới cho dữ liệu đều phải hỏi "dữ liệu đang có có vi phạm không, và ai dọn". Hỏi xong rồi mới bật luật.
+
 ---
 
 ## Phần CỦA RIÊNG DỰ ÁN NÀY

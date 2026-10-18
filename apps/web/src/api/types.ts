@@ -631,11 +631,13 @@ export interface ContractLineStaff {
   tier: { id: string; name: string } | null;
 }
 
-// contracts/present.ts — StaffWarning: thợ trùng giờ (OVERLAP) hoặc có lịch khác trong ngày (SAME_DAY),
-// kể cả khi chỉ đang được giữ chỗ ở hợp đồng nháp khác. Ca và giữ chỗ của chính hợp đồng này không tính.
+// contracts/present.ts — StaffWarning: OVERLAP (đỏ, chặn xác nhận) = trùng lịch đã chiếm giờ thật hoặc trùng dòng khác
+// của chính hợp đồng (sameContract); SAME_DAY (vàng) = có lịch khác trong ngày; DRAFT_HOLD (xám, KHÔNG chặn) = chỉ đang
+// được giữ chỗ ở hợp đồng NHÁP khác (draftHolds[].overlaps cho biết trùng giờ hay chỉ cùng ngày). Quyết định 15:14.
+// Ca và giữ chỗ của chính hợp đồng đang sửa (excludeContractId) không tính.
 export interface StaffWarning {
   membershipId: string;
-  level: Exclude<AvailabilityLevel, 'FREE'>;
+  level: Exclude<AvailabilityLevel, 'FREE'> | 'DRAFT_HOLD';
   overlaps: AvailabilityShift[];
   sameDay: AvailabilityShift[];
   draftHolds: DraftHold[];

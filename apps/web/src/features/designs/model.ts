@@ -267,7 +267,11 @@ export function checkDraft(args: { kind: DesignKind; template: DesignTemplate | 
     const pe = photoCountError(template, draft.photoFileIds.length);
     if (pe) e.photos = pe;
   }
+  // Ô nhập mà mẫu có thì phải điền — không để ô trống trên ảnh.
+  if (kind === 'FEEDBACK' && template?.slots.includes('sao') && draft.rating === null) e.rating = 'Chọn số sao.';
+  if (kind === 'FEEDBACK' && template?.slots.includes('nfb') && !draft.receivedAt) e.receivedAt = 'Nhập ngày nhận lời khen.';
   if (kind === 'FEEDBACK' && !draft.body.trim()) e.body = 'Dán nội dung lời khen.';
+  if (kind === 'GREETING' && template?.slots.includes('td') && !draft.title.trim()) e.title = 'Nhập tiêu đề.';
   if (kind === 'GREETING' && !draft.body.trim()) e.body = 'Nhập lời chúc.';
   if (draft.body.length > BODY_MAX) e.body = `Tối đa ${BODY_MAX} ký tự.`;
   if (kind === 'GREETING' && draft.title.length > TITLE_MAX) e.title = `Tối đa ${TITLE_MAX} ký tự.`;

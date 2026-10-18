@@ -385,8 +385,10 @@ export interface LineWarning {
   ranges: WarnRange[];
   // Số ca trong ngày (SAME_DAY).
   count: number;
-  // Mã các hợp đồng nháp đang giữ chỗ chồng giờ (DRAFT_HOLD), không trùng nhau.
+  // Mã các hợp đồng nháp đang giữ chỗ (DRAFT_HOLD), không trùng nhau.
   holdCodes?: string[];
+  // DRAFT_HOLD mà không giữ chỗ nào trùng giờ (chỉ cùng ngày, khác giờ).
+  holdSameDayOnly?: boolean;
 }
 
 const LEVEL_RANK: Record<WarnLevel, number> = { OVERLAP: 0, DRAFT_HOLD: 1, SAME_DAY: 2 };
@@ -415,14 +417,19 @@ export function serverWarnings(list: StaffWarning[] | undefined, lineLabel: (ind
     const same = w.sameContract ?? [];
     const holds = w.draftHolds;
     const overlapHolds = holds.filter((h) => h.overlaps);
+    // Đỏ: trùng lịch đã chiếm giờ / trùng dòng khác của hợp đồng này. Giữ chỗ nháp trùng giờ: xám. Có ca thật cùng ngày:
+    // vàng (đếm cả giữ chỗ). Chỉ có giữ chỗ nháp cùng ngày khác giờ: xám "cùng ngày, khác giờ".
     const level: WarnLevel | null =
       w.overlaps.length > 0 || same.length > 0
         ? 'OVERLAP'
         : overlapHolds.length > 0
           ? 'DRAFT_HOLD'
-          : w.sameDay.length > 0 || holds.length > 0
+          : w.sameDay.length > 0
             ? 'SAME_DAY'
-            : null;
+            : holds.length > 0
+              ? 'DRAFT_HOLD'
+              : null;
+    const shownHolds = overlapHolds.length > 0 ? overlapHolds : holds;
     if (!level) continue;
     const ranges =
       level === 'OVERLAP'
@@ -431,14 +438,14 @@ export function serverWarnings(list: StaffWarning[] | undefined, lineLabel: (ind
             ...same.map((h) => ({ start: h.scheduledStart, end: h.scheduledEnd, label: `Dòng ${lineLabel(h.lineIndex, h.lineName)} của hợp đồng này` })),
           ]
         : level === 'DRAFT_HOLD'
-          ? overlapHolds.map(holdRange).filter((r): r is WarnRange => r !== null)
+          ? shownHolds.map(holdRange).filter((r): r is WarnRange => r !== null)
           : [...w.sameDay.map((s) => ({ start: s.startsAt, end: s.endsAt, label: shiftLabel(s) })), ...holds.map(holdRange).filter((r): r is WarnRange => r !== null)];
     out.push({
       membershipId: w.membershipId,
       level,
       ranges,
       count: w.sameDay.length + holds.length,
-      ...(overlapHolds.length > 0 ? { holdCodes: [...new Set(overlapHolds.map((h) => h.code))] } : {}),
+      ...(level === 'DRAFT_HOLD' ? { holdCodes: [...new Set(shownHolds.map((h) => h.code))], holdSameDayOnly: overlapHolds.length === 0 } : {}),
     });
   }
   return out;

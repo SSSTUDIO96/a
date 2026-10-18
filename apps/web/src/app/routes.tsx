@@ -5,7 +5,9 @@ import { LoginPage } from '../features/auth/LoginPage';
 import { RegisterPage } from '../features/auth/RegisterPage';
 import { BrandPage } from '../features/brand';
 import { ContractEditorPage, ContractListPage, NEW_CONTRACT_SEGMENT } from '../features/contracts';
+import { CoursesPage } from '../features/courses';
 import { CustomersPage } from '../features/customers';
+import { DesignsPage } from '../features/designs';
 import { PaymentsPage } from '../features/payments';
 import { PlatformApp } from '../features/platform';
 import { PricingPage } from '../features/pricing';
@@ -61,6 +63,10 @@ const orgChildren: RouteObject[] = [
   { path: 'bao-cao', element: <NavSectionHome navKey="bao-cao" /> },
   { path: 'bao-cao/doanh-thu', element: guarded('doanh-thu', <RevenuePage />) },
   { path: 'bao-cao/so-thu', element: guarded('so-thu', <CashbookPage />) },
+  { path: 'dao-tao', element: guarded('dao-tao', <CoursesPage />) },
+  { path: 'dao-tao/*', element: guarded('dao-tao', <CoursesPage />) },
+  { path: 'mau-thiet-ke', element: guarded('mau-thiet-ke', <DesignsPage />) },
+  { path: 'mau-thiet-ke/*', element: guarded('mau-thiet-ke', <DesignsPage />) },
   { path: 'cai-dat', element: guarded('cai-dat', <Navigate to="thuong-hieu" replace />) },
   { path: 'cai-dat/thuong-hieu', element: guarded('thuong-hieu', <BrandPage />) },
   { path: '*', element: <NotFoundView /> },
