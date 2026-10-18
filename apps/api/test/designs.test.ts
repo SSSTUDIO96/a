@@ -10,8 +10,6 @@ import { DEFAULT_GREETING_PHRASES, DESIGN_TEMPLATES } from '@makeup/shared';
 import { ALL_ROUTES, createApp } from '../src/app';
 import { designRoutes } from '../src/modules/designs/routes';
 import { seedDefaultGreetingPhrases } from '../src/modules/designs/seed';
-import { buildGateFixture, printReport, runIsolationGate, type GateFixture, type GateOrg, type GateReport, type RefSamples, type Samples } from './gate';
-import { printPartialReport, runPartialPatchGate, type PartialReport, type PartialSamples } from './gate-partial';
 import { addMember, bearer, createOrg, makeDeps, registerUser, type App, type TestUser } from './helpers';
 
 const deps = makeDeps();
@@ -665,121 +663,6 @@ describe('quyền designs.read / designs.write', () => {
   });
 });
 
-// ---------- Cửa gác chạy trên designRoutes: mẫu đề xuất cho test/gate-samples.ts (điều phối chép vào khi đăng ký) ----------
-
-// Thêm vào fixture của cửa gác: hợp đồng khoá học + lớp (thay ids.contractId để đường design-data đo được courseClassId),
-// ảnh DESIGN_PHOTO, ảnh DESIGN_CARD, một thẻ feedback trên hợp đồng khoá học, một câu chúc.
-async function extendGateOrg(o: GateOrg) {
-  const m = await deps.db.membership.findFirstOrThrow({ where: { organizationId: o.orgId, userId: o.owner.id } });
-  const course = await courseContract(o.orgId, o.owner.id, o.ids.customerId ?? '', m.id);
-  o.ids.serviceContractId = o.ids.contractId ?? '';
-  o.ids.contractId = course.contractId;
-  o.ids.classId = course.classId;
-  o.ids.designPhotoId = await insertFile(o.orgId, o.owner.id, 'DESIGN_PHOTO');
-  o.ids.designCardFileId = await insertFile(o.orgId, o.owner.id, 'DESIGN_CARD');
-  const card = await createCard(o.owner, o.orgId, {
-    kind: 'FEEDBACK',
-    templateCode: 'fb-01',
-    contractId: course.contractId,
-    body: 'Lời khen mẫu',
-    photoFileIds: [o.ids.designPhotoId],
-    size: '1080x1350',
-  });
-  if (card.status !== 201) throw new Error(`Cửa gác thẻ: tạo thẻ mẫu ${card.status} ${JSON.stringify(card.body)}`);
-  o.ids.cardId = card.body.id;
-  const phrase = await request(app)
-    .post(url(o.orgId, '/greeting-phrases'))
-    .set(bearer(o.owner))
-    .set('idempotency-key', idem())
-    .send({ name: 'Mẫu', appliesTo: [], title: 'Tiêu đề mẫu', body: 'Câu chúc mẫu' });
-  if (phrase.status !== 201) throw new Error(`Cửa gác thẻ: tạo câu chúc mẫu ${phrase.status}`);
-  o.ids.phraseId = phrase.body.id;
-}
-
-const DESIGN_SAMPLES: Samples = {
-  'PATCH /orgs/:orgId/greeting-phrases/:phraseId': () => ({ title: 'Đổi tiêu đề thử' }),
-  'PATCH /orgs/:orgId/design-cards/:cardId': () => ({ title: 'Đổi tiêu đề thử' }),
-  'PUT /orgs/:orgId/design-cards/:cardId/output': (o) => ({ fileId: o.ids.designCardFileId }),
-};
-
-const DESIGN_REF_SAMPLES: RefSamples = {
-  'GET /orgs/:orgId/contracts/:contractId/design-data': [(o) => ({ courseClassId: o.ids.classId })],
-  'GET /orgs/:orgId/design-cards': [(o) => ({ contractId: o.ids.contractId, customerId: o.ids.customerId })],
-  'POST /orgs/:orgId/design-cards': [
-    (o) => ({ kind: 'WELCOME', templateCode: 'shd-01', contractId: o.ids.contractId, courseClassId: o.ids.classId, size: '1080x1350' }),
-    (o) => ({
-      kind: 'FEEDBACK',
-      templateCode: 'fb-01',
-      contractId: o.ids.serviceContractId,
-      body: 'Lời khen mẫu',
-      photoFileIds: [o.ids.designPhotoId],
-      size: '1080x1350',
-    }),
-  ],
-  'PATCH /orgs/:orgId/design-cards/:cardId': [(o) => ({ courseClassId: o.ids.classId }), (o) => ({ photoFileIds: [o.ids.designPhotoId] })],
-  'PUT /orgs/:orgId/design-cards/:cardId/output': [(o) => ({ fileId: o.ids.designCardFileId })],
-};
-
-const DESIGN_PARTIAL_SAMPLES: PartialSamples = {
-  'PATCH /orgs/:orgId/greeting-phrases/:phraseId': {
-    full: () => ({ name: 'Câu đủ', appliesTo: ['COURSE'], title: 'Tiêu đề đủ', body: 'Câu chúc đủ', sortOrder: 7, isActive: false }),
-    one: () => ({ name: 'Câu đổi tên' }),
-  },
-  'PATCH /orgs/:orgId/design-cards/:cardId': {
-    full: (c) => ({
-      templateCode: 'fb-03',
-      courseClassId: c.o.ids.classId,
-      title: 'Tiêu đề đủ',
-      body: 'Lời khen đủ',
-      rating: 4,
-      receivedAt: '2026-11-05',
-      photoFileIds: [c.o.ids.designPhotoId],
-      fontOverride: 'ky-2',
-      size: '1080x1080',
-      snapshot: { ten: 'Tên sửa tay' },
-    }),
-    one: () => ({ fontOverride: 'ky-3' }),
-    derived: { outputUrl: 'URL ký đổi mỗi lần đọc', outputUrlExpiresAt: 'hạn URL ký đổi mỗi lần đọc' },
-  },
-};
-
-// Cửa gác hiện hành chỉ thay mã ở trường CHUỖI; trường mảng mã (photoFileIds) bị báo "chưa có mẫu tham chiếu chéo".
-// Tham chiếu chéo của photoFileIds đã đo riêng ở bài "ảnh của tổ chức khác" phía trên. Phiếu vướng gửi thợ giữ test/gate.ts.
-const KNOWN_GATE_GAPS = [
-  'POST /orgs/:orgId/design-cards: trường photoFileIds chưa có mẫu tham chiếu chéo',
-  'PATCH /orgs/:orgId/design-cards/:cardId: trường photoFileIds chưa có mẫu tham chiếu chéo',
-];
-
-describe('cửa gác trên designRoutes (mẫu đề xuất)', () => {
-  let fx: GateFixture;
-  let gate: GateReport;
-  let partial: PartialReport;
-
-  beforeAll(async () => {
-    fx = await buildGateFixture(app);
-    await extendGateOrg(fx.a);
-    await extendGateOrg(fx.b);
-    partial = await runPartialPatchGate(app, deps.db, designRoutes, fx, DESIGN_PARTIAL_SAMPLES);
-    printPartialReport(' (thẻ)', partial);
-    gate = await runIsolationGate(app, designRoutes, fx, DESIGN_SAMPLES, DESIGN_REF_SAMPLES);
-    printReport(' (thẻ)', gate);
-  }, 180_000);
-
-  it('cách ly: mọi phép đạt trên 10 đường thẻ (trừ chỗ cửa gác chưa đo được mảng mã)', () => {
-    expect(designRoutes).toHaveLength(10);
-    for (const [name, c] of Object.entries(gate)) {
-      const violations = name === 'crossRef' ? c.violations.filter((v) => !KNOWN_GATE_GAPS.includes(v)) : c.violations;
-      expect(violations, name).toEqual([]);
-    }
-    expect(gate.crossRef.violations.sort()).toEqual([...KNOWN_GATE_GAPS].sort());
-    expect(gate.outsider.total).toBe(10);
-    expect(gate.keep.total).toBe(10);
-    expect(gate.refBase.total).toBe(7);
-  });
-
-  it('sửa một phần: 2/2 đường PATCH giữ nguyên trường không gửi', () => {
-    expect(partial.partialStatic.violations).toEqual([]);
-    expect(partial.partialKeep.violations).toEqual([]);
-    expect(partial.covered).toBe(2);
-  });
-});
+// Cửa gác cách ly + sửa một phần cho 10 đường thẻ: đã chuyển vào cửa gác chung (thợ G2) — fixture ở test/gate.ts
+// (designPhotoId, designCardFileId, cardId, phraseId, courseContractId, classId), mẫu ở test/gate-samples.ts; trường mảng
+// mã photoFileIds nay được cửa gác đo (đường "photoFileIds[]"), đột biến 14 trong test/gate-mutants.test.ts.
