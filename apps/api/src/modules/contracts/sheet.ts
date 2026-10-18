@@ -14,6 +14,7 @@ import {
   type Vnd,
 } from '@makeup/shared';
 import { AppError } from '../../lib/errors';
+import { MAX_MONEY_VND } from '../../lib/money';
 import { resolveCurrentPrice, type PriceRef } from '../catalog/prices';
 import { assertActiveStaff, assertBookable, type StaffAssignment } from '../schedule/service';
 import type { ContractKindKey, CourseLineInput, LineInput, PlacedLineInput, TravelInput } from './schemas';
@@ -77,6 +78,28 @@ export function money<T>(work: () => T, details?: unknown): T {
   } catch (err) {
     if (err instanceof ContractMathError) throw new AppError('VALIDATION_FAILED', err.message, details);
     throw err;
+  }
+}
+
+// Trần chung (lib/money.ts) áp cả cho số TÍNH RA: thành tiền dòng, tạm tính, tổng. Database chặn mọi cột tiền > trần
+// (migration 20261018250000) nhưng chỉ báo lời chung — kiểm ở đây trước khi ghi để có lời rõ (P3 của thợ S5).
+const CAP_TEXT = `${MAX_MONEY_VND.toLocaleString('vi-VN')} đ`;
+export const TOTAL_TOO_LARGE_MESSAGE = `Tổng hợp đồng quá lớn (tối đa ${CAP_TEXT})`;
+
+export function assertTotalsCap(subtotal: Vnd): void {
+  if (subtotal > MAX_MONEY_VND) {
+    throw new AppError('VALIDATION_FAILED', TOTAL_TOO_LARGE_MESSAGE, { field: 'subtotal', subtotal, max: MAX_MONEY_VND });
+  }
+}
+
+function assertLineCap(l: { name: string; lineTotal: Vnd }, line: number): void {
+  if (l.lineTotal > MAX_MONEY_VND) {
+    throw new AppError('VALIDATION_FAILED', `Thành tiền dòng "${l.name}" quá lớn (tối đa ${CAP_TEXT})`, {
+      line,
+      field: 'lineTotal',
+      lineTotal: l.lineTotal,
+      max: MAX_MONEY_VND,
+    });
   }
 }
 
@@ -497,7 +520,11 @@ export async function planLines(tx: Tx, orgId: string, inputs: LineInput[], at: 
     seatCheck: opts.seatCheck,
   };
   const out: PlannedLine[] = [];
-  for (const [i, input] of inputs.entries()) out.push(...(await planOne(ctx, input, (opts.firstIndex ?? 0) + i)));
+  for (const [i, input] of inputs.entries()) {
+    const planned = await planOne(ctx, input, (opts.firstIndex ?? 0) + i);
+    for (const l of planned) assertLineCap(l, (opts.firstIndex ?? 0) + i);
+    out.push(...planned);
+  }
   // Một lớp chỉ một dòng trong cùng hợp đồng (một hợp đồng = một học viên; ghi danh trùng bị chặn lúc xác nhận).
   const seen = new Set<string>();
   for (const l of out) {

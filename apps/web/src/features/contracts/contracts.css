@@ -32,6 +32,9 @@
 
 /* ---------- Thẻ đầu: khách + ngày ---------- */
 .ct-head > .ui-card__body { padding: 6px 16px 12px; }
+/* N1: "Hợp đồng HD-000001" giữ một dòng; chật thì nhóm nhãn trạng thái + nút xuống dòng dưới tiêu đề. */
+.ct-head > .ui-card__head { flex-wrap: wrap; row-gap: 6px; }
+.ct-head .ui-card__title { white-space: nowrap; }
 .ct-set { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 12px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line-2); }
 .ct-set:first-child { border-top: 0; }
 .ct-set > .ct-set__l { font-weight: 500; }
