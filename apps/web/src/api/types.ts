@@ -316,8 +316,6 @@ export interface Customer {
   phone: string | null;
   email: string | null;
   note: string | null;
-  avatarFileId: string | null;
-  avatarUrl: string | null;
   createdAt: IsoDateTime;
   updatedAt: IsoDateTime;
 }
