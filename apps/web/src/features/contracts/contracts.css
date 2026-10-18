@@ -42,7 +42,9 @@
 .ct-set--top > .ct-set__l { padding-top: 10px; }
 .ct-date { max-width: 240px; }
 .ct-kh { display: flex; gap: 10px; align-items: center; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--soft); }
-.ct-kh__main { min-width: 0; flex: 1; }
+.ct-kh__main { min-width: 0; flex: 1 1 160px; }
+.ct-kh { flex-wrap: wrap; }
+.ct-kh > .ct-lnk { white-space: nowrap; margin-left: auto; }
 .ct-kh__name { font-weight: 600; overflow-wrap: anywhere; }
 .ct-cs { display: flex; flex-direction: column; gap: 8px; }
 .ct-cs__row { display: flex; gap: 8px; align-items: flex-start; }

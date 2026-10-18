@@ -1511,4 +1511,32 @@ describe('trần số tiền của hợp đồng (MAX_MONEY_VND)', () => {
     const patch = await request(app).patch(url(A.orgId, `/${ok.body.id}`)).set(bearer(A.owner)).send({ expectedUpdatedAt: ok.body.updatedAt, discount: over });
     expect([patch.status, patch.body.error.details.issues]).toEqual([400, [{ path: 'discount', message: MONEY_TOO_LARGE_MESSAGE }]]);
   });
+
+  // P3 (thợ S5): database chặn mọi cột tiền > trần (migration 20261018250000) nhưng chỉ báo lời chung. Số TÍNH RA (thành tiền
+  // dòng, tạm tính, tổng) phải được kiểm trước khi ghi, ở mọi cửa, với lời rõ.
+  it('tổng vượt trần: 2 dòng 60 tỷ → 400 "Tổng hợp đồng quá lớn (tối đa …)" ở xem trước, tạo, sửa nháp, thêm dòng; đúng trần → nhận; thành tiền dòng vượt trần → 400', async () => {
+    const { MAX_MONEY_VND } = await import('../src/lib/money');
+    const cap = `${MAX_MONEY_VND.toLocaleString('vi-VN')} đ`;
+    const totalMsg = `Tổng hợp đồng quá lớn (tối đa ${cap})`;
+    const custom = (name: string, unitPrice: number, quantity = 1) => ({ kind: 'CUSTOM', name, unitPrice, quantity });
+    const big = { customerId: customerA, lines: [custom('Khoản A', 60_000_000_000), custom('Khoản B', 60_000_000_000)] };
+    for (const r of [await quote(A.owner, A.orgId, big), await create(A.owner, A.orgId, big)]) {
+      expect([r.status, r.body.error.code, r.body.error.message]).toEqual([400, 'VALIDATION_FAILED', totalMsg]);
+      expect(r.body.error.details).toMatchObject({ field: 'subtotal', subtotal: 120_000_000_000, max: MAX_MONEY_VND });
+    }
+    // Đúng trần (50 + 50 tỷ) → nhận.
+    const edge = await create(A.owner, A.orgId, { customerId: customerA, lines: [custom('Khoản A', 50_000_000_000), custom('Khoản B', 50_000_000_000)] });
+    expect([edge.status, edge.body.total]).toEqual([201, MAX_MONEY_VND]);
+    // Thêm dòng làm tổng vượt trần → 400, hợp đồng giữ nguyên.
+    const add = await request(app).post(url(A.orgId, `/${edge.body.id}/lines`)).set(bearer(A.owner)).set('idempotency-key', idem()).send(custom('Thêm', 1));
+    expect([add.status, add.body.error.message]).toEqual([400, totalMsg]);
+    expect((await deps.db.contractLine.count({ where: { contractId: edge.body.id } }))).toBe(2);
+    // Sửa nháp thay dòng → 400.
+    const p = await request(app).patch(url(A.orgId, `/${edge.body.id}`)).set(bearer(A.owner)).send({ expectedUpdatedAt: edge.body.updatedAt, lines: big.lines });
+    expect([p.status, p.body.error.message]).toEqual([400, totalMsg]);
+    // Một dòng: số lượng × đơn giá vượt trần → 400 nêu tên dòng.
+    const line = await quote(A.owner, A.orgId, { customerId: customerA, lines: [custom('Khoản nhân', 60_000_000_000, 2)] });
+    expect([line.status, line.body.error.message]).toEqual([400, `Thành tiền dòng "Khoản nhân" quá lớn (tối đa ${cap})`]);
+    expect(line.body.error.details).toMatchObject({ line: 0, field: 'lineTotal' });
+  });
 });

@@ -75,6 +75,8 @@
 .ws-c__nm { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ws-c__meta { font-size: 12px; color: var(--muted); }
 .ws-c__rh.is-na .ws-c__nm { color: var(--muted); }
+/* Hàng "Chưa có thợ" ở 1024: cột tên hẹp — cho xuống dòng thay vì cắt "Chưa có t…". */
+.ws-c__rh.is-na .ws-c__nm { white-space: normal; }
 .ws-c__cell {
   border-left: 1px solid var(--line-2); border-bottom: 1px solid var(--line-2);
   padding: 6px; display: flex; flex-direction: column; gap: 4px; min-height: 96px; min-width: 0;

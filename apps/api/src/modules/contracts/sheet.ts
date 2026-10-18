@@ -560,6 +560,7 @@ export async function buildSheet(
       input.discount,
     ),
   );
+  assertTotalsCap(subtotal);
   const suggestedDeposit = money(() =>
     computeSuggestedDeposit(
       lines.map((l) => l.packageDeposit),

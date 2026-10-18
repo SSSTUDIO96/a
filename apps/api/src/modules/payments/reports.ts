@@ -229,7 +229,7 @@ async function courseShares(db: Db, orgId: string, contractIds: string[]) {
     ORDER BY l.contract_id, co.id`;
 }
 
-interface Bucket {
+export interface Bucket {
   contractCount: number;
   sales: bigint;
   depositRequired: bigint;
@@ -239,7 +239,7 @@ interface Bucket {
   refunded: bigint;
 }
 
-const emptyBucket = (): Bucket => ({
+export const emptyBucket = (): Bucket => ({
   contractCount: 0,
   sales: 0n,
   depositRequired: 0n,
@@ -294,7 +294,7 @@ function addTo(b: Bucket, c: Record<Money, bigint>, booked: boolean) {
 
 // Số vượt ngưỡng số nguyên an toàn (dữ liệu cũ trước trần 100 tỷ/phiếu) → null, KHÔNG ném lỗi 500 làm sập cả báo cáo
 // (biên bản máy chủ lát 2, M3). Phản hồi có cờ totalsOverflow để giao diện báo "tổng quá lớn — kiểm lại phiếu".
-function presentBucket(b: Bucket) {
+export function presentBucket(b: Bucket) {
   return {
     contractCount: b.contractCount,
     sales: vndOrNull(b.sales),

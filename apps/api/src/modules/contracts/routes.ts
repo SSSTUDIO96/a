@@ -26,7 +26,7 @@ import {
   type ContractBody,
   type ContractKindKey,
 } from './schemas';
-import { buildSheet, insertLines, money, planLines } from './sheet';
+import { assertTotalsCap, buildSheet, insertLines, money, planLines } from './sheet';
 import { contractSummarySelect, loadContractDetail, loadStaffMap, presentSheet, presentSummary, sheetWarnings } from './present';
 import { classSeats, enrollContractLines, releaseEnrollments } from './enroll';
 import { checkChosenText, contractTextRoutes, snapshotTexts } from './texts';
@@ -811,7 +811,10 @@ export const contractRoutes: AnyRoute[] = [
   }),
 ];
 
+// Tính lại tổng từ các dòng đã ghi (thêm dòng, đổi giảm giá nháp). Tạm tính vượt trần chung → 400 lời rõ trước khi ghi.
 async function recompute(tx: Tx, orgId: string, contractId: string, discount: Vnd) {
   const rows = await lineTotals(tx, orgId, contractId);
-  return money(() => computeContractTotals(rows, discount));
+  const totals = money(() => computeContractTotals(rows, discount));
+  assertTotalsCap(totals.subtotal);
+  return totals;
 }

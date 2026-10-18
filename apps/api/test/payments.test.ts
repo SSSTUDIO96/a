@@ -3,6 +3,8 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import request from 'supertest';
+import { vndOrNull } from '../src/modules/payments/common';
+import { emptyBucket, presentBucket } from '../src/modules/payments/reports';
 import { addMember, bearer, createOrg, makeApp, makeDeps, registerUser, type App, type TestUser } from './helpers';
 
 const deps = makeDeps();
@@ -452,33 +454,79 @@ describe('sửa nghiệm thu máy chủ lát 2 — thu tiền', () => {
     await pay(o.owner, o.orgId, c.id, { method: 'CASH', amount: 100_000_000_000, allowOverpay: true, note: 'trần' }).expect(201);
   });
 
-  it('M3 — dữ liệu cũ: 2 phiếu 5 triệu tỷ (ghi thẳng database, trước khi có trần) → báo cáo + sổ thu 200, tổng null + cờ totalsOverflow, danh sách phiếu vẫn đủ', async () => {
-    const o = await newOrg('m3-cu');
+  // Bài cũ ghi thẳng 2 phiếu 5 triệu tỷ để giả "dữ liệu cũ trước khi có trần". Từ migration 20261018250000_tran_so_tien
+  // database cấm mọi số tiền > 100 tỷ nên không còn tạo được dòng đó (điều phối quyết P1). Ý của bài cũ giữ nguyên, tách ba:
+  //  (a) hàm thuần vndOrNull / presentBucket: tổng vượt ngưỡng số nguyên an toàn → null, không ném lỗi;
+  //  (b) đầu cuối trên database THẬT: 90.072 phiếu ĐÚNG trần 100 tỷ (hợp lệ) → tổng 9.007.200.000.000.000 > ngưỡng
+  //      9.007.199.254.740.991 → sổ thu + báo cáo vẫn 200, tổng null + cờ totalsOverflow, danh sách phiếu vẫn đủ;
+  //  (c) database chặn phiếu vượt trần khi ghi thẳng (lách máy chủ).
+  it('M3 (a) — vndOrNull / presentBucket: vượt ngưỡng an toàn → null (không ném lỗi), đúng ngưỡng → số', () => {
+    const SAFE = BigInt(Number.MAX_SAFE_INTEGER);
+    expect(vndOrNull(SAFE)).toBe(Number.MAX_SAFE_INTEGER);
+    expect(vndOrNull(SAFE + 1n)).toBeNull();
+    expect(vndOrNull(-SAFE)).toBe(-Number.MAX_SAFE_INTEGER);
+    expect(vndOrNull(-SAFE - 1n)).toBeNull();
+    const b = { ...emptyBucket(), contractCount: 2, sales: 2_000_000n, paidToDate: 2n * SAFE, received: SAFE + 1_000n, refunded: 1_000n };
+    const out = presentBucket(b);
+    expect(out).toEqual({
+      contractCount: 2,
+      sales: 2_000_000,
+      depositRequired: 0,
+      depositOutstanding: 0,
+      outstanding: null, // 2.000.000 − 2 × ngưỡng < −ngưỡng
+      received: null,
+      refunded: 1_000,
+      collected: Number.MAX_SAFE_INTEGER, // (ngưỡng + 1.000) − 1.000: tổng gộp về lại trong ngưỡng thì vẫn là số
+    });
+  });
+
+  it('M3 (b) — 90.072 phiếu đúng trần 100 tỷ (tổng vượt ngưỡng an toàn) → sổ thu + báo cáo 200, tổng null + cờ totalsOverflow, danh sách phiếu vẫn đủ', async () => {
+    const o = await newOrg('m3-tong');
     const c1 = await newContract(o, 1_000_000);
     const c2 = await newContract(o, 1_000_000);
-    await pay(o.owner, o.orgId, c1.id, { method: 'CASH', amount: 1_000 }).expect(201);
-    for (const [i, c] of [c1, c2].entries()) {
-      await deps.db.payment.create({
-        data: { organizationId: o.orgId, contractId: c.id, code: `PT-CU-${i}`, kind: 'RECEIPT', method: 'CASH', amount: 5_000_000_000_000_000n, receivedAt: new Date(), note: 'dữ liệu cũ', createdById: o.owner.id },
-      });
-    }
+    const N = 90_072; // 90.072 × 100 tỷ = 9.007.200.000.000.000 > Number.MAX_SAFE_INTEGER
+    expect(BigInt(N) * 100_000_000_000n > BigInt(Number.MAX_SAFE_INTEGER)).toBe(true);
+    expect(BigInt(N - 1) * 100_000_000_000n + 1_000n <= BigInt(Number.MAX_SAFE_INTEGER)).toBe(true);
+    await pay(o.owner, o.orgId, c2.id, { method: 'CASH', amount: 1_000 }).expect(201);
+    // Ghi một lần bằng SQL (qua API sẽ mất hàng giờ). Mỗi phiếu đều hợp lệ (= trần) — database nhận.
+    await deps.db.$executeRaw`
+      INSERT INTO payments (id, organization_id, contract_id, code, kind, method, amount, received_at, note, created_by_id)
+      SELECT gen_random_uuid(), ${o.orgId}::uuid, ${c1.id}::uuid, 'PT-TRAN-' || g, 'RECEIPT', 'CASH', 100000000000, now(), 'phiếu đúng trần', ${o.owner.id}::uuid
+      FROM generate_series(1, ${N}::int) g`;
     const from = at(-DAY);
     const to = at(DAY);
-    const ledger = await request(app).get(api(o.orgId, '/payments')).query({ from, to }).set(bearer(o.owner));
-    const month = await request(app).get(api(o.orgId, '/reports/revenue')).query({ from, to, groupBy: 'month' }).set(bearer(o.owner));
-    const byC = await request(app).get(api(o.orgId, '/reports/revenue')).query({ from, to, groupBy: 'contract' }).set(bearer(o.owner));
-    console.log(`[M3] dữ liệu cũ vượt ngưỡng: sổ thu → ${ledger.status} (${ledger.body.items?.length} phiếu, tổng thu ${ledger.body.totals?.received}); báo cáo tháng → ${month.status}; theo hợp đồng → ${byC.status}`);
-    expect([ledger.status, month.status, byC.status]).toEqual([200, 200, 200]);
-    expect(ledger.body.items).toHaveLength(3);
-    expect(ledger.body.items.some((i: { amount: number }) => i.amount === 5_000_000_000_000_000)).toBe(true);
+    const get = (path: string, q: object) => request(app).get(api(o.orgId, path)).query({ from, to, ...q }).set(bearer(o.owner));
+    const ledger = await get('/payments', {});
+    const month = await get('/reports/revenue', { groupBy: 'month' });
+    const byC = await get('/reports/revenue', { groupBy: 'contract' });
+    const byKind = await get('/reports/revenue', { groupBy: 'kind' });
+    console.log(`[M3] ${N + 1} phiếu, tổng vượt ngưỡng: sổ thu → ${ledger.status} (tổng ${ledger.body.total} phiếu, tổng thu ${ledger.body.totals?.received}); báo cáo tháng → ${month.status}; theo hợp đồng → ${byC.status}; theo loại → ${byKind.status}`);
+    expect([ledger.status, month.status, byC.status, byKind.status]).toEqual([200, 200, 200, 200]);
+    expect(ledger.body.total).toBe(N + 1);
+    expect(ledger.body.items.length).toBeGreaterThan(0);
+    expect(ledger.body.items.some((i: { amount: number }) => i.amount === 100_000_000_000)).toBe(true);
     expect(ledger.body.totals.received).toBeNull();
     expect(ledger.body.totalsOverflow).toBe(true);
-    expect(month.body.totalsOverflow).toBe(true);
-    expect(month.body.totals.received).toBeNull();
+    for (const r of [month, byKind]) {
+      expect(r.body.totalsOverflow).toBe(true);
+      expect(r.body.totals.received).toBeNull();
+    }
     expect(byC.body.totalsOverflow).toBe(true);
     expect(byC.body.rows).toHaveLength(2);
-    // Từng hợp đồng vẫn đọc được số của mình (một phiếu không vượt ngưỡng).
-    expect(byC.body.rows.map((r: { paid: number }) => r.paid).sort()).toEqual([5_000_000_000_000_000, 5_000_000_000_001_000].sort());
+    // Hợp đồng có tổng thu vượt ngưỡng → null; hợp đồng kia vẫn đọc được số của mình.
+    const paidOf = (id: string) => byC.body.rows.find((r: { contractId: string }) => r.contractId === id)?.paid;
+    expect(paidOf(c1.id)).toBeNull();
+    expect(paidOf(c2.id)).toBe(1_000);
+  });
+
+  it('M3 (c) — ghi thẳng database một phiếu 100.000.000.001 đ (lách máy chủ) → database chặn (payments_amount_cap), không ghi', async () => {
+    const o = await newOrg('m3-db');
+    const c = await newContract(o, 1_000_000);
+    const err = await deps.db.payment
+      .create({ data: { organizationId: o.orgId, contractId: c.id, code: 'PT-VUOT', kind: 'RECEIPT', method: 'CASH', amount: 100_000_000_001n, receivedAt: new Date(), note: 'vượt trần', createdById: o.owner.id } })
+      .catch((e: unknown) => e);
+    expect(String(err)).toMatch(/payments_amount_cap/);
+    expect(await deps.db.payment.count({ where: { contractId: c.id } })).toBe(0);
   });
 
   it('N5 — vai trò chỉ có payments.read (không có customers.read) → tiến độ thu tiền KHÔNG có SĐT khách; có customers.read → có', async () => {
