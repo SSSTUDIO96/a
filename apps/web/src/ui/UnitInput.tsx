@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type ChangeEvent,
@@ -90,6 +91,15 @@ export function UnitInput({
     }
   }, [localError]);
 
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const pendingSelection = useRef<{ start: number; end: number } | null>(null);
+  useLayoutEffect(() => {
+    const el = inputRef.current;
+    const sel = pendingSelection.current;
+    pendingSelection.current = null;
+    if (sel && el && document.activeElement === el) el.setSelectionRange(sel.start, sel.end);
+  });
+
   const shownError = localError ?? error;
   const f = useFieldIds({ error: shownError, hint }, describedByProp);
   const text = draft ?? (value === null ? '' : formatDecimal(value, fractionDigits));
@@ -120,7 +130,15 @@ export function UnitInput({
 
   function handleFocus(e: FocusEvent<HTMLInputElement>) {
     // Đang sửa: không chèn dấu chấm ngăn nghìn ("2500", không phải "2.500") để chữ trong ô không tự thành dạng mơ hồ.
-    if (draft === null) setDraft(value === null ? '' : formatDecimal(value, fractionDigits, false));
+    if (draft === null) {
+      const el = e.currentTarget;
+      const next = value === null ? '' : formatDecimal(value, fractionDigits, false);
+      // Chữ đổi dạng làm trình duyệt bỏ vùng chọn: đang chọn hết thì giữ chọn hết (chọn hết rồi gõ = thay cả ô).
+      if (next !== el.value && el.value.length > 0 && el.selectionStart === 0 && (el.selectionEnd ?? 0) >= el.value.length) {
+        pendingSelection.current = { start: 0, end: next.length };
+      }
+      setDraft(next);
+    }
     onFocus?.(e);
   }
 
@@ -133,6 +151,7 @@ export function UnitInput({
     <FieldShell error={shownError} hint={hint} errorId={f.errorId} hintId={f.hintId} className={className}>
       <span className="ui-unit">
         <input
+          ref={inputRef}
           type="text"
           inputMode={fractionDigits > 0 ? 'decimal' : 'numeric'}
           autoComplete="off"

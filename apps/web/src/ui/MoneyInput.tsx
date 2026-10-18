@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type ChangeEvent,
@@ -64,6 +65,17 @@ export function MoneyInput({
 }: MoneyInputProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const setCaret = useCaret(inputRef);
+  // Vùng chọn hẹn áp sau lần vẽ kế tiếp (khi chữ trong ô vừa đổi dạng lúc nhận tiêu điểm).
+  const pendingSelection = useRef<{ start: number; end: number } | null>(null);
+  const setSelection = (sel: { start: number; end: number }) => {
+    pendingSelection.current = sel;
+  };
+  useLayoutEffect(() => {
+    const el = inputRef.current;
+    const sel = pendingSelection.current;
+    pendingSelection.current = null;
+    if (sel && el && document.activeElement === el) el.setSelectionRange(sel.start, sel.end);
+  });
   const [focused, setFocused] = useState(false);
   // Chữ đang hiện khi có lỗi tự phát hiện hoặc đang gõ; null = hiện theo `value`.
   const [draft, setDraft] = useState<string | null>(null);
@@ -186,7 +198,20 @@ export function MoneyInput({
 
   function handleFocus(e: FocusEvent<HTMLInputElement>) {
     setFocused(true);
-    if (draft === null) setDraft(displayOf(value, true));
+    if (draft === null) {
+      // Chữ đổi dạng ("1.500.000 ₫" → "1.500.000") làm trình duyệt bỏ vùng chọn. Giữ lại: đang chọn hết thì vẫn chọn hết
+      // (để "chọn hết rồi gõ" thay cả ô, như Playwright fill hoặc bấm 3 lần); không thì giữ con trỏ sau đúng số chữ số.
+      const el = e.currentTarget;
+      const start = el.selectionStart ?? el.value.length;
+      const end = el.selectionEnd ?? start;
+      const next = displayOf(value, true);
+      if (el.value.length > 0 && start === 0 && end >= el.value.length) setSelection({ start: 0, end: next.length });
+      else {
+        const a = caretAfterDigits(next, digitsBefore(el.value, start));
+        setSelection({ start: a, end: end === start ? a : caretAfterDigits(next, digitsBefore(el.value, end)) });
+      }
+      setDraft(next);
+    }
     onFocus?.(e);
   }
 

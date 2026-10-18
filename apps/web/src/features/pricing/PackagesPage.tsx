@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { listMakeupSubjects, listPackages, listServices } from '../../api/catalog';
 import type { MakeupSubject, Service, ServicePackage } from '../../api/types';
-import { Button, Card, EmptyState, formatVnd, IconPlus, Skeleton } from '../../ui';
+import { Button, Card, Chip, formatVnd, IconPlus, Skeleton, StatusTag } from '../../ui';
 import { useOrgId, usePricingPerms, useResource } from './hooks';
-import { fetchAllPages, placeLabel, subjectCards, type SubjectCard } from './logic';
+import { fetchAllPages, filterActive, placeLabel, splitCards, subjectCards, type SubjectCard } from './logic';
 import { PackageDialog, type PackageTarget } from './PackageDialog';
 import { LoadError } from './parts';
 import { PricingHeader } from './PricingHeader';
@@ -23,8 +23,10 @@ export function PackagesPage() {
     async (signal) => {
       const [subjects, packages, services] = await Promise.all([
         listMakeupSubjects(orgId, undefined, signal).then((r) => r.items),
-        fetchAllPages((page, pageSize) => listPackages(orgId, { isActive: true, page, pageSize }, signal)),
-        fetchAllPages((page, pageSize) => listServices(orgId, { isActive: true, page, pageSize }, signal)),
+        // Lấy cả gói ngừng bán; danh sách lọc ở máy theo chip "Cả ngừng bán".
+        fetchAllPages((page, pageSize) => listPackages(orgId, { page, pageSize }, signal)),
+        // Cả dịch vụ ngừng bán: gói cũ còn để tick thì vẫn hiện tên để bỏ tick được.
+        fetchAllPages((page, pageSize) => listServices(orgId, { page, pageSize }, signal)),
       ]);
       return { subjects, packages, services };
     },
@@ -34,6 +36,7 @@ export function PackagesPage() {
   // Đổi key mỗi lần mở để hộp bắt đầu sạch.
   const [dialogKey, setDialogKey] = useState(0);
   const [addingSubject, setAddingSubject] = useState(false);
+  const [showInactive, setShowInactive] = useState(false);
 
   function open(t: PackageTarget) {
     setDialogKey((k) => k + 1);
@@ -55,19 +58,46 @@ export function PackagesPage() {
   if (res.status === 'loading') body = <GridSkeleton />;
   else if (res.status === 'error') body = <LoadError error={res.error} retry={reload} />;
   else {
-    const cards = subjectCards(res.data.subjects, res.data.packages);
+    const inactiveCount = res.data.packages.filter((p) => !p.isActive).length;
+    const { filled, empty } = splitCards(subjectCards(res.data.subjects, filterActive(res.data.packages, showInactive)));
     body = (
-      <div className="pr-grid">
-        {cards.map((c) => (
-          <SubjectCardView key={c.subjectId ?? 'moi-nhan-vat'} card={c} canAdd={perms.canCreatePriced} onOpen={(pkg) => open({ kind: 'edit', pkg })} onAdd={() => open({ kind: 'create', subjectId: c.subjectId })} />
-        ))}
-        {perms.catalogWrite && (
-          <button type="button" className="pr-add-tile" onClick={() => setAddingSubject(true)}>
-            <IconPlus />
-            Thêm nhân vật
-          </button>
+      <>
+        {inactiveCount > 0 && (
+          <div className="pr-filter">
+            <Chip selected={showInactive} count={inactiveCount} onClick={() => setShowInactive((v) => !v)}>
+              Cả ngừng bán
+            </Chip>
+          </div>
         )}
-      </div>
+        <div className="pr-grid">
+          {filled.map((c) => (
+            <SubjectCardView key={c.subjectId ?? 'moi-nhan-vat'} card={c} canAdd={perms.canCreatePriced} onOpen={(pkg) => open({ kind: 'edit', pkg })} onAdd={() => open({ kind: 'create', subjectId: c.subjectId })} />
+          ))}
+          {perms.catalogWrite && (
+            <button type="button" className="pr-add-tile" onClick={() => setAddingSubject(true)}>
+              <IconPlus />
+              Thêm nhân vật
+            </button>
+          )}
+        </div>
+        {empty.length > 0 && (
+          <p className="pr-nopkg">
+            <span className="pr-nopkg__lbl">Chưa có gói:</span>
+            {empty.map((c, i) => (
+              <span key={c.subjectId ?? 'moi-nhan-vat'} className="pr-nopkg__item">
+                {i > 0 && <span aria-hidden="true"> · </span>}
+                {perms.canCreatePriced ? (
+                  <button type="button" className="pr-nopkg__btn" aria-label={`Thêm gói cho ${c.name.toLocaleLowerCase('vi')}`} onClick={() => open({ kind: 'create', subjectId: c.subjectId })}>
+                    {c.name}
+                  </button>
+                ) : (
+                  c.name
+                )}
+              </span>
+            ))}
+          </p>
+        )}
+      </>
     );
   }
 
@@ -124,17 +154,13 @@ function SubjectCardView({ card, canAdd, onOpen, onAdd }: { card: SubjectCard; c
         ) : undefined
       }
     >
-      {card.packages.length === 0 ? (
-        <EmptyState message="Chưa có gói." />
-      ) : (
-        <ul className="pr-list">
-          {card.packages.map((p) => (
-            <li key={p.id}>
-              <PackageRow pkg={p} onOpen={() => onOpen(p)} />
-            </li>
-          ))}
-        </ul>
-      )}
+      <ul className="pr-list">
+        {card.packages.map((p) => (
+          <li key={p.id}>
+            <PackageRow pkg={p} onOpen={() => onOpen(p)} />
+          </li>
+        ))}
+      </ul>
     </Card>
   );
 }
@@ -143,7 +169,10 @@ function SubjectCardView({ card, canAdd, onOpen, onAdd }: { card: SubjectCard; c
 export function PackageRow({ pkg, onOpen }: { pkg: ServicePackage; onOpen: () => void }) {
   return (
     <button type="button" className="pr-row" onClick={onOpen}>
-      <span className="pr-row__name">{pkg.name}</span>
+      <span className="pr-row__name">
+        {pkg.name}
+        {!pkg.isActive && <StatusTag className="pr-off">Ngừng bán</StatusTag>}
+      </span>
       <span className="pr-row__meta">{placeLabel(pkg.locationTypes)}</span>
       <b className="pr-row__price num">{pkg.currentPrice ? formatVnd(pkg.currentPrice.unitPrice) : 'Chưa có giá'}</b>
     </button>

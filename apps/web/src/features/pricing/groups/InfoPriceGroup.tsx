@@ -1,6 +1,6 @@
 import { useId } from 'react';
 import type { MakeupSubject } from '../../../api/types';
-import { MoneyInput, Select, SettingRow, TextInput, UnitInput, type SelectOption } from '../../../ui';
+import { MoneyInput, Select, SettingRow, Switch, TextInput, UnitInput, type SelectOption } from '../../../ui';
 import { ALL_SUBJECTS_LABEL, type FormErrors, type PackageForm, type PricingPerms } from '../logic';
 import { Group } from '../parts';
 
@@ -14,6 +14,7 @@ export interface GroupProps {
 }
 
 export const TIP_SUBJECT = 'Để Mọi nhân vật nếu gói dùng cho ai cũng được.';
+export const TIP_ACTIVE = 'Tắt = ngừng bán: ẩn khỏi danh sách, không xoá. Hợp đồng đã lập không đổi.';
 export const TIP_SALE = 'Bỏ trống nếu không giảm. Hợp đồng dùng giá bán khi có. Đổi giá = thêm bản giá mới; hợp đồng cũ giữ giá đã chốt.';
 
 // Số nguyên dương từ ô chữ: rỗng → null; có ký tự khác chữ số → giữ nguyên giá trị cũ.
@@ -114,6 +115,9 @@ export function InfoPriceGroup({
           error={errors.depositAmount}
           disabled={!canEdit}
         />
+      </SettingRow>
+      <SettingRow label="Đang bán" htmlFor={`${id}-ban`} tip={TIP_ACTIVE} controlWidth={180}>
+        <Switch id={`${id}-ban`} checked={form.isActive} onChange={(v) => set({ isActive: v })} disabled={!canEdit} />
       </SettingRow>
     </Group>
   );

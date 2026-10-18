@@ -130,6 +130,8 @@ export function ContractEditor({ orgId, slug, tz, has, contractId }: ContractEdi
   const [voidTarget, setVoidTarget] = useState<{ id: string; name: string } | null>(null);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
+  // Đã sửa ô cọc: hiện đúng số người nhập (trống = theo gợi ý); chưa sửa: hiện số máy chủ trả.
+  const [depositTouched, setDepositTouched] = useState(false);
   const [refreshed, setRefreshed] = useState<{ key: string; data: ContractQuote } | null>(null);
   const idemKey = useRef(newIdempotencyKey());
   const pickRef = useRef<HTMLDivElement>(null);
@@ -410,7 +412,13 @@ export function ContractEditor({ orgId, slug, tz, has, contractId }: ContractEdi
       </StatusTag>
     );
   const totals = draftMode ? quoteData : detail;
-  const deposit = draftMode ? (draft.depositRequired ?? quoteData?.depositRequired ?? null) : (detail?.depositRequired ?? null);
+  const depositInput = draftMode
+    ? depositTouched
+      ? draft.depositRequired
+      : (draft.depositRequired ?? quoteData?.depositRequired ?? null)
+    : (detail?.depositRequired ?? null);
+  // Thanh tổng: luôn số máy chủ trả.
+  const deposit = draftMode ? (quoteData?.depositRequired ?? null) : (detail?.depositRequired ?? null);
 
   // Dòng hiện trên màn: nháp → các dòng đang nhập; đã xác nhận → dòng máy chủ (kể cả dòng đã huỷ, phát sinh).
   const placedCards = draftMode
@@ -656,14 +664,17 @@ export function ContractEditor({ orgId, slug, tz, has, contractId }: ContractEdi
             total={totals?.total ?? null}
             suggestedDeposit={draftMode ? (quoteData?.suggestedDeposit ?? null) : null}
             discount={draft.discount}
-            deposit={deposit}
+            deposit={depositInput}
             notes={draft.notes}
             moneyLocked={!draftMode || !ab.canEdit}
             notesLocked={!ab.canEditNotes}
             pending={draftMode && pending}
             errors={errors}
             onDiscount={(discount) => update((d) => ({ ...d, discount }))}
-            onDeposit={(depositRequired) => update((d) => ({ ...d, depositRequired }))}
+            onDeposit={(depositRequired) => {
+              setDepositTouched(true);
+              update((d) => ({ ...d, depositRequired }));
+            }}
             onNotes={(notes) => update((d) => ({ ...d, notes }))}
             onNotesBlur={status === 'CONFIRMED' ? () => void saveNotes() : undefined}
           />

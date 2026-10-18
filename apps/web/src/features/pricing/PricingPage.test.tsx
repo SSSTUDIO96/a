@@ -148,7 +148,9 @@ describe('Gói theo nhân vật — danh sách gọn', () => {
     expect([...row.children].map((c) => c.textContent)).toEqual(['Cô dâu – Ngày cưới', 'Mọi nơi', '2.700.000 ₫']);
     expect(screen.getByRole('button', { name: /Mẹ – Trang điểm nhẹ nhàng/ }).textContent).toContain('Studio · Tại nhà');
     expect(screen.getByRole('heading', { name: /Cô dâu.*1 gói/ })).toBeTruthy();
-    expect(screen.getByRole('heading', { name: /Mọi nhân vật.*0 gói/ })).toBeTruthy();
+    // "Mọi nhân vật" chưa có gói: không có thẻ riêng, nằm trong dòng gọn "Chưa có gói:" ở cuối.
+    expect(screen.queryByRole('heading', { name: /Mọi nhân vật/ })).toBeNull();
+    expect(screen.getByText('Chưa có gói:').parentElement?.textContent).toBe('Chưa có gói:Mọi nhân vật');
     // Không ô tick trong danh sách chỉ để xem.
     expect(screen.queryAllByRole('checkbox')).toHaveLength(0);
     expect(screen.getByRole('button', { name: 'Thêm gói' })).toBeTruthy();
@@ -448,5 +450,60 @@ describe('Dịch vụ phụ & phụ phí, Nhân vật', () => {
       ['/orgs/org-1/makeup-subjects/s2', { sortOrder: 0 }],
       ['/orgs/org-1/makeup-subjects/s1', { sortOrder: 1 }],
     ]);
+  });
+});
+
+describe('Bổ sung theo duyệt của điều phối: nhân vật chưa có gói, Đang bán, Dịch vụ trong gói', () => {
+  it('nhân vật chưa có gói gom một dòng cuối; bấm tên → hộp tạo gói cho đúng nhân vật', async () => {
+    const user = userEvent.setup();
+    const extra = { ...SUBJECTS[0], id: 's3', name: 'Chú rể', sortOrder: 2 };
+    setupServer(OWNER, (m, p) => (p === '/orgs/org-1/makeup-subjects' ? json(200, { items: [...SUBJECTS, extra] }) : undefined));
+    renderAt('/chien/bang-gia/goi');
+    await screen.findByRole('button', { name: /Cô dâu – Ngày cưới/ });
+    expect(screen.getByText('Chưa có gói:').parentElement?.textContent).toBe('Chưa có gói:Chú rể · Mọi nhân vật');
+    // Chỉ 2 thẻ (nhân vật có gói), không thẻ rỗng.
+    expect(document.querySelectorAll('.pr-subj')).toHaveLength(2);
+    await user.click(screen.getByRole('button', { name: 'Thêm gói cho chú rể' }));
+    const dlg = await screen.findByRole('dialog', { name: 'Gói mới' });
+    expect(dlg.querySelector('.ui-dialog__eyebrow')?.textContent).toBe('Chú rể');
+  });
+
+  it('gói ngừng bán: mặc định ẩn; chip "Cả ngừng bán" (đếm 1) hiện lại kèm nhãn "Ngừng bán"', async () => {
+    const user = userEvent.setup();
+    const off = { ...PKG2, id: 'p3', code: 'G-OLD', name: 'Gói cũ', isActive: false };
+    setupServer(OWNER, (m, p) => (p === '/orgs/org-1/packages' && m === 'GET' ? json(200, { items: [PKG, PKG2, off], page: 1, pageSize: 100, total: 3 }) : undefined));
+    renderAt('/chien/bang-gia/goi');
+    await screen.findByRole('button', { name: /Cô dâu – Ngày cưới/ });
+    expect(screen.queryByRole('button', { name: /Gói cũ/ })).toBeNull();
+    const chip = screen.getByRole('button', { name: /Cả ngừng bán/ });
+    expect(chip.getAttribute('aria-pressed')).toBe('false');
+    expect(chip.textContent).toBe('Cả ngừng bán1');
+    await user.click(chip);
+    expect((await screen.findByRole('button', { name: /Gói cũ/ })).textContent).toContain('Ngừng bán');
+  });
+
+  it('công tắc "Đang bán" trong hộp gói → PATCH {isActive:false}, không xoá', async () => {
+    const user = userEvent.setup();
+    const calls = setupServer(OWNER);
+    renderAt('/chien/bang-gia/goi');
+    const dlg = await openPackage();
+    const sw = within(dlg).getByRole('switch', { name: 'Đang bán' });
+    expect(sw.getAttribute('aria-checked')).toBe('true');
+    await user.click(sw);
+    await user.click(within(dlg).getByRole('button', { name: 'Lưu' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(writes(calls)).toEqual(['PATCH /orgs/org-1/packages/p1']);
+    expect(calls.find((c) => c.method === 'PATCH')?.body).toEqual({ isActive: false });
+  });
+
+  it('trang Dịch vụ có nhóm thứ ba "Dịch vụ trong gói" (loại MAIN), mở cùng hộp dịch vụ có "Đang bán"', async () => {
+    const user = userEvent.setup();
+    setupServer(OWNER);
+    renderAt('/chien/bang-gia/dich-vu');
+    const section = await screen.findByRole('region', { name: 'Dịch vụ trong gói' });
+    await user.click(within(section).getByRole('button', { name: /Makeup cô dâu/ }));
+    const dlg = await screen.findByRole('dialog', { name: 'Makeup cô dâu' });
+    expect(dlg.querySelector('.ui-dialog__eyebrow')?.textContent).toBe('Dịch vụ trong gói · MCD');
+    expect(within(dlg).getByRole('switch', { name: 'Đang bán' })).toBeTruthy();
   });
 });

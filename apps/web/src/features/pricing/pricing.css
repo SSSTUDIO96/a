@@ -228,3 +228,22 @@ span.pr-subrow__name { padding-left: 8px; }
   .pr-trow + .pr-trow:not(.pr-trow--head) { border-top: 1px solid var(--line-2); }
   .pr-trow--head + .pr-trow { border-top: 0; }
 }
+
+/* Chip lọc "Cả ngừng bán" và nhãn trên dòng ngừng bán */
+.pr-filter { display: flex; gap: 8px; margin-bottom: 12px; }
+.pr-off.ui-tag { margin-left: 8px; vertical-align: 1px; }
+
+/* Nhân vật chưa có gói: một dòng gọn cuối danh sách, mỗi tên mở hộp tạo gói */
+.pr-nopkg { margin-top: 14px; font-size: 13px; color: var(--muted); line-height: 1.7; overflow-wrap: anywhere; }
+.pr-nopkg__lbl { margin-right: 6px; }
+.pr-nopkg__btn {
+  font: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--accent);
+  font-weight: 600;
+  cursor: pointer;
+}
+.pr-nopkg__btn:hover { text-decoration: underline; }
+.pr-nopkg__btn:focus-visible { outline: var(--focus-ring); outline-offset: var(--focus-offset); border-radius: 4px; }

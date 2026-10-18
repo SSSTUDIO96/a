@@ -3,9 +3,9 @@ import { addServicePrice, createService, updateService } from '../../api/catalog
 import { getServicePayRates, putServicePayRates } from '../../api/staff';
 import type { PayRateSheet, PayRatesInput, Service, ServiceKind } from '../../api/types';
 import { useOnline } from '../../layout/ErrorStates';
-import { Button, Dialog, MoneyInput, SettingRow, TextInput, UnitInput } from '../../ui';
+import { Button, Dialog, MoneyInput, SettingRow, Switch, TextInput, UnitInput } from '../../ui';
 import { useFirstErrorFocus, useInputErrors, useStableKey } from './formHooks';
-import { TIP_SALE } from './groups/InfoPriceGroup';
+import { TIP_ACTIVE, TIP_SALE } from './groups/InfoPriceGroup';
 import { PayRatesGroup } from './groups/PayRatesGroup';
 import { useResource } from './hooks';
 import {
@@ -26,7 +26,7 @@ import { ErrorBanner, Group } from './parts';
 
 export type ServiceTarget = { kind: 'edit'; service: Service } | { kind: 'create'; serviceKind: ServiceKind };
 
-const KIND_LABEL: Record<ServiceKind, string> = { MAIN: 'Dịch vụ chính', ADDON: 'Dịch vụ phụ', SURCHARGE: 'Phụ phí' };
+const KIND_LABEL: Record<ServiceKind, string> = { MAIN: 'Dịch vụ trong gói', ADDON: 'Dịch vụ phụ', SURCHARGE: 'Phụ phí' };
 
 /**
  * Hộp dịch vụ (bản vẽ C mục 4.2b): Tên, Mã, Thời lượng, Giá niêm yết, Giá bán, Tiền công thợ theo bậc.
@@ -217,6 +217,9 @@ export function ServiceDialog({
               error={errors.salePrice}
               disabled={!canPrice}
             />
+          </SettingRow>
+          <SettingRow label="Đang bán" htmlFor={`${id}-ban`} tip={TIP_ACTIVE} controlWidth={180}>
+            <Switch id={`${id}-ban`} checked={form.isActive} onChange={(v) => set({ isActive: v })} disabled={!canInfo} />
           </SettingRow>
         </Group>
         {showPay && (

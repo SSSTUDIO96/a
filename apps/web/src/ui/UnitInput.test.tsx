@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { UnitInput } from './UnitInput';
 
@@ -178,5 +178,32 @@ describe('UnitInput phút/lần', () => {
     await user.keyboard(',5');
     expect(screen.getByRole('alert').textContent).toContain('Chỉ nhập số nguyên');
     expect(screen.getByText('phút')).toBeTruthy();
+  });
+});
+
+// Phiếu vướng W4 (cùng bệnh với MoneyInput): số ≥ 1.000 đổi dạng lúc nhận tiêu điểm ("2.500" → "2500") làm mất vùng chọn.
+describe('UnitInput — chọn hết rồi gõ thay cả ô', () => {
+  it('chọn hết TRƯỚC khi ô nhận tiêu điểm (kiểu Playwright fill) → gõ thay cả ô', async () => {
+    const user = userEvent.setup();
+    const onValue = vi.fn();
+    render(<Harness initial={2500} onValue={onValue} />);
+    const el = input();
+    expect(el.value).toBe('2.500');
+    el.setSelectionRange(0, el.value.length);
+    act(() => el.focus());
+    expect([el.selectionStart, el.selectionEnd]).toEqual([0, 4]);
+    await user.keyboard('12,5');
+    expect(el.value).toBe('12,5');
+    expect(onValue).toHaveBeenLastCalledWith(12.5);
+  });
+
+  it('bấm 3 lần chọn hết rồi gõ → thay cả ô', async () => {
+    const user = userEvent.setup();
+    const onValue = vi.fn();
+    render(<Harness unit="phút" initial={1440} onValue={onValue} />);
+    await user.tripleClick(input());
+    await user.keyboard('90');
+    expect(input().value).toBe('90');
+    expect(onValue).toHaveBeenLastCalledWith(90);
   });
 });

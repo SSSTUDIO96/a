@@ -94,6 +94,13 @@ Mỗi lỗi ghi đủ: triệu chứng · gốc bệnh · số đo · cách ch�
 - **Cách chặn:** lệnh `pnpm db:deploy-to <đường_kết_nối>` đặt CẢ HAI biến, từ chối database không phải `makeup_test…` (trừ khi ghi cờ rõ), rồi đọc lại trạng thái trên chính database đích. Đã thử: vế BẮT (thiếu đường kết nối → từ chối; trỏ `makeup_dev` → từ chối) và vế GIỮ (database thử mới → áp 11/11, kiểm lại khớp).
 - **Bài học cho studio khác:** một công cụ có hai chỗ khai "đi đâu" thì lệnh chỉ đổi một chỗ sẽ lặng lẽ đi về chỗ kia. Sau mỗi lệnh ghi dữ liệu, đếm lại trên đúng nơi mình nhắm, đừng tin câu "thành công".
 
+### 17. Bài thử đỏ giả vì thợ khác "dựng lại bộ đọc database" giữa chừng
+- **Triệu chứng:** thợ chấm chạy bài thử trên một bản cũ, được 315/316. Bài đỏ báo thiếu một cột mà bản đó không hề có.
+- **Gốc bệnh:** mọi thợ dùng chung một thư mục thư viện. Đúng lúc thợ chấm đang chạy, một thợ khác chạy lệnh dựng lại bộ đọc database (`prisma generate`) theo bản vẽ dữ liệu MỚI. Bản cũ đang chấm liền đọc phải bộ của bản mới.
+- **Số đo:** 1/316 đỏ giả. Thợ chấm tách một bộ đọc database riêng cho bản chấm thì được 316/316.
+- **Cách chặn:** thợ chấm và người đo trên một bản cũ phải dùng bộ đọc database riêng của bản đó, không dùng chung với thư mục đang làm. Gặp bài đỏ lạ thì kiểm giờ sửa của bộ dùng chung trước khi kết luận.
+- **Bài học cho studio khác:** khi nhiều người làm song song trên một máy, "đỏ" chưa chắc là lỗi của mã đang chấm. Phải chắc là đang đo đúng bản, rồi mới tin con số.
+
 ---
 
 ## Phần CỦA RIÊNG DỰ ÁN NÀY

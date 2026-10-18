@@ -1,35 +1,39 @@
 import { useState } from 'react';
 import { listServices } from '../../api/catalog';
 import type { Service, ServiceKind } from '../../api/types';
-import { Button, Card, formatVnd, IconPlus, Skeleton, Tooltip } from '../../ui';
+import { Button, Card, Chip, formatVnd, IconPlus, Skeleton, StatusTag, Tooltip } from '../../ui';
 import { useOrgId, usePricingPerms, useResource } from './hooks';
-import { fetchAllPages, formatDuration } from './logic';
+import { fetchAllPages, filterActive, formatDuration } from './logic';
 import { LoadError } from './parts';
 import { PricingHeader } from './PricingHeader';
 import { ServiceDialog, type ServiceTarget } from './ServiceDialog';
 
 export const TIP_ADDON_LIST = 'Khách tick thêm dưới gói khi lập hợp đồng.';
+export const TIP_MAIN_LIST = 'Dịch vụ để chọn vào "Đã gồm trong gói" khi sửa gói.';
 
-const SECTIONS: { kind: Extract<ServiceKind, 'ADDON' | 'SURCHARGE'>; title: string; tip?: string; addLabel: string }[] = [
+const SECTIONS: { kind: ServiceKind; title: string; tip?: string; addLabel: string }[] = [
   { kind: 'ADDON', title: 'Dịch vụ phụ', tip: TIP_ADDON_LIST, addLabel: 'Thêm dịch vụ phụ' },
   { kind: 'SURCHARGE', title: 'Phụ phí cài sẵn', addLabel: 'Thêm phụ phí' },
+  { kind: 'MAIN', title: 'Dịch vụ trong gói', tip: TIP_MAIN_LIST, addLabel: 'Thêm dịch vụ trong gói' },
 ];
 
 // (b) Dịch vụ phụ & phụ phí — một thẻ danh sách, hai tiêu đề nhóm; mỗi dòng: tên · thời lượng · giá. Bấm dòng → hộp dịch vụ.
 export function ServicesPage() {
   const orgId = useOrgId();
   const perms = usePricingPerms();
-  const [res, reload] = useResource<{ ADDON: Service[]; SURCHARGE: Service[] }>(
+  // Lấy cả món ngừng bán (lọc ở máy theo chip "Cả ngừng bán"), chia theo loại.
+  const [res, reload] = useResource<Record<ServiceKind, Service[]>>(
     async (signal) => {
-      const [ADDON, SURCHARGE] = await Promise.all(
-        (['ADDON', 'SURCHARGE'] as const).map((kind) =>
-          fetchAllPages((page, pageSize) => listServices(orgId, { kind, isActive: true, page, pageSize }, signal)),
-        ),
-      );
-      return { ADDON: ADDON ?? [], SURCHARGE: SURCHARGE ?? [] };
+      const all = await fetchAllPages((page, pageSize) => listServices(orgId, { page, pageSize }, signal));
+      return {
+        ADDON: all.filter((x) => x.kind === 'ADDON'),
+        SURCHARGE: all.filter((x) => x.kind === 'SURCHARGE'),
+        MAIN: all.filter((x) => x.kind === 'MAIN'),
+      };
     },
     [orgId],
   );
+  const [showInactive, setShowInactive] = useState(false);
   const [target, setTarget] = useState<ServiceTarget | null>(null);
   const [dialogKey, setDialogKey] = useState(0);
   const open = (t: ServiceTarget) => {
@@ -41,6 +45,14 @@ export function ServicesPage() {
   if (res.status === 'error') body = <LoadError error={res.error} retry={reload} />;
   else
     body = (
+      <>
+      {res.status === 'ready' && inactiveCount(res.data) > 0 && (
+        <div className="pr-filter">
+          <Chip selected={showInactive} count={inactiveCount(res.data)} onClick={() => setShowInactive((v) => !v)}>
+            Cả ngừng bán
+          </Chip>
+        </div>
+      )}
       <Card className="pr-narrow" flush>
         {SECTIONS.map((s) => (
           <section key={s.kind} aria-label={s.title}>
@@ -54,14 +66,17 @@ export function ServicesPage() {
             </div>
             {res.status === 'loading' ? (
               <ListSkeleton />
-            ) : res.data[s.kind].length === 0 ? (
+            ) : filterActive(res.data[s.kind], showInactive).length === 0 ? (
               <p className="pr-muted pr-pad">Chưa có mục nào.</p>
             ) : (
               <ul className="pr-list">
-                {res.data[s.kind].map((svc) => (
+                {filterActive(res.data[s.kind], showInactive).map((svc) => (
                   <li key={svc.id}>
                     <button type="button" className="pr-row" onClick={() => open({ kind: 'edit', service: svc })}>
-                      <span className="pr-row__name">{svc.name}</span>
+                      <span className="pr-row__name">
+                        {svc.name}
+                        {!svc.isActive && <StatusTag className="pr-off">Ngừng bán</StatusTag>}
+                      </span>
                       <span className="pr-row__meta">{formatDuration(svc.durationMinutes)}</span>
                       <b className="pr-row__price num">{svc.currentPrice ? formatVnd(svc.currentPrice.unitPrice) : 'Chưa có giá'}</b>
                     </button>
@@ -72,6 +87,7 @@ export function ServicesPage() {
           </section>
         ))}
       </Card>
+      </>
     );
 
   return (
@@ -97,6 +113,10 @@ export function ServicesPage() {
       )}
     </>
   );
+}
+
+function inactiveCount(data: Record<ServiceKind, Service[]>): number {
+  return Object.values(data).reduce((n, list) => n + list.filter((x) => !x.isActive).length, 0);
 }
 
 function ListSkeleton() {

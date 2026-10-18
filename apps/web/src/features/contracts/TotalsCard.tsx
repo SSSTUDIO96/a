@@ -38,7 +38,8 @@ export function TotalsCard(p: TotalsCardProps) {
           <MoneyInput
             id="hd-giam-gia"
             aria-label="Giảm giá"
-            value={p.discount}
+            value={p.discount === 0 ? null : p.discount}
+            placeholder="0 ₫"
             onChange={(v) => p.onDiscount(v ?? 0)}
             disabled={p.moneyLocked}
             error={p.errors.discount}
@@ -61,6 +62,7 @@ export function TotalsCard(p: TotalsCardProps) {
             id="hd-coc"
             aria-label="Cọc cần thu"
             value={p.deposit}
+            placeholder={p.suggestedDeposit !== null ? `Gợi ý ${formatVnd(p.suggestedDeposit)}` : undefined}
             onChange={p.onDeposit}
             disabled={p.moneyLocked}
             error={p.errors.depositRequired}

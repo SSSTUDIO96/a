@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="ten" content="Hồ sơ thương hiệu & trang giới thiệu — R&D v4">
+<title>Hồ sơ thương hiệu — R&D v4</title>
+<link rel="stylesheet" href="v4-chung/v4.css">
+<style>
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none;margin-bottom:16px}
+.tabs a{padding:10px 14px;color:var(--muted);text-decoration:none;font-weight:500;border-bottom:2px solid transparent;white-space:nowrap}
+.tabs a.on{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
+.imgs{display:grid;grid-template-columns:96px 96px minmax(0,1fr);gap:16px;padding:10px 0}
+.imgs .slot{display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:var(--muted);min-width:0}
+.imgs .im{height:96px;border:1px solid var(--line);border-radius:10px;background-size:cover;background-position:center}
+.imgs .im.round{border-radius:50%}
+.imgs .im.empty{border-style:dashed;border-color:var(--accent-line);display:grid;place-items:center;color:var(--accent);background:#FFFCFD}
+.imgs .row{gap:4px}
+.wh{display:grid;grid-template-columns:84px 44px minmax(0,1fr);gap:8px;align-items:center;padding:7px 0;border-top:1px solid var(--line-2)}
+.wh:first-of-type{border-top:0}
+.wh .sh{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.wh .sh input{width:76px}
+.wh .off{color:var(--faint);font-size:13px}
+.stl{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.stl .chip b{font-weight:400;color:var(--faint);margin-left:2px}
+.pub{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.pub .url{font-size:13px;color:var(--muted);overflow-wrap:anywhere;flex:1;min-width:0}
+.pk-r{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:12px;align-items:center;padding:9px 0;border-top:1px solid var(--line-2)}
+.pk-r:first-child{border-top:0}
+.pk-r .n{font-weight:500}
+.cols{display:grid;grid-template-columns:minmax(0,1fr) 420px;gap:20px;align-items:start}
+.pvw{position:sticky;top:16px}
+.pvw .frame{border:1px solid var(--line);border-radius:12px;overflow:hidden;max-height:calc(100vh - 120px);overflow-y:auto;background:#fff}
+.pvw .bar{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+.pvw .bar .sp{flex:1}
+/* ===== Trang giới thiệu công khai (đọc GET /public/sites/:slug) ===== */
+.site{container-type:inline-size;background:#fff;color:var(--text)}
+.site .cover{height:150px;background-size:cover;background-position:center}
+.site .hdr{padding:0 16px 14px;display:flex;flex-direction:column;gap:6px;border-bottom:1px solid var(--line)}
+.site .hdr .lg{width:76px;height:76px;border-radius:50%;border:3px solid #fff;margin-top:-38px;background-size:cover;background-position:center;background-color:#fff}
+.site .hdr h1{font-size:21px;font-weight:700}
+.site .hdr p{color:var(--muted)}
+.site .cta{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.site sec{display:block;padding:16px;border-bottom:1px solid var(--line)}
+.site h2{font-size:16px;font-weight:700;margin-bottom:8px}
+.site h3{font-size:12px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.05em;margin:12px 0 6px}
+.site .pkc{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px}
+.site .pkc .t{display:flex;gap:10px;align-items:baseline}
+.site .pkc .t b{flex:1;font-size:15px}
+.site .pkc .pr{font-weight:700;white-space:nowrap;text-align:right}
+.site .pkc .pr del{display:block;font-weight:400;color:var(--faint);font-size:12px}
+.site .pkc ul{list-style:none;margin-top:6px;font-size:13px;color:var(--muted);display:flex;flex-direction:column;gap:2px}
+.site .pkc .ad{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.site .hrs{display:grid;grid-template-columns:90px 1fr;gap:4px 12px;font-size:13.5px}
+.site .hrs .c{color:var(--faint)}
+.site .pol{font-size:13.5px;margin-bottom:8px}
+.site .pol b{display:block}
+.site .ft{padding:16px;text-align:center;color:var(--faint);font-size:12px}
+.site .inner{max-width:1080px;margin:0 auto}
+@container (min-width:760px){
+  .site .cover{height:260px}
+  .site .hdr{padding:0 28px 18px;flex-direction:row;align-items:flex-end;gap:18px}
+  .site .hdr .lg{width:104px;height:104px;margin-top:-52px}
+  .site .hdr .tx{flex:1}
+  .site .hdr h1{font-size:26px}
+  .site .body2{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:0}
+  .site .body2>div:last-child{border-left:1px solid var(--line)}
+  .site sec{padding:20px 28px}
+  .site .pks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .site .pkc{margin:0}
+}
+@media (max-width:1180px){
+  .cols{grid-template-columns:minmax(0,1fr) 340px}
+}
+@media (max-width:640px){
+  .cols{grid-template-columns:minmax(0,1fr)}
+  .imgs{grid-template-columns:96px 96px}
+  .imgs .slot:last-child{grid-column:1 / -1}
+  .wh{grid-template-columns:70px 44px minmax(0,1fr)}
+  .pvw{position:static}
+}
+</style>
+</head>
+<body>
+<script src="v4-chung/v4.js"></script>
+<script>
+const {icon,av,vnd,tip,man,mucLuc,photo}=V4;
+const f=(s)=>` data-f="${s}"`;
+const svgUrl=(svg)=>`url('data:image/svg+xml,${encodeURIComponent(svg)}')`;
+// Ảnh minh hoạ do R&D vẽ (không phải ảnh thật)
+const COVER=svgUrl(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 300"><rect width="800" height="300" fill="#EFE3E6"/><circle cx="620" cy="80" r="120" fill="#E4CBD3"/><rect x="90" y="150" width="220" height="40" rx="20" fill="#C98FA3"/><rect x="330" y="120" width="26" height="140" rx="10" fill="#7A6A62"/><rect x="370" y="100" width="22" height="160" rx="8" fill="#A63D62"/><circle cx="520" cy="210" r="46" fill="#F6EBDD"/><circle cx="520" cy="210" r="30" fill="#D9A982"/><rect x="600" y="170" width="120" height="70" rx="12" fill="#fff" opacity=".7"/></svg>`);
+const LOGO=svgUrl(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#fff"/><circle cx="50" cy="50" r="44" fill="none" stroke="#A63D62" stroke-width="3"/><text x="50" y="62" text-anchor="middle" font-family="Georgia,serif" font-size="34" fill="#A63D62">SC</text></svg>`);
+const P={brandName:'Studio Chiến Makeup',tagline:'Trang điểm cô dâu tự nhiên, bền đẹp suốt ngày cưới',slug:'studio-chien',
+ bio:'Studio Chiến chuyên trang điểm cô dâu, mẹ cô dâu và khách dự tiệc tại Hà Nội. Đội 8 thợ, nhận làm tại studio hoặc tại nhà.',
+ exp:'Hơn 9 năm trang điểm cưới, hơn 2.000 cô dâu.',styles:['Tự nhiên','Hàn Quốc','Sang trọng','Cổ điển'],area:'Nội thành Hà Nội, Long Biên, Gia Lâm',
+ addr:'25 Hoàng Quốc Việt, Cầu Giấy, Hà Nội',phone:'0903 112 233',email:'studiochien@gmail.com',zalo:'0903 112 233',fb:'https://facebook.com/studiochien',ig:'',tt:'https://tiktok.com/@studiochien',web:''};
+const NGAY=['Thứ Hai','Thứ Ba','Thứ Tư','Thứ Năm','Thứ Sáu','Thứ Bảy','Chủ nhật'];
+const GIO=[[['08:00','12:00'],['13:30','20:00']],[['08:00','20:00']],[['08:00','20:00']],[['08:00','20:00']],[['08:00','20:00']],[['04:00','21:00']],[['04:00','21:00']]];
+const POL={booking:'Đặt lịch trước ít nhất 7 ngày với cô dâu, 2 ngày với khách dự tiệc.',cancel:'Huỷ trước 15 ngày được hoàn 50% cọc. Huỷ sau đó không hoàn cọc.',deposit:'Cọc 30% khi chốt lịch, phần còn lại thanh toán sau buổi làm.'};
+// GET /public/sites/:slug → packages[{name, subject, durationMinutes, locationTypes, includedKm, price{listPrice,salePrice,unitPrice}, included[], addons[]}]
+const GOIC=[
+ ['Cô dâu',[{n:'Cô dâu – Ngày cưới',l:3000000,s:2700000,ph:150,loc:'Studio · Tại nhà · Nơi khác',km:3,inc:['Makeup cô dâu × 1','Làm tóc × 1'],ad:[['Làm nail',250000],['Lens',100000],['Kẹp mi',80000]]},{n:'Cô dâu – Ăn hỏi',l:1800000,s:null,ph:120,loc:'Studio · Tại nhà · Nơi khác',km:3,inc:['Makeup ăn hỏi × 1','Làm tóc × 1'],ad:[['Làm nail',250000]]}]],
+ ['Phù dâu',[{n:'Phù dâu',l:400000,s:null,ph:40,loc:'Studio',km:null,inc:['Makeup phù dâu × 1'],ad:[['Làm tóc',300000],['Kẹp mi',80000]]}]],
+];
+const toPrice=(g)=>`<div class="pr num"${f('price.unitPrice / listPrice')}>${vnd(g.s??g.l)}${g.s?`<del>${vnd(g.l)}</del>`:''}</div>`;
+function site(){
+  return `<div class="site"><div class="cover" style="background-image:${COVER}"${f('profile.cover.url')}></div>
+  <div class="hdr"><div class="lg" style="background-image:${LOGO}"${f('profile.logo.url')}></div><div class="tx"><h1${f('profile.brandName')}>${P.brandName}</h1><p${f('profile.tagline')}>${P.tagline}</p></div>
+   <div class="cta"><a class="btn pri" href="tel:0903112233"${f('profile.phone')}>${icon('phone','s')}Gọi 0903 112 233</a><a class="btn"${f('profile.zalo')}>Nhắn Zalo</a></div></div>
+  <div class="body2"><div>
+   <sec><h2>Bảng giá</h2>${GOIC.map(([nv,ds])=>`<h3${f('packages[].subject.name')}>${nv}</h3><div class="pks">${ds.map(g=>`<div class="pkc"><div class="t"><b${f('packages[].name')}>${g.n}</b>${toPrice(g)}</div>
+     <ul><li${f('durationMinutes · locationTypes')}>${Math.floor(g.ph/60)?Math.floor(g.ph/60)+' giờ':''}${g.ph%60?' '+g.ph%60+' phút':''} · ${g.loc}</li>${g.inc.map(x=>`<li${f('included[].name × quantity')}>✓ ${x}</li>`).join('')}${g.km!=null?`<li${f('includedKm')}>Miễn phí di chuyển trong ${g.km} km</li>`:''}</ul>
+     <div class="ad"${f('addons[].name · price')}>${g.ad.map(([a,p])=>`<span class="tag">+ ${a} ${vnd(p)}</span>`).join('')}</div></div>`).join('')}</div>`).join('')}</sec>
+   <sec><h2>Giới thiệu</h2><p${f('profile.bio')}>${P.bio}</p><p class="muted small" style="margin-top:6px"${f('profile.experience')}>${P.exp}</p><div class="stl" style="margin-top:10px"${f('profile.styles[]')}>${P.styles.map(s=>`<span class="tag nv">${s}</span>`).join('')}</div><p class="small muted" style="margin-top:8px"${f('profile.serviceArea')}>Phục vụ: ${P.area}</p></sec>
+  </div><div>
+   <sec><h2>Giờ làm việc</h2><div class="hrs"${f('profile.workingHours[]')}>${NGAY.map((d,i)=>`<span>${d}</span><span>${GIO[i].map(c=>c.join('–')).join(', ')}</span>`).join('')}</div></sec>
+   <sec><h2>Chính sách</h2><div class="pol"${f('bookingPolicy')}><b>Đặt lịch</b>${POL.booking}</div><div class="pol"${f('depositPolicy')}><b>Đặt cọc</b>${POL.deposit}</div><div class="pol"${f('cancellationPolicy')}><b>Huỷ lịch</b>${POL.cancel}</div></sec>
+   <sec><h2>Liên hệ</h2><p class="small"${f('profile.address')}>${icon('pin','s')} ${P.addr}</p><p class="small" style="margin-top:6px"${f('profile.email')}>${P.email}</p><div class="row" style="margin-top:8px"${f('facebook · tiktok · instagram · website')}><a class="chip">Facebook</a><a class="chip">TikTok</a></div></sec>
+  </div></div><div class="ft">Trang tạo bằng Makeup Pro</div></div>`;
+}
+/* ---- Các nhóm form (dùng chung cho 3 phương án) ---- */
+const gThuongHieu=()=>`<div class="grp">Thương hiệu</div>
+ <div class="set wide"><label>Tên thương hiệu<span class="req">*</span></label><input class="ctl"${f('brandName')} value="${P.brandName}"></div>
+ <div class="set wide"><label>Câu giới thiệu ngắn ${tip('Hiện ngay dưới tên trên trang. Tối đa 200 ký tự.')}</label><input class="ctl"${f('tagline')} value="${P.tagline}"></div>
+ <div class="set wide stack"><label>Giới thiệu</label><textarea class="ctl" rows="3"${f('bio')}>${P.bio}</textarea></div>
+ <div class="set wide"><label>Kinh nghiệm</label><input class="ctl"${f('experience')} value="${P.exp}"></div>
+ <div class="set wide"><label>Phong cách ${tip('Tối đa 20 phong cách, mỗi cái tối đa 50 ký tự.')}</label><div class="stl"${f('styles[]')}>${P.styles.map(s=>`<span class="chip on">${s}<b>✕</b></span>`).join('')}<button class="btn sm dashed">+ Thêm</button></div></div>
+ <div class="set wide"><label>Khu vực phục vụ</label><input class="ctl"${f('serviceArea')} value="${P.area}"></div>`;
+const gAnh=()=>`<div class="grp">Ảnh ${tip('Logo tối đa 2 MB. Ảnh bìa nên ngang (3:1). Chỉ nhận tệp ảnh.')}</div>
+ <div class="imgs"><div class="slot"${f('logoFileId ← POST /files?purpose=ORG_LOGO')}>Logo<div class="im" style="background-image:${LOGO}"></div><div class="row"><button class="btn sm">Đổi</button></div></div>
+ <div class="slot"${f('avatarFileId')}>Ảnh đại diện<div class="im round empty">${icon('up')}</div><div class="row"><button class="btn sm">Tải ảnh</button></div></div>
+ <div class="slot"${f('coverFileId ← purpose ORG_LOGO/ALBUM_IMAGE')}>Ảnh bìa<div class="im" style="background-image:${COVER}"></div><div class="row"><button class="btn sm">Đổi</button><button class="btn sm ghost">Bỏ</button></div></div></div>`;
+const gLienHe=()=>`<div class="grp">Liên hệ</div>
+ <div class="set wide"><label>Địa chỉ</label><input class="ctl"${f('address')} value="${P.addr}"></div>
+ <div class="set wide"><label>Số điện thoại</label><input class="ctl"${f('phone')} value="${P.phone}"></div>
+ <div class="set wide"><label>Zalo ${tip('Số điện thoại hoặc liên kết https://zalo.me/…')}</label><input class="ctl"${f('zalo')} value="${P.zalo}"></div>
+ <div class="set wide"><label>Email</label><input class="ctl"${f('email')} value="${P.email}"></div>
+ <div class="set wide"><label>Facebook</label><input class="ctl"${f('facebook (https)')} value="${P.fb}"></div>
+ <div class="set wide"><label>TikTok</label><input class="ctl"${f('tiktok (https)')} value="${P.tt}"></div>
+ <div class="set wide"><label>Instagram</label><input class="ctl err"${f('instagram (https)')} value="instagram.com/studiochien"><div></div><div class="errmsg">Liên kết phải là địa chỉ https:// đầy đủ</div></div>
+ <div class="set wide"><label>Website</label><input class="ctl"${f('website (https)')} placeholder="https://"></div>`;
+const gGio=()=>`<div class="grp">Giờ làm việc ${tip('Mỗi ngày tối đa 2 ca, không chồng nhau. Giờ này chỉ để khách xem, không chặn lịch.')}</div>
+ ${NGAY.map((d,i)=>`<div class="wh"${f('workingHours[{weekday:'+(i+1)+', open, close}]')}><span class="sb">${d}</span><span class="sw ${GIO[i].length?'on':''}"></span><span class="sh">${GIO[i].map(([o,c])=>`<input class="ctl sm" value="${o}">–<input class="ctl sm" value="${c}">`).join('<span class="faint">,</span>')}${GIO[i].length<2?'<button class="btn sm ghost">+ Ca 2</button>':''}</span></div>`).join('')}`;
+const gChinhSach=()=>`<div class="grp">Chính sách</div>
+ <div class="set wide stack"><label>Đặt lịch</label><textarea class="ctl" rows="2"${f('bookingPolicy')}>${POL.booking}</textarea></div>
+ <div class="set wide stack"><label>Đặt cọc</label><textarea class="ctl" rows="2"${f('depositPolicy')}>${POL.deposit}</textarea></div>
+ <div class="set wide stack"><label>Huỷ lịch</label><textarea class="ctl" rows="2"${f('cancellationPolicy')}>${POL.cancel}</textarea></div>`;
+const gGoi=()=>`<div class="grp">Gói hiện trên trang ${tip('Tắt thì gói vẫn bán bình thường, chỉ không hiện trên trang giới thiệu. Sửa giá ở Bảng giá.')}</div>
+ ${[['Cô dâu – Ngày cưới',2700000,1],['Cô dâu – Ăn hỏi',1800000,1],['Mẹ – Trang điểm nhẹ nhàng',600000,0],['Phù dâu',400000,1],['Khách dự tiệc',450000,0]].map(([n,g,on])=>`<div class="pk-r"><span class="n"${f('packages[].name')}>${n}</span><span class="num muted small">${vnd(g)}</span><span class="sw ${on?'on':''}"${f('isPublic → PATCH /packages/:id')}></span></div>`).join('')}`;
+const pubBar=(on)=>`<div class="card" style="margin-bottom:16px"><div class="cb" style="padding:12px 18px"><div class="pub">
+ ${on?`<span class="tag ok"${f('isPublished · publishedAt')}>Đang công khai từ 12/10/2026</span>`:`<span class="tag draft"${f('isPublished = false')}>Chưa xuất bản</span>`}
+ <span class="url"${f('site.slug')}>makeuppro.vn/trang/<b>studio-chien</b></span>
+ <button class="btn sm">Sao chép liên kết</button>${on?`<a class="btn sm" href="#trang">${icon('eye','s')}Mở trang</a><a class="btn sm danger" href="#c-go"${f('POST /profile/unpublish')}>Gỡ trang</a>`:`<button class="btn sm pri"${f('POST /profile/publish')}>Xuất bản</button>`}</div></div></div>`;
+const saveBar=`<div class="sumbar"><span class="t fx">Có thay đổi chưa lưu</span><button class="btn">Bỏ thay đổi</button><button class="btn pri"${f('PUT /profile (gửi đủ mọi trường)')}>Lưu hồ sơ</button></div>`;
+
+/* A — form một cột dài */
+man('a',{nav:'cai-dat',kid:'Hồ sơ thương hiệu',title:'Hồ sơ thương hiệu'},`<div class="ph"><h1>Hồ sơ thương hiệu</h1><span class="sub">hiện trên trang giới thiệu công khai</span></div>
+<div class="has-sum" style="max-width:860px">${pubBar(true)}<div class="card"><div class="cb">${gThuongHieu()}${gAnh()}${gLienHe()}${gGio()}${gChinhSach()}${gGoi()}</div></div>${saveBar}</div>`);
+/* B — tab */
+man('b',{nav:'cai-dat',kid:'Hồ sơ thương hiệu',title:'Hồ sơ thương hiệu'},`<div class="ph"><h1>Hồ sơ thương hiệu</h1><span class="sp"></span><a class="btn" href="#b-xem">${icon('eye','s')}Xem trước</a><button class="btn pri">Lưu hồ sơ</button></div>
+${pubBar(true)}<div class="tabs"><a class="on">Thương hiệu & ảnh</a><a>Liên hệ</a><a>Giờ làm việc</a><a>Chính sách</a><a>Gói hiện trên trang</a></div>
+<div class="card" style="max-width:860px"><div class="cb">${gThuongHieu()}${gAnh()}</div></div>`);
+man('b-xem',{nav:'cai-dat',kid:'Hồ sơ thương hiệu',title:'Xem trước',back:'#b'},`<div class="ph"><h1>Hồ sơ thương hiệu</h1></div>${pubBar(true)}
+<div class="dlg-bg"><div class="dlg w"><div class="dh"><h2>Xem trước trang giới thiệu</h2><button class="btn icon ghost">${icon('x')}</button></div><div class="db" style="padding:0">${site()}</div></div></div>`);
+/* C — form trái + xem trước phải (ĐỀ XUẤT) */
+const segm=(on)=>`<div class="seg m-only" style="width:100%;margin-bottom:12px"><a class="btn ${on==='sua'?'':''}" style="flex:1;border:0;border-radius:0;${on==='sua'?'background:var(--accent-soft);color:var(--accent);font-weight:600':''}" href="#c">Sửa hồ sơ</a><a class="btn" style="flex:1;border:0;border-left:1px solid var(--line);border-radius:0;${on==='xem'?'background:var(--accent-soft);color:var(--accent);font-weight:600':''}" href="#c-xem">Xem trước</a></div>`;
+man('c',{nav:'cai-dat',kid:'Hồ sơ thương hiệu',title:'Hồ sơ thương hiệu'},`<div class="ph"><h1>Hồ sơ thương hiệu</h1><span class="sub">khách thấy đúng như khung bên phải</span></div>
+${pubBar(true)}${segm('sua')}<div class="cols has-sum"><div class="card"><div class="cb">${gThuongHieu()}${gAnh()}${gLienHe()}${gGio()}${gChinhSach()}${gGoi()}</div></div>
+<div class="pvw m-hide"><div class="bar"><b>Xem trước</b><span class="sp"></span><span class="seg sm"><button class="on">Điện thoại</button><button>Máy tính</button></span></div><div class="frame">${site()}</div></div></div>${saveBar}`);
+man('c-xem',{nav:'cai-dat',kid:'Hồ sơ thương hiệu',title:'Hồ sơ thương hiệu'},`<div class="ph"><h1>Hồ sơ thương hiệu</h1></div>${pubBar(true)}${segm('xem')}
+<div class="card" style="overflow:hidden">${site()}</div>`);
+man('c-chua',{nav:'cai-dat',kid:'Hồ sơ thương hiệu',title:'Hồ sơ thương hiệu'},`<div class="ph"><h1>Hồ sơ thương hiệu</h1></div>${pubBar(false)}
+<div class="bn grey" style="margin-bottom:16px">${icon('globe','s')}<span>Trang chưa xuất bản: khách mở liên kết sẽ thấy "Không tìm thấy trang giới thiệu". Lưu hồ sơ có tên thương hiệu rồi bấm Xuất bản.</span></div>
+<div class="card"><div class="empty"><span>Chưa có hồ sơ thương hiệu. Bắt đầu bằng tên thương hiệu.</span><input class="ctl" style="max-width:360px" placeholder="Tên thương hiệu, ví dụ: Studio Chiến Makeup"><button class="btn pri sm">Lưu và tiếp tục</button></div></div>`);
+man('c-go',{nav:'cai-dat',kid:'Hồ sơ thương hiệu',title:'Hồ sơ thương hiệu'},`<div class="ph"><h1>Hồ sơ thương hiệu</h1></div>${pubBar(true)}
+<div class="dlg-bg"><div class="dlg" style="width:min(440px,100%)"><div class="dh"><h2>Gỡ trang giới thiệu?</h2><button class="btn icon ghost">${icon('x')}</button></div>
+<div class="db"><p style="margin:8px 0">Khách mở liên kết sẽ thấy "Không tìm thấy trang giới thiệu". Hồ sơ vẫn giữ nguyên, xuất bản lại lúc nào cũng được.</p></div>
+<footer><button class="btn">Giữ trang</button><button class="btn pri">Gỡ trang</button></footer></div></div>`);
+/* Trang công khai thật */
+man('trang',{shell:'none',title:'Trang giới thiệu'},`<div class="inner" style="max-width:1080px;margin:0 auto">${site()}</div>`);
+man('trang-404',{shell:'none',title:'Không tìm thấy'},`<div style="min-height:100vh;display:grid;place-items:center;padding:16px"><div class="empty"><b style="font-size:18px;color:var(--text)">Không tìm thấy trang giới thiệu</b><span>Liên kết có thể sai, hoặc studio đã gỡ trang.</span></div></div>`);
+mucLuc('Hồ sơ thương hiệu & trang giới thiệu — R&D vòng 4','Ba phương án cho màn sửa hồ sơ (Cài đặt › Hồ sơ thương hiệu) và một trang công khai chung. Bấm "Hiện trường dữ liệu" để thấy trường.',[
+ ['Phương án A — một cột dài, thanh lưu dính đáy',[['a','Sửa hồ sơ']]],
+ ['Phương án B — chia tab, xem trước trong hộp thoại',[['b','Tab Thương hiệu & ảnh'],['b-xem','Hộp xem trước']]],
+ ['Phương án C — sửa bên trái, xem trước trực tiếp bên phải (đề xuất, đã chọn thay)',[['c','Sửa hồ sơ + xem trước'],['c-xem','Điện thoại: Xem trước'],['c-chua','Chưa có hồ sơ / chưa xuất bản'],['c-go','Gỡ trang']]],
+ ['Trang công khai (khách xem)',[['trang','/trang/studio-chien'],['trang-404','Trang không có / đã gỡ']]],
+]);
+V4.boot();
+</script>
+</body>
+</html>

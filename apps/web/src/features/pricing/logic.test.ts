@@ -11,6 +11,7 @@ import {
   buildTravelInput,
   emptyPackageForm,
   fetchAllPages,
+  filterActive,
   formatDuration,
   mapSaveError,
   mapTravelError,
@@ -21,6 +22,7 @@ import {
   pricingPerms,
   resolveGroup,
   sortOrderPatches,
+  splitCards,
   subjectCards,
   travelDirty,
   travelToForm,
@@ -129,6 +131,23 @@ describe('chữ hiển thị trong danh sách gọn', () => {
   });
 });
 
+describe('nhân vật chưa có gói và món ngừng bán', () => {
+  it('nhân vật có gói → thẻ; chưa có gói (kể cả "Mọi nhân vật") → gom một dòng cuối', () => {
+    const subjects = [subject('s1', 'Cô dâu', 0), subject('s2', 'Chú rể', 1), subject('s3', 'Phù dâu', 2)];
+    const { filled, empty } = splitCards(subjectCards(subjects, [pkg({ id: 'a', subjectId: 's1' }), pkg({ id: 'b', subjectId: 's3' })]));
+    expect(filled.map((c) => c.name)).toEqual(['Cô dâu', 'Phù dâu']);
+    expect(empty.map((c) => c.name)).toEqual(['Chú rể', 'Mọi nhân vật']);
+  });
+
+  it('mặc định ẩn món ngừng bán; chip "Cả ngừng bán" hiện lại; ngừng bán gửi PATCH {isActive:false}', () => {
+    const list = [pkg({ id: 'a' }), pkg({ id: 'b', isActive: false })];
+    expect(filterActive(list, false).map((p) => p.id)).toEqual(['a']);
+    expect(filterActive(list, true).map((p) => p.id)).toEqual(['a', 'b']);
+    const p = pkg();
+    expect(buildPackagePatch(p, { ...packageToForm(p, null), isActive: false })).toEqual({ isActive: false });
+  });
+});
+
 describe('biểu mẫu gói', () => {
   it('đọc gói: locationTypes rỗng → tick đủ 3 ô; tách đã gồm / dịch vụ phụ; nạp tiền công', () => {
     const f = packageToForm(pkg(), SHEET);
@@ -196,8 +215,8 @@ describe('biểu mẫu gói', () => {
 
   it('dịch vụ: mã so theo chữ hoa (máy chủ tự đổi)', () => {
     const svc = { id: 'n', kind: 'ADDON' as const, code: 'NAIL', name: 'Làm nail', description: null, durationMinutes: 40, categoryId: null, isActive: true, isPublic: true, sortOrder: 0, createdAt: T, updatedAt: T, category: null, currentPrice: null };
-    expect(buildServicePatch(svc, { code: 'nail', name: 'Làm nail', durationMinutes: 40, listPrice: 1, salePrice: null, payRates: {} })).toBeNull();
-    expect(buildServicePatch(svc, { code: 'NAIL2', name: 'Nail', durationMinutes: 30, listPrice: 1, salePrice: null, payRates: {} })).toEqual({ code: 'NAIL2', name: 'Nail', durationMinutes: 30 });
+    expect(buildServicePatch(svc, { code: 'nail', name: 'Làm nail', isActive: true, durationMinutes: 40, listPrice: 1, salePrice: null, payRates: {} })).toBeNull();
+    expect(buildServicePatch(svc, { code: 'NAIL2', name: 'Nail', isActive: false, durationMinutes: 30, listPrice: 1, salePrice: null, payRates: {} })).toEqual({ code: 'NAIL2', name: 'Nail', isActive: false, durationMinutes: 30 });
   });
 });
 

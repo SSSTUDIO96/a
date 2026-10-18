@@ -143,6 +143,19 @@ export function subjectCards(subjects: readonly MakeupSubject[], packages: reado
   return cards;
 }
 
+/**
+ * Nhân vật có gói → thẻ (giữ thứ tự); nhân vật chưa có gói → gom thành MỘT dòng gọn ở cuối (mỗi tên mở hộp tạo gói).
+ * Tránh nửa màn điện thoại toàn thẻ "Chưa có gói" (anh Chiến chê "Rối quá" kiểu bày ô thừa).
+ */
+export function splitCards(cards: readonly SubjectCard[]): { filled: SubjectCard[]; empty: SubjectCard[] } {
+  return { filled: cards.filter((c) => c.packages.length > 0), empty: cards.filter((c) => c.packages.length === 0) };
+}
+
+// Danh sách mặc định ẩn món ngừng bán; chip "Cả ngừng bán" hiện lại.
+export function filterActive<T extends { isActive: boolean }>(items: readonly T[], showInactive: boolean): T[] {
+  return showInactive ? [...items] : items.filter((i) => i.isActive);
+}
+
 export function packageCountBySubject(packages: readonly ServicePackage[]): Map<string, number> {
   const m = new Map<string, number>();
   for (const p of packages) if (p.subjectId) m.set(p.subjectId, (m.get(p.subjectId) ?? 0) + 1);
@@ -175,6 +188,8 @@ export interface IncludedRow {
 export interface PackageForm {
   code: string;
   name: string;
+  // Đang bán (isActive). Ngừng bán không xoá gói; hợp đồng cũ giữ nguyên.
+  isActive: boolean;
   subjectId: string | null;
   durationMinutes: number | null;
   staffCount: number | null;
@@ -194,6 +209,7 @@ export function emptyPackageForm(subjectId: string | null): PackageForm {
   return {
     code: '',
     name: '',
+    isActive: true,
     subjectId,
     durationMinutes: null,
     staffCount: 1,
@@ -212,6 +228,7 @@ export function packageToForm(p: ServicePackage, sheet: PayRateSheet | null): Pa
   return {
     code: p.code,
     name: p.name,
+    isActive: p.isActive,
     subjectId: p.subjectId,
     durationMinutes: p.durationMinutes,
     staffCount: p.staffCount,
@@ -278,6 +295,7 @@ function itemsKey(items: readonly { serviceId: string; quantity?: number; isOpti
 export function buildPackagePatch(original: ServicePackage, f: PackageForm): PackageUpdateInput | null {
   const patch: PackageUpdateInput = {};
   if (f.name.trim() !== original.name) patch.name = f.name.trim();
+  if (f.isActive !== original.isActive) patch.isActive = f.isActive;
   if (f.subjectId !== original.subjectId) patch.subjectId = f.subjectId;
   if (f.durationMinutes !== null && f.durationMinutes !== original.durationMinutes) patch.durationMinutes = f.durationMinutes;
   if (f.staffCount !== null && f.staffCount !== original.staffCount) patch.staffCount = f.staffCount;
@@ -310,6 +328,7 @@ export function buildPackageCreate(f: PackageForm): PackageCreateInput {
   return {
     code: f.code.trim(),
     name: f.name.trim(),
+    isActive: f.isActive,
     subjectId: f.subjectId,
     durationMinutes: f.durationMinutes,
     staffCount: f.staffCount ?? undefined,
@@ -513,6 +532,7 @@ export function sortOrderPatches(list: readonly MakeupSubject[]): { id: string; 
 export interface ServiceForm {
   code: string;
   name: string;
+  isActive: boolean;
   durationMinutes: number | null;
   listPrice: Vnd | null;
   salePrice: Vnd | null;
@@ -523,6 +543,7 @@ export function serviceToForm(s: Service | null): ServiceForm {
   return {
     code: s?.code ?? '',
     name: s?.name ?? '',
+    isActive: s?.isActive ?? true,
     durationMinutes: s?.durationMinutes ?? null,
     listPrice: s?.currentPrice?.listPrice ?? null,
     salePrice: s?.currentPrice?.salePrice ?? null,
@@ -545,11 +566,12 @@ export function buildServicePatch(original: Service, f: ServiceForm): ServiceUpd
   const patch: ServiceUpdateInput = {};
   if (f.name.trim() !== original.name) patch.name = f.name.trim();
   if (f.code.trim().toUpperCase() !== original.code) patch.code = f.code.trim();
+  if (f.isActive !== original.isActive) patch.isActive = f.isActive;
   if (f.durationMinutes !== null && f.durationMinutes !== original.durationMinutes) patch.durationMinutes = f.durationMinutes;
   return Object.keys(patch).length > 0 ? patch : null;
 }
 
 export function buildServiceCreate(kind: ServiceKind, f: ServiceForm): ServiceCreateInput {
   if (f.durationMinutes === null || f.listPrice === null) throw new Error('Gọi validateServiceForm trước khi dựng thân tạo dịch vụ');
-  return { kind, code: f.code.trim(), name: f.name.trim(), durationMinutes: f.durationMinutes, listPrice: f.listPrice, salePrice: f.salePrice };
+  return { kind, code: f.code.trim(), name: f.name.trim(), isActive: f.isActive, durationMinutes: f.durationMinutes, listPrice: f.listPrice, salePrice: f.salePrice };
 }

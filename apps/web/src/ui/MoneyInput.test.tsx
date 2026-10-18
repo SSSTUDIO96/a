@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MoneyInput } from './MoneyInput';
 import type { Vnd } from './format';
@@ -272,7 +272,7 @@ describe('MoneyInput — chọn hết rồi gõ thay cả ô', () => {
     render(<Harness initial={2_700_000} onValue={onValue} />);
     const el = input();
     el.setSelectionRange(0, el.value.length);
-    el.focus();
+    act(() => el.focus());
     expect([el.selectionStart, el.selectionEnd]).toEqual([0, el.value.length]);
     await user.keyboard('3500000');
     expect(el.value).toBe('3.500.000');
@@ -294,7 +294,7 @@ describe('MoneyInput — chọn hết rồi gõ thay cả ô', () => {
     const el = input();
     // "2.700.000 ₫": con trỏ sau "2.7" (3 ký tự, 2 chữ số).
     el.setSelectionRange(3, 3);
-    el.focus();
+    act(() => el.focus());
     expect(el.value).toBe('2.700.000');
     expect([el.selectionStart, el.selectionEnd]).toEqual([3, 3]);
   });
