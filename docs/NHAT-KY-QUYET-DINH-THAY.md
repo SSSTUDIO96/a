@@ -74,5 +74,7 @@ Anh Chiến nhắn lúc khoảng 15:13 UTC ngày 18/10/2026: *"Tự làm vào ch
 | 22:10 | Trần số tiền ở bảng giá | Cùng trần với phiếu thu | Một luật cho mọi số tiền | Được |
 
 | 23:40 | Database thử mặc định `makeup_test` chứa dữ liệu thử cũ vượt trần 100 tỷ (9 dòng) | Dựng lại từ đầu (xoá database thử, tạo mới, áp đủ migration). **Chỉ database thử**, không đụng database phát triển hay dữ liệu thật | Để lệnh kiểm tra gốc chạy được với chốt trần tiền mới | Được: dữ liệu thử tự sinh lại khi chạy bài thử |
+| 00:30 | Phụ phí (ví dụ phụ phí đi xa, phụ phí ngày lễ) không có thời lượng | Cho phép bỏ trống thời lượng — chỉ riêng loại phụ phí; gói chính và dịch vụ phụ vẫn bắt buộc. Phụ phí cũ đang mang số phút giả **không tự đổi** | Bỏ trống là "không áp dụng"; ghi 0 thì lẫn với "0 phút" | Được: một migration nới chốt |
+| 00:30 | Đổi khách trên hợp đồng nháp khi đã có lịch hoặc thẻ thiết kế | Chặn, báo "khách đang được dùng" kèm số lượng | Lịch và thẻ đã chép khách cũ, đổi nửa vời sẽ lệch | Được |
 
 **Cần anh xem lại nhất:** (1) cách anh vào thao tác thực tế (dòng 19:44): chạy trên máy anh hay cho phép đưa lên mạng; (2) phân quyền theo vai trò mẫu (dòng 15:16) — studio anh có thể muốn thợ chính thấy cả lịch của đội.
