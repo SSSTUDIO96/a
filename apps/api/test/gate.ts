@@ -5,6 +5,7 @@ import request from 'supertest';
 import { z } from 'zod';
 import type { AnyRoute } from '../src/http/route';
 import { addMember, bearer, createOrg, registerUser, type App, type TestUser } from './helpers';
+import { makePng } from './png';
 
 export interface GateOrg {
   orgId: string;
@@ -107,6 +108,19 @@ async function post(app: App, owner: TestUser, path: string, body: unknown): Pro
   return id;
 }
 
+// Tải một ảnh PNG thật (thân nhị phân, không phải JSON) — trả id tệp.
+async function upload(app: App, owner: TestUser, orgId: string, purpose: string): Promise<string> {
+  const res = await request(app)
+    .post(`/api/v1/orgs/${orgId}/files?purpose=${purpose}&name=mau.png`)
+    .set(bearer(owner))
+    .set('idempotency-key', randomUUID())
+    .set('content-type', 'application/octet-stream')
+    .send(makePng());
+  const id = (res.body as { id?: string }).id;
+  if (res.status !== 201 || !id) throw new Error(`Cửa gác: tải tệp ${purpose} thất bại ${res.status}: ${JSON.stringify(res.body)}`);
+  return id;
+}
+
 // Mỗi tổ chức thử có đủ MỌI loại tài nguyên mà đường API nhận làm tham số — thêm module mới thì thêm ở đây.
 async function setupOrg(app: App, label: string): Promise<GateOrg> {
   const owner = await registerUser(app, `gac-chu-${label}`);
@@ -157,6 +171,12 @@ async function setupOrg(app: App, label: string): Promise<GateOrg> {
     return id;
   };
   const lineId = await firstLine(contractId);
+  // Hợp đồng nháp được thu tiền (quyết định của thợ G) — phiếu thu mẫu cho đường huỷ phiếu.
+  const paymentId = await post(app, owner, `${o}/contracts/${contractId}/payments`, { method: 'CASH', amount: 10000 });
+  const fileId = await upload(app, owner, orgId, 'ALBUM_IMAGE');
+  const avatarFileId = await upload(app, owner, orgId, 'STAFF_AVATAR');
+  const logoFileId = await upload(app, owner, orgId, 'ORG_LOGO');
+  // KHÔNG tạo sẵn hồ sơ thương hiệu: phép "giữ" cần POST /profile/publish thân rỗng → 400 (chưa có hồ sơ).
   // Hợp đồng thứ hai dành riêng cho việc gắn lịch — hợp đồng có lịch gắn thì không thay được toàn bộ dòng.
   const contract2Id = await post(app, owner, `${o}/contracts`, {
     customerId,
@@ -184,6 +204,12 @@ async function setupOrg(app: App, label: string): Promise<GateOrg> {
       addonId,
       contract2Id,
       line2Id,
+      paymentId,
+      fileId,
+      avatarFileId,
+      logoFileId,
+      // Ảnh bìa nhận ALBUM_IMAGE: dùng chung tệp album.
+      coverFileId: fileId,
     },
   };
 }

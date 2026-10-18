@@ -32,6 +32,14 @@ export const SAMPLES: Samples = {
   // Bậc lấy từ CHÍNH tổ chức đang gọi — để chỉ id gói/dịch vụ là của tổ chức khác.
   'PUT /orgs/:orgId/packages/:packageId/pay-rates': (o) => ({ rates: [{ tierId: o.ids.tierId, amount: 100000 }] }),
   'PUT /orgs/:orgId/services/:serviceId/pay-rates': (o) => ({ rates: [{ tierId: o.ids.tierId, amount: 100000 }] }),
+  // Thu tiền (thợ G)
+  'GET /orgs/:orgId/payments': () => ({ from: '2026-01-01T00:00:00.000Z', to: '2026-12-31T00:00:00.000Z' }),
+  'GET /orgs/:orgId/reports/revenue': () => ({ from: '2026-01-01T00:00:00.000Z', to: '2026-12-31T00:00:00.000Z' }),
+  'PUT /orgs/:orgId/contracts/:contractId/installments': () => ({
+    installments: [{ name: 'Đặt cọc', dueDate: '2026-12-01T00:00:00.000Z', amount: 100000, isDeposit: true }],
+  }),
+  'POST /orgs/:orgId/contracts/:contractId/payments': () => ({ method: 'CASH', amount: 1000 }),
+  'POST /orgs/:orgId/payments/:paymentId/void': () => ({ reason: 'Thử cửa gác' }),
 };
 
 // Mẫu HỢP LỆ dùng toàn mã của chính tổ chức — cửa gác tự thay TỪNG trường mã bằng mã của tổ chức khác.
@@ -102,7 +110,13 @@ export const REF_SAMPLES: RefSamples = {
       excludeContractId: o.ids.contractId,
     }),
   ],
-  'PATCH /orgs/:orgId/staff/:membershipId': [(o) => ({ tierId: o.ids.tierId })],
+  'PATCH /orgs/:orgId/staff/:membershipId': [(o) => ({ tierId: o.ids.tierId }), (o) => ({ avatarFileId: o.ids.avatarFileId })],
+  'GET /orgs/:orgId/payments': [
+    (o) => ({ from: '2026-01-01T00:00:00.000Z', to: '2026-12-31T00:00:00.000Z', contractId: o.ids.contractId }),
+  ],
+  'PUT /orgs/:orgId/profile': [
+    (o) => ({ brandName: 'Mẫu', logoFileId: o.ids.logoFileId, avatarFileId: o.ids.avatarFileId, coverFileId: o.ids.coverFileId }),
+  ],
   'PUT /orgs/:orgId/packages/:packageId/pay-rates': [(o) => ({ rates: [{ tierId: o.ids.tierId, amount: 100000 }] })],
   'PUT /orgs/:orgId/services/:serviceId/pay-rates': [(o) => ({ rates: [{ tierId: o.ids.tierId, amount: 100000 }] })],
 };
