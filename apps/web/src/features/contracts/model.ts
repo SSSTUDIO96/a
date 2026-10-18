@@ -586,3 +586,51 @@ export function travelFormula(t: LineViewExt<string | null> | null): string | nu
   }
   return `${over} · phí cố định`;
 }
+
+// ---------------------------------------------------------------------------------------------
+// Dòng gói mới từ bảng giá: nhân vật của gói, 1 người, nơi làm đầu tiên gói cho phép (Studio mặc định),
+// cách tính phí di chuyển theo cài đặt của tổ chức (defaultMode).
+export function newPackageLine(
+  pkg: { id: string; name: string; subjectId: string | null; locationTypes: readonly LocationType[] },
+  defaultStudioId: string | null,
+  defaultTravelMode: TravelFeeMode,
+): PlacedDraft {
+  const loc = LOCATION_ORDER.find((l) => pkg.locationTypes.length === 0 || pkg.locationTypes.includes(l)) ?? null;
+  return {
+    key: newLineKey(),
+    kind: 'PACKAGE',
+    refId: pkg.id,
+    name: pkg.name,
+    subjectId: pkg.subjectId,
+    quantity: 1,
+    start: '',
+    end: '',
+    staff: [],
+    addonIds: [],
+    locationType: loc,
+    studioLocationId: loc === 'STUDIO' ? defaultStudioId : null,
+    address: '',
+    travel: { mode: defaultTravelMode, distanceKm: null, amount: null },
+  };
+}
+
+/** Thợ của các dòng KHÁC trong hợp đồng chồng giờ với dòng `key` — để ô chọn thợ ghi "Dòng Cô dâu của hợp đồng này". */
+export function conflictsForLine(
+  draft: ContractDraft,
+  key: string,
+  subjectName: (id: string | null) => string | null,
+): Map<string, WarnRange[]> {
+  const out = new Map<string, WarnRange[]>();
+  const me = draft.lines.find((l): l is PlacedDraft => isPlaced(l) && l.key === key);
+  if (!me || !me.start || !me.end) return out;
+  for (const o of draft.lines) {
+    if (!isPlaced(o) || o.key === key || !o.start || !o.end) continue;
+    if (!(minutes(me.start) < minutes(o.end) && minutes(o.start) < minutes(me.end))) continue;
+    for (const s of o.staff) {
+      const list = out.get(s.membershipId) ?? [];
+      list.push({ start: o.start, end: o.end, label: `Dòng ${placedLabel(o, subjectName)} của hợp đồng này` });
+      out.set(s.membershipId, list);
+    }
+  }
+  return out;
+}
