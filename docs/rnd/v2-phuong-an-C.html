@@ -329,7 +329,7 @@ const CS={mode:'PER_KM',codinh:150000,km:10000,mienphi:3,toithieu:100000,khuhoi:
 // Customer
 const KH={ten:'Tôn Nữ Hoàng Bảo Ngọc Phương Thảo',sdt:'0912 345 678',email:'phuongthao.tnhbn@gmail.com',ghichu:'Da nhạy cảm, không dùng keo dán mi.'};
 // Contract
-const HD={ma:'HĐ-2026-0142',ngay:'24/10/2026',thu:'Thứ Bảy',giam:297000,coc:1000000,ghichu:'Nhà gái ở ngõ nhỏ, xe máy vào được, ô tô đỗ đầu ngõ.'};
+const HD={ma:'HĐ-2026-0142',ngay:'24/10/2026',thu:'Thứ Bảy',giam:327000,coc:1000000,ghichu:'Nhà gái ở ngõ nhỏ, xe máy vào được, ô tô đỗ đầu ngõ.'};
 // ContractLine: gói theo nhân vật, dịch vụ phụ tick (ADDON, parentLineId), di chuyển (TRAVEL), phụ phí (SURCHARGE), tự đặt tên (CUSTOM)
 const DONG=[
  {id:'l1',goi:'p1',nv:'cd',dd:'CUSTOMER_HOME',dc:'Số 7, ngõ 128 Nguyễn Văn Cừ, Long Biên, Hà Nội',gio:'04:30 – 07:00',sl:1,them:{nail:1,lens:1},dm:'PER_KM',km:12.35,pp:[]},
@@ -351,14 +351,17 @@ const nvTen=id=>id?NV.find(n=>n.id===id).ten:'Mọi nhân vật';
 const giaGoi=g=>g.ban??g.niemyet;
 const phut=p=>p>=60?(Math.floor(p/60)+' giờ'+(p%60?' '+p%60+' phút':'')):p+' phút';
 const tip=t=>`<i class="tip" tabindex="0" data-tip="${t}">?</i>`;
+// Đúng công thức computeTravelFee (packages/shared/src/contract.ts):
+// km tính tiền = km × (2 nếu tính cả chiều về) − km miễn phí; tiền làm tròn LÊN bội 1.000 ₫; không thấp hơn phí tối thiểu (trừ khi km tính tiền = 0).
+function kmTinh(d){return Math.max(0,Math.round(d.km*100)*(CS.khuhoi?2:1)-CS.mienphi*100)/100}
 function tienDC(d){
   if(d.dm==='FIXED')return CS.codinh;
   if(d.dm==='MANUAL')return d.tay||0;
-  const k=Math.max(0,d.km-CS.mienphi)*(CS.khuhoi?2:1);
-  return Math.max(CS.toithieu,Math.round(k*CS.km/1000)*1000);
+  const k=kmTinh(d); if(k===0)return 0;
+  return Math.max(CS.toithieu,Math.ceil(k*CS.km/1000)*1000);
 }
 function congThucKm(d){
-  return `(${kmf(d.km)} − ${CS.mienphi}) km${CS.khuhoi?' × 2 chiều':''} × ${vnd(CS.km)}`;
+  return `${kmf(d.km)} km${CS.khuhoi?' × 2 chiều':''} − ${CS.mienphi} km miễn phí = ${kmf(kmTinh(d))} km × ${vnd(CS.km)}`;
 }
 // Bảng tính phẳng (giống kết quả máy chủ trả về từ đường "quote")
 function bangTinh(xn){
@@ -446,7 +449,7 @@ function nhomDiChuyen(){
       <div class="set stack"><label>Cách tính mặc định${tip('Khi lập hợp đồng vẫn đổi được cách tính cho từng dòng.')}</label><div class="seg sm r"><button>Cố định</button><button class="on">Theo km</button><button>Nhập tay</button></div></div>
       <div class="set"><label>Mức cố định mỗi lần đi</label><input class="ctl money" value="${vnd(CS.codinh)}"></div>
       <div class="set"><label>Đơn giá mỗi km</label><input class="ctl money" value="${vnd(CS.km)}"></div>
-      <div class="set"><label>Số km miễn phí${tip('Trừ đi trước khi nhân đơn giá.')}</label><span class="unit"><input class="ctl r" value="${CS.mienphi}"><b>km</b></span></div>
+      <div class="set"><label>Số km miễn phí${tip('Trừ vào tổng số km (đã tính cả chiều về) trước khi nhân đơn giá.')}</label><span class="unit"><input class="ctl r" value="${CS.mienphi}"><b>km</b></span></div>
       <div class="set"><label>Phí tối thiểu${tip('Tính ra thấp hơn mức này thì lấy mức này.')}</label><input class="ctl money" value="${vnd(CS.toithieu)}"></div>
       <div class="set"><label>Tính cả chiều về</label><span class="sw on r"></span></div>`],
    ['Studio / cửa hàng'+tip('Điểm xuất phát để đo số km. Chấm tròn = mặc định.'),`${STU.map(s=>`<label class="stu"><input type="radio" name="md" ${s.md?'checked':''}><span style="min-width:0"><span class="tier-n">${s.ten}</span><span class="fx" style="display:block">${s.dc}</span></span></label>`).join('')}<button class="btn ghost sm" style="padding:0;margin-top:6px">${ic('plus')}Thêm studio / cửa hàng</button>`]];
