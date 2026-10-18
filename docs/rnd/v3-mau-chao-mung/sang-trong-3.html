@@ -20,6 +20,7 @@ html,body{background:#ddd}
 #c{position:relative;width:1080px;height:1080px;overflow:hidden}
 body.doc #c{height:1920px}
 img{display:block}
+[data-fit]{flex-shrink:0;text-wrap:balance}
 
 #c{background:#1C1816;color:#F6F1EA;font-family:"Be Vietnam Pro"}
 .arch{position:absolute;left:90px;top:200px;width:420px;height:640px;border-radius:210px 210px 0 0;overflow:hidden;outline:1.5px solid #B89A6A;outline-offset:14px}
@@ -32,9 +33,11 @@ img{display:block}
 .brand{position:absolute;left:0;right:0;bottom:90px;display:flex;justify-content:center;align-items:center;gap:16px;font-size:20px;letter-spacing:.34em;text-transform:uppercase;color:#CDB896}
 .brand img{width:50px;height:50px}
 body.doc .arch{left:200px;top:220px;width:680px;height:880px;border-radius:340px 340px 0 0}
-body.doc .tx{left:110px;right:110px;top:1180px;bottom:260px;align-items:center;text-align:center;justify-content:flex-start;gap:30px}
-body.doc .ten{font-size:104px}
-body.doc .brand{bottom:120px}
+body.doc .tx{left:100px;right:100px;top:1210px;bottom:230px;align-items:center;text-align:center;justify-content:flex-start;gap:28px}
+body.doc .ten{font-size:110px}
+body.doc .hi{font-size:84px}
+body.doc .kh{font-size:28px}
+body.doc .brand{bottom:110px;font-size:24px}body.doc .brand img{width:60px;height:60px}
 
 </style></head><body><div id="c"><div class="arch"><img data-f="anh" alt=""></div>
 <div class="tx"><div class="hi">Chào mừng</div><div class="ten" data-f="ten" data-fit="3"></div><div class="dv"></div><div class="kh" data-f="khoa" data-fit="2"></div></div>
@@ -46,8 +49,8 @@ const D={ten:P.get('ten')||'Tôn Nữ Hoàng Bảo Ngọc Phương Thảo',khoa:
   thuongHieu:P.get('th')||'Chiến Makeup Academy',anh:P.get('anh')||AVATAR,logo:P.get('logo')||LOGO};
 document.body.classList.add(P.get('kho')==='doc'?'doc':'vuong');
 document.querySelectorAll('[data-f]').forEach(el=>{const k=el.dataset.f;if(el.tagName==='IMG')el.src=D[k];else el.textContent=D[k];});
-function fit(){document.querySelectorAll('[data-fit]').forEach(el=>{el.style.fontSize='';const max=+el.dataset.fit;let s=parseFloat(getComputedStyle(el).fontSize);
-  for(let i=0;i<80;i++){const cs=getComputedStyle(el);const lh=parseFloat(cs.lineHeight);const pad=parseFloat(cs.paddingTop)+parseFloat(cs.paddingBottom);if(el.scrollHeight-pad<=lh*max+4&&el.scrollWidth<=el.clientWidth+1)break;s-=2;el.style.fontSize=s+'px';}});
+function fit(){document.querySelectorAll('[data-fit]').forEach(el=>{el.style.fontSize='';const max=+el.dataset.fit+(document.body.classList.contains('doc')&&el.dataset.f==='ten'&&!el.hasAttribute('data-nodoc')?1:0);let s=parseFloat(getComputedStyle(el).fontSize);
+  for(let i=0;i<80;i++){const cs=getComputedStyle(el);const lh=parseFloat(cs.lineHeight);const pad=parseFloat(cs.paddingTop)+parseFloat(cs.paddingBottom);if(el.offsetHeight-pad<=lh*max+4&&el.scrollWidth<=el.clientWidth+1)break;s-=2;el.style.fontSize=s+'px';}});
   document.querySelectorAll('[data-fitw]').forEach(el=>{let s=parseFloat(getComputedStyle(el).fontSize);for(let i=0;i<80&&el.scrollWidth>el.clientWidth+1;i++){s-=2;el.style.fontSize=s+'px';}});
   document.body.dataset.ready='1';}
 document.fonts.ready.then(fit);

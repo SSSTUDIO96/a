@@ -9,6 +9,8 @@ import {
   TRAVEL_FEE_MODE_LABELS,
   vndFromBigInt,
   type TravelFeeMode,
+  type TravelPolicy,
+  type TravelTier,
   type Vnd,
 } from '@makeup/shared';
 import { AppError } from '../../lib/errors';
@@ -50,6 +52,18 @@ export interface PlannedLine {
   packageDeposit: Vnd;
   // Thợ phụ trách dự kiến (chỉ dòng gói/dịch vụ chính).
   staff: StaffAssignment[];
+  // Số liệu để in dòng công thức phí di chuyển (chỉ dòng TRAVEL, chỉ có ở bảng tính — database chưa có cột lưu).
+  travelBreakdown: TravelBreakdown | null;
+}
+
+export interface TravelBreakdown {
+  includedKm: number | null;
+  // Bán kính lấy từ đâu: gói (includedKm của gói) hay mức chung của tổ chức (freeKm).
+  includedFrom: 'PACKAGE' | 'ORGANIZATION' | null;
+  excessKm: number | null;
+  chargedKm: number | null;
+  roundTrip: boolean;
+  tier: TravelTier | null;
 }
 
 // Đổi lỗi tính tiền của @makeup/shared thành 400 có lời rõ; lỗi khác ném nguyên.
@@ -98,6 +112,7 @@ function blank(): Omit<PlannedLine, 'kind' | 'name' | 'quantity' | 'unitPrice' |
     note: null,
     packageDeposit: 0,
     staff: [],
+    travelBreakdown: null,
   };
 }
 
@@ -130,16 +145,11 @@ async function loadSubject(tx: Tx, orgId: string, subjectId: string, line: numbe
   return s;
 }
 
-export interface TravelPolicyNumbers {
-  fixedAmount: Vnd;
-  perKmAmount: Vnd;
-  freeKm: number;
-  minimumAmount: Vnd;
-  roundTrip: boolean;
-}
-
-export async function loadTravelPolicy(tx: Tx, orgId: string): Promise<TravelPolicyNumbers> {
-  const p = await tx.travelFeePolicy.findUnique({ where: { organizationId: orgId } });
+export async function loadTravelPolicy(tx: Tx, orgId: string): Promise<TravelPolicy> {
+  const p = await tx.travelFeePolicy.findUnique({
+    where: { organizationId: orgId },
+    include: { tiers: { orderBy: { fromKm: 'asc' } } },
+  });
   // Tổ chức nào cũng được tạo kèm cài đặt phí di chuyển; thiếu là dữ liệu hỏng, không đoán.
   if (!p) throw new Error(`Tổ chức ${orgId} thiếu cài đặt phí di chuyển`);
   return {
@@ -148,6 +158,11 @@ export async function loadTravelPolicy(tx: Tx, orgId: string): Promise<TravelPol
     freeKm: p.freeKm.toNumber(),
     minimumAmount: vndFromBigInt(p.minimumAmount, 'phí tối thiểu'),
     roundTrip: p.roundTrip,
+    tiers: p.tiers.map((t) => ({
+      fromKm: t.fromKm.toNumber(),
+      toKm: t.toKm === null ? null : t.toKm.toNumber(),
+      amount: vndFromBigInt(t.amount, 'phí theo bậc'),
+    })),
   };
 }
 
@@ -155,7 +170,7 @@ interface Ctx {
   tx: Tx;
   orgId: string;
   at: Date;
-  policy: () => Promise<TravelPolicyNumbers>;
+  policy: () => Promise<TravelPolicy>;
 }
 
 async function planPlaced(ctx: Ctx, input: PlacedLineInput, line: number): Promise<PlannedLine[]> {
@@ -166,6 +181,8 @@ async function planPlaced(ctx: Ctx, input: PlacedLineInput, line: number): Promi
   let pkgSubject: { id: string } | null = null;
   // Số thợ tối đa của dòng = số thợ của gói + 3 (dịch vụ lẻ tính như gói 1 thợ).
   let staffCount = 1;
+  // Bán kính miễn phí của gói (km một chiều); undefined = theo mức chung của tổ chức.
+  let includedKm: number | undefined;
 
   if (input.kind === 'PACKAGE') {
     const pkg = await tx.servicePackage.findFirst({
@@ -178,6 +195,7 @@ async function planPlaced(ctx: Ctx, input: PlacedLineInput, line: number): Promi
         subjectId: true,
         locationTypes: true,
         staffCount: true,
+        includedKm: true,
         items: { where: { isOptional: false }, select: { serviceId: true } },
       },
     });
@@ -200,6 +218,7 @@ async function planPlaced(ctx: Ctx, input: PlacedLineInput, line: number): Promi
     includedServiceIds = new Set(pkg.items.map((i) => i.serviceId));
     pkgSubject = pkg.subjectId ? { id: pkg.subjectId } : null;
     staffCount = pkg.staffCount;
+    includedKm = pkg.includedKm === null ? undefined : pkg.includedKm.toNumber();
     if (pkg.subjectId && input.subjectId && input.subjectId !== pkg.subjectId) {
       const want = await tx.makeupSubject.findFirst({
         where: { id: pkg.subjectId, organizationId: orgId },
@@ -296,7 +315,7 @@ async function planPlaced(ctx: Ctx, input: PlacedLineInput, line: number): Promi
       lineTotal: money(() => computeLineTotal(price.unitPrice, a.quantity, 0), { line }),
     });
   }
-  if (input.travel) out.push(await planTravel(ctx, main, input.travel, line));
+  if (input.travel) out.push(await planTravel(ctx, main, input.travel, includedKm, line));
   return out;
 }
 
@@ -325,9 +344,18 @@ async function checkStaff(ctx: Ctx, main: PlannedLine, staff: StaffAssignment[],
   return staff.map((s) => ({ membershipId: s.membershipId, role: s.role }));
 }
 
-async function planTravel(ctx: Ctx, parent: PlannedLine, travel: TravelInput, line: number): Promise<PlannedLine> {
+async function planTravel(
+  ctx: Ctx,
+  parent: PlannedLine,
+  travel: TravelInput,
+  includedKm: number | undefined,
+  line: number,
+): Promise<PlannedLine> {
   const policy = await ctx.policy();
-  const fee = money(() => computeTravelFee(policy, travel), { line });
+  const fee = money(
+    () => computeTravelFee(policy, { mode: travel.mode, distanceKm: travel.distanceKm, amount: travel.amount, includedKm }),
+    { line },
+  );
   return {
     ...blank(),
     parentLineId: parent.id,
@@ -341,6 +369,14 @@ async function planTravel(ctx: Ctx, parent: PlannedLine, travel: TravelInput, li
     distanceKm: fee.distanceKm,
     perKmAmount: fee.perKmAmount,
     note: travel.note ?? null,
+    travelBreakdown: {
+      includedKm: fee.includedKm,
+      includedFrom: fee.includedKm === null ? null : includedKm === undefined ? 'ORGANIZATION' : 'PACKAGE',
+      excessKm: fee.excessKm,
+      chargedKm: fee.chargedKm,
+      roundTrip: fee.roundTrip,
+      tier: fee.tier,
+    },
   };
 }
 
@@ -389,7 +425,7 @@ async function planOne(ctx: Ctx, input: LineInput, line: number): Promise<Planne
 // Tính các dòng từ dữ liệu nhập: kiểm tham chiếu thuộc tổ chức, chốt giá hiện hành, sinh dòng dịch vụ phụ và phí di chuyển.
 // `line` trong lỗi là vị trí dòng (bắt đầu từ 0) trong mảng gửi lên.
 export async function planLines(tx: Tx, orgId: string, inputs: LineInput[], at: Date, firstIndex = 0): Promise<PlannedLine[]> {
-  let cached: TravelPolicyNumbers | null = null;
+  let cached: TravelPolicy | null = null;
   const ctx: Ctx = {
     tx,
     orgId,

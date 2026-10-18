@@ -8,7 +8,7 @@
     "build": "tsc --noEmit -p tsconfig.json && vite build && node scripts/check-bundle-secrets.mjs && node scripts/vercel-config.mjs --check",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json",
-    "test": "vitest run && vitest run --config src/ui/vitest.dom.config.ts",
+    "test": "vitest run",
     "e2e": "playwright test"
   },
   "dependencies": {

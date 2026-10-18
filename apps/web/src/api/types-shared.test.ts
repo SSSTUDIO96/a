@@ -6,7 +6,7 @@ import type { ContractStatus, InitialWorkStatus, TravelFeeMode, WorkStatus } fro
 const work = { DRAFT: 1, PENDING_CONFIRMATION: 1, CONFIRMED: 1, IN_PROGRESS: 1, COMPLETED: 1, CANCELLED: 1, NO_SHOW: 1 } satisfies Record<WorkStatus, 1>;
 const initial = { DRAFT: 1, PENDING_CONFIRMATION: 1, CONFIRMED: 1 } satisfies Record<InitialWorkStatus, 1>;
 const contract = { DRAFT: 1, CONFIRMED: 1, COMPLETED: 1, CANCELLED: 1 } satisfies Record<ContractStatus, 1>;
-const travel = { FIXED: 1, PER_KM: 1, MANUAL: 1 } satisfies Record<TravelFeeMode, 1>;
+const travel = { FIXED: 1, PER_KM: 1, MANUAL: 1, TIERED: 1 } satisfies Record<TravelFeeMode, 1>;
 
 const sorted = (a: readonly string[]) => [...a].sort();
 

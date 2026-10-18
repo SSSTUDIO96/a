@@ -126,6 +126,7 @@ model Organization {
   installments      PaymentInstallment[]
   payments          Payment[]
   subscriptions     OrganizationSubscription[]
+  profile           OrganizationProfile?
 
   @@map("organizations")
 }
@@ -821,6 +822,10 @@ model StoredFile {
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   createdBy    User         @relation(fields: [createdById], references: [id], onDelete: Restrict)
 
+  profileLogos   OrganizationProfile[] @relation("ProfileLogo")
+  profileAvatars OrganizationProfile[] @relation("ProfileAvatar")
+  profileCovers  OrganizationProfile[] @relation("ProfileCover")
+
   @@unique([id, organizationId])
   @@index([organizationId, purpose])
   @@map("stored_files")
@@ -949,4 +954,44 @@ model OrganizationSubscription {
 
   @@index([organizationId, startsAt])
   @@map("organization_subscriptions")
+}
+
+// ==================== HỒ SƠ THƯƠNG HIỆU (website giới thiệu đọc bản đã xuất bản) ====================
+
+// Hồ sơ công khai của tổ chức. Website chỉ đọc khi isPublished = true; sửa xong phải bấm xuất bản lại.
+model OrganizationProfile {
+  organizationId     String    @id @map("organization_id") @db.Uuid
+  brandName          String    @map("brand_name")
+  tagline            String?
+  bio                String?
+  experience         String?
+  styles             String[]
+  serviceArea        String?   @map("service_area")
+  address            String?
+  phone              String?
+  email              String?
+  zalo               String?
+  facebook           String?
+  instagram          String?
+  tiktok             String?
+  website            String?
+  logoFileId         String?   @map("logo_file_id") @db.Uuid
+  avatarFileId       String?   @map("avatar_file_id") @db.Uuid
+  coverFileId        String?   @map("cover_file_id") @db.Uuid
+  // Giờ làm việc theo thứ trong tuần: [{ weekday: 1..7, open: "08:00", close: "20:00" }] — kiểm bằng zod ở máy chủ.
+  workingHours       Json      @default("[]") @map("working_hours")
+  bookingPolicy      String?   @map("booking_policy")
+  cancellationPolicy String?   @map("cancellation_policy")
+  depositPolicy      String?   @map("deposit_policy")
+  isPublished        Boolean   @default(false) @map("is_published")
+  publishedAt        DateTime? @map("published_at") @db.Timestamptz(3)
+  updatedAt          DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  // Khoá ngoại kép (tệp, tổ chức): database chặn gắn ảnh của tổ chức khác.
+  logo         StoredFile?  @relation("ProfileLogo", fields: [logoFileId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  avatar       StoredFile?  @relation("ProfileAvatar", fields: [avatarFileId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  cover        StoredFile?  @relation("ProfileCover", fields: [coverFileId, organizationId], references: [id, organizationId], onDelete: Restrict)
+
+  @@map("organization_profiles")
 }

@@ -14,7 +14,9 @@
     "db:generate": "prisma generate",
     "db:sync-roles": "tsx src/scripts/run-sync-system-roles.ts",
     "postinstall": "prisma generate",
-    "db:sync-roles:prod": "node dist/scripts/run-sync-system-roles.js"
+    "db:sync-roles:prod": "node dist/scripts/run-sync-system-roles.js",
+    "platform:grant-admin": "tsx src/scripts/grant-platform-admin.ts",
+    "platform:seed-plans": "tsx src/scripts/seed-plans.ts"
   },
   "dependencies": {
     "@makeup/shared": "workspace:*",

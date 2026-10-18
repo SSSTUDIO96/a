@@ -41,7 +41,11 @@ import type {
   ServicePackage,
   StaffMember,
   StaffTier,
+  AvailabilityShift,
+  StaffAvailability,
+  StaffAvailabilityResult,
   StudioLocation,
+  TravelFeeTier,
   TravelFeePolicy,
 } from './types';
 
@@ -92,7 +96,16 @@ const K = {
     id: true, name: true, address: true, latitude: true, longitude: true, isDefault: true, isActive: true, createdAt: true, updatedAt: true,
   }),
   policy: keysOf<TravelFeePolicy>()({
-    defaultMode: true, fixedAmount: true, perKmAmount: true, freeKm: true, minimumAmount: true, roundTrip: true, updatedAt: true,
+    defaultMode: true, fixedAmount: true, perKmAmount: true, freeKm: true, minimumAmount: true, roundTrip: true, tiers: true, updatedAt: true,
+  }),
+  travelTier: keysOf<TravelFeeTier>()({ fromKm: true, toKm: true, amount: true }),
+  availResult: keysOf<StaffAvailabilityResult>()({ startsAt: true, endsAt: true, dayStart: true, dayEnd: true, timezone: true, items: true }),
+  avail: keysOf<StaffAvailability>()({
+    membershipId: true, displayName: true, avatarUrl: true, initials: true, tier: true, isBookable: true, level: true,
+    overlaps: true, sameDay: true, draftHolds: true,
+  }),
+  availShift: keysOf<AvailabilityShift>()({
+    appointmentId: true, code: true, status: true, startsAt: true, endsAt: true, blockStart: true, blockEnd: true, title: true, customerName: true,
   }),
   price: keysOf<CurrentPrice>()({ priceVersionId: true, listPrice: true, salePrice: true, unitPrice: true, effectiveFrom: true }),
   version: keysOf<PriceVersion>()({
@@ -104,7 +117,7 @@ const K = {
   }),
   pkg: keysOf<ServicePackage>()({
     id: true, code: true, name: true, description: true, durationMinutes: true, staffCount: true, depositAmount: true, subjectId: true,
-    locationTypes: true, terms: true, isActive: true, isPublic: true, sortOrder: true, createdAt: true, updatedAt: true, subject: true,
+    locationTypes: true, includedKm: true, terms: true, isActive: true, isPublic: true, sortOrder: true, createdAt: true, updatedAt: true, subject: true,
     items: true, currentPrice: true,
   }),
   pkgItem: keysOf<PackageItem>()({ serviceId: true, quantity: true, isOptional: true, service: true, currentPrice: true }),
@@ -283,8 +296,15 @@ describe('types.ts khớp đúng dữ liệu máy chủ thật trả về', () =
       freeKm: 3,
       minimumAmount: 50_000,
       roundTrip: true,
+      tiers: [
+        { fromKm: 20, toKm: null, amount: 400_000 },
+        { fromKm: 10, toKm: 20, amount: 200_000 },
+      ],
     });
     expectKeys(policy, K.policy, 'putTravelFeePolicy');
+    expectKeys(first(policy.tiers, 'bậc km'), K.travelTier, 'TravelFeeTier');
+    expect(policy.tiers.map((t) => t.fromKm)).toEqual([10, 20]);
+    expect(policy.tiers[1]?.toKm).toBeNull();
     expectVnd(policy.perKmAmount, 'perKmAmount');
     expect(policy.freeKm).toBe(3);
   });
@@ -323,6 +343,7 @@ describe('types.ts khớp đúng dữ liệu máy chủ thật trả về', () =
         durationMinutes: 180,
         subjectId: subject.id,
         depositAmount: 500_000,
+        includedKm: 5,
         items: [{ serviceId: main.id }, { serviceId: addon.id, isOptional: true }],
         listPrice: 2_700_000,
       },
@@ -335,6 +356,7 @@ describe('types.ts khớp đúng dữ liệu máy chủ thật trả về', () =
     expectKeys(item.service, K.pkgItemService, 'PackageItem.service');
     expectKeys(item.currentPrice, K.price, 'PackageItem.currentPrice');
     expectVnd(pkg.depositAmount, 'depositAmount');
+    expect(pkg.includedKm).toBe(5);
     expectKeys(await catalog.updatePackage(orgId, pkg.id, { staffCount: 2 }), K.pkg, 'updatePackage');
     expectKeys(await catalog.getPackage(orgId, pkg.id), K.pkg, 'getPackage');
     const pkgs = await catalog.listPackages(orgId, { isActive: true });
@@ -380,6 +402,25 @@ describe('types.ts khớp đúng dữ liệu máy chủ thật trả về', () =
     const list = await schedule.listCustomers(orgId, { q: 'Lan' });
     expectKeys(list, K.page, 'listCustomers');
     expectKeys(first(list.items, 'khách'), K.customer, 'listCustomers.items');
+  });
+
+  it('mức rảnh của thợ', async () => {
+    // Ca riêng (không gắn hợp đồng) 07:00–10:00 → hỏi 08:00–09:00 phải ra trùng giờ.
+    await schedule.createAppointment(
+      orgId,
+      { startsAt: '2026-12-25T07:00:00+07:00', endsAt: '2026-12-25T10:00:00+07:00', staff: [{ membershipId }], status: 'CONFIRMED' },
+      newIdempotencyKey(),
+    );
+    const avail = await staff.getStaffAvailability(orgId, {
+      startsAt: '2026-12-25T08:00:00+07:00',
+      endsAt: '2026-12-25T09:00:00+07:00',
+      membershipIds: [membershipId],
+    });
+    expectKeys(avail, K.availResult, 'getStaffAvailability');
+    const me = first(avail.items, 'mức rảnh của thợ');
+    expectKeys(me, K.avail, 'StaffAvailability');
+    expect(me.level).toBe('OVERLAP');
+    expectKeys(first(me.overlaps, 'ca trùng'), K.availShift, 'AvailabilityShift');
   });
 
   it('hợp đồng: quote, tạo, xem, sửa, thêm dòng, huỷ dòng, xác nhận', async () => {

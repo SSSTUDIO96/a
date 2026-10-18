@@ -119,6 +119,13 @@ export interface StudioLocationCreateInput {
 
 export type StudioLocationUpdateInput = Partial<StudioLocationCreateInput>;
 
+// Bậc phí di chuyển theo km MỘT CHIỀU: khoảng [fromKm, toKm); toKm null = bậc cuối.
+export interface TravelFeeTier {
+  fromKm: number;
+  toKm: number | null;
+  amount: Vnd;
+}
+
 // catalog/locations.ts — presentPolicy.
 export interface TravelFeePolicy {
   defaultMode: TravelFeeMode;
@@ -127,10 +134,12 @@ export interface TravelFeePolicy {
   freeKm: number;
   minimumAmount: Vnd;
   roundTrip: boolean;
+  // Xếp theo fromKm. TIERED bắt buộc ít nhất một bậc.
+  tiers: TravelFeeTier[];
   updatedAt: IsoDateTime;
 }
 
-// PUT ghi đè toàn bộ: gửi đủ 6 trường.
+// PUT ghi đè toàn bộ: gửi đủ mọi trường, kể cả tiers (mảng rỗng được khi không dùng TIERED).
 export type TravelFeePolicyInput = Omit<TravelFeePolicy, 'updatedAt'>;
 
 // catalog/prices.ts — presentPrice: giá hiện hành (null = chưa có giá hiệu lực).
@@ -233,6 +242,8 @@ export interface ServicePackage {
   subjectId: string | null;
   // Rỗng = không giới hạn địa điểm.
   locationTypes: LocationType[];
+  // Bán kính miễn phí khi làm tại nhà / nơi khác (km một chiều); null = theo freeKm của tổ chức.
+  includedKm: number | null;
   terms: string | null;
   isActive: boolean;
   isPublic: boolean;
@@ -266,6 +277,7 @@ export interface PackageUpdateInput {
   depositAmount?: Vnd;
   subjectId?: string | null;
   locationTypes?: LocationType[];
+  includedKm?: number | null;
   terms?: string | null;
   isActive?: boolean;
   isPublic?: boolean;
@@ -721,6 +733,67 @@ export interface PayRateRow {
 export interface PayRateSheet {
   owner: { kind: 'package' | 'service'; id: string; name: string };
   items: PayRateRow[];
+}
+
+// staff/availability.ts — mức rảnh của thợ cho một khung giờ (chọn thợ khi xếp lịch / lập hợp đồng).
+export type AvailabilityLevel = 'OVERLAP' | 'SAME_DAY' | 'FREE';
+
+export interface AvailabilityShift {
+  appointmentId: string;
+  code: string;
+  status: WorkStatus;
+  startsAt: IsoDateTime;
+  endsAt: IsoDateTime;
+  // Khoảng bận đã gồm thời gian di chuyển.
+  blockStart: IsoDateTime;
+  blockEnd: IsoDateTime;
+  title: string | null;
+  customerName: string | null;
+}
+
+// Thợ đang được giữ chỗ ở dòng của một hợp đồng nháp khác.
+export interface DraftHold {
+  contractId: string;
+  code: string;
+  lineId: string;
+  lineName: string;
+  scheduledStart: IsoDateTime | null;
+  scheduledEnd: IsoDateTime | null;
+  overlaps: boolean;
+}
+
+export interface StaffAvailability {
+  membershipId: string;
+  displayName: string;
+  avatarUrl: string | null;
+  initials: string;
+  tier: { id: string; name: string } | null;
+  isBookable: boolean;
+  // OVERLAP = trùng giờ; SAME_DAY = có lịch khác cùng ngày (theo múi giờ tổ chức); FREE = rảnh.
+  level: AvailabilityLevel;
+  overlaps: AvailabilityShift[];
+  sameDay: AvailabilityShift[];
+  draftHolds: DraftHold[];
+}
+
+export interface StaffAvailabilityQuery {
+  startsAt: IsoDateTime;
+  // Sau startsAt, khung tối đa 24 giờ.
+  endsAt: IsoDateTime;
+  membershipIds?: string[];
+  excludeAppointmentIds?: string[];
+  // Đang sửa hợp đồng nháp nào thì bỏ giữ chỗ của chính nó.
+  excludeContractId?: string;
+}
+
+export interface StaffAvailabilityResult {
+  startsAt: IsoDateTime;
+  endsAt: IsoDateTime;
+  // Ranh giới "ngày" theo múi giờ của tổ chức.
+  dayStart: IsoDateTime;
+  dayEnd: IsoDateTime;
+  timezone: string;
+  items: StaffAvailability[];
 }
 
 export interface PayRatesInput {

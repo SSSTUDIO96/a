@@ -1,9 +1,11 @@
-import { createBrowserRouter, Navigate, Outlet, type RouteObject } from 'react-router';
+import type { ReactNode } from 'react';
+import { createBrowserRouter, Outlet, type RouteObject } from 'react-router';
 import { CreateOrgPage } from '../features/auth/CreateOrgPage';
 import { LoginPage } from '../features/auth/LoginPage';
 import { RegisterPage } from '../features/auth/RegisterPage';
+import { AppShell, OrgHome, RequireNavPermission } from '../layout/AppShell';
+import { NotFoundView } from '../layout/ErrorStates';
 import { GuestOnly, HomeRedirect, RequireAuth } from './guards';
-import { NotFound, OrgShell, Placeholder } from './OrgShell';
 import { SessionProvider } from './session';
 
 function Root() {
@@ -14,18 +16,27 @@ function Root() {
   );
 }
 
-// Đường trong một tổ chức (/:orgSlug/...). Các gói W4–W6 thay Placeholder bằng màn thật.
+// Màn chưa dựng: đúng một dòng, không nút giả. Các gói W4–W6 thay bằng màn thật.
+export function Placeholder() {
+  return <p>Đang dựng</p>;
+}
+
+// Mỗi đường trong tổ chức gắn với một mục điều hướng (src/layout/nav.ts) để chặn theo quyền.
+function guarded(navKey: string, element: ReactNode) {
+  return <RequireNavPermission navKey={navKey}>{element}</RequireNavPermission>;
+}
+
 const orgChildren: RouteObject[] = [
-  { index: true, element: <Navigate to="lich" replace /> },
-  { path: 'lich', element: <Placeholder /> },
-  { path: 'bang-gia', element: <Placeholder /> },
-  { path: 'bang-gia/:nhom', element: <Placeholder /> },
-  { path: 'hop-dong', element: <Placeholder /> },
-  { path: 'hop-dong/:id', element: <Placeholder /> },
-  { path: 'khach-hang', element: <Placeholder /> },
-  { path: 'nhan-su', element: <Placeholder /> },
-  { path: 'cai-dat', element: <Placeholder /> },
-  { path: '*', element: <NotFound /> },
+  { index: true, element: <OrgHome /> },
+  { path: 'lich', element: guarded('lich', <Placeholder />) },
+  { path: 'bang-gia', element: guarded('bang-gia', <Placeholder />) },
+  { path: 'bang-gia/:nhom', element: guarded('bang-gia', <Placeholder />) },
+  { path: 'hop-dong', element: guarded('hop-dong', <Placeholder />) },
+  { path: 'hop-dong/:id', element: guarded('hop-dong', <Placeholder />) },
+  { path: 'khach-hang', element: guarded('khach-hang', <Placeholder />) },
+  { path: 'nhan-su', element: guarded('nhan-su', <Placeholder />) },
+  { path: 'cai-dat', element: guarded('cai-dat', <Placeholder />) },
+  { path: '*', element: <NotFoundView /> },
 ];
 
 export const routes: RouteObject[] = [
@@ -36,8 +47,8 @@ export const routes: RouteObject[] = [
       { path: 'dang-nhap', element: <GuestOnly><LoginPage /></GuestOnly> },
       { path: 'dang-ky', element: <GuestOnly><RegisterPage /></GuestOnly> },
       { path: 'tao-to-chuc', element: <RequireAuth><CreateOrgPage /></RequireAuth> },
-      { path: ':orgSlug', element: <RequireAuth><OrgShell /></RequireAuth>, children: orgChildren },
-      { path: '*', element: <NotFound /> },
+      { path: ':orgSlug', element: <RequireAuth><AppShell /></RequireAuth>, children: orgChildren },
+      { path: '*', element: <main className="sh-alone"><NotFoundView message="Không có trang này." backTo="/" /></main> },
     ],
   },
 ];

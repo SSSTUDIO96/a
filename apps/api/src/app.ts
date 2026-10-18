@@ -17,13 +17,14 @@ import { staffRoutes } from './modules/staff/routes';
 import { fileRoutes } from './modules/files/routes';
 import { paymentRoutes } from './modules/payments/routes';
 import { platformRoutes } from './modules/platform/routes';
+import { profileRoutes } from './modules/profile/routes';
 import { createHash } from 'node:crypto';
 import { Prisma } from '@prisma/client';
 
 // Lời báo lỗi mặc định của zod bằng tiếng Việt (lời riêng trong từng schema vẫn được ưu tiên).
 z.config(z.locales.vi());
 
-export const ALL_ROUTES: AnyRoute[] = [...authRoutes, ...orgRoutes, ...catalogRoutes, ...scheduleRoutes, ...contractRoutes, ...staffRoutes, ...fileRoutes, ...paymentRoutes, ...platformRoutes];
+export const ALL_ROUTES: AnyRoute[] = [...authRoutes, ...orgRoutes, ...catalogRoutes, ...scheduleRoutes, ...contractRoutes, ...staffRoutes, ...fileRoutes, ...paymentRoutes, ...platformRoutes, ...profileRoutes];
 
 export function createApp(deps: Deps, routes: AnyRoute[] = ALL_ROUTES) {
   const app = express();

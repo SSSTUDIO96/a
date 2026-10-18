@@ -18,6 +18,7 @@ html,body{background:#ddd}
 #c{position:relative;width:1080px;height:1080px;overflow:hidden}
 body.doc #c{height:1920px}
 img{display:block}
+[data-fit]{flex-shrink:0;text-wrap:balance}
 
 #c{background:#fff;color:#3B2E4A;font-family:"Nunito";padding:48px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1.25fr .9fr .55fr;gap:24px}
 .t{border-radius:36px;overflow:hidden;min-width:0;min-height:0}
@@ -47,8 +48,8 @@ const D={ten:P.get('ten')||'Tôn Nữ Hoàng Bảo Ngọc Phương Thảo',khoa:
   thuongHieu:P.get('th')||'Chiến Makeup Academy',anh:P.get('anh')||AVATAR,logo:P.get('logo')||LOGO};
 document.body.classList.add(P.get('kho')==='doc'?'doc':'vuong');
 document.querySelectorAll('[data-f]').forEach(el=>{const k=el.dataset.f;if(el.tagName==='IMG')el.src=D[k];else el.textContent=D[k];});
-function fit(){document.querySelectorAll('[data-fit]').forEach(el=>{el.style.fontSize='';const max=+el.dataset.fit;let s=parseFloat(getComputedStyle(el).fontSize);
-  for(let i=0;i<80;i++){const cs=getComputedStyle(el);const lh=parseFloat(cs.lineHeight);const pad=parseFloat(cs.paddingTop)+parseFloat(cs.paddingBottom);if(el.scrollHeight-pad<=lh*max+4&&el.scrollWidth<=el.clientWidth+1)break;s-=2;el.style.fontSize=s+'px';}});
+function fit(){document.querySelectorAll('[data-fit]').forEach(el=>{el.style.fontSize='';const max=+el.dataset.fit+(document.body.classList.contains('doc')&&el.dataset.f==='ten'&&!el.hasAttribute('data-nodoc')?1:0);let s=parseFloat(getComputedStyle(el).fontSize);
+  for(let i=0;i<80;i++){const cs=getComputedStyle(el);const lh=parseFloat(cs.lineHeight);const pad=parseFloat(cs.paddingTop)+parseFloat(cs.paddingBottom);if(el.offsetHeight-pad<=lh*max+4&&el.scrollWidth<=el.clientWidth+1)break;s-=2;el.style.fontSize=s+'px';}});
   document.querySelectorAll('[data-fitw]').forEach(el=>{let s=parseFloat(getComputedStyle(el).fontSize);for(let i=0;i<80&&el.scrollWidth>el.clientWidth+1;i++){s-=2;el.style.fontSize=s+'px';}});
   document.body.dataset.ready='1';}
 document.fonts.ready.then(fit);

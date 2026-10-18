@@ -3,7 +3,7 @@ import { vndFromBigInt, type Vnd } from '@makeup/shared';
 import { AppError } from '../../lib/errors';
 import { initialsOf } from '../staff/common';
 import { staffAvailabilityTx, type AvailabilityShift, type DraftHold } from '../staff/availability';
-import type { PlannedLine, Sheet } from './sheet';
+import type { PlannedLine, Sheet, TravelBreakdown } from './sheet';
 
 // Thợ phụ trách dự kiến của dòng, đủ để giao diện hiện ảnh/chữ viết tắt và bậc.
 export interface StaffView {
@@ -132,6 +132,8 @@ export interface LineView {
   voidReason: string | null;
   staff: StaffView[];
   staffWarnings: StaffWarning[];
+  // Chỉ bảng tính (xem trước) có; dòng đã lưu trả null vì database chưa lưu bán kính/bậc đã dùng.
+  travelBreakdown: TravelBreakdown | null;
 }
 
 export interface GroupedLine extends LineView {
@@ -231,6 +233,7 @@ function rowView(r: LineRow, warnings: WarningMap): LineView {
     voidReason: r.voidReason,
     staff: r.plannedStaff.map((s) => staffView(s.membership, s.role)).sort(byRole),
     staffWarnings: warnings.get(r.id) ?? [],
+    travelBreakdown: null,
   };
 }
 

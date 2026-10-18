@@ -170,7 +170,14 @@ function bigBody() {
           { serviceId: A.nail, quantity: 2 },
         ],
       },
-      { kind: 'SERVICE', serviceId: A.party, subjectId: A.bridesmaid, quantity: 3, locationType: 'OTHER', travel: { mode: 'FIXED' } },
+      {
+        kind: 'SERVICE',
+        serviceId: A.party,
+        subjectId: A.bridesmaid,
+        quantity: 3,
+        locationType: 'OTHER',
+        travel: { mode: 'FIXED', distanceKm: 8 },
+      },
       {
         kind: 'SERVICE',
         serviceId: A.party,
@@ -208,7 +215,7 @@ interface Line {
 
 function stripIds(lines: Line[]): unknown {
   const one = (l: Line): unknown => {
-    const { id: _id, addons, travel, ...rest } = l;
+    const { id: _id, addons, travel, travelBreakdown: _b, ...rest } = l as Line & { travelBreakdown: unknown };
     return { ...rest, addons: addons?.map(one), travel: travel ? one(travel) : null };
   };
   return lines.map((l) => one(l as Line));
@@ -230,10 +237,10 @@ describe('lập hợp đồng nhiều gói, nhiều nhân vật, dịch vụ ph�
     expect(c.status).toBe('DRAFT');
 
     const [bride, mother, maids, guest, early, earlyOverride, custom] = c.lines as Line[];
-    // Gói cô dâu: giá khuyến mại 3.000.000, nhân vật lấy từ gói; khứ hồi 12,35×2 − 3 = 21,7 km × 5.000 = 108.500 → 109.000
+    // Gói cô dâu: giá khuyến mại 3.000.000, nhân vật lấy từ gói; khứ hồi (12,35 − 3) × 2 = 18,7 km × 5.000 = 93.500 → 94.000
     expect(bride).toMatchObject({ kind: 'PACKAGE', unitPrice: 3_000_000, lineTotal: 3_000_000, subjectName: 'Cô dâu' });
     expect(bride!.addons.map((a) => [a.name, a.lineTotal])).toEqual([['Lens', 100_000]]);
-    expect(bride!.travel).toMatchObject({ kind: 'TRAVEL', travelMode: 'PER_KM', distanceKm: 12.35, perKmAmount: 5_000, lineTotal: 109_000 });
+    expect(bride!.travel).toMatchObject({ kind: 'TRAVEL', travelMode: 'PER_KM', distanceKm: 12.35, perKmAmount: 5_000, lineTotal: 94_000 });
     // Gói mẹ ×2 − giảm 100.000; tại studio mặc định; tóc ×2, nail ×2
     expect(mother).toMatchObject({ unitPrice: 1_200_000, quantity: 2, lineDiscount: 100_000, lineTotal: 2_300_000, subjectName: 'Mẹ cô dâu' });
     expect(mother!.studioLocationId).toBe(A.studio);
@@ -250,10 +257,10 @@ describe('lập hợp đồng nhiều gói, nhiều nhân vật, dịch vụ ph�
     expect(earlyOverride).toMatchObject({ kind: 'SURCHARGE', unitPrice: 250_000, priceVersionId: null });
     expect(custom).toMatchObject({ kind: 'CUSTOM', name: 'Phí giữ váy qua đêm', lineTotal: 120_000, priceVersionId: null });
 
-    expect(c.subtotal).toBe(10_329_000);
+    expect(c.subtotal).toBe(10_314_000);
     expect(c.discount).toBe(200_000);
-    expect(c.total).toBe(10_129_000);
-    expect(c.travelTotal).toBe(259_000);
+    expect(c.total).toBe(10_114_000);
+    expect(c.travelTotal).toBe(244_000);
     // Cọc gợi ý = 1.000.000 (cô dâu) + 300.000 × 2 (mẹ)
     expect(c.depositRequired).toBe(1_600_000);
     expect(c.customer).toMatchObject({ id: customerA, fullName: 'Nguyễn Thị Hoa' });
@@ -261,13 +268,23 @@ describe('lập hợp đồng nhiều gói, nhiều nhân vật, dịch vụ ph�
     // Xem trước = hợp đồng, từng dòng, từng đồng.
     expect(q.body).toMatchObject({ subtotal: c.subtotal, discount: c.discount, total: c.total, travelTotal: c.travelTotal });
     expect(q.body.depositRequired).toBe(c.depositRequired);
+    // Số liệu công thức phí di chuyển chỉ có ở bảng tính (database chưa có cột lưu) — so phần còn lại.
+    expect(q.body.lines[0].travel.travelBreakdown).toEqual({
+      includedKm: 3,
+      includedFrom: 'ORGANIZATION',
+      excessKm: 9.35,
+      chargedKm: 18.7,
+      roundTrip: true,
+      tier: null,
+    });
+    expect(c.lines[0].travel.travelBreakdown).toBeNull();
     expect(stripIds(q.body.lines)).toEqual(stripIds(c.lines));
 
     // Database giữ đúng số dòng và tiền là BigInt khớp tổng.
     const rows = await deps.db.contractLine.findMany({ where: { contractId: c.id } });
     // 7 dòng gốc + 3 dịch vụ phụ + 3 phí di chuyển
     expect(rows).toHaveLength(13);
-    expect(rows.reduce((s, r) => s + r.lineTotal, 0n)).toBe(10_329_000n);
+    expect(rows.reduce((s, r) => s + r.lineTotal, 0n)).toBe(10_314_000n);
   });
 
   it('đổi bảng giá sau khi tạo → hợp đồng giữ nguyên giá đã chốt', async () => {
@@ -296,6 +313,74 @@ describe('lập hợp đồng nhiều gói, nhiều nhân vật, dịch vụ ph�
     expect(bad.status).toBe(400);
     const both = await create(A.owner, A.orgId, { customerId: customerA, newCustomer: { fullName: 'X' }, lines });
     expect(both.status).toBe(400);
+  });
+});
+
+describe('bán kính miễn phí của gói và phí theo bậc khoảng cách', () => {
+  let C: Catalog;
+  let cust: string;
+  let radiusPkg: string;
+
+  beforeAll(async () => {
+    C = await seed('ban-kinh');
+    cust = await newCustomer(C.orgId, 'Khách bán kính', '0911000999');
+    // Gói tại nhà có bán kính miễn phí 10 km; tổ chức: 5.000 ₫/km, khứ hồi, bán kính chung 3 km, tối thiểu 50.000.
+    const pkg = await deps.db.servicePackage.create({
+      data: { organizationId: C.orgId, code: 'TAI-NHA', name: 'Gói tại nhà', durationMinutes: 120, includedKm: 10 },
+    });
+    await deps.db.priceVersion.create({
+      data: { organizationId: C.orgId, packageId: pkg.id, listPrice: 2_000_000n, effectiveFrom: new Date(Date.now() - 60_000), createdById: C.owner.id },
+    });
+    radiusPkg = pkg.id;
+    await deps.db.travelFeeTier.createMany({
+      data: [
+        { organizationId: C.orgId, fromKm: 3, toKm: 20, amount: 200_000n },
+        { organizationId: C.orgId, fromKm: 20, toKm: null, amount: 400_000n },
+      ],
+    });
+  });
+
+  const line = (packageId: string, travel: object) => ({ kind: 'PACKAGE', packageId, quantity: 1, locationType: 'CUSTOMER_HOME', travel });
+  const travelOf = async (packageId: string, travel: object) => {
+    const r = await quote(C.owner, C.orgId, { customerId: cust, lines: [line(packageId, travel)] });
+    return r;
+  };
+
+  it('theo km: bán kính của gói thay mức chung; đúng bằng bán kính → 0; vượt → tính phần vượt × 2 (khứ hồi)', async () => {
+    const inside = (await travelOf(radiusPkg, { mode: 'PER_KM', distanceKm: 10 }).then((r) => r.body)).lines[0].travel;
+    expect(inside).toMatchObject({ lineTotal: 0, travelBreakdown: { includedKm: 10, includedFrom: 'PACKAGE', excessKm: 0 } });
+    // (12,35 − 10) × 2 = 4,7 km × 5.000 = 23.500 → 24.000 → nâng lên tối thiểu 50.000
+    const over = (await travelOf(radiusPkg, { mode: 'PER_KM', distanceKm: 12.35 }).then((r) => r.body)).lines[0].travel;
+    expect(over).toMatchObject({ lineTotal: 50_000, travelBreakdown: { includedKm: 10, excessKm: 2.35, chargedKm: 4.7, roundTrip: true } });
+    // Gói không đặt bán kính → bán kính chung 3 km: (12,35 − 3) × 2 = 18,7 km → 94.000
+    const org = (await travelOf(C.motherPkg, { mode: 'PER_KM', distanceKm: 12.35 }).then((r) => r.body)).lines[0].travel;
+    expect(org).toMatchObject({ lineTotal: 94_000, travelBreakdown: { includedKm: 3, includedFrom: 'ORGANIZATION' } });
+  });
+
+  it('cố định: trong bán kính gói → 0; vượt → mức cố định; có bán kính mà thiếu km → 400', async () => {
+    expect((await travelOf(radiusPkg, { mode: 'FIXED', distanceKm: 9 })).body.lines[0].travel.lineTotal).toBe(0);
+    expect((await travelOf(radiusPkg, { mode: 'FIXED', distanceKm: 10.5 })).body.lines[0].travel.lineTotal).toBe(150_000);
+    const r = await travelOf(radiusPkg, { mode: 'FIXED' });
+    expect(r.status).toBe(400);
+    expect(r.body.error.message).toMatch(/Cần số km để xét bán kính miễn phí 10 km/);
+  });
+
+  it('theo bậc: chọn đúng bậc theo km một chiều, trả bậc đã áp; lưu hợp đồng đúng số tiền', async () => {
+    const t = (await travelOf(radiusPkg, { mode: 'TIERED', distanceKm: 15 })).body.lines[0].travel;
+    expect(t).toMatchObject({ travelMode: 'TIERED', lineTotal: 200_000, travelBreakdown: { tier: { fromKm: 3, toKm: 20, amount: 200_000 } } });
+    const last = (await travelOf(radiusPkg, { mode: 'TIERED', distanceKm: 20 })).body.lines[0].travel;
+    expect(last).toMatchObject({ lineTotal: 400_000, travelBreakdown: { tier: { fromKm: 20, toKm: null } } });
+    expect((await travelOf(radiusPkg, { mode: 'TIERED', distanceKm: 8 })).body.lines[0].travel.lineTotal).toBe(0);
+    const c = (await create(C.owner, C.orgId, { customerId: cust, lines: [line(radiusPkg, { mode: 'TIERED', distanceKm: 25 })] }).expect(201)).body;
+    expect(c.lines[0].travel).toMatchObject({ travelMode: 'TIERED', distanceKm: 25, lineTotal: 400_000 });
+    expect(c.total).toBe(2_400_000);
+  });
+
+  it('theo bậc: không bậc nào khớp → 400 nêu số km', async () => {
+    // Gói mẹ dùng bán kính chung 3 km; bậc đầu bắt đầu từ 3 km nên thử tổ chức khác không có bậc.
+    const r = await quote(A.owner, A.orgId, { customerId: customerA, lines: [line(A.motherPkg, { mode: 'TIERED', distanceKm: 7.5 })] });
+    expect(r.status).toBe(400);
+    expect(r.body.error.message).toBe('Chưa có bậc phí cho khoảng cách 7.5 km');
   });
 });
 

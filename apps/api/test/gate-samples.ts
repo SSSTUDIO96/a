@@ -45,6 +45,9 @@ const packageLine = (o: GateOrg) => ({
   locationType: 'STUDIO',
   studioLocationId: o.ids.locationId,
   addons: [{ serviceId: o.ids.addonId, quantity: 1 }],
+  scheduledStart: '2027-04-01T01:00:00.000Z',
+  scheduledEnd: '2027-04-01T03:00:00.000Z',
+  staff: [{ membershipId: o.ids.membershipId, role: 'PRIMARY' }],
 });
 const serviceLine = (o: GateOrg) => ({ kind: 'SERVICE', serviceId: o.ids.serviceId, quantity: 1 });
 export const REF_SAMPLES: RefSamples = {

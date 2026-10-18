@@ -20,6 +20,7 @@ html,body{background:#ddd}
 #c{position:relative;width:1080px;height:1080px;overflow:hidden}
 body.doc #c{height:1920px}
 img{display:block}
+[data-fit]{flex-shrink:0;text-wrap:balance}
 
 #c{background:#F6F1EA;color:#1E1A17;font-family:"Be Vietnam Pro";display:grid;grid-template-rows:560px 1fr}
 .ph{position:relative}.ph img{width:100%;height:100%;object-fit:cover;object-position:50% 36%}
@@ -30,9 +31,11 @@ img{display:block}
 .ten{font-family:"Cormorant Garamond";font-weight:600;font-size:88px;line-height:1.08;padding-top:.06em}
 .kh{font-size:30px;color:#6B5A48;line-height:1.35}
 body.doc #c{grid-template-rows:1180px 1fr}
-body.doc .tx{padding:80px 80px 90px;gap:26px}
-body.doc .ten{font-size:110px}
-body.doc .kh{font-size:38px}
+body.doc .tx{padding:80px 80px 110px;gap:34px;justify-content:center}
+body.doc .ten{font-size:124px}
+body.doc .kh{font-size:42px}
+body.doc .lb{font-size:24px}
+body.doc .brand{font-size:24px;left:70px;top:70px}body.doc .brand img{width:56px;height:56px}
 
 </style></head><body><div id="c"><div class="ph"><img data-f="anh" alt=""><div class="brand"><img data-f="logo" alt=""><span data-f="thuongHieu"></span></div></div>
 <div class="tx"><div class="lb">Chào mừng học viên mới</div><div class="ten" data-f="ten" data-fit="2"></div><div class="kh" data-f="khoa" data-fit="2"></div></div></div>
@@ -43,8 +46,8 @@ const D={ten:P.get('ten')||'Tôn Nữ Hoàng Bảo Ngọc Phương Thảo',khoa:
   thuongHieu:P.get('th')||'Chiến Makeup Academy',anh:P.get('anh')||AVATAR,logo:P.get('logo')||LOGO};
 document.body.classList.add(P.get('kho')==='doc'?'doc':'vuong');
 document.querySelectorAll('[data-f]').forEach(el=>{const k=el.dataset.f;if(el.tagName==='IMG')el.src=D[k];else el.textContent=D[k];});
-function fit(){document.querySelectorAll('[data-fit]').forEach(el=>{el.style.fontSize='';const max=+el.dataset.fit;let s=parseFloat(getComputedStyle(el).fontSize);
-  for(let i=0;i<80;i++){const cs=getComputedStyle(el);const lh=parseFloat(cs.lineHeight);const pad=parseFloat(cs.paddingTop)+parseFloat(cs.paddingBottom);if(el.scrollHeight-pad<=lh*max+4&&el.scrollWidth<=el.clientWidth+1)break;s-=2;el.style.fontSize=s+'px';}});
+function fit(){document.querySelectorAll('[data-fit]').forEach(el=>{el.style.fontSize='';const max=+el.dataset.fit+(document.body.classList.contains('doc')&&el.dataset.f==='ten'&&!el.hasAttribute('data-nodoc')?1:0);let s=parseFloat(getComputedStyle(el).fontSize);
+  for(let i=0;i<80;i++){const cs=getComputedStyle(el);const lh=parseFloat(cs.lineHeight);const pad=parseFloat(cs.paddingTop)+parseFloat(cs.paddingBottom);if(el.offsetHeight-pad<=lh*max+4&&el.scrollWidth<=el.clientWidth+1)break;s-=2;el.style.fontSize=s+'px';}});
   document.querySelectorAll('[data-fitw]').forEach(el=>{let s=parseFloat(getComputedStyle(el).fontSize);for(let i=0;i<80&&el.scrollWidth>el.clientWidth+1;i++){s-=2;el.style.fontSize=s+'px';}});
   document.body.dataset.ready='1';}
 document.fonts.ready.then(fit);

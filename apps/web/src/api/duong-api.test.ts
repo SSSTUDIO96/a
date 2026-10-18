@@ -71,10 +71,27 @@ const cases: Case[] = [
   { name: 'getTravelFeePolicy', call: () => catalog.getTravelFeePolicy(ORG), method: 'GET', url: `${P}/travel-fee-policy` },
   {
     name: 'putTravelFeePolicy',
-    call: () => catalog.putTravelFeePolicy(ORG, { defaultMode: 'PER_KM', fixedAmount: 0, perKmAmount: 10_000, freeKm: 3, minimumAmount: 50_000, roundTrip: true }),
+    call: () =>
+      catalog.putTravelFeePolicy(ORG, {
+        defaultMode: 'TIERED',
+        fixedAmount: 0,
+        perKmAmount: 10_000,
+        freeKm: 3,
+        minimumAmount: 50_000,
+        roundTrip: true,
+        tiers: [{ fromKm: 10, toKm: 20, amount: 200_000 }, { fromKm: 20, toKm: null, amount: 400_000 }],
+      }),
     method: 'PUT',
     url: `${P}/travel-fee-policy`,
-    body: { defaultMode: 'PER_KM', fixedAmount: 0, perKmAmount: 10_000, freeKm: 3, minimumAmount: 50_000, roundTrip: true },
+    body: {
+      defaultMode: 'TIERED',
+      fixedAmount: 0,
+      perKmAmount: 10_000,
+      freeKm: 3,
+      minimumAmount: 50_000,
+      roundTrip: true,
+      tiers: [{ fromKm: 10, toKm: 20, amount: 200_000 }, { fromKm: 20, toKm: null, amount: 400_000 }],
+    },
   },
   { name: 'listServices', call: () => catalog.listServices(ORG, { kind: 'ADDON', page: 2, q: 'tóc' }), method: 'GET', url: `${P}/services?kind=ADDON&page=2&q=t%C3%B3c` },
   { name: 'getService', call: () => catalog.getService(ORG, 'sv1'), method: 'GET', url: `${P}/services/sv1` },
@@ -85,7 +102,7 @@ const cases: Case[] = [
   { name: 'listPackages', call: () => catalog.listPackages(ORG, { isActive: true, locationType: 'STUDIO' }), method: 'GET', url: `${P}/packages?isActive=true&locationType=STUDIO` },
   { name: 'getPackage', call: () => catalog.getPackage(ORG, 'p1'), method: 'GET', url: `${P}/packages/p1` },
   { name: 'createPackage', call: () => catalog.createPackage(ORG, { code: 'CD1', name: 'Cô dâu 1', durationMinutes: 120, listPrice: 2_700_000, items: [{ serviceId: 'sv1', isOptional: true }] }, KEY), method: 'POST', url: `${P}/packages`, body: { code: 'CD1', name: 'Cô dâu 1', durationMinutes: 120, listPrice: 2_700_000, items: [{ serviceId: 'sv1', isOptional: true }] }, idem: true },
-  { name: 'updatePackage', call: () => catalog.updatePackage(ORG, 'p1', { items: [] }), method: 'PATCH', url: `${P}/packages/p1`, body: { items: [] } },
+  { name: 'updatePackage', call: () => catalog.updatePackage(ORG, 'p1', { items: [], includedKm: 5 }), method: 'PATCH', url: `${P}/packages/p1`, body: { items: [], includedKm: 5 } },
   { name: 'listPackagePrices', call: () => catalog.listPackagePrices(ORG, 'p1'), method: 'GET', url: `${P}/packages/p1/prices` },
   { name: 'addPackagePrice', call: () => catalog.addPackagePrice(ORG, 'p1', { listPrice: 3_000_000, effectiveFrom: '2026-12-01T00:00:00+07:00' }, KEY), method: 'POST', url: `${P}/packages/p1/prices`, body: { listPrice: 3_000_000, effectiveFrom: '2026-12-01T00:00:00+07:00' }, idem: true },
   // ---- schedule ----
@@ -130,6 +147,13 @@ const cases: Case[] = [
   { name: 'listStaffTiers', call: () => staff.listStaffTiers(ORG), method: 'GET', url: `${P}/staff-tiers` },
   { name: 'createStaffTier', call: () => staff.createStaffTier(ORG, { name: 'Bậc 1' }, KEY), method: 'POST', url: `${P}/staff-tiers`, body: { name: 'Bậc 1' }, idem: true },
   { name: 'updateStaffTier', call: () => staff.updateStaffTier(ORG, 't1', { sortOrder: 3 }), method: 'PATCH', url: `${P}/staff-tiers/t1`, body: { sortOrder: 3 } },
+  {
+    name: 'getStaffAvailability',
+    call: () =>
+      staff.getStaffAvailability(ORG, { startsAt: '2026-11-01T08:00:00+07:00', endsAt: '2026-11-01T10:00:00+07:00', membershipIds: ['m1', 'm2'], excludeContractId: 'h1' }),
+    method: 'GET',
+    url: `${P}/staff/availability?startsAt=2026-11-01T08%3A00%3A00%2B07%3A00&endsAt=2026-11-01T10%3A00%3A00%2B07%3A00&excludeContractId=h1&membershipIds=m1%2Cm2`,
+  },
   { name: 'listStaff', call: () => staff.listStaff(ORG, { tierId: 't1' }), method: 'GET', url: `${P}/staff?tierId=t1` },
   { name: 'updateStaff', call: () => staff.updateStaff(ORG, 'm1', { tierId: null, isBookable: false }), method: 'PATCH', url: `${P}/staff/m1`, body: { tierId: null, isBookable: false } },
   { name: 'getPackagePayRates', call: () => staff.getPackagePayRates(ORG, 'p1'), method: 'GET', url: `${P}/packages/p1/pay-rates` },

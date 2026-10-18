@@ -18,6 +18,7 @@ html,body{background:#ddd}
 #c{position:relative;width:1080px;height:1080px;overflow:hidden}
 body.doc #c{height:1920px}
 img{display:block}
+[data-fit]{flex-shrink:0;text-wrap:balance}
 
 #c{background:#FFF4C9;color:#3B2E4A;font-family:"Nunito"}
 .dots{position:absolute;inset:0;width:100%;height:100%}
@@ -34,10 +35,10 @@ body.doc .pol{left:170px;top:240px;width:740px;padding:30px 30px 0}
 body.doc .pol img{height:690px}
 body.doc .pol .cap{font-size:80px}
 body.doc .tape{left:400px;top:205px;width:300px;height:70px}
-body.doc .tx{left:110px;right:110px;top:1260px;bottom:260px;align-items:center;text-align:center;justify-content:flex-start;gap:32px}
-body.doc .ten{font-size:96px}
-body.doc .kh{align-self:center;font-size:36px}
-body.doc .brand{right:0;left:0;justify-content:center;bottom:130px}
+body.doc .tx{left:100px;right:100px;top:1240px;bottom:250px;align-items:center;text-align:center;justify-content:center;gap:36px}
+body.doc .ten{font-size:116px}
+body.doc .kh{align-self:center;font-size:42px}
+body.doc .brand{right:0;left:0;justify-content:center;bottom:130px;font-size:34px}body.doc .brand img{width:70px;height:70px}
 
 </style></head><body><div id="c"><svg class="dots" viewBox="0 0 1080 1080" preserveAspectRatio="none"><circle cx="90" cy="120" r="14" fill="#E2578B"/><circle cx="980" cy="90" r="10" fill="#7AC7A8"/><circle cx="1030" cy="1040" r="14" fill="#9C83E8"/><circle cx="60" cy="560" r="10" fill="#F2B33D"/><circle cx="160" cy="960" r="18" fill="#7AC7A8"/><circle cx="930" cy="1000" r="12" fill="#E2578B"/><circle cx="520" cy="60" r="9" fill="#9C83E8"/><circle cx="470" cy="1030" r="10" fill="#F2B33D"/><circle cx="1040" cy="760" r="9" fill="#E2578B"/><circle cx="40" cy="330" r="8" fill="#9C83E8"/></svg>
 <div class="tape"></div><div class="pol"><img data-f="anh" alt=""><div class="cap">Chào mừng!</div></div>
@@ -50,8 +51,8 @@ const D={ten:P.get('ten')||'Tôn Nữ Hoàng Bảo Ngọc Phương Thảo',khoa:
   thuongHieu:P.get('th')||'Chiến Makeup Academy',anh:P.get('anh')||AVATAR,logo:P.get('logo')||LOGO};
 document.body.classList.add(P.get('kho')==='doc'?'doc':'vuong');
 document.querySelectorAll('[data-f]').forEach(el=>{const k=el.dataset.f;if(el.tagName==='IMG')el.src=D[k];else el.textContent=D[k];});
-function fit(){document.querySelectorAll('[data-fit]').forEach(el=>{el.style.fontSize='';const max=+el.dataset.fit;let s=parseFloat(getComputedStyle(el).fontSize);
-  for(let i=0;i<80;i++){const cs=getComputedStyle(el);const lh=parseFloat(cs.lineHeight);const pad=parseFloat(cs.paddingTop)+parseFloat(cs.paddingBottom);if(el.scrollHeight-pad<=lh*max+4&&el.scrollWidth<=el.clientWidth+1)break;s-=2;el.style.fontSize=s+'px';}});
+function fit(){document.querySelectorAll('[data-fit]').forEach(el=>{el.style.fontSize='';const max=+el.dataset.fit+(document.body.classList.contains('doc')&&el.dataset.f==='ten'&&!el.hasAttribute('data-nodoc')?1:0);let s=parseFloat(getComputedStyle(el).fontSize);
+  for(let i=0;i<80;i++){const cs=getComputedStyle(el);const lh=parseFloat(cs.lineHeight);const pad=parseFloat(cs.paddingTop)+parseFloat(cs.paddingBottom);if(el.offsetHeight-pad<=lh*max+4&&el.scrollWidth<=el.clientWidth+1)break;s-=2;el.style.fontSize=s+'px';}});
   document.querySelectorAll('[data-fitw]').forEach(el=>{let s=parseFloat(getComputedStyle(el).fontSize);for(let i=0;i<80&&el.scrollWidth>el.clientWidth+1;i++){s-=2;el.style.fontSize=s+'px';}});
   document.body.dataset.ready='1';}
 document.fonts.ready.then(fit);
