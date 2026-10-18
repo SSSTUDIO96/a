@@ -60,3 +60,8 @@ Danh sách việc các thợ, thợ chấm và R&D đã nêu nhưng **chưa làm
 | 40 | Phụ phí cũ đang mang số phút giả (1 phút do web cũ gửi) — chủ tự xoá trong hộp sửa dịch vụ, máy chủ không tự đổi | thợ V |
 | 41 | Xoá bản ghi còn được tham chiếu nay ra 400 "không tìm thấy dữ liệu liên quan"; muốn báo 409 "đang được dùng" thì đường xoá phải tự kiểm trước | thợ U |
 | 42 | Màn lập hợp đồng khoá học chưa có ô "Lý do giảm" (máy chủ chưa có trường) và chưa đổi "Người phụ trách" sau khi tạo (PATCH chưa nhận) | thợ W-HDKH |
+| 43 | Hợp đồng đã xác nhận cũ có dòng thiếu giờ: máy chủ đã nhận tạo ca gắn đúng dòng (`contractLineId`), nhưng form Lịch trên web chưa gửi trường này — hiện chỉ sửa được bằng huỷ dòng + thêm phát sinh (giá lấy theo bảng giá hiện hành) | thợ Y1 |
+| 44 | Thông báo "Máy chủ đang bận" (khi bị giới hạn lượt gọi) vẫn là chữ trần | thợ Y3 |
+| 45 | Màn Tạo tổ chức: lỗi dưới ô chỉ tính lại khi bấm gửi, chọn xong loại tổ chức chữ đỏ vẫn còn | thợ Y3 |
+| 46 | Mẫu shd-03: chữ "THÁNG 11" đè lên số "03" (có từ trước) | thợ Y4 |
+| 47 | Ô chọn loại tổ chức dựng riêng trong auth.css vì `Segmented` không dùng `<label>` — nên thống nhất vào src/ui | thợ Y3 |
