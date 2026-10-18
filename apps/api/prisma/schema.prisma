@@ -1,0 +1,158 @@
+// Makeup Pro — cấu trúc dữ liệu.
+// Luật: mọi bảng nghiệp vụ có organization_id; tiền là BigInt (đồng); thời gian là timestamptz (UTC).
+// Không xoá dây chuyền (cascade) dữ liệu nghiệp vụ: xoá tổ chức bị chặn khi còn dữ liệu.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum UserStatus {
+  ACTIVE
+  DISABLED
+}
+
+enum OrganizationKind {
+  INDIVIDUAL
+  TEAM
+  ACADEMY
+}
+
+enum OrganizationStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum MembershipStatus {
+  ACTIVE
+  SUSPENDED
+  REMOVED
+}
+
+model User {
+  id           String     @id @default(uuid()) @db.Uuid
+  email        String     @unique
+  passwordHash String     @map("password_hash")
+  fullName     String     @map("full_name")
+  phone        String?
+  status       UserStatus @default(ACTIVE)
+  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  memberships   Membership[]
+  refreshTokens RefreshToken[]
+  auditLogs     AuditLog[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id           String    @id @default(uuid()) @db.Uuid
+  userId       String    @map("user_id") @db.Uuid
+  familyId     String    @map("family_id") @db.Uuid
+  tokenHash    String    @unique @map("token_hash")
+  expiresAt    DateTime  @map("expires_at") @db.Timestamptz(3)
+  revokedAt    DateTime? @map("revoked_at") @db.Timestamptz(3)
+  replacedById String?   @map("replaced_by_id") @db.Uuid
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([userId])
+  @@index([familyId])
+  @@map("refresh_tokens")
+}
+
+model Organization {
+  id        String             @id @default(uuid()) @db.Uuid
+  slug      String             @unique
+  name      String
+  kind      OrganizationKind
+  timezone  String             @default("Asia/Ho_Chi_Minh")
+  currency  String             @default("VND")
+  status    OrganizationStatus @default(ACTIVE)
+  createdAt DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  roles           Role[]
+  memberships     Membership[]
+  membershipRoles MembershipRole[]
+  auditLogs       AuditLog[]
+
+  @@map("organizations")
+}
+
+model Role {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  key            String
+  name           String
+  isSystem       Boolean  @default(false) @map("is_system")
+  // Khoá quyền lấy từ danh mục @makeup/shared; máy chủ từ chối khoá lạ.
+  permissions    String[]
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  organization    Organization     @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  membershipRoles MembershipRole[]
+
+  @@unique([organizationId, key])
+  // Cho phép khoá ngoại kép (id, organization_id) để database tự chặn gán vai trò khác tổ chức.
+  @@unique([id, organizationId])
+  @@map("roles")
+}
+
+model Membership {
+  id             String           @id @default(uuid()) @db.Uuid
+  organizationId String           @map("organization_id") @db.Uuid
+  userId         String           @map("user_id") @db.Uuid
+  status         MembershipStatus @default(ACTIVE)
+  createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  user         User             @relation(fields: [userId], references: [id], onDelete: Restrict)
+  roles        MembershipRole[]
+
+  @@unique([organizationId, userId])
+  @@unique([id, organizationId])
+  @@index([userId])
+  @@map("memberships")
+}
+
+model MembershipRole {
+  organizationId String @map("organization_id") @db.Uuid
+  membershipId   String @map("membership_id") @db.Uuid
+  roleId         String @map("role_id") @db.Uuid
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  membership   Membership   @relation(fields: [membershipId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  role         Role         @relation(fields: [roleId, organizationId], references: [id, organizationId], onDelete: Restrict)
+
+  @@id([membershipId, roleId])
+  @@index([roleId])
+  @@map("membership_roles")
+}
+
+model AuditLog {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String?  @map("organization_id") @db.Uuid
+  actorUserId    String?  @map("actor_user_id") @db.Uuid
+  action         String
+  entityType     String   @map("entity_type")
+  entityId       String?  @map("entity_id")
+  data           Json?
+  requestId      String?  @map("request_id")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  actor        User?         @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  @@index([organizationId, createdAt])
+  @@map("audit_logs")
+}
