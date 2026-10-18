@@ -262,3 +262,40 @@ describe('MoneyInput — dấu chấm tự gõ và giá trị đặt từ ngoài
     expect(onValue).toHaveBeenLastCalledWith(30_000_000);
   });
 });
+
+// Phiếu vướng W4: chữ trong ô đổi dạng lúc nhận tiêu điểm ("1.500.000 ₫" → "1.500.000") làm mất vùng chọn,
+// nên "chọn hết rồi gõ" (Playwright fill, bấm 3 lần chọn hết) bị nối số mới vào sau số cũ.
+describe('MoneyInput — chọn hết rồi gõ thay cả ô', () => {
+  it('chọn hết TRƯỚC khi ô nhận tiêu điểm (kiểu Playwright fill) → gõ thay cả ô', async () => {
+    const user = userEvent.setup();
+    const onValue = vi.fn();
+    render(<Harness initial={2_700_000} onValue={onValue} />);
+    const el = input();
+    el.setSelectionRange(0, el.value.length);
+    el.focus();
+    expect([el.selectionStart, el.selectionEnd]).toEqual([0, el.value.length]);
+    await user.keyboard('3500000');
+    expect(el.value).toBe('3.500.000');
+    expect(onValue).toHaveBeenLastCalledWith(3_500_000);
+  });
+
+  it('bấm 3 lần chọn hết rồi gõ → thay cả ô', async () => {
+    const user = userEvent.setup();
+    const onValue = vi.fn();
+    render(<Harness initial={2_700_000} onValue={onValue} />);
+    await user.tripleClick(input());
+    await user.keyboard('80000');
+    expect(input().value).toBe('80.000');
+    expect(onValue).toHaveBeenLastCalledWith(80_000);
+  });
+
+  it('bấm vào giữa số: con trỏ giữ đúng sau chữ số đã đứng trước nó (bỏ " ₫" không làm nhảy con trỏ)', async () => {
+    render(<Harness initial={2_700_000} />);
+    const el = input();
+    // "2.700.000 ₫": con trỏ sau "2.7" (3 ký tự, 2 chữ số).
+    el.setSelectionRange(3, 3);
+    el.focus();
+    expect(el.value).toBe('2.700.000');
+    expect([el.selectionStart, el.selectionEnd]).toEqual([3, 3]);
+  });
+});
