@@ -185,7 +185,11 @@ describe('mặc định chế độ C, đổi chế độ', () => {
     renderScreen(OWNER);
     await screen.findByTestId('che-do-C');
     const rows = screen.getAllByRole('rowheader').map((r) => r.textContent);
-    expect(rows).toEqual(['THThu HàThợ chính · 1 ca/tuần', 'MAMinh AnhThợ chính · 1 ca/tuần', 'BVBảo VyThợ phụ · 1 ca/tuần', '?Chưa có thợ1 ca/tuần']);
+    expect(rows).toEqual(['THThu HàThợ chính1 ca/tuần', 'MAMinh AnhThợ chính1 ca/tuần', 'BVBảo VyThợ phụ1 ca/tuần', '?Chưa có thợ1 ca/tuần']);
+    // L3: bậc thợ và "n ca/tuần" là hai dòng riêng; "1 ca/tuần" không được bẻ dòng.
+    const meta = [...document.querySelectorAll('[role="rowheader"] .ws-c__meta')].map((m) => m.textContent);
+    expect(meta.slice(0, 2)).toEqual(['Thợ chính', '1 ca/tuần']);
+    expect(document.querySelectorAll('[role="rowheader"] .ws-c__meta.ws-nb')).toHaveLength(4);
     const cell = document.querySelector('[data-cell="m-ha|2026-10-24"]') as HTMLElement;
     expect(within(cell).getByText('06:00')).toBeTruthy();
     expect(within(cell).getByText('Khách L-0001')).toBeTruthy();
@@ -255,7 +259,7 @@ describe('quyền xem', () => {
     await screen.findByTestId('che-do-C');
     const list = calls.find((c) => c.url.includes('/appointments?'));
     expect(list?.url).not.toContain('membershipId');
-    expect(screen.getAllByRole('rowheader').map((r) => r.textContent)).toEqual(['MAMinh AnhThợ chính · 1 ca/tuần']);
+    expect(screen.getAllByRole('rowheader').map((r) => r.textContent)).toEqual(['MAMinh AnhThợ chính1 ca/tuần']);
     expect(screen.queryByRole('button', { name: 'Thêm lịch' })).toBeNull();
     // Mở ca của mình: không có nút sửa / đổi trạng thái.
     fireEvent.click(screen.getByText('Khách L-0002'));

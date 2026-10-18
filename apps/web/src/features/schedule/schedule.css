@@ -199,6 +199,8 @@
 .ws-day.is-on .ws-day__w, .ws-day.is-on .ws-day__c { color: var(--accent); }
 .ws-day__dot { position: absolute; top: 7px; right: 7px; width: 7px; height: 7px; border-radius: 50%; background: var(--danger); }
 .ws-filters { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+/* Máy tính: chip lọc thợ xuống hàng khi nhiều thợ (không cắt "Chưa có thợ" ở mép, thanh cuộn ẩn nên không ai biết để cuộn). */
+@media (min-width: 641px) { .ws-filters { flex-wrap: wrap; overflow-x: visible; } }
 .ws-filters .ui-chip { padding-left: 4px; }
 .ws-filters .ui-chip:first-child { padding-left: 12px; }
 .ws-todo { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }

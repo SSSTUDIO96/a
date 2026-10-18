@@ -49,15 +49,9 @@ export function WeekGridC({ day, lanes, showUnassigned, appointments, marks, onO
                   <span className="ws-c__nm" title={lane?.name}>
                     {lane ? (short.get(lane.membershipId) ?? lane.name) : 'Chưa có thợ'}
                   </span>
-                  {/* Mỗi cụm ("Thợ chính", "2 ca/tuần") không bị bẻ giữa chừng; hết chỗ thì cả cụm xuống dòng (biên bản L3). */}
-                  <span className="ws-c__meta">
-                    {lane?.tierName && (
-                      <>
-                        <span className="ws-nb">{lane.tierName}</span> ·{' '}
-                      </>
-                    )}
-                    <span className="ws-nb">{n} ca/tuần</span>
-                  </span>
+                  {/* Bậc thợ và số ca mỗi thứ một dòng, "2 ca/tuần" không bao giờ bị bẻ giữa chừng (biên bản L3). */}
+                  {lane?.tierName && <span className="ws-c__meta">{lane.tierName}</span>}
+                  <span className="ws-c__meta ws-nb">{n} ca/tuần</span>
                 </span>
               </div>
               {days.map((d) => {
