@@ -45,3 +45,8 @@ Danh sách việc các thợ, thợ chấm và R&D đã nêu nhưng **chưa làm
 | 27 | Chế độ tối | R&D 2 |
 | 28 | Màn Thành viên & vai trò | R&D 2 |
 | 29 | Huỷ riêng từng dịch vụ phụ trong hợp đồng đã xác nhận | thợ Hợp đồng |
+| 30 | `src/api/types.ts` chưa khai `customer.phoneHidden`, `totalsOverflow`, tổng `null` khi vượt ngưỡng ở thu tiền (máy chủ đã trả) | thợ Thu tiền |
+| 31 | DateInput/MoneyInput nhận `ref`; DateInput có giới hạn ngày min/max | thợ Thu tiền |
+| 32 | Máy chủ: `GET /contracts` trả `paid`, `remaining`; lọc "chưa có ngày sự kiện"; phiếu thu có `installmentId`, tài khoản nhận, người thu; xuất CSV sổ thu ở máy chủ | thợ Thu tiền |
+| 33 | Dịch vụ phụ có bật "công khai" hiện cả trên trang giới thiệu — anh xác nhận giữ hay chỉ hiện gói | thợ Thương hiệu |
+| 34 | Thẻ `og:` cho Zalo/Facebook in sẵn từ máy chủ; đặt `VITE_PUBLIC_SITE_ORIGIN` trên Vercel | thợ Thương hiệu |

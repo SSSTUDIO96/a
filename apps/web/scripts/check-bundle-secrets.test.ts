@@ -183,7 +183,7 @@ describe('cửa gác bí mật — vế BẮT', () => {
     const r = runGate(writeBundle(files));
     expect(r.code).toBe(1);
     for (const [name, [, kind]] of Object.entries(DIST_LA)) {
-      const lines = r.out.split('\n').filter((l) => l.includes(name.split('/')[1]));
+      const lines = r.out.split('\n').filter((l) => l.includes(name.split('/')[1] ?? name));
       expect(lines.length, name).toBeGreaterThan(0);
       expect(lines.join('\n'), name).toMatch(kind);
     }
