@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import request from 'supertest';
+import { cancelAppointmentsOfContractTx } from '../src/modules/schedule/service';
 import { addMember, bearer, createOrg, makeApp, makeDeps, registerUser, type App, type TestUser } from './helpers';
 
 const deps = makeDeps();
@@ -462,5 +463,138 @@ describe('lịch gắn hợp đồng', () => {
     expect((await postAppt(orgA, ownerA, { ...slot(27, '08:00', '09:00', []), contractId: cancelled.id })).status).toBe(409);
     const contractB = await makeContract(orgB, await makeCustomer(orgB, ownerB), ownerB.id);
     expect((await postAppt(orgA, ownerA, { ...slot(27, '08:00', '09:00', []), contractId: contractB.id })).status).toBe(404);
+  });
+});
+
+describe('N2: thợ đã tắt nhận lịch', () => {
+  let mOff: string;
+  let mOn: string;
+  beforeAll(async () => {
+    mOff = await addMember(app, ownerA, orgA, await registerUser(app, 'tho-tat-lich'), ['artist']);
+    mOn = await addMember(app, ownerA, orgA, await registerUser(app, 'tho-bat-lich'), ['artist']);
+    await request(app).patch(`/api/v1/orgs/${orgA}/staff/${mOn}`).set(bearer(ownerA)).send({ isBookable: true }).expect(200);
+  });
+
+  it('BẮT: tạo lịch với thợ isBookable=false → 400 kèm membershipIds; GIỮ: thợ bật nhận lịch / chưa có hồ sơ → 201', async () => {
+    const before = await postAppt(orgA, ownerA, slot(16, '08:00', '09:00', [{ membershipId: mOff }]));
+    expect(before.status).toBe(201);
+    await request(app).patch(`/api/v1/orgs/${orgA}/staff/${mOff}`).set(bearer(ownerA)).send({ isBookable: false }).expect(200);
+    const res = await postAppt(orgA, ownerA, slot(16, '10:00', '11:00', [{ membershipId: mOff }]));
+    expect(res.status).toBe(400);
+    expect(res.body.error.details.membershipIds).toEqual([mOff]);
+    const draft = await postAppt(orgA, ownerA, { ...slot(16, '10:00', '11:00', [{ membershipId: mOn }, { membershipId: mOff, role: 'ASSIST' }]), status: 'DRAFT' });
+    expect(draft.status).toBe(400);
+    expect(draft.body.error.details.membershipIds).toEqual([mOff]);
+    expect((await postAppt(orgA, ownerA, slot(16, '10:00', '11:00', [{ membershipId: mOn }]))).status).toBe(201);
+
+    // Lịch đã phân từ trước giữ nguyên: đổi giờ được, giữ thợ đó trong danh sách khi đổi thợ cũng được.
+    const moved = await request(app)
+      .patch(`/api/v1/orgs/${orgA}/appointments/${before.body.id}`)
+      .set(bearer(ownerA))
+      .send({ startsAt: at(16, '07:00'), endsAt: at(16, '08:00') });
+    expect(moved.status).toBe(200);
+    const kept = await request(app)
+      .patch(`/api/v1/orgs/${orgA}/appointments/${before.body.id}`)
+      .set(bearer(ownerA))
+      .send({ staff: [{ membershipId: mOff, role: 'ASSIST' }] });
+    expect(kept.status).toBe(200);
+  });
+
+  it('BẮT: đổi thợ sang thợ tắt nhận lịch → 400', async () => {
+    const a = await postAppt(orgA, ownerA, slot(17, '08:00', '09:00', [{ membershipId: mOn }]));
+    expect(a.status).toBe(201);
+    const res = await request(app)
+      .patch(`/api/v1/orgs/${orgA}/appointments/${a.body.id}`)
+      .set(bearer(ownerA))
+      .send({ staff: [{ membershipId: mOn }, { membershipId: mOff, role: 'ASSIST' }] });
+    expect(res.status).toBe(400);
+    expect(res.body.error.details.membershipIds).toEqual([mOff]);
+  });
+});
+
+describe('G5: lịch giữ số điện thoại khách, không trả số điện thoại thợ', () => {
+  it('thợ xem lịch của mình thấy số khách; mục thợ trong lịch không có số điện thoại', async () => {
+    const thoPhone = '0977 000 555';
+    await request(app).patch(`/api/v1/orgs/${orgA}/staff/${m1}`).set(bearer(ownerA)).send({ phone: thoPhone }).expect(200);
+    const a = await postAppt(orgA, ownerA, {
+      ...slot(18, '08:00', '09:00', [{ membershipId: m1 }]),
+      newCustomer: { fullName: 'Khách G5', phone: '0911 222 333' },
+    });
+    expect(a.status).toBe(201);
+    const view = await request(app).get(`/api/v1/orgs/${orgA}/appointments/${a.body.id}`).set(bearer(artist1)).expect(200);
+    expect(view.body.customer.phone).toBe('0911222333');
+    expect(Object.keys(view.body.staff[0])).not.toContain('phone');
+    expect(JSON.stringify(view.body)).not.toContain('0977000555');
+    const list = await request(app)
+      .get(`/api/v1/orgs/${orgA}/appointments`)
+      .query({ from: at(18, '00:00'), to: at(19, '00:00') })
+      .set(bearer(artist1))
+      .expect(200);
+    expect(JSON.stringify(list.body)).not.toContain('0977000555');
+  });
+});
+
+describe('G1: huỷ hợp đồng thì huỷ các lịch đã gắn (cancelAppointmentsOfContractTx)', () => {
+  const ctxA = () => ({ orgId: orgA, userId: ownerA.id, requestId: `thu-${randomUUID()}` });
+  async function attach(contractId: string, day: number, from: string, to: string, membershipId: string, status = 'CONFIRMED') {
+    const res = await postAppt(orgA, ownerA, { ...slot(day, from, to, [{ membershipId }]), contractId, status });
+    if (res.status !== 201) throw new Error(`Tạo lịch thất bại ${res.status}: ${JSON.stringify(res.body)}`);
+    return res.body.id as string;
+  }
+
+  it('GIỮ: nháp/chờ/đã xác nhận → huỷ, nhả giờ, ghi lịch sử + nhật ký; lịch đã xong và đã huỷ giữ nguyên', async () => {
+    const contract = await makeContract(orgA, await makeCustomer(orgA, ownerA), ownerA.id);
+    const draft = await attach(contract.id, 23, '08:00', '09:00', m1, 'DRAFT');
+    const pending = await attach(contract.id, 23, '10:00', '11:00', m1, 'PENDING_CONFIRMATION');
+    const confirmed = await attach(contract.id, 23, '12:00', '13:00', m1);
+    const done = await attach(contract.id, 23, '14:00', '15:00', m1);
+    for (const to of ['IN_PROGRESS', 'COMPLETED']) await setStatus(orgA, ownerA, done, { to }).expect(200);
+    const gone = await attach(contract.id, 23, '16:00', '17:00', m1);
+    await setStatus(orgA, ownerA, gone, { to: 'CANCELLED', reason: 'Huỷ riêng trước' }).expect(200);
+
+    const result = await deps.db.$transaction((tx) => cancelAppointmentsOfContractTx(tx, ctxA(), contract.id, 'Khách huỷ hợp đồng'));
+    expect(result.blocking).toEqual([]);
+    expect([...result.cancelled].sort()).toEqual([draft, pending, confirmed].sort());
+
+    const rows = await deps.db.appointment.findMany({ where: { contractId: contract.id }, include: { staff: true } });
+    const byId = new Map(rows.map((r) => [r.id, r]));
+    for (const id of [draft, pending, confirmed]) {
+      expect(byId.get(id)?.status).toBe('CANCELLED');
+      expect(byId.get(id)?.cancelReason).toBe('Khách huỷ hợp đồng');
+      expect(byId.get(id)?.staff.every((s) => !s.isBlocking)).toBe(true);
+    }
+    expect(byId.get(done)?.status).toBe('COMPLETED');
+    expect(byId.get(gone)?.cancelReason).toBe('Huỷ riêng trước');
+    const history = await deps.db.appointmentStatusHistory.count({ where: { appointmentId: confirmed, toStatus: 'CANCELLED' } });
+    expect(history).toBe(1);
+    const audit = await deps.db.auditLog.findFirst({ where: { entityId: confirmed, action: 'appointment.status_changed' } });
+    expect(audit?.data).toMatchObject({ to: 'CANCELLED', via: 'contract.cancelled', contractId: contract.id });
+
+    // Giờ của thợ đã được nhả: lịch khác cùng giờ tạo được.
+    expect((await postAppt(orgA, ownerA, slot(23, '12:00', '13:00', [{ membershipId: m1 }]))).status).toBe(201);
+  });
+
+  it('BẮT: còn lịch đang làm → trả blocking, KHÔNG lịch nào bị đổi', async () => {
+    const contract = await makeContract(orgA, await makeCustomer(orgA, ownerA), ownerA.id);
+    const confirmed = await attach(contract.id, 24, '08:00', '09:00', m2);
+    const running = await attach(contract.id, 24, '10:00', '11:00', m2);
+    await setStatus(orgA, ownerA, running, { to: 'IN_PROGRESS' }).expect(200);
+    const result = await deps.db.$transaction((tx) => cancelAppointmentsOfContractTx(tx, ctxA(), contract.id, 'Huỷ'));
+    expect(result).toEqual({ cancelled: [], blocking: [running] });
+    const rows = await deps.db.appointment.findMany({ where: { contractId: contract.id }, select: { id: true, status: true } });
+    expect(new Map(rows.map((r) => [r.id, r.status]))).toEqual(new Map([[confirmed, 'CONFIRMED'], [running, 'IN_PROGRESS']]));
+  });
+
+  it('BẮT: ngữ cảnh tổ chức B không huỷ được lịch của hợp đồng A; lý do rỗng bị từ chối', async () => {
+    const contract = await makeContract(orgA, await makeCustomer(orgA, ownerA), ownerA.id);
+    const appt = await attach(contract.id, 28, '08:00', '09:00', m1);
+    const result = await deps.db.$transaction((tx) =>
+      cancelAppointmentsOfContractTx(tx, { orgId: orgB, userId: ownerB.id, requestId: 'thu-b' }, contract.id, 'Phá'),
+    );
+    expect(result).toEqual({ cancelled: [], blocking: [] });
+    await expect(deps.db.$transaction((tx) => cancelAppointmentsOfContractTx(tx, ctxA(), contract.id, '  '))).rejects.toThrow(
+      'Huỷ lịch phải ghi lý do',
+    );
+    expect((await deps.db.appointment.findUniqueOrThrow({ where: { id: appt } })).status).toBe('CONFIRMED');
   });
 });
