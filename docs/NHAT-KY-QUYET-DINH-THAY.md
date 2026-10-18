@@ -56,4 +56,11 @@ Anh Chiến nhắn lúc khoảng 15:13 UTC ngày 18/10/2026: *"Tự làm vào ch
 | 19:43 | 5 màn chưa có bản vẽ | R&D số 2 bày 3 phương án có ảnh rồi **tự chọn** phương án đề xuất và dựng bản vẽ thông số | Anh giao làm hết khi vắng; ảnh cả 3 vẫn giữ để anh xem lại | Được |
 | 19:44 | "Thao tác thực tế" | Em làm tới mức chạy được đầy đủ trên máy đám mây, có bài thử và ảnh. **Không** tự đưa lên Vercel/Railway và không mua dịch vụ: phát hành nằm trong danh sách phải chờ anh. Sáng mai anh chọn: chạy trên máy anh, hay cho phép đưa lên mạng | Luật 10: phát hành và công khai phải dừng chờ anh | — |
 
+| 20:30 | 5 màn mới (R&D số 2) | Nhân sự & trả lương **C** (hai cột; tiền công: bậc + ảnh + tên thợ + ô tiền), Khách hàng **C** (danh sách trái, hồ sơ phải), Thu tiền dịch vụ **A** (cùng khuôn thu tiền đào tạo), Hồ sơ thương hiệu **C** (sửa trái, xem trước phải), Quản trị nền tảng **B** (trang chủ việc cần làm). Ảnh cả 3 phương án giữ ở `docs/rnd/anh/v4-*` | Số lần bấm cho việc chính ít nhất, đúng lời anh tả màn trả lương | Được |
+| 20:30 | Trang giới thiệu công khai | Đặt ở `/trang/:slug`; máy chủ cấm tổ chức đặt đường dẫn `trang` | Không đè đường của tổ chức | Được |
+| 20:31 | Màu ca trên lịch | Tô theo **nhân vật makeup** của ca (dữ liệu thật); bỏ nhóm màu "Ăn hỏi", "Tiệc & sự kiện" của bản mẫu vì database không có loại sự kiện | Không đoán theo chữ trong tên ca | Được: thêm trường loại sự kiện nếu anh muốn |
+| 20:31 | Ô ngày giờ | Mọi ô ngày hiện dd/mm/yyyy, giờ 24h, kể cả trình duyệt tiếng Anh | Tránh đặt nhầm ngày | Được |
+| 20:32 | Thu cọc trước khi chốt — ngày thu | Không cho ghi ngày thu trước ngày lập hợp đồng quá 1 ngày; lùi ngày có nhật ký | Kỳ đã chốt không bị đổi số âm thầm | Được |
+| 20:32 | Trang công khai khi thuê bao hết hạn | Quá thời gian ân hạn hoặc đã huỷ → ẩn trang (như chưa xuất bản) | Studio không trả tiền thì không quảng bá | Được |
+
 **Cần anh xem lại nhất:** (1) cách anh vào thao tác thực tế (dòng 19:44): chạy trên máy anh hay cho phép đưa lên mạng; (2) phân quyền theo vai trò mẫu (dòng 15:16) — studio anh có thể muốn thợ chính thấy cả lịch của đội.

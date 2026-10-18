@@ -278,7 +278,7 @@ export const appointmentRoutes = [
         });
         return tx.appointment.findUniqueOrThrow({ where: { id: before.id }, include: appointmentInclude });
       });
-      return { body: presentAppointment(row, () => null, await loadHistory(deps.db, o.id, row.id)) };
+      return { body: await presentAppointmentOne(deps.db, o.id, row, await loadHistory(deps.db, o.id, row.id)) };
     },
   }),
 

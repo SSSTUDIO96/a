@@ -1,6 +1,7 @@
 // Mẫu dữ liệu cho cửa gác cách ly (dùng chung cho tenant-isolation.test.ts và gate-mutants.test.ts).
 import { randomUUID } from 'node:crypto';
 import type { GateOrg, RefSamples, Samples } from './gate';
+import type { PartialSamples } from './gate-partial';
 
 // Thân yêu cầu hợp lệ cho các đường POST/PATCH có tham số id (khoá: "METHOD /đường").
 export const SAMPLES: Samples = {
@@ -119,4 +120,129 @@ export const REF_SAMPLES: RefSamples = {
   ],
   'PUT /orgs/:orgId/packages/:packageId/pay-rates': [(o) => ({ rates: [{ tierId: o.ids.tierId, amount: 100000 }] })],
   'PUT /orgs/:orgId/services/:serviceId/pay-rates': [(o) => ({ rates: [{ tierId: o.ids.tierId, amount: 100000 }] })],
+};
+
+// MẪU "SỬA MỘT PHẦN" cho cửa gác test/gate-partial.ts: mọi đường PATCH phải có mẫu ở đây.
+// full: MỌI trường của thân, giá trị KHÁC mặc định lúc tạo — để bệnh "trường vắng mặt bị đặt về mặc định" lộ ra.
+// one: đúng MỘT trường, giá trị khác full.
+export const PARTIAL_SAMPLES: PartialSamples = {
+  'PATCH /orgs/:orgId': {
+    full: () => ({ name: 'Tổ chức đủ trường', timezone: 'Asia/Bangkok' }),
+    one: () => ({ name: 'Tổ chức đổi tên' }),
+  },
+  'PATCH /orgs/:orgId/members/:membershipId': {
+    full: () => ({ roleKeys: ['rong', 'artist'], status: 'ACTIVE' }),
+    one: () => ({ status: 'SUSPENDED' }),
+  },
+  'PATCH /orgs/:orgId/roles/:roleId': {
+    full: () => ({ name: 'Vai trò đủ', permissions: ['org.read', 'catalog.read'] }),
+    one: () => ({ name: 'Vai trò đổi tên' }),
+  },
+  'PATCH /orgs/:orgId/service-categories/:categoryId': {
+    full: () => ({ name: 'Nhóm đủ', sortOrder: 7, isActive: false }),
+    one: () => ({ name: 'Nhóm đổi tên' }),
+  },
+  'PATCH /orgs/:orgId/makeup-subjects/:subjectId': {
+    full: () => ({ name: 'Nhân vật đủ', sortOrder: 7, isActive: false }),
+    one: () => ({ name: 'Nhân vật đổi tên' }),
+  },
+  'PATCH /orgs/:orgId/studio-locations/:locationId': {
+    full: () => ({ name: 'Studio đủ', address: 'Số 9 Phố Huế, Hà Nội', latitude: 21.0123, longitude: 105.8456, isDefault: true, isActive: true }),
+    one: () => ({ name: 'Studio đổi tên' }),
+  },
+  'PATCH /orgs/:orgId/services/:serviceId': {
+    full: (c) => ({
+      kind: 'MAIN',
+      code: `DVD${randomUUID().slice(0, 4).toUpperCase()}`,
+      name: 'Dịch vụ đủ',
+      description: 'Mô tả đủ',
+      durationMinutes: 45,
+      categoryId: c.o.ids.categoryId,
+      isActive: true,
+      isPublic: false,
+      sortOrder: 9,
+    }),
+    one: () => ({ name: 'Dịch vụ đổi tên' }),
+  },
+  'PATCH /orgs/:orgId/packages/:packageId': {
+    full: (c) => ({
+      code: `GOID${randomUUID().slice(0, 4).toUpperCase()}`,
+      name: 'Gói đủ',
+      description: 'Mô tả gói',
+      durationMinutes: 150,
+      staffCount: 2,
+      depositAmount: 300000,
+      subjectId: c.o.ids.subjectId,
+      locationTypes: ['STUDIO', 'CUSTOMER_HOME'],
+      includedKm: 5,
+      terms: 'Điều khoản gói',
+      isActive: true,
+      isPublic: false,
+      sortOrder: 9,
+      items: [{ serviceId: c.o.ids.addonId, quantity: 2, isOptional: true }],
+    }),
+    one: () => ({ name: 'Gói đổi tên' }),
+  },
+  'PATCH /orgs/:orgId/customers/:customerId': {
+    full: () => ({ fullName: 'Khách đủ', phone: '0912345678', email: 'khach-du@thu.local', note: 'Ghi chú khách' }),
+    one: () => ({ fullName: 'Khách đổi tên' }),
+  },
+  'PATCH /orgs/:orgId/appointments/:appointmentId': {
+    full: (c) => ({
+      startsAt: '2026-12-01T02:00:00.000Z',
+      endsAt: '2026-12-01T04:00:00.000Z',
+      travelBeforeMin: 15,
+      travelAfterMin: 20,
+      locationType: 'OTHER',
+      address: 'Số 1 Tràng Tiền',
+      latitude: 21.02,
+      longitude: 105.85,
+      notes: 'Ghi chú đủ',
+      title: 'Tiêu đề đủ',
+      staff: [{ membershipId: c.o.ids.membershipId, role: 'ASSIST' }],
+    }),
+    one: () => ({ notes: 'Ghi chú đổi' }),
+  },
+  'PATCH /orgs/:orgId/contracts/:contractId': {
+    full: () => ({
+      discount: 1000,
+      depositRequired: 20000,
+      eventDate: '2027-01-15T02:00:00.000Z',
+      notes: 'Ghi chú hợp đồng',
+      terms: 'Điều khoản hợp đồng',
+    }),
+    one: () => ({ notes: 'Ghi chú đổi' }),
+    skip: { lines: 'gửi lines là THAY toàn bộ dòng (mã dòng mới) — không phải sửa một phần; cửa gác cách ly đã đo lines' },
+  },
+  'PATCH /orgs/:orgId/staff-tiers/:tierId': {
+    full: () => ({ name: 'Bậc đủ', sortOrder: 5, isActive: false }),
+    one: () => ({ name: 'Bậc đổi tên' }),
+  },
+  'PATCH /orgs/:orgId/staff/:membershipId': {
+    full: (c) => ({ displayName: 'Thợ đủ', avatarFileId: c.o.ids.avatarFileId, phone: '0987654321', tierId: c.o.ids.tierId, isBookable: false }),
+    one: () => ({ displayName: 'Thợ đổi tên' }),
+    skip: { avatarUrl: 'trường chỉ để báo lỗi "không nhận avatarUrl" — không bao giờ hợp lệ' },
+  },
+  'PATCH /platform/organizations/:organizationId': {
+    full: () => ({ status: 'ACTIVE', reason: 'Mở lại' }),
+    one: () => ({ status: 'SUSPENDED', reason: 'Thử cửa gác' }),
+    as: 'admin',
+  },
+  'PATCH /platform/plans/:planId': {
+    full: () => ({
+      name: 'Gói đủ',
+      priceMonthly: 199_000,
+      maxStaff: 2,
+      maxAppointmentsPerMonth: 30,
+      maxStorageMb: 500,
+      maxStudents: 0,
+      maxCourses: 0,
+      customDomain: true,
+      features: ['web'],
+      isActive: false,
+      sortOrder: 7,
+    }),
+    one: () => ({ priceMonthly: 129_000 }),
+    as: 'admin',
+  },
 };

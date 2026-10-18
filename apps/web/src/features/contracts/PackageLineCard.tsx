@@ -8,8 +8,8 @@ import {
   Segmented,
   Select,
   StatusTag,
-  TextInput,
   Textarea,
+  TimeInput,
   Tooltip,
   formatVnd,
 } from '../../ui';
@@ -128,25 +128,23 @@ export function PackageLineCard(p: PackageLineCardProps) {
         <span className="ct-rw__l">Giờ</span>
         <div className="ct-dcr">
           <div className="ct-fl">
-            <TextInput
-              type="time"
+            <TimeInput
               size="sm"
               className="ct-time"
               aria-label="Giờ bắt đầu"
-              value={line.start}
+              value={line.start || null}
               disabled={locked}
-              onChange={(e) => p.onChange({ start: e.target.value })}
+              onChange={(v) => p.onChange({ start: v ?? '' })}
               error={errors[lineKey(i, 'scheduledStart')]}
             />
             –
-            <TextInput
-              type="time"
+            <TimeInput
               size="sm"
               className="ct-time"
               aria-label="Giờ kết thúc"
-              value={line.end}
+              value={line.end || null}
               disabled={locked}
-              onChange={(e) => p.onChange({ end: e.target.value })}
+              onChange={(v) => p.onChange({ end: v ?? '' })}
               error={errors[lineKey(i, 'scheduledEnd')]}
             />
             <span className="ct-fx ct-num ct-pend">{view ? `${view.quantity} × ${formatVnd(view.unitPrice)}` : ''}</span>

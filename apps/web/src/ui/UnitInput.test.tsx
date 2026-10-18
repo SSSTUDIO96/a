@@ -190,7 +190,7 @@ describe('UnitInput — chọn hết rồi gõ thay cả ô', () => {
     const el = input();
     expect(el.value).toBe('2.500');
     el.setSelectionRange(0, el.value.length);
-    act(() => el.focus());
+    await act(async () => el.focus());
     expect([el.selectionStart, el.selectionEnd]).toEqual([0, 4]);
     await user.keyboard('12,5');
     expect(el.value).toBe('12,5');

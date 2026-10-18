@@ -72,9 +72,7 @@
 .ct-fl { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; min-width: 0; }
 .ct-fl__grow { flex: 1; }
 .ct-dcr { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-.ct-time { width: 84px; }
-.ct-time input { text-align: center; padding: 0 6px; }
-.ct-time input::-webkit-calendar-picker-indicator { display: none; }
+.ct-time { width: 100px; }
 .ct-km { width: 110px; }
 .ct-manual { width: 130px; }
 .ct-amt { margin-left: auto; font-weight: 700; }

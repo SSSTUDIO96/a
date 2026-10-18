@@ -21,12 +21,12 @@ import {
   BottomSheet,
   Button,
   Card,
+  DateInput,
   IconLock,
   IconPlus,
   SkeletonText,
   StatusTag,
   StickyTotalBar,
-  TextInput,
   WithTooltip,
   formatVnd,
 } from '../../ui';
@@ -573,13 +573,13 @@ export function ContractEditor({ orgId, slug, tz, has, contractId }: ContractEdi
                 <label className="ct-set__l" htmlFor="hd-ngay">
                   Ngày sự kiện
                 </label>
-                <TextInput
+                <DateInput
                   id="hd-ngay"
-                  type="date"
                   className="ct-date"
-                  value={draft.eventDate}
+                  aria-label="Ngày sự kiện"
+                  value={draft.eventDate || null}
                   disabled={!ab.canEdit}
-                  onChange={(e) => update((d) => ({ ...d, eventDate: e.target.value }))}
+                  onChange={(v) => update((d) => ({ ...d, eventDate: v ?? '' }))}
                   error={errors.eventDate}
                 />
               </div>
