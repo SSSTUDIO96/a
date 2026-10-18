@@ -1,6 +1,5 @@
 import {
   useEffect,
-  useLayoutEffect,
   useRef,
   useState,
   type ChangeEvent,
@@ -91,14 +90,8 @@ export function UnitInput({
     }
   }, [localError]);
 
-  const inputRef = useRef<HTMLInputElement | null>(null);
-  const pendingSelection = useRef<{ start: number; end: number } | null>(null);
-  useLayoutEffect(() => {
-    const el = inputRef.current;
-    const sel = pendingSelection.current;
-    pendingSelection.current = null;
-    if (sel && el && document.activeElement === el) el.setSelectionRange(sel.start, sel.end);
-  });
+  const valueRef = useRef(value);
+  valueRef.current = value;
 
   const shownError = localError ?? error;
   const f = useFieldIds({ error: shownError, hint }, describedByProp);
@@ -130,14 +123,21 @@ export function UnitInput({
 
   function handleFocus(e: FocusEvent<HTMLInputElement>) {
     // Đang sửa: không chèn dấu chấm ngăn nghìn ("2500", không phải "2.500") để chữ trong ô không tự thành dạng mơ hồ.
+    // Đổi chữ ở microtask và giữ "chọn hết" — cùng lý do như MoneyInput (input.select() gọi focus giữa chừng).
     if (draft === null) {
       const el = e.currentTarget;
-      const next = value === null ? '' : formatDecimal(value, fractionDigits, false);
-      // Chữ đổi dạng làm trình duyệt bỏ vùng chọn: đang chọn hết thì giữ chọn hết (chọn hết rồi gõ = thay cả ô).
-      if (next !== el.value && el.value.length > 0 && el.selectionStart === 0 && (el.selectionEnd ?? 0) >= el.value.length) {
-        pendingSelection.current = { start: 0, end: next.length };
-      }
-      setDraft(next);
+      const before = el.value;
+      queueMicrotask(() => {
+        if (document.activeElement !== el || el.value !== before) return;
+        const v = valueRef.current;
+        const next = v === null ? '' : formatDecimal(v, fractionDigits, false);
+        if (el.value !== next) {
+          const all = el.value.length > 0 && el.selectionStart === 0 && (el.selectionEnd ?? 0) >= el.value.length;
+          el.value = next;
+          if (all) el.setSelectionRange(0, next.length);
+        }
+        setDraft((d) => d ?? next);
+      });
     }
     onFocus?.(e);
   }
@@ -151,7 +151,6 @@ export function UnitInput({
     <FieldShell error={shownError} hint={hint} errorId={f.errorId} hintId={f.hintId} className={className}>
       <span className="ui-unit">
         <input
-          ref={inputRef}
           type="text"
           inputMode={fractionDigits > 0 ? 'decimal' : 'numeric'}
           autoComplete="off"

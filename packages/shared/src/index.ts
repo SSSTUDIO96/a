@@ -3,3 +3,6 @@ export * from './money';
 export * from './schedule';
 export * from './contract';
 export * from './payments';
+export * from './courses';
+export * from './design-templates';
+export * from './greetings';

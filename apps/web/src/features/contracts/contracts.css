@@ -60,6 +60,8 @@
 .ct-ln__hd { display: flex; align-items: center; gap: 8px; padding: 12px 16px; flex-wrap: wrap; }
 .ct-ln__ttl { display: flex; gap: 8px; align-items: center; min-width: 0; flex-wrap: wrap; }
 .ct-ln__n { font-weight: 700; overflow-wrap: anywhere; }
+.ct-ln__ttl > .ui-field { width: auto; flex: none; }
+.ct-ln__ttl select { width: 150px; }
 .ct-ln__sp { flex: 1; }
 .ct-ln__hd .ui-ico { width: 16px; height: 16px; }
 .ct-ln--locked .ct-ln__hd { background: var(--soft); border-radius: 12px 12px 0 0; }

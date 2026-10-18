@@ -1,0 +1,41 @@
+/* Ô ngày (DateInput) và ô giờ (TimeInput) — bản vẽ C mục 3: như TextInput; nút mở bảng chọn ở mép phải.
+   Bảng nổi: nền trắng, viền --line, bo 8; ô đang chọn nền --accent-soft, chữ --accent/600. Chỉ dùng token sẵn có. */
+.ui-pickfield { position: relative; display: block; width: 100%; min-width: 0; }
+.ui-pickfield__input.ui-input { padding-right: 38px; font-variant-numeric: tabular-nums; }
+.ui-pickfield__btn {
+  position: absolute; right: 3px; top: 50%; transform: translateY(-50%);
+  width: 30px; height: 30px; display: grid; place-items: center;
+  border: 0; border-radius: 6px; background: none; color: var(--muted); cursor: pointer;
+}
+.ui-input--sm + .ui-pickfield__btn { width: 26px; height: 26px; }
+.ui-pickfield__btn .ui-ico { width: 16px; height: 16px; }
+.ui-pickfield__btn:hover:not(:disabled) { background: var(--soft); color: var(--text); }
+.ui-pickfield__btn:focus-visible { outline: var(--focus-ring); outline-offset: 0; }
+.ui-pickfield__btn:disabled { opacity: .5; cursor: not-allowed; }
+
+.ui-pick {
+  z-index: 200; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-ctl);
+  padding: 8px; color: var(--text);
+}
+.ui-pick__head { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 2px 2px 6px; }
+.ui-pick__head b { font-size: 14px; }
+.ui-pick__nav { width: 30px; height: 30px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); cursor: pointer; color: var(--text); }
+.ui-pick__nav .ui-ico { width: 16px; height: 16px; }
+.ui-pick button:focus-visible { outline: var(--focus-ring); outline-offset: 0; }
+
+.ui-cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; }
+.ui-cal__wd { text-align: center; font-size: 11.5px; font-weight: 600; color: var(--muted); padding: 4px 0; }
+.ui-cal__wd.is-we { color: var(--accent); }
+.ui-cal__d {
+  height: 32px; border: 0; border-radius: 6px; background: none; cursor: pointer; color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.ui-cal__d:hover { background: var(--soft); }
+.ui-cal__d.is-today { box-shadow: inset 0 0 0 1px var(--line-hover); font-weight: 600; }
+.ui-cal__d[aria-pressed='true'] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+
+.ui-clock { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.ui-clock__col { display: flex; flex-direction: column; gap: 2px; max-height: 216px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+.ui-clock__opt { flex: none; height: 30px; border: 0; border-radius: 6px; background: none; cursor: pointer; color: var(--text); }
+.ui-clock__opt:hover { background: var(--soft); }
+.ui-clock__opt[aria-pressed='true'] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }

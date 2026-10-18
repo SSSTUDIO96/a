@@ -641,3 +641,180 @@ export interface PublicSite { site: { name: string; slug: string; timezone: stri
 export function getPublicSite(slug: string, signal?: AbortSignal): Promise<PublicSite>;      // GET /public/sites/:slug
 ```
 (Kiểu `durationMinutes`, `description` của gói/dịch vụ: thợ W12 đối chiếu lại `select` trong /home/user/a/apps/api/src/modules/profile/public.ts và schema.prisma — có thể null hay không.)
+
+---
+
+## 5. Quản trị nền tảng SaaS — phương án B "Trang chủ việc cần làm + danh sách hai cột" (quyết định thay)
+
+Bản mẫu: /home/user/a/docs/rnd/v4-quan-tri.html — `#b`, `#b-ds`, `#b-ct`, `#gia-han`, `#khoa`, `#b-goi`, `#goi-sua`, `#trang-thai`, `#khong-quyen`.
+
+Ảnh (3 khổ): /home/user/a/docs/rnd/anh/v4-quan-tri-b-{desktop,tablet,mobile}.png, …-b-ds-…, …-b-ct-…, …-gia-han-…, …-khoa-…, …-b-goi-…, …-goi-sua-…, …-trang-thai-…, …-khong-quyen-…; có nhãn trường: /home/user/a/docs/rnd/anh/v4-quan-tri-truong-b-desktop.png, /home/user/a/docs/rnd/anh/v4-quan-tri-truong-b-ds-desktop.png
+
+### 5.1 Cách vào — không có mật khẩu dùng chung
+
+- **Không** có trang đăng nhập riêng, **không** có mật khẩu chung, **không** có nút "đổi mật khẩu quản trị", **không** có nút "đặt lại mật khẩu cho chủ studio" (Studio Pro có cả 4 thứ này — đây là lỗi số 6 đã ghi; mình bỏ hết).
+- Quyền quản trị nền tảng chỉ cấp bằng lệnh chạy trên máy chủ (`src/scripts/grant-platform-admin.ts`). Người được cấp **đăng nhập như mọi người** rồi mở `/quan-tri`.
+- Web không biết trước ai là quản trị (`GET /auth/me` không có cờ): trang `/quan-tri` gọi `GET /platform/stats` trước.
+  - 200 → hiện trang.
+  - **404** → hiện **đúng màn "Không có trang này."** như đường bịa (`#khong-quyen`), không lộ là có trang quản trị. Không hiện chữ "bạn không có quyền".
+- Không có liên kết tới `/quan-tri` ở bất kỳ đâu trong app của studio.
+- `quan-tri` đã nằm trong `RESERVED_SLUGS` của máy chủ → không trùng đường tổ chức.
+
+### 5.2 Đường và khung
+
+| Đường | Màn |
+|---|---|
+| `/quan-tri` | Trang chủ (số liệu + việc cần làm) |
+| `/quan-tri/to-chuc` | Tổ chức: danh sách + chi tiết tổ chức đầu danh sách |
+| `/quan-tri/to-chuc/:organizationId` | Chi tiết một tổ chức (điện thoại: màn con) |
+| `/quan-tri/goi-cuoc` | Gói cước + hạn mức |
+
+Khung riêng `PlatformShell` (cùng token, khác menu): thanh trái 240 — tên "Quản trị nền tảng", người dùng + dòng "Quản trị nền tảng", 3 mục **Trang chủ · Tổ chức · Gói cước**. Máy tính bảng: 68px chỉ biểu tượng. Điện thoại: thanh dưới **3 ô** (không phải 5).
+
+### 5.3 Trang chủ (`#b`)
+
+- Tiêu đề "Trang chủ quản trị" + chữ phụ "số liệu lúc {generatedAt}".
+- **4 StatTile**:
+  1. Tổ chức: `organizations.total`; dưới "{byStatus.SUSPENDED} đang khoá".
+  2. Đang dùng trả phí: `bySubscriptionStatus.ACTIVE`; dưới "{TRIAL} đang dùng thử".
+  3. Sắp hết hạn 30 ngày (biến thể danger): `expiringIn30Days`; dưới "{EXPIRED} đã hết hạn · {PAST_DUE} chậm thanh toán".
+  4. **Doanh thu thuê bao dự kiến/tháng** (highlight): `projectedMonthlyRevenue`; dưới "không phải tiền đã thu"; Tooltip = nguyên văn `projectedMonthlyRevenueNote`. **Không** gọi là doanh thu đã thu, không gọi là lợi nhuận.
+- **Hai thẻ cạnh nhau** (máy tính bảng, điện thoại: chồng dọc):
+  - "Sắp hết hạn · 30 ngày tới" + liên kết "Xem tất cả" (mở `/quan-tri/to-chuc?loc=sap-het-han`): `GET /platform/organizations?expiringWithinDays=30&pageSize=5`. Mỗi dòng: tên tổ chức 600 · dòng phụ "{tên gói} · StatusTag" · bên phải ngày hết hạn 700 + Button sm "Gia hạn" (mở hộp 5.5 cho tổ chức đó).
+  - "Hết hạn, còn ân hạn" (chữ phụ "còn ghi được tới hết ân hạn"): `GET /platform/organizations?subscriptionStatus=EXPIRED&pageSize=20`, **lọc phía máy** `subscription.inGrace = true`. Mỗi dòng: tên · "Hết dd/mm · StatusTag" · bên phải "ân hạn đến **dd/mm**" (`graceEndsAt`) + "Gia hạn". Dưới cùng nhóm "Tổ chức mới 7 ngày qua": 5 dòng đầu của `GET /platform/organizations?pageSize=5` (máy chủ xếp mới tạo trước), lọc `createdAt` trong 7 ngày; mỗi dòng tên · gói · ngày tạo.
+
+### 5.4 Tổ chức (`#b-ds`, `#b-ct`)
+
+ListDetail thường (380 | 1fr).
+
+*Cột trái*
+- Ô tìm "Tên, đường dẫn hoặc email chủ" → `q` (đợi 300 ms).
+- Hàng Chip cuộn ngang (một chip được chọn): Tất cả · Sắp hết hạn (`expiringWithinDays=30`) · Hết hạn (`subscriptionStatus=EXPIRED`) · Chậm thanh toán (`PAST_DUE`) · Dùng thử (`TRIAL`) · Đang khoá (`status=SUSPENDED`). Số đếm trong chip lấy từ `GET /platform/stats` (không gọi thêm).
+- Select sm "Mọi gói cước" + các gói → `planCode`.
+- Mỗi dòng: tên tổ chức 600 (+ nhãn đỏ "Đang khoá" nếu `status = SUSPENDED`) · dòng phụ "{slug} · {owner.email}" · bên phải StatusTag thuê bao + "đến dd/mm/yyyy" / "hết dd/mm/yyyy" 12px. 20 dòng/lần, "Xem thêm 20 tổ chức".
+
+*Nhãn trạng thái thuê bao* (`subscriptionStatus` = trạng thái hiệu lực):
+
+| Giá trị | Chữ | Màu StatusTag |
+|---|---|---|
+| `NONE` | Chưa có thuê bao | xám nháp |
+| `TRIAL` | Dùng thử | accent |
+| `ACTIVE` | Đang dùng | ok |
+| `PAST_DUE` | Chậm thanh toán | warn |
+| `EXPIRED` | Hết hạn | danger |
+| `CANCELLED` | Đã huỷ | xám nháp |
+
+*Cột phải — 4 thẻ*
+1. **Đầu**: tên 16/700 · "/{slug} · {loại tổ chức} · tạo dd/mm/yyyy" (loại: INDIVIDUAL "Thợ cá nhân", TEAM "Đội / studio", ACADEMY "Trung tâm đào tạo") · StatusTag. Bảng nhãn–giá trị: Chủ tài khoản (mọi `owners[]`: tên · email) · Thành viên ("{memberCount} người đang hoạt động") · Trạng thái tổ chức (Hoạt động / nhãn "Đang khoá"). Chân thẻ: **"Đổi gói / gia hạn"** (primary) · **"Tạm khoá"** (viền đỏ) hoặc **"Mở khoá"** khi đang khoá.
+   - `configError` có giá trị → dải đỏ trên đầu thẻ, chữ nguyên văn máy chủ.
+2. **Thuê bao hiện hành**: Gói (`effectivePlan.plan.name` · giá/tháng; nếu `effectivePlan.source = 'default'` (chưa có thuê bao, áp gói mặc định) thì ghi thêm "(mặc định)") · Thời hạn (`startsAt → endsAt`, không hạn ghi "không thời hạn") · Ghi dữ liệu ? ("Được" / "Còn ân hạn đến dd/mm" / "Chỉ xem"; từ `writable`, `inGrace`, `graceEndsAt`; tooltip nói ân hạn `graceDays` ngày) · Ghi chú (`note`). Không có thuê bao: dòng `--muted` "Chưa có thuê bao — đang áp gói mặc định".
+3. **Mức dùng so với gói**: 3 hàng (nhãn 150px · thanh 8px · "x / y" bên phải): Thành viên (`usage.staff` / `maxStaff`), Lịch tháng này (`usage.appointmentsThisMonth` / `maxAppointmentsPerMonth`), Dung lượng (`usage.storageMb` MB / `maxStorageMb`, đổi sang GB khi ≥ 1024). Thanh màu `--accent`; ≥ 90% đổi `--danger`. Giới hạn `null` → "x / Không giới hạn", không vẽ thanh. **Học viên, Khoá học không vẽ** (máy chủ trả `null` = chưa đếm được).
+4. **Lịch sử thuê bao**: bảng Gói (+ nhãn "Hiện hành" nếu `isCurrent`) · Trạng thái · Thời hạn · Ghi chú (ẩn ở máy tính bảng). Dòng hiện hành tô `--accent-soft`.
+
+### 5.5 Hộp thoại
+
+*Đổi gói / gia hạn* (`#gia-han`) — Dialog 600.
+- Dòng phụ "{tên tổ chức} · đang dùng {gói} đến {endsAt}".
+- Gói cước (Select: `GET /platform/plans`, chỉ gói `isActive`, trừ gói `trial` luôn chọn được; mặc định = gói hiện tại) · Trạng thái (Segmented sm Dùng thử · **Đang dùng** · Chậm thanh toán; mặc định Đang dùng) · Bắt đầu ? (ô ngày; mặc định = `endsAt` hiện tại nếu còn hạn, không thì hôm nay; tooltip "Không được trước ngày bắt đầu của thuê bao mới nhất") · Thời hạn (Segmented sm **1 tháng · 3 · 6 · 12 tháng** · Đến ngày… · Không hạn) · dòng "Hết hạn" tính sẵn (chỉ đọc) · Ghi chú (Textarea, ≤500).
+- Dải xám "Thêm một dòng thuê bao mới; dòng cũ giữ làm lịch sử."
+- Lưu → `POST /platform/organizations/:organizationId/subscriptions {planId, status, startsAt, months}` (hoặc `endsAt` khi chọn "Đến ngày…", `endsAt: null` khi "Không hạn"). **Không gửi cả `months` lẫn `endsAt`.**
+
+*Tạm khoá* (`#khoa`) — ConfirmDialog 460: "Tạm khoá {tên}?" · câu "Mọi thành viên không vào được tổ chức; trang giới thiệu công khai tắt. Dữ liệu giữ nguyên, mở khoá lúc nào cũng được." · Lý do `*` → `PATCH /platform/organizations/:id {status: 'SUSPENDED', reason}`. "Mở khoá" → hộp xác nhận ngắn, `{status: 'ACTIVE'}` (lý do tuỳ chọn).
+
+*Gói cước* (`#b-goi`, `#goi-sua`) — lưới thẻ `repeat(auto-fill, minmax(250px, 1fr))`. Mỗi thẻ: tên + mã 12px · nhãn "Đang bán"/"Ngừng bán" · giá/tháng 20/700 · 5 dòng hạn mức (null = "Không giới hạn") + "Tên miền riêng: có/không" · các nhãn `features[]` · chân "Sửa". Nút "+ Gói mới" ở tiêu đề.
+- Hộp Sửa/Tạo (Dialog 640): Mã gói (chỉ khi tạo; chữ thường không dấu, số, gạch dưới, 2–32 ký tự; khi sửa chỉ hiện ở dòng phụ "không đổi được") · Tên gói · Giá mỗi tháng (MoneyInput) · **dải vàng khi sửa giá**: "Đổi giá áp cho mọi thuê bao đang dùng gói này" · nhóm Giới hạn (2 cột; trống = không giới hạn): Thành viên, Lịch mỗi tháng, Dung lượng (MB), Học viên, Khoá học, Tên miền riêng (Switch) · nhóm Bày bán: Tính năng ghi trên gói (Chip + "Thêm", ≤50) · Đang bán (Switch) · Thứ tự.
+- Tạo → `POST /platform/plans` (đủ trường); sửa → `PATCH /platform/plans/:planId` (chỉ trường đã đổi).
+- Số tổ chức đang dùng gói (để ghi "42 tổ chức" trong dải vàng): **chưa có trường** → bản dựng ghi câu không có số (đề xuất 5.8-2).
+
+### 5.6 Ô ↔ trường
+
+| Ô | Đọc | Ghi |
+|---|---|---|
+| 4 ô số trang chủ, số trong chip | `GET /platform/stats` → `organizations{total, byStatus{ACTIVE, SUSPENDED}, bySubscriptionStatus{NONE, TRIAL, ACTIVE, PAST_DUE, EXPIRED, CANCELLED}}, expiringIn30Days, projectedMonthlyRevenue, projectedMonthlyRevenueNote, generatedAt` | — |
+| Danh sách tổ chức | `GET /platform/organizations?page&pageSize&status&subscriptionStatus&planCode&expiringWithinDays&q` → `items[{id, name, slug, kind, status, createdAt, owner{id, fullName, email}\|null, subscriptionStatus, subscription{id, plan{id, code, name, priceMonthly}, status, startsAt, endsAt, effectiveStatus, graceEndsAt, inGrace, writable}\|null, memberCount, storageUsedBytes}]`, `total` | — |
+| Chi tiết | `GET /platform/organizations/:id` → các cột tổ chức + `owners[], memberCount, storageUsedBytes, subscriptionStatus, currentSubscription{id, status, startsAt, endsAt, note, effectiveStatus, graceEndsAt, inGrace, writable}\|null, effectivePlan{source, plan{…}}\|null, configError, graceDays, usage{staff, appointmentsThisMonth, storageMb, students:null, courses:null}, subscriptions[{id, plan{id,code,name}, status, startsAt, endsAt, note, createdById, createdAt, isCurrent}]` | `PATCH /platform/organizations/:id {status, reason?}`; `POST …/subscriptions {planId, status?, startsAt?, endsAt?\|months?, note?}` |
+| Gói cước | `GET /platform/plans` → `items[{id, code, name, priceMonthly, maxStaff, maxAppointmentsPerMonth, maxStorageMb, maxStudents, maxCourses, customDomain, features, isActive, sortOrder}]` | `POST /platform/plans`, `PATCH /platform/plans/:planId` |
+
+### 5.7 Trạng thái
+
+| Tình huống | Hiển thị |
+|---|---|
+| Đang kiểm quyền (`GET /platform/stats` chưa về) | Skeleton 4 ô số, **không** vẽ thanh trái (tránh lộ khung quản trị rồi mới giấu) |
+| 404 ở bước kiểm quyền | Màn "Không có trang này." chung của app |
+| 404 tổ chức / gói | EmptyState "Không tìm thấy tổ chức" + "Về danh sách" |
+| 400 | Lỗi dưới ô (ví dụ "Ngày hết hạn phải sau ngày bắt đầu", "Mã gói: chữ thường không dấu…", "Nhập lý do tạm khoá") |
+| 409 | Dải đỏ trong hộp, chữ máy chủ: "Ngày bắt đầu không được trước ngày bắt đầu của thuê bao mới nhất", "Gói này đã ngừng bán", "Mã gói đã có" |
+| `configError` | Dải đỏ ở thẻ đầu chi tiết |
+
+Quyền: chỉ có một mức — **là quản trị nền tảng hay không** (do máy chủ quyết qua 404). Không dùng danh mục quyền của tổ chức.
+
+### 5.8 Đề xuất trường / đường mới (KHÔNG vẽ)
+
+1. `GET /auth/me` trả cờ `isPlatformAdmin` — để không phải gọi thử (vẫn giữ 404 cho người thường).
+2. Số tổ chức đang dùng mỗi gói (`plans[].subscriberCount`) — cho dải cảnh báo đổi giá.
+3. Lý do tạm khoá đọc lại được trong chi tiết (hiện chỉ nằm ở nhật ký thay đổi): `suspendedReason`, `suspendedAt`.
+4. Nhật ký thao tác của quản trị theo tổ chức (`GET /platform/organizations/:id/audit`).
+5. Tiền thuê bao **đã thu thật** (sổ thu của nền tảng) — hiện chỉ có số dự kiến.
+6. Danh sách chờ, yêu cầu khôi phục mật khẩu (Studio Pro có tab "Waiting List", "Yêu cầu mật khẩu") — khôi phục mật khẩu nên để người dùng tự làm qua email, không qua quản trị.
+7. Đếm học viên, khoá học (`usage.students/courses`) khi có module đào tạo.
+
+### 5.9 Gói việc theo tệp
+
+| Gói | Tệp sở hữu | Nội dung | Phụ thuộc |
+|---|---|---|---|
+| **W13 Quản trị nền tảng** | `src/features/platform/**`: `PlatformGate.tsx` (gọi stats, 404 → NotFound), `PlatformShell.tsx`, `PlatformNav.ts`, `HomePage.tsx`, `StatTiles.tsx`, `ExpiringCard.tsx`, `GraceCard.tsx`, `OrganizationsPage.tsx`, `OrgList.tsx`, `OrgDetail.tsx`, `UsageBars.tsx`, `SubscriptionHistory.tsx`, `SubscriptionDialog.tsx`, `SuspendDialog.tsx`, `PlansPage.tsx`, `PlanDialog.tsx`, `labels.ts`; **`src/api/platform.ts` (mới)** | Mục 5 | Lõi `src/api/client.ts`. **Không** dùng `AppShell`/`nav.ts` của tổ chức. |
+| Yêu cầu W3 | `routes.tsx`: nhánh `/quan-tri/*` trong `RequireAuth`, **ngoài** `:orgSlug`, phần tử `PlatformGate` | | |
+
+### 5.10 Hàm API web cần thêm
+
+```ts
+// src/api/platform.ts (mới, W13) — đường KHÔNG có tiền tố /orgs/:orgId
+export type EffectiveStatus = 'NONE' | 'TRIAL' | 'ACTIVE' | 'PAST_DUE' | 'EXPIRED' | 'CANCELLED';
+export type SubscriptionStatus = Exclude<EffectiveStatus, 'NONE'>;
+export interface PlanView { id: string; code: string; name: string; priceMonthly: Vnd; maxStaff: number|null; maxAppointmentsPerMonth: number|null; maxStorageMb: number|null; maxStudents: number|null; maxCourses: number|null; customDomain: boolean; features: string[]; isActive: boolean; sortOrder: number; createdAt: IsoDateTime; updatedAt: IsoDateTime }
+export interface PlatformStats { organizations: { total: number; byStatus: Record<'ACTIVE'|'SUSPENDED', number>; bySubscriptionStatus: Record<EffectiveStatus, number> }; expiringIn30Days: number; projectedMonthlyRevenue: Vnd; projectedMonthlyRevenueNote: string; generatedAt: IsoDateTime }
+export interface OrgListItem { id: string; name: string; slug: string; kind: OrgKind; status: 'ACTIVE'|'SUSPENDED'; createdAt: IsoDateTime; owner: { id: string; fullName: string; email: string } | null; subscriptionStatus: EffectiveStatus; subscription: { id: string; plan: { id: string; code: string; name: string; priceMonthly: Vnd }; status: SubscriptionStatus; startsAt: IsoDateTime; endsAt: IsoDateTime|null; effectiveStatus: EffectiveStatus; graceEndsAt: IsoDateTime|null; inGrace: boolean; writable: boolean } | null; memberCount: number; storageUsedBytes: number }
+export interface OrgListQuery { page?: number; pageSize?: number; status?: 'ACTIVE'|'SUSPENDED'; subscriptionStatus?: EffectiveStatus; planCode?: string; expiringWithinDays?: number; q?: string }
+export interface OrgDetail { id: string; name: string; slug: string; kind: OrgKind; status: 'ACTIVE'|'SUSPENDED'; timezone: string; currency: string; createdAt: IsoDateTime; updatedAt: IsoDateTime; owners: { id: string; fullName: string; email: string }[]; memberCount: number; storageUsedBytes: number; subscriptionStatus: EffectiveStatus; currentSubscription: { id: string; status: SubscriptionStatus; startsAt: IsoDateTime; endsAt: IsoDateTime|null; note: string|null; effectiveStatus: EffectiveStatus; graceEndsAt: IsoDateTime|null; inGrace: boolean; writable: boolean } | null; effectivePlan: { source: 'subscription' | 'default'; plan: PlanView } | null; configError: string|null; graceDays: number; usage: { staff: number; appointmentsThisMonth: number; storageMb: number; students: null; courses: null }; subscriptions: { id: string; plan: { id: string; code: string; name: string }; status: SubscriptionStatus; startsAt: IsoDateTime; endsAt: IsoDateTime|null; note: string|null; createdById: string|null; createdAt: IsoDateTime; isCurrent: boolean }[] }
+export interface SubscriptionInput { planId: string; status?: SubscriptionStatus; startsAt?: IsoDateTime; note?: string; months?: number; endsAt?: IsoDateTime | null }   // chỉ một trong months / endsAt
+export type PlanInput = Omit<PlanView, 'id'|'createdAt'|'updatedAt'>;
+export function getPlatformStats(signal?: AbortSignal): Promise<PlatformStats>;                                         // GET  /platform/stats (cũng là bước kiểm quyền)
+export function listPlatformOrganizations(query?: OrgListQuery, signal?: AbortSignal): Promise<Page<OrgListItem>>;       // GET  /platform/organizations
+export function getPlatformOrganization(organizationId: string, signal?: AbortSignal): Promise<OrgDetail>;               // GET  /platform/organizations/:id
+export function addSubscription(organizationId: string, input: SubscriptionInput): Promise<unknown>;                    // POST /platform/organizations/:id/subscriptions → tải lại chi tiết
+export function setOrganizationStatus(organizationId: string, input: { status: 'ACTIVE'|'SUSPENDED'; reason?: string }): Promise<unknown>; // PATCH
+export function listPlans(signal?: AbortSignal): Promise<Items<PlanView>>;                                             // GET  /platform/plans
+export function createPlan(input: PlanInput): Promise<PlanView>;                                                         // POST /platform/plans
+export function updatePlan(planId: string, input: Partial<Omit<PlanInput, 'code'>>): Promise<PlanView>;                   // PATCH /platform/plans/:planId
+```
+(`OrgDetail` trả nguyên các cột bảng `organizations` — thợ W13 đối chiếu schema.prisma `model Organization`. `effectivePlan.source` là `'subscription' \| 'default'` — đã đối chiếu /home/user/a/apps/api/src/lib/quota.ts dòng 98.)
+
+---
+
+## 6. Thứ tự giao việc và tệp dùng chung (tổng hợp 5 màn)
+
+**Gói mới, chạy song song được ngay (mỗi gói chỉ ghi vào thư mục của mình + tệp API mới của mình):**
+
+| Gói | Thư mục | Tệp API mới | Có thể bắt đầu |
+|---|---|---|---|
+| W8 Nhân sự | `src/features/staff/**` | `src/api/files.ts` | ngay |
+| W9 Khách hàng | `src/features/customers/**` | — | ngay |
+| W10 Thu tiền | `src/features/payments/**` | `src/api/payments.ts` | ngay |
+| W10b Báo cáo | `src/features/reports/**` | `src/api/reports.ts` | ngay (import kiểu từ payments.ts khi có) |
+| W11 Thương hiệu | `src/features/brand/**` | `src/api/profile.ts` | ngay; phần ảnh chờ `files.ts` (W8), xem trước chờ `SiteView` (W12) |
+| W12 Trang công khai | `src/features/public-site/**` | `src/api/publicSite.ts` | ngay |
+| W13 Quản trị nền tảng | `src/features/platform/**` | `src/api/platform.ts` | ngay |
+
+**Yêu cầu sửa tệp của người khác (chủ tệp làm, gom một lượt cho đỡ đụng):**
+
+| Chủ tệp | Tệp | Thêm gì | Cho gói |
+|---|---|---|---|
+| W3 | `src/layout/nav.ts` | menu con Thợ makeup (2), Hợp đồng (3, có Thu tiền), mục mới Báo cáo (Doanh thu, Sổ thu) với quyền theo mục con, Cài đặt › Hồ sơ thương hiệu | W8, W10, W10b, W11 |
+| W3 | `src/app/routes.tsx` | các đường ở 1.1, 2.1, 3.1, 4.1, 5.2; `/trang/:slug` và `/quan-tri/*` đặt **trước** `:orgSlug` | tất cả |
+| W2 | `src/ui/*` | ListGroupHeader, ListRow, StatTile, PersonChip, ImageUpload, ConfirmDialog (mục 0.2) | tất cả |
+| W1 | `src/api/org.ts` | `listRoles`, `addMember` | W8 |
+| W5 | `src/features/contracts/**` | đọc `?customerId=`; liên kết "Thu tiền" ở hợp đồng đã xác nhận | W9, W10 |
+| W6 | `src/features/schedule/**` | đọc `?ngay=&ca=` | W9 |
+| Đội máy chủ | `apps/api/src/modules/orgs/routes.ts` | thêm `'trang'` vào `RESERVED_SLUGS` | W12 |
+
+**W7 Kiểm thử giao diện** thêm vào `apps/web/e2e/**`: chụp 3 khổ (1440, 1024, 390) cho mọi màn ở mục 1–5, đặt cạnh ảnh `docs/rnd/anh/v4-*` tương ứng; kiểm `scrollWidth === innerWidth`; với Thu tiền kiểm 4 ô số khớp `summary` máy chủ; với Quản trị kiểm người thường mở `/quan-tri` thấy đúng màn "Không có trang này.".

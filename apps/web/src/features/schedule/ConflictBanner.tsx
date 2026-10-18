@@ -1,8 +1,7 @@
 // Dải đỏ trùng lịch (bản vẽ C 4.1, luật 409): "Trùng lịch: Thu Hà đã có lịch L-0123 06:00–07:30" + nút "Đổi thợ", "Đổi giờ".
 // Hộp thoại đang nhập giữ nguyên; lưới tô viền đỏ các ca trong danh sách (theo appointmentId).
 import type { AppointmentConflict } from '../../api/types';
-import { Button } from '../../ui';
-import { IconWarn } from './icons';
+import { Button, IconWarn } from '../../ui';
 import { hhmm } from './time';
 
 export function conflictLine(c: AppointmentConflict): string {

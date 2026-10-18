@@ -57,6 +57,10 @@ model User {
   filesCreated         StoredFile[]
   paymentsCreated      Payment[]                  @relation("PaymentCreatedBy")
   platformAdmin        PlatformAdmin?             @relation("PlatformAdminUser")
+  coursesCreated       Course[]                   @relation("CourseCreatedBy")
+  courseClassesCreated CourseClass[]              @relation("CourseClassCreatedBy")
+  contractTextsUpdated ContractText[]             @relation("ContractTextUpdatedBy")
+  designCardsCreated   DesignCard[]               @relation("DesignCardCreatedBy")
 
   @@map("users")
 }
@@ -127,6 +131,14 @@ model Organization {
   payments          Payment[]
   subscriptions     OrganizationSubscription[]
   profile           OrganizationProfile?
+  courseGroups      CourseGroup[]
+  courses           Course[]
+  courseClasses     CourseClass[]
+  enrollments       Enrollment[]
+  contractTexts     ContractText[]
+  greetingPhrases   GreetingPhrase[]
+  designCards       DesignCard[]
+  designCardPhotos  DesignCardPhoto[]
 
   @@map("organizations")
 }
@@ -165,6 +177,8 @@ model Membership {
   assignments       AppointmentStaff[]
   staffProfile      StaffProfile?
   contractLineStaff ContractLineStaff[]
+  instructedClasses CourseClass[]       @relation("ClassInstructor")
+  ownedContracts    Contract[]          @relation("ContractOwner")
 
   @@unique([organizationId, userId])
   @@unique([id, organizationId])
@@ -354,12 +368,18 @@ model Customer {
   phone          String?
   email          String?
   note           String?
+  // Ảnh học viên/khách = tệp CUSTOMER_AVATAR (thẻ chào mừng lấy ảnh từ đây).
+  avatarFileId   String?  @map("avatar_file_id") @db.Uuid
   createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  // Khoá ngoại kép (tệp, tổ chức): database chặn gắn ảnh của tổ chức khác.
+  avatarFile   StoredFile?   @relation("CustomerAvatar", fields: [avatarFileId, organizationId], references: [id, organizationId], onDelete: Restrict)
   appointments Appointment[]
   contracts    Contract[]
+  enrollments  Enrollment[]
+  designCards  DesignCard[]
 
   @@unique([id, organizationId])
   @@index([organizationId, phone])
@@ -540,6 +560,7 @@ model StudioLocation {
 
   organization  Organization   @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   contractLines ContractLine[]
+  courseClasses CourseClass[]
 
   @@unique([id, organizationId])
   @@map("studio_locations")
@@ -605,40 +626,65 @@ enum ContractLineKind {
   SURCHARGE
   TRAVEL
   CUSTOM
+  // Dòng khoá học: một học viên vào một lớp (course_class_id bắt buộc, chốt bằng CHECK).
+  COURSE
+}
+
+// Loại hợp đồng: dịch vụ makeup hay khoá học. Đặt lúc tạo, không đổi được (trigger contracts_kind_immutable).
+enum ContractKind {
+  SERVICE
+  COURSE
 }
 
 // Hợp đồng là nơi DUY NHẤT giữ tiền của một đơn makeup.
 // Luật: subtotal = tổng line_total các dòng chưa huỷ; total = subtotal − discount (máy chủ tự tính, bài thử kiểm).
 model Contract {
-  id              String         @id @default(uuid()) @db.Uuid
-  organizationId  String         @map("organization_id") @db.Uuid
-  code            String
-  customerId      String         @map("customer_id") @db.Uuid
-  status          ContractStatus @default(DRAFT)
-  eventDate       DateTime?      @map("event_date") @db.Timestamptz(3)
-  subtotal        BigInt         @default(0)
-  discount        BigInt         @default(0)
-  total           BigInt         @default(0)
-  depositRequired BigInt         @default(0) @map("deposit_required")
-  notes           String?
-  terms           String?
-  cancelReason    String?        @map("cancel_reason")
-  confirmedAt     DateTime?      @map("confirmed_at") @db.Timestamptz(3)
-  createdById     String         @map("created_by_id") @db.Uuid
-  createdAt       DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt       DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
+  id                   String         @id @default(uuid()) @db.Uuid
+  organizationId       String         @map("organization_id") @db.Uuid
+  code                 String
+  // Hợp đồng có từ trước khi có đào tạo nhận mặc định SERVICE.
+  kind                 ContractKind   @default(SERVICE)
+  customerId           String         @map("customer_id") @db.Uuid
+  // Người phụ trách (tư vấn, nhắc đóng tiền).
+  ownerMembershipId    String?        @map("owner_membership_id") @db.Uuid
+  status               ContractStatus @default(DRAFT)
+  eventDate            DateTime?      @map("event_date") @db.Timestamptz(3)
+  subtotal             BigInt         @default(0)
+  discount             BigInt         @default(0)
+  total                BigInt         @default(0)
+  depositRequired      BigInt         @default(0) @map("deposit_required")
+  notes                String?
+  terms                String?
+  // Bản chụp nội quy lúc xác nhận — chỉ hợp đồng khoá học (CHECK contracts_rules_only_course).
+  rules                String?
+  // Mẫu điều khoản / nội quy đã chụp (id + phiên bản lúc chụp).
+  termsTemplateId      String?        @map("terms_template_id") @db.Uuid
+  termsTemplateVersion Int?           @map("terms_template_version")
+  rulesTemplateId      String?        @map("rules_template_id") @db.Uuid
+  rulesTemplateVersion Int?           @map("rules_template_version")
+  cancelReason         String?        @map("cancel_reason")
+  confirmedAt          DateTime?      @map("confirmed_at") @db.Timestamptz(3)
+  createdById          String         @map("created_by_id") @db.Uuid
+  createdAt            DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt            DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  organization Organization         @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  customer     Customer             @relation(fields: [customerId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  lines        ContractLine[]
-  appointments Appointment[]
-  installments PaymentInstallment[]
-  payments     Payment[]
-  createdBy    User                 @relation("ContractCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  organization  Organization         @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  customer      Customer             @relation(fields: [customerId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  owner         Membership?          @relation("ContractOwner", fields: [ownerMembershipId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  termsTemplate ContractText?        @relation("ContractTermsTemplate", fields: [termsTemplateId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  rulesTemplate ContractText?        @relation("ContractRulesTemplate", fields: [rulesTemplateId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  lines         ContractLine[]
+  appointments  Appointment[]
+  installments  PaymentInstallment[]
+  payments      Payment[]
+  enrollments   Enrollment[]
+  designCards   DesignCard[]
+  createdBy     User                 @relation("ContractCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
 
   @@unique([organizationId, code])
   @@unique([id, organizationId])
   @@index([organizationId, eventDate])
+  @@index([organizationId, kind])
   @@map("contracts")
 }
 
@@ -672,6 +718,8 @@ model ContractLine {
   travelMode        TravelFeeMode?   @map("travel_mode")
   distanceKm        Decimal?         @map("distance_km") @db.Decimal(7, 2)
   perKmAmount       BigInt?          @map("per_km_amount")
+  // Chỉ dòng COURSE: lớp học viên vào (CHECK: kind = COURSE ⇔ có lớp).
+  courseClassId     String?          @map("course_class_id") @db.Uuid
   note              String?
   sortOrder         Int              @default(0) @map("sort_order")
   addedAfterConfirm Boolean          @default(false) @map("added_after_confirm")
@@ -692,11 +740,16 @@ model ContractLine {
   appointmentsInContract Appointment[]       @relation("AppointmentLineOfContract")
   plannedStaff           ContractLineStaff[]
   priceVersion           PriceVersion?       @relation(fields: [priceVersionId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  courseClass            CourseClass?        @relation(fields: [courseClassId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  // Tối đa một ghi danh mỗi dòng (unique contract_line_id); khai mảng vì Prisma đòi khoá duy nhất kép cho quan hệ 1–1.
+  enrollments            Enrollment[]
+  enrollmentsInContract  Enrollment[]        @relation("EnrollmentLineOfContract")
   createdBy              User                @relation("ContractLineCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
 
   @@unique([id, organizationId])
   @@unique([id, contractId])
   @@index([contractId])
+  @@index([courseClassId])
   @@map("contract_lines")
 }
 
@@ -797,8 +850,13 @@ enum FilePurpose {
   ALBUM_IMAGE
   COURSE_RESOURCE
   SUBMISSION
+  // Không dùng nữa (thay bằng DESIGN_CARD); để nguyên cho khỏi đổi enum đang chạy.
   WELCOME_CARD
   OTHER
+  // Ảnh người dùng tải lên cho thẻ (chào mừng / feedback / lời chúc).
+  DESIGN_PHOTO
+  // Ảnh PNG thẻ đã xuất.
+  DESIGN_CARD
 }
 
 enum FileStatus {
@@ -828,10 +886,13 @@ model StoredFile {
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   createdBy    User         @relation(fields: [createdById], references: [id], onDelete: Restrict)
 
-  profileLogos   OrganizationProfile[] @relation("ProfileLogo")
-  profileAvatars OrganizationProfile[] @relation("ProfileAvatar")
-  profileCovers  OrganizationProfile[] @relation("ProfileCover")
-  staffAvatars   StaffProfile[]        @relation("StaffAvatar")
+  profileLogos      OrganizationProfile[] @relation("ProfileLogo")
+  profileAvatars    OrganizationProfile[] @relation("ProfileAvatar")
+  profileCovers     OrganizationProfile[] @relation("ProfileCover")
+  staffAvatars      StaffProfile[]        @relation("StaffAvatar")
+  customerAvatars   Customer[]            @relation("CustomerAvatar")
+  designCardOutputs DesignCard[]          @relation("DesignCardOutput")
+  designCardPhotos  DesignCardPhoto[]
 
   @@unique([id, organizationId])
   @@index([organizationId, purpose])
@@ -1001,4 +1062,267 @@ model OrganizationProfile {
   cover        StoredFile?  @relation("ProfileCover", fields: [coverFileId, organizationId], references: [id, organizationId], onDelete: Restrict)
 
   @@map("organization_profiles")
+}
+
+// ==================== ĐÀO TẠO (chỉ tổ chức ACADEMY — máy chủ chặn tổ chức khác) ====================
+
+enum CourseMode {
+  // Khoá một lớp: đúng 1 lớp chưa huỷ (trigger course_classes_single_guard).
+  SINGLE_CLASS
+  MULTI_CLASS
+}
+
+enum CourseClassStatus {
+  OPEN
+  // Ngừng nhận ghi danh (chưa đầy vẫn đóng được).
+  CLOSED
+  CANCELLED
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  CANCELLED
+}
+
+// Nhóm khoá do trung tâm tự đặt tên.
+model CourseGroup {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  name           String
+  sortOrder      Int      @default(0) @map("sort_order")
+  // Ẩn nhóm, không xoá.
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  courses      Course[]
+
+  @@unique([organizationId, name])
+  @@unique([id, organizationId])
+  @@map("course_groups")
+}
+
+// Khoá học. Học phí chép vào dòng hợp đồng lúc thêm (không dùng PriceVersion): đổi học phí không đổi hợp đồng cũ.
+model Course {
+  id              String     @id @default(uuid()) @db.Uuid
+  organizationId  String     @map("organization_id") @db.Uuid
+  // Trống = "Chưa xếp nhóm".
+  groupId         String?    @map("group_id") @db.Uuid
+  code            String
+  name            String
+  mode            CourseMode
+  tuitionFee      BigInt     @map("tuition_fee")
+  // Cọc mặc định (gợi ý khi lập hợp đồng), không vượt học phí.
+  depositAmount   BigInt     @default(0) @map("deposit_amount")
+  defaultCapacity Int        @map("default_capacity")
+  sessionCount    Int?       @map("session_count")
+  sessionMinutes  Int?       @map("session_minutes")
+  description     String?
+  sortOrder       Int        @default(0) @map("sort_order")
+  // Lưu trữ thay cho xoá; khoá đã có hợp đồng không xoá được.
+  archivedAt      DateTime?  @map("archived_at") @db.Timestamptz(3)
+  createdById     String     @map("created_by_id") @db.Uuid
+  createdAt       DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  group        CourseGroup?  @relation(fields: [groupId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  createdBy    User          @relation("CourseCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  classes      CourseClass[]
+
+  @@unique([organizationId, code])
+  @@unique([id, organizationId])
+  @@index([organizationId, groupId])
+  @@map("courses")
+}
+
+// Lớp (đợt khai giảng) của một khoá. Số đã ghi danh do máy chủ đếm; CHECK enrolled_count <= capacity là chốt cuối.
+model CourseClass {
+  id                     String            @id @default(uuid()) @db.Uuid
+  organizationId         String            @map("organization_id") @db.Uuid
+  courseId               String            @map("course_id") @db.Uuid
+  name                   String
+  startDate              DateTime          @map("start_date") @db.Date
+  endDate                DateTime          @map("end_date") @db.Date
+  // 1 = Thứ Hai … 7 = Chủ nhật (ISO), không trùng, ít nhất 1 ngày.
+  weekdays               Int[]
+  // Phút tính từ 0:00 (18:00 → 1080).
+  startMinute            Int?              @map("start_minute")
+  endMinute              Int?              @map("end_minute")
+  capacity               Int
+  enrolledCount          Int               @default(0) @map("enrolled_count")
+  status                 CourseClassStatus @default(OPEN)
+  instructorMembershipId String?           @map("instructor_membership_id") @db.Uuid
+  studioLocationId       String?           @map("studio_location_id") @db.Uuid
+  note                   String?
+  createdById            String            @map("created_by_id") @db.Uuid
+  createdAt              DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt              DateTime          @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  course         Course          @relation(fields: [courseId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  instructor     Membership?     @relation("ClassInstructor", fields: [instructorMembershipId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  studioLocation StudioLocation? @relation(fields: [studioLocationId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  createdBy      User            @relation("CourseClassCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  contractLines  ContractLine[]
+  enrollments    Enrollment[]
+  designCards    DesignCard[]
+
+  @@unique([id, organizationId])
+  @@unique([courseId, name])
+  @@index([organizationId, startDate])
+  @@map("course_classes")
+}
+
+// Ghi danh: một học viên vào một lớp, sinh khi hợp đồng khoá học XÁC NHẬN (nháp không giữ chỗ).
+model Enrollment {
+  id             String           @id @default(uuid()) @db.Uuid
+  organizationId String           @map("organization_id") @db.Uuid
+  courseClassId  String           @map("course_class_id") @db.Uuid
+  contractId     String           @map("contract_id") @db.Uuid
+  contractLineId String           @map("contract_line_id") @db.Uuid
+  // Chép từ hợp đồng để đếm học viên và chặn ghi danh trùng.
+  customerId     String           @map("customer_id") @db.Uuid
+  status         EnrollmentStatus @default(ACTIVE)
+  enrolledAt     DateTime         @map("enrolled_at") @db.Timestamptz(3)
+  cancelledAt    DateTime?        @map("cancelled_at") @db.Timestamptz(3)
+  cancelReason   String?          @map("cancel_reason")
+
+  organization           Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  courseClass            CourseClass  @relation(fields: [courseClassId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  contract               Contract     @relation(fields: [contractId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  contractLine           ContractLine @relation(fields: [contractLineId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  // Dòng phải thuộc CHÍNH hợp đồng của ghi danh (database tự chặn).
+  contractLineInContract ContractLine @relation("EnrollmentLineOfContract", fields: [contractLineId, contractId], references: [id, contractId], onDelete: Restrict)
+  customer               Customer     @relation(fields: [customerId, organizationId], references: [id, organizationId], onDelete: Restrict)
+
+  @@unique([contractLineId])
+  @@unique([id, organizationId])
+  @@index([courseClassId, status])
+  @@index([organizationId, status, customerId])
+  @@map("enrollments")
+}
+
+// ==================== MẪU ĐIỀU KHOẢN / NỘI QUY ====================
+
+enum ContractTextKind {
+  TERMS
+  RULES
+}
+
+// Hợp đồng chụp nội dung lúc xác nhận (terms / rules) nên sửa mẫu không đổi hợp đồng đã ký.
+model ContractText {
+  id             String           @id @default(uuid()) @db.Uuid
+  organizationId String           @map("organization_id") @db.Uuid
+  kind           ContractTextKind
+  // Rỗng = dùng cho cả hai loại hợp đồng.
+  appliesTo      ContractKind[]   @map("applies_to")
+  name           String
+  body           String
+  // Tăng 1 mỗi lần sửa nội dung.
+  version        Int              @default(1)
+  // Mẫu gợi ý khi lập hợp đồng; mỗi (tổ chức, loại) tối đa một mẫu mặc định (index một phần).
+  isDefault      Boolean          @default(false) @map("is_default")
+  isActive       Boolean          @default(true) @map("is_active")
+  updatedById    String           @map("updated_by_id") @db.Uuid
+  createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  updatedBy      User         @relation("ContractTextUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  termsContracts Contract[]   @relation("ContractTermsTemplate")
+  rulesContracts Contract[]   @relation("ContractRulesTemplate")
+
+  @@unique([id, organizationId])
+  @@index([organizationId, kind])
+  @@map("contract_texts")
+}
+
+// ==================== MẪU THIẾT KẾ (thẻ chào mừng / feedback / lời chúc) ====================
+// Danh mục mẫu là mã nguồn (packages/shared/src/design-templates.ts), không nằm trong database.
+
+enum DesignCardKind {
+  WELCOME
+  FEEDBACK
+  GREETING
+}
+
+// Câu chúc soạn sẵn cho Lời chúc. Tổ chức mới được chép DEFAULT_GREETING_PHRASES từ packages/shared.
+model GreetingPhrase {
+  id             String         @id @default(uuid()) @db.Uuid
+  organizationId String         @map("organization_id") @db.Uuid
+  name           String
+  // Rỗng = dùng cho cả hai loại hợp đồng.
+  appliesTo      ContractKind[] @map("applies_to")
+  title          String
+  body           String
+  sortOrder      Int            @default(0) @map("sort_order")
+  isActive       Boolean        @default(true) @map("is_active")
+  createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+
+  @@unique([id, organizationId])
+  @@index([organizationId, sortOrder])
+  @@map("greeting_phrases")
+}
+
+// Thẻ đã tạo. snapshot = giá trị đã điền lúc xuất ảnh (theo khoá SLOT_SOURCES): tải lại ảnh cũ ra đúng như cũ.
+model DesignCard {
+  id              String         @id @default(uuid()) @db.Uuid
+  organizationId  String         @map("organization_id") @db.Uuid
+  kind            DesignCardKind
+  // Mã mẫu trong danh mục (shd-01, fb-02, lc-01…) và phiên bản mẫu lúc tạo.
+  templateCode    String         @map("template_code")
+  templateVersion Int            @map("template_version")
+  contractId      String         @map("contract_id") @db.Uuid
+  customerId      String         @map("customer_id") @db.Uuid
+  courseClassId   String?        @map("course_class_id") @db.Uuid
+  title           String?
+  body            String?
+  // 1–5, chỉ FEEDBACK.
+  rating          Int?
+  // Ngày nhận lời khen, chỉ FEEDBACK.
+  receivedAt      DateTime?      @map("received_at") @db.Date
+  // Ví dụ "ky-2": thay mọi phông viết tay của mẫu bằng chữ ký 2.
+  fontOverride    String?        @map("font_override")
+  // "1080x1350" hoặc "1080x1080".
+  size            String
+  snapshot        Json
+  outputFileId    String?        @map("output_file_id") @db.Uuid
+  createdById     String         @map("created_by_id") @db.Uuid
+  createdAt       DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt       DateTime?      @map("deleted_at") @db.Timestamptz(3)
+
+  organization Organization      @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  contract     Contract          @relation(fields: [contractId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  customer     Customer          @relation(fields: [customerId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  courseClass  CourseClass?      @relation(fields: [courseClassId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  outputFile   StoredFile?       @relation("DesignCardOutput", fields: [outputFileId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  createdBy    User              @relation("DesignCardCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  photos       DesignCardPhoto[]
+
+  @@unique([id, organizationId])
+  @@index([organizationId, kind, createdAt])
+  @@index([contractId])
+  @@map("design_cards")
+}
+
+// Ảnh người dùng tải lên cho thẻ: tối đa 3 (sort_order 0..2). Xoá thẻ thì xoá dòng.
+model DesignCardPhoto {
+  cardId         String @map("card_id") @db.Uuid
+  organizationId String @map("organization_id") @db.Uuid
+  fileId         String @map("file_id") @db.Uuid
+  sortOrder      Int    @map("sort_order")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  card         DesignCard   @relation(fields: [cardId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  file         StoredFile   @relation(fields: [fileId, organizationId], references: [id, organizationId], onDelete: Restrict)
+
+  @@id([cardId, sortOrder])
+  @@index([fileId])
+  @@map("design_card_photos")
 }

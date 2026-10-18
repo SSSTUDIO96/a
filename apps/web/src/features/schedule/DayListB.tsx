@@ -2,8 +2,8 @@
 // Dải 7 ngày (số ca) · chip lọc thợ · "Cần xử lý" (ca chưa có thợ) · danh sách chia buổi · máy tính: khung "Thợ trong ngày".
 import { useState } from 'react';
 import type { Appointment } from '../../api/types';
-import { Button, Chip, WorkStatusTag } from '../../ui';
-import { IconPerson, IconWarn } from './icons';
+import { Button, Chip, IconWarn, WorkStatusTag } from '../../ui';
+import { IconPerson } from './icons';
 import {
   appointmentsOfDay,
   countByDay,

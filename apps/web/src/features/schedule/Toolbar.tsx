@@ -1,8 +1,7 @@
 // Thanh công cụ lịch (bản vẽ C 4.1), từ trái sang: nhóm tuần "‹ 19 – 25/10/2026 › Hôm nay" · "+ Thêm lịch" ·
 // nhãn đỏ "n ca trùng lịch" (chỉ khi đang có dải trùng lịch) · khoảng trống · nút chuyển chế độ · "Bộ lọc".
 // Điện thoại (bản mẫu v2-lich-C-mobile): nút chuyển chế độ chia đều cả hàng ở trên; "+ Lịch" nằm ở thanh trên.
-import { Button, IconPlus } from '../../ui';
-import { IconFilter, IconNext, IconPrev, IconWarn } from './icons';
+import { Button, IconBack, IconFilter, IconNext, IconPlus, IconWarn } from '../../ui';
 import { ModeSwitch } from './ModeSwitch';
 import type { ScheduleMode } from './model';
 import { cx } from './parts';
@@ -40,7 +39,7 @@ export function Toolbar({
 }) {
   const nav = (
     <div className="ws-pill">
-      <Button variant="ghost" size="sm" icon={<IconPrev />} aria-label={prevLabel} onClick={onPrev} />
+      <Button variant="ghost" size="sm" icon={<IconBack />} aria-label={prevLabel} onClick={onPrev} />
       <span className="ws-pill__lbl num" aria-live="polite">
         {label}
       </span>

@@ -1,6 +1,5 @@
 import {
   useEffect,
-  useLayoutEffect,
   useRef,
   useState,
   type ChangeEvent,
@@ -65,17 +64,9 @@ export function MoneyInput({
 }: MoneyInputProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const setCaret = useCaret(inputRef);
-  // Vùng chọn hẹn áp sau lần vẽ kế tiếp (khi chữ trong ô vừa đổi dạng lúc nhận tiêu điểm).
-  const pendingSelection = useRef<{ start: number; end: number } | null>(null);
-  const setSelection = (sel: { start: number; end: number }) => {
-    pendingSelection.current = sel;
-  };
-  useLayoutEffect(() => {
-    const el = inputRef.current;
-    const sel = pendingSelection.current;
-    pendingSelection.current = null;
-    if (sel && el && document.activeElement === el) el.setSelectionRange(sel.start, sel.end);
-  });
+  // Giá trị mới nhất cho việc đổi chữ trễ lúc vào ô (handleFocus).
+  const valueRef = useRef(value);
+  valueRef.current = value;
   const [focused, setFocused] = useState(false);
   // Chữ đang hiện khi có lỗi tự phát hiện hoặc đang gõ; null = hiện theo `value`.
   const [draft, setDraft] = useState<string | null>(null);
@@ -197,20 +188,30 @@ export function MoneyInput({
   }
 
   function handleFocus(e: FocusEvent<HTMLInputElement>) {
-    setFocused(true);
+    const el = e.currentTarget;
     if (draft === null) {
-      // Chữ đổi dạng ("1.500.000 ₫" → "1.500.000") làm trình duyệt bỏ vùng chọn. Giữ lại: đang chọn hết thì vẫn chọn hết
-      // (để "chọn hết rồi gõ" thay cả ô, như Playwright fill hoặc bấm 3 lần); không thì giữ con trỏ sau đúng số chữ số.
-      const el = e.currentTarget;
-      const start = el.selectionStart ?? el.value.length;
-      const end = el.selectionEnd ?? start;
-      const next = displayOf(value, true);
-      if (el.value.length > 0 && start === 0 && end >= el.value.length) setSelection({ start: 0, end: next.length });
-      else {
-        const a = caretAfterDigits(next, digitsBefore(el.value, start));
-        setSelection({ start: a, end: end === start ? a : caretAfterDigits(next, digitsBefore(el.value, end)) });
-      }
-      setDraft(next);
+      // Bỏ " ₫" khi vào ô — làm ở microtask, SAU khi trình duyệt xong việc đang dở. input.select() (chọn hết rồi gõ:
+      // Playwright fill, kịch bản) gọi focus GIỮA chừng rồi mới khôi phục vùng chọn đã lưu; đổi chữ ngay lúc đó làm
+      // vùng chọn thành 0,0 và số mới bị nối vào số cũ. Ở microtask, vùng chọn đã ổn định: đổi chữ ngay trong ô và
+      // giữ vùng chọn (chọn hết → vẫn chọn hết; con trỏ → sau đúng số chữ số). React vẽ lại thấy chữ đã đúng nên không ghi đè.
+      const before = el.value;
+      queueMicrotask(() => {
+        if (document.activeElement !== el || el.value !== before) return;
+        const next = displayOf(valueRef.current, true);
+        if (el.value !== next) {
+          const start = el.selectionStart ?? el.value.length;
+          const end = el.selectionEnd ?? start;
+          const all = el.value.length > 0 && start === 0 && end >= el.value.length;
+          const a = all ? 0 : caretAfterDigits(next, digitsBefore(el.value, start));
+          const b = all ? next.length : end === start ? a : caretAfterDigits(next, digitsBefore(el.value, end));
+          el.value = next;
+          el.setSelectionRange(a, b);
+        }
+        setFocused(true);
+        setDraft((d) => d ?? next);
+      });
+    } else {
+      setFocused(true);
     }
     onFocus?.(e);
   }

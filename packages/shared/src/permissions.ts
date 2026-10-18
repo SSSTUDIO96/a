@@ -21,6 +21,7 @@ export const PERMISSIONS = {
   'contracts.read': 'Xem hợp đồng',
   'contracts.write': 'Lập, sửa, xác nhận hợp đồng',
   'contracts.adjust': 'Điều chỉnh hợp đồng đã xác nhận: huỷ dòng, giảm giá',
+  'contracts.texts': 'Sửa mẫu điều khoản / nội quy',
   'staff.read': 'Xem hồ sơ thợ, bậc lương của thợ',
   'staff.write': 'Sửa hồ sơ thợ, gán bậc lương, quản lý danh sách bậc',
   'payroll.read': 'Xem tiền công theo gói',
@@ -31,6 +32,10 @@ export const PERMISSIONS = {
   'reports.read': 'Xem báo cáo doanh thu',
   'files.read': 'Xem tệp, ảnh của tổ chức',
   'files.write': 'Tải tệp, ảnh lên',
+  'courses.read': 'Xem khoá, lớp, danh sách học viên của lớp',
+  'courses.write': 'Thêm, sửa khoá, nhóm, mở/đóng lớp',
+  'designs.read': 'Xem thẻ đã tạo',
+  'designs.write': 'Tạo thẻ, tải ảnh thẻ, sửa câu chúc soạn sẵn',
 } as const;
 
 export type Permission = keyof typeof PERMISSIONS;
@@ -64,6 +69,7 @@ export const SYSTEM_ROLES: Record<SystemRoleKey, { name: string; permissions: Pe
       'schedule.read_own', 'schedule.read_all', 'schedule.write', 'contracts.read', 'contracts.write',
       'contracts.adjust', 'staff.read', 'staff.write', 'payments.read', 'payments.write', 'payments.void',
       'reports.read', 'files.read', 'files.write',
+      'contracts.texts', 'courses.read', 'courses.write', 'designs.read', 'designs.write',
     ],
   },
   artist: {
@@ -80,6 +86,7 @@ export const SYSTEM_ROLES: Record<SystemRoleKey, { name: string; permissions: Pe
       'org.read', 'members.read', 'catalog.read', 'customers.read', 'customers.write',
       'schedule.read_own', 'schedule.read_all', 'schedule.write', 'contracts.read', 'contracts.write', 'staff.read',
       'payments.read', 'payments.write', 'files.read', 'files.write',
+      'courses.read', 'designs.read', 'designs.write',
     ],
   },
   accountant: {
@@ -88,9 +95,14 @@ export const SYSTEM_ROLES: Record<SystemRoleKey, { name: string; permissions: Pe
       'org.read', 'members.read', 'audit.read', 'catalog.read', 'customers.read',
       'schedule.read_own', 'schedule.read_all', 'contracts.read', 'staff.read', 'payroll.read',
       'payments.read', 'payments.write', 'payments.void', 'reports.read', 'files.read',
+      'courses.read',
     ],
   },
-  instructor: { name: 'Giảng viên', permissions: ['org.read', 'members.read', 'catalog.read', 'schedule.read_own'] },
+  // Giảng viên xem mọi lớp (courses.read) — KY-DUYET-C3: tách courses.read_own để sau nếu chủ muốn hẹp hơn.
+  instructor: {
+    name: 'Giảng viên',
+    permissions: ['org.read', 'members.read', 'catalog.read', 'schedule.read_own', 'courses.read', 'designs.read'],
+  },
   teaching_assistant: { name: 'Trợ giảng', permissions: ['org.read', 'schedule.read_own'] },
 };
 

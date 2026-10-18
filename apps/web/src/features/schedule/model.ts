@@ -29,7 +29,7 @@ export const TONE_LABELS: Record<Tone, string> = {
 };
 
 export const TONE_RULE_TIP =
-  'Màu theo chữ trong tên ca: có "ăn hỏi" → Ăn hỏi; có "tiệc", "sự kiện" hoặc "kỷ yếu" → Tiệc & sự kiện; có "cô dâu" hoặc "cưới" → Cô dâu; còn lại → Khác.';
+  'Màu tạm đoán theo tên ca (máy chủ chưa gửi nhân vật của ca): có "ăn hỏi" → Ăn hỏi; có "tiệc", "sự kiện" hoặc "kỷ yếu" → Tiệc & sự kiện; có "cô dâu" hoặc "cưới" → Cô dâu; còn lại → Khác.';
 
 export function toneOf(title: string | null | undefined): Tone {
   const t = (title ?? '').toLocaleLowerCase('vi');

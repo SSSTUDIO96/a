@@ -52,7 +52,6 @@ export function StaffPicker(props: StaffPickerProps) {
   useEffect(() => {
     if (open) setPicked(props.initial);
     // Mở lại ô chọn thì bắt đầu từ thợ đang gán của dòng.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   const confirm = () => {

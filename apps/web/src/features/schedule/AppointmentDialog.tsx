@@ -21,11 +21,13 @@ import {
   Button,
   Checkbox,
   ContractStatusTag,
+  DateInput,
   Dialog,
   Segmented,
   SettingRow,
   TextInput,
   Textarea,
+  TimeInput,
   Tooltip,
   UnitInput,
   WorkStatusTag,
@@ -103,7 +105,7 @@ function emptyForm(day: DayKey, laneId?: string): FormState {
 
 // Giờ kết thúc ≤ giờ bắt đầu → ca kết thúc ngày hôm sau (ca qua đêm, máy chủ cho tối đa 24 giờ). Màn ghi rõ ngày kết thúc.
 export function timesOf(f: Pick<FormState, 'day' | 'start' | 'end'>): { startsAt: string; endsAt: string; endDay: DayKey } | null {
-  if (!/^\d{2}:\d{2}$/.test(f.start) || !/^\d{2}:\d{2}$/.test(f.end)) return null;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(f.day) || !/^\d{2}:\d{2}$/.test(f.start) || !/^\d{2}:\d{2}$/.test(f.end)) return null;
   const endDay = f.end <= f.start ? addDays(f.day, 1) : f.day;
   return { startsAt: vnIso(f.day, f.start), endsAt: vnIso(endDay, f.end), endDay };
 }
@@ -201,6 +203,11 @@ export function AppointmentDialog({
   }
 
   const update = (patch: Partial<FormState>) => setForm((f) => ({ ...f, ...patch }));
+  // Lỗi gõ của ô ngày/giờ (chữ chưa đọc được thành ngày/giờ) — chặn nút lưu.
+  const inputErrors = useRef<Record<string, string | null>>({});
+  const onInputError = (key: string, message: string | null) => {
+    inputErrors.current[key] = message;
+  };
 
   function goFix(which: 'staff' | 'time') {
     pendingFocus.current = which;
@@ -220,6 +227,9 @@ export function AppointmentDialog({
     resetErrors();
     const times = timesOf(form);
     const local: Record<string, string> = {};
+    // Ô ngày/giờ đang có chữ gõ sai: lỗi đã hiện dưới ô, không gửi.
+    if (Object.values(inputErrors.current).some(Boolean)) return;
+    if (!form.day) local.day = 'Chọn ngày';
     if (!form.start) local.startsAt = 'Chọn giờ bắt đầu';
     if (!form.end) local.endsAt = 'Chọn giờ kết thúc';
     if (form.newCustomer && !form.newCustomer.fullName.trim()) local['newCustomer.fullName'] = 'Nhập họ tên khách';
@@ -379,6 +389,7 @@ export function AppointmentDialog({
           lanes={lanes}
           startRef={startRef}
           staffRef={staffRef}
+          onInputError={onInputError}
         />
       )}
     </Dialog>
@@ -512,6 +523,7 @@ function FormBody({
   lanes,
   startRef,
   staffRef,
+  onInputError,
 }: {
   orgId: string;
   mode: 'create' | 'edit';
@@ -524,6 +536,7 @@ function FormBody({
   lanes: StaffLane[];
   startRef: RefObject<HTMLInputElement | null>;
   staffRef: RefObject<HTMLDivElement | null>;
+  onInputError: (key: string, message: string | null) => void;
 }) {
   const times = timesOf(form);
   const overnight = times && times.endDay !== form.day;
@@ -542,29 +555,30 @@ function FormBody({
           <TextInput id="ws-ten-ca" value={form.title} maxLength={200} onChange={(e) => update({ title: e.target.value })} error={errors.title} />
         </SettingRow>
         <SettingRow label="Ngày" htmlFor="ws-ngay" required>
-          <TextInput
+          <DateInput
             id="ws-ngay"
-            type="date"
-            value={form.day}
-            onChange={(e) => e.target.value && update({ day: e.target.value })}
+            value={form.day || null}
+            onChange={(v) => update({ day: v ?? '' })}
+            onInputError={(m) => onInputError('day', m)}
+            error={errors.day}
           />
         </SettingRow>
         <SettingRow label="Giờ" required controlWidth={300} className="ws-row-wide ws-row-stack-phone" tip="Giờ kết thúc sớm hơn giờ bắt đầu nghĩa là ca kết thúc vào ngày hôm sau.">
           <div className="ws-times">
-            <TextInput
+            <TimeInput
               ref={startRef}
-              type="time"
               aria-label="Giờ bắt đầu"
-              value={form.start}
-              onChange={(e) => update({ start: e.target.value })}
+              value={form.start || null}
+              onChange={(v) => update({ start: v ?? '' })}
+              onInputError={(m) => onInputError('start', m)}
               error={errors.startsAt}
             />
             <span aria-hidden="true">–</span>
-            <TextInput
-              type="time"
+            <TimeInput
               aria-label="Giờ kết thúc"
-              value={form.end}
-              onChange={(e) => update({ end: e.target.value })}
+              value={form.end || null}
+              onChange={(v) => update({ end: v ?? '' })}
+              onInputError={(m) => onInputError('end', m)}
               error={errors.endsAt}
               hint={overnight ? `Kết thúc ${weekdayLong(times.endDay)} ${ddmm(times.endDay)}` : undefined}
             />

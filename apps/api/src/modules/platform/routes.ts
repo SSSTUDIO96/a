@@ -134,20 +134,60 @@ async function findOrganization(db: Prisma.TransactionClient, id: string) {
   return org;
 }
 
-const PlanBody = z.object({
-  code: PlanCode,
+// Trường của gói, KHÔNG có giá trị mặc định: dùng chung cho tạo (thêm mặc định ở PlanBody) và sửa một phần (PlanPatchBody).
+// Biên bản nghiệm thu máy chủ lát 2, lỗi S1: PATCH dùng PlanBody.partial() — zod 4 vẫn ĐIỀN .default() cho trường
+// vắng mặt, nên chỉ sửa giá thì 9 thông số khác bị đặt về mặc định (xoá hết giới hạn, bật bán lại gói đã ngừng).
+const planFields = {
   name: z.string().trim().min(1, 'Nhập tên gói').max(60),
   priceMonthly: Money,
-  maxStaff: Limit.default(null),
-  maxAppointmentsPerMonth: Limit.default(null),
-  maxStorageMb: Limit.default(null),
-  maxStudents: Limit.default(null),
-  maxCourses: Limit.default(null),
-  customDomain: z.boolean().default(false),
-  features: z.array(z.string().trim().min(1).max(64)).max(50).default([]),
-  isActive: z.boolean().default(true),
-  sortOrder: z.number().int().min(0).max(1_000_000).default(0),
+  maxStaff: Limit,
+  maxAppointmentsPerMonth: Limit,
+  maxStorageMb: Limit,
+  maxStudents: Limit,
+  maxCourses: Limit,
+  customDomain: z.boolean(),
+  features: z.array(z.string().trim().min(1).max(64)).max(50),
+  isActive: z.boolean(),
+  sortOrder: z.number().int().min(0).max(1_000_000),
+};
+
+const PlanBody = z.object({
+  code: PlanCode,
+  ...planFields,
+  maxStaff: planFields.maxStaff.default(null),
+  maxAppointmentsPerMonth: planFields.maxAppointmentsPerMonth.default(null),
+  maxStorageMb: planFields.maxStorageMb.default(null),
+  maxStudents: planFields.maxStudents.default(null),
+  maxCourses: planFields.maxCourses.default(null),
+  customDomain: planFields.customDomain.default(false),
+  features: planFields.features.default([]),
+  isActive: planFields.isActive.default(true),
+  sortOrder: planFields.sortOrder.default(0),
 });
+
+// Sửa một phần: chỉ trường được gửi bị đổi; KHÔNG có .default() (defineRoute từ chối PATCH có mặc định).
+// Gửi "code" (mã gói không đổi được) hay trường lạ → 400 thay vì lặng lẽ bỏ qua.
+const PlanPatchBody = z
+  .strictObject(
+    {
+      name: planFields.name.optional(),
+      priceMonthly: planFields.priceMonthly.optional(),
+      maxStaff: planFields.maxStaff.optional(),
+      maxAppointmentsPerMonth: planFields.maxAppointmentsPerMonth.optional(),
+      maxStorageMb: planFields.maxStorageMb.optional(),
+      maxStudents: planFields.maxStudents.optional(),
+      maxCourses: planFields.maxCourses.optional(),
+      customDomain: planFields.customDomain.optional(),
+      features: planFields.features.optional(),
+      isActive: planFields.isActive.optional(),
+      sortOrder: planFields.sortOrder.optional(),
+    },
+    {
+      error: (iss) =>
+        iss.code === 'unrecognized_keys' ? `Không nhận trường: ${iss.keys.join(', ')} (mã gói không đổi được)` : undefined,
+    },
+  )
+  .refine((b) => Object.values(b).some((v) => v !== undefined), 'Không có gì để sửa');
 
 export const platformRoutes: AnyRoute[] = [
   defineRoute({
@@ -460,9 +500,7 @@ export const platformRoutes: AnyRoute[] = [
     tag: TAG,
     summary: 'Sửa gói (mã gói không đổi được). Đổi giá áp cho mọi thuê bao đang dùng gói này.',
     params: PlanParams,
-    body: PlanBody.omit({ code: true })
-      .partial()
-      .refine((b) => Object.keys(b).length > 0, 'Không có gì để sửa'),
+    body: PlanPatchBody,
     handler: async ({ deps, params, body, userId, requestId }) => {
       const actor = mustUser(userId);
       const row = await deps.db.$transaction(async (tx) => {
@@ -479,7 +517,12 @@ export const platformRoutes: AnyRoute[] = [
           action: 'platform.plan_updated',
           entityType: 'subscription_plan',
           entityId: before.id,
-          data: { before: presentPlan(before), after: body } as unknown as Prisma.InputJsonValue,
+          // Ghi cả trạng thái sau thật sự (không chỉ thân gửi lên) và danh sách trường đã gửi: nhìn nhật ký biết ngay đổi gì.
+          data: {
+            before: presentPlan(before),
+            after: presentPlan(after),
+            changedFields: Object.keys(body).filter((k) => body[k as keyof typeof body] !== undefined),
+          } as unknown as Prisma.InputJsonValue,
           requestId,
         });
         return after;

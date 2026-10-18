@@ -104,11 +104,7 @@ export function createApp(deps: Deps, routes: AnyRoute[] = ALL_ROUTES) {
     if (route.rateLimit === 'auth') handlers.push(authLimiter);
     if (route.rateLimit === 'refresh') handlers.push(refreshCeilingLimiter, refreshProbeLimiter);
     handlers.push(async (req: Request, res: Response) => {
-      const userId = route.scope === 'public' ? null : await authenticate(req, deps);
-      // Đường quản trị nền tảng: người không có tên trong platform_admins nhận đúng lời "không có đường" — không lộ là có.
-      if (route.scope === 'platform' && !(await deps.db.platformAdmin.findUnique({ where: { userId: userId ?? '' } }))) {
-        throw new AppError('NOT_FOUND', 'Không có đường API này');
-      }
+      const userId = route.scope === 'public' ? null : route.scope === 'platform' ? await platformAdminOrNotFound(req, deps) : await authenticate(req, deps);
       const org =
         route.scope === 'org' && userId && route.permission
           ? await loadOrgContext(
@@ -158,9 +154,29 @@ export function createApp(deps: Deps, routes: AnyRoute[] = ALL_ROUTES) {
   app.get(RAW_ROUTE, rawFileHandler(deps));
   app.use('/api/v1', router);
 
-  app.use((_req, _res, next) => next(new AppError('NOT_FOUND', 'Không có đường API này')));
+  app.use((_req, _res, next) => next(notFoundRoute()));
   app.use(errorHandler(deps));
   return app;
+}
+
+// Đường quản trị nền tảng: AI không phải quản trị nền tảng — kể cả CHƯA đăng nhập hay cầm thẻ rác/hết hạn — nhận đúng
+// lời "không có đường" như một đường bịa (cùng mã 404, cùng thân trừ requestId). Trước đây xác thực chạy trước nên người
+// chưa đăng nhập nhận 401 ở đường thật, 404 ở đường bịa → dò ra đủ đường quản trị (biên bản máy chủ lát 2, lỗi M2).
+async function platformAdminOrNotFound(req: Request, deps: Deps): Promise<string> {
+  let userId: string;
+  try {
+    userId = await authenticate(req, deps);
+  } catch (err) {
+    if (err instanceof AppError && err.code === 'UNAUTHENTICATED') throw notFoundRoute();
+    throw err;
+  }
+  if (!(await deps.db.platformAdmin.findUnique({ where: { userId } }))) throw notFoundRoute();
+  return userId;
+}
+
+// Một chỗ duy nhất dựng lời "không có đường" — đường bịa (cuối app) và đường quản trị bị từ chối dùng chung.
+function notFoundRoute(): AppError {
+  return new AppError('NOT_FOUND', 'Không có đường API này');
 }
 
 const IDEM_PENDING_TTL_MS = 2 * 60_000;

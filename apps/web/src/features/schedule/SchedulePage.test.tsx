@@ -244,7 +244,7 @@ describe('409 trùng lịch', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Thêm lịch' }));
     const dlg = await screen.findByRole('dialog');
-    fireEvent.change(within(dlg).getByLabelText(/^Ngày/), { target: { value: '2026-10-24' } });
+    fireEvent.change(within(dlg).getByLabelText(/^Ngày/), { target: { value: '24/10/2026' } });
     fireEvent.change(within(dlg).getByLabelText('Giờ bắt đầu'), { target: { value: '06:30' } });
     fireEvent.change(within(dlg).getByLabelText('Giờ kết thúc'), { target: { value: '08:00' } });
     fireEvent.click(within(dlg).getByRole('checkbox', { name: /Thu Hà/ }));

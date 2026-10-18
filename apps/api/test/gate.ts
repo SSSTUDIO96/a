@@ -270,7 +270,6 @@ export async function runIsolationGate(
   const platformRoutes = routes.filter((r) => r.path.startsWith('/platform/'));
   // Đường quản trị nền tảng: mã tổ chức là của A, mã gói là mã bịa (fixture không tạo gói).
   const platformIds = { organizationId: fx.a.orgId, planId: randomUUID() };
-  const authed = routes.filter((r) => r.scope !== 'public');
   const idRoutes = orgRoutes.filter((r) => /:(?!orgId\b)[A-Za-z]+/.test(r.path));
   const secretsOfA = [fx.a.orgId, ...Object.values(fx.a.ids), fx.a.owner.email, fx.a.noPerms.email];
 
@@ -288,9 +287,24 @@ export async function runIsolationGate(
     const res = await send(app, r, fill(r, fx.a.ids), bearer(fx.a.noPerms), {});
     record(report.noPerms, res.status === 403, `${key(r)} → ${res.status}`);
   }
-  // 4. Không đăng nhập → 401.
-  for (const r of authed) {
-    const ids = r.scope === 'org' ? fx.a.ids : r.path.startsWith('/platform/') ? platformIds : {};
+  // So phản hồi của một đường thật với một đường bịa cùng phương thức dưới /platform/: phải GIỐNG HỆT (mã + thân trừ requestId).
+  const sameAsFakePlatform = async (r: AnyRoute, headers: Record<string, string>) => {
+    const fakeRoute = { ...r, path: `/platform/duong-bia-${randomUUID()}` } as AnyRoute;
+    const res = await send(app, r, fill(r, platformIds), headers, {});
+    const bia = await send(app, fakeRoute, `/api/v1${fakeRoute.path}`, headers, {});
+    const norm = (x: request.Response) => JSON.stringify(x.body ?? '').replace(/"requestId":"[^"]+"/g, '');
+    const same = res.status === bia.status && norm(res) === norm(bia);
+    return { ok: res.status === 404 && same, status: res.status, same, biaStatus: bia.status };
+  };
+  // 4. Không đăng nhập → 401. RIÊNG đường /platform/ (chọn theo địa chỉ): 404 GIỐNG HỆT đường bịa — 401 ở đường thật
+  //    mà 404 ở đường bịa là để người chưa đăng nhập dò ra đủ đường quản trị (biên bản máy chủ lát 2, lỗi M2).
+  for (const r of routes.filter((x) => x.scope !== 'public' || x.path.startsWith('/platform/'))) {
+    if (r.path.startsWith('/platform/')) {
+      const c = await sameAsFakePlatform(r, {});
+      record(report.unauth, c.ok, `${key(r)} (chưa đăng nhập) → ${c.status}${c.same ? '' : `, KHÁC đường bịa (${c.biaStatus})`}`);
+      continue;
+    }
+    const ids = r.scope === 'org' ? fx.a.ids : {};
     const res = await send(app, r, fill(r, ids), {}, {});
     record(report.unauth, res.status === 401, `${key(r)} → ${res.status}`);
   }
@@ -367,16 +381,20 @@ export async function runIsolationGate(
       if (!covered.has(path)) record(report.crossRef, false, `${key(r)}: trường ${path} chưa có mẫu tham chiếu chéo`);
     }
   }
-  // 9. QUẢN TRỊ NỀN TẢNG: người không có tên trong platform_admins (chủ A, chủ B, thành viên A không quyền)
-  //    gọi mọi đường /platform/ → 404 GIỐNG HỆT một đường bịa cùng phương thức (không lộ "đường này có thật").
+  // 9. QUẢN TRỊ NỀN TẢNG: người không có tên trong platform_admins (chủ A, chủ B, thành viên A không quyền) — và cả
+  //    người CHƯA đăng nhập, người cầm thẻ rác — gọi mọi đường /platform/ → 404 GIỐNG HỆT một đường bịa cùng phương thức
+  //    (không lộ "đường này có thật").
+  const callers: [string, Record<string, string>][] = [
+    ['chủ A', bearer(fx.a.owner)],
+    ['chủ B', bearer(fx.b.owner)],
+    ['thành viên A không quyền', bearer(fx.a.noPerms)],
+    ['chưa đăng nhập', {}],
+    ['thẻ rác', { authorization: 'Bearer the-rac.khong.hop-le' }],
+  ];
   for (const r of platformRoutes) {
-    for (const [who, user] of [['chủ A', fx.a.owner], ['chủ B', fx.b.owner], ['thành viên A không quyền', fx.a.noPerms]] as const) {
-      const fakeRoute = { ...r, path: `/platform/duong-bia-${randomUUID()}` } as AnyRoute;
-      const res = await send(app, r, fill(r, platformIds), bearer(user), {});
-      const bia = await send(app, fakeRoute, `/api/v1${fakeRoute.path}`, bearer(user), {});
-      const norm = (x: request.Response) => JSON.stringify(x.body ?? '').replace(/"requestId":"[^"]+"/g, '');
-      const same = res.status === bia.status && norm(res) === norm(bia);
-      record(report.platform, res.status === 404 && same, `${key(r)} (${who}) → ${res.status}${same ? '' : `, KHÁC đường bịa (${bia.status})`}`);
+    for (const [who, headers] of callers) {
+      const c = await sameAsFakePlatform(r, headers);
+      record(report.platform, c.ok, `${key(r)} (${who}) → ${c.status}${c.same ? '' : `, KHÁC đường bịa (${c.biaStatus})`}`);
     }
   }
   // 8. GIỮ: chủ A dùng thật phải được trả lời đúng nghĩa — xem: 200; gửi thân rỗng: 400 (lỗi dữ liệu,

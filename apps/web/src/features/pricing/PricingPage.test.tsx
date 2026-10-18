@@ -1,9 +1,12 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { configure, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SYSTEM_ROLES } from '@makeup/shared';
 import { routes } from '../../app/routes';
+
+// Lần tải đầu (khung + phiên + quyền + 3 đường bảng giá) có lúc quá 1 giây khi cả bộ thử chạy song song.
+configure({ asyncUtilTimeout: 5000 });
 
 // Màn Bảng giá chạy thật trong khung (phiên, router, quyền) với máy chủ giả lập qua fetch.
 

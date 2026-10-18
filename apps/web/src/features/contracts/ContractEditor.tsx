@@ -168,7 +168,6 @@ export function ContractEditor({ orgId, slug, tz, has, contractId }: ContractEdi
       });
     return () => controller.abort();
     // detail?.id đọc để bỏ qua nạp lại; không phải phụ thuộc.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orgId, contractId, tz]);
 
   const status = detail?.status ?? null;
@@ -488,8 +487,16 @@ export function ContractEditor({ orgId, slug, tz, has, contractId }: ContractEdi
   const actions = draftMode ? (
     ab.canEdit ? (
       <>
-        <Button size={phone ? 'sm' : 'md'} onClick={() => void onSave()} loading={busy === 'save'} disabled={saveBlocked || busy !== null}>
-          Lưu nháp
+        {/* Điện thoại: thanh tổng hẹp — nút gọn "Lưu" (tên đọc vẫn là "Lưu nháp") để số tổng không bị cắt. */}
+        <Button
+          size={phone ? 'sm' : 'md'}
+          variant={phone ? 'ghost' : 'default'}
+          aria-label={phone ? 'Lưu nháp' : undefined}
+          onClick={() => void onSave()}
+          loading={busy === 'save'}
+          disabled={saveBlocked || busy !== null}
+        >
+          {phone ? 'Lưu' : 'Lưu nháp'}
         </Button>
         {blockedReason ? (
           <WithTooltip text={blockedReason}>
@@ -530,7 +537,8 @@ export function ContractEditor({ orgId, slug, tz, has, contractId }: ContractEdi
 
   return (
     <div className="ct-page">
-      <PageHeader title={draftMode ? 'Lập hợp đồng' : 'Hợp đồng'} backTo={`/${slug}/hop-dong`} phoneAction={statusTag} />
+      {/* h1 máy tính "Lập hợp đồng" (bản mẫu); điện thoại ẩn h1, thanh trên ghi đủ "Lập hợp đồng {mã}". */}
+      <PageHeader title={phone ? title : draftMode ? 'Lập hợp đồng' : 'Hợp đồng'} backTo={`/${slug}/hop-dong`} phoneAction={statusTag} />
       <div className="ct-grid" style={ab.showCatalog ? undefined : { gridTemplateColumns: 'minmax(0, 1fr)' }}>
         {catalogCard}
         <div className="ct-col">
@@ -683,9 +691,9 @@ export function ContractEditor({ orgId, slug, tz, has, contractId }: ContractEdi
             <div className={`ct-alert`} role="alert">
               <IconWarn />
               <div>
-                {alert?.text ?? quoteGeneralError}
+                {alert?.conflicts && alert.conflicts.length > 0 ? null : (alert?.text ?? quoteGeneralError)}
                 {alert?.conflicts && alert.conflicts.length > 0 && (
-                  <ul>
+                  <ul style={{ margin: 0, listStyle: 'none' }}>
                     {alert.conflicts.map((c) => (
                       <li key={`${c.appointmentId}-${c.membershipId}`}>
                         Trùng lịch: {c.staffName} đã có lịch {c.code} {timeOf(c.startsAt, tz)}–{timeOf(c.endsAt, tz)}

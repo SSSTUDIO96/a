@@ -1,10 +1,18 @@
 import { z } from 'zod';
 import type { AnyRoute } from './route';
 
+// Đường quản trị nền tảng KHÔNG vào tài liệu công khai: người ngoài không được biết có những đường nào
+// (biên bản máy chủ lát 2, lỗi M2). Lọc theo CẢ địa chỉ lẫn nhãn — đường dưới /platform/ khai nhầm scope vẫn bị bỏ
+// (sổ lỗi mục 15: lọc theo nhãn thì đường khai nhầm nhãn lọt qua).
+export function isPlatformRoute(r: Pick<AnyRoute, 'scope' | 'path'>): boolean {
+  return r.scope === 'platform' || r.path === '/platform' || r.path.startsWith('/platform/');
+}
+
 // Tài liệu OpenAPI sinh thẳng từ bảng đường API — không có bản viết tay để lệch khỏi mã.
 export function buildOpenApi(routes: AnyRoute[]) {
   const paths: Record<string, Record<string, unknown>> = {};
   for (const r of routes) {
+    if (isPlatformRoute(r)) continue;
     const path = `/api/v1${r.path.replace(/:([A-Za-z]+)/g, '{$1}')}`;
     const params: Record<string, unknown>[] = [...r.path.matchAll(/:([A-Za-z]+)/g)].map((m) => ({
       name: m[1],

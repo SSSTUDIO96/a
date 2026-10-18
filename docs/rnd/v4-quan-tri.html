@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="ten" content="Quản trị nền tảng — R&D v4">
+<title>Quản trị nền tảng — R&D v4</title>
+<link rel="stylesheet" href="v4-chung/v4.css">
+<style>
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none;margin-bottom:16px}
+.tabs a{padding:10px 14px;color:var(--muted);text-decoration:none;font-weight:500;border-bottom:2px solid transparent;white-space:nowrap}
+.tabs a.on{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
+.us{display:grid;grid-template-columns:150px minmax(0,1fr) 120px;gap:12px;align-items:center;padding:9px 0;border-top:1px solid var(--line-2)}
+.us:first-child{border-top:0}
+.us .bar{height:8px;border-radius:4px;background:var(--line-2);overflow:hidden}
+.us .bar i{display:block;height:100%;background:var(--accent);border-radius:4px}
+.us .bar i.hi{background:var(--danger)}
+.us .v{text-align:right;font-size:13px;white-space:nowrap}
+.kv{display:grid;grid-template-columns:150px minmax(0,1fr);gap:8px 16px;padding:12px 18px}
+.kv dt{color:var(--muted)}
+.kv dd{overflow-wrap:anywhere}
+.plan{display:flex;flex-direction:column;gap:6px;padding:14px 16px}
+.plan .p{font-size:20px;font-weight:700}
+.plan ul{list-style:none;font-size:13px;color:var(--muted);display:flex;flex-direction:column;gap:2px}
+.plans{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.tasks .lr{grid-template-columns:minmax(0,1fr) auto}
+.org-n{font-weight:600;overflow-wrap:anywhere}
+.lim{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 24px}
+@media (max-width:640px){
+  .us{grid-template-columns:minmax(0,1fr) auto}
+  .us .bar{grid-column:1 / -1;grid-row:2}
+  .kv{grid-template-columns:1fr;gap:2px;padding:10px 14px}
+  .kv dd{margin-bottom:8px}
+  .lim{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<script src="v4-chung/v4.js"></script>
+<script>
+const {icon,av,vnd,tip,man,mucLuc}=V4;
+const f=(s)=>` data-f="${s}"`;
+const KIND={INDIVIDUAL:'Thợ cá nhân',TEAM:'Đội / studio',ACADEMY:'Trung tâm đào tạo'};
+// Nhãn trạng thái thuê bao hiệu lực (effectiveStatus)
+const SS={NONE:['draft','Chưa có thuê bao'],TRIAL:['nv','Dùng thử'],ACTIVE:['ok','Đang dùng'],PAST_DUE:['ps','Chậm thanh toán'],EXPIRED:['huy','Hết hạn'],CANCELLED:['draft','Đã huỷ']};
+const tagS=(s,extra)=>`<span class="tag ${SS[s][0]}"${f('subscriptionStatus (effectiveStatus)')}>${SS[s][1]}${extra||''}</span>`;
+// GET /platform/organizations → items[{id,name,slug,kind,status,createdAt,owner{fullName,email},subscriptionStatus,subscription{plan{name,priceMonthly},endsAt,inGrace,graceEndsAt},memberCount,storageUsedBytes}]
+const ORG=[
+ {n:'Studio Chiến Makeup',slug:'studio-chien',k:'TEAM',o:['Nguyễn Trọng Chiến','chien@studiochien.vn'],s:'ACTIVE',plan:'Đội nhỏ',gia:299000,het:'12/11/2026',mem:9,mb:412},
+ {n:'Quỳnh Hương Makeup & Academy',slug:'quynh-huong',k:'ACADEMY',o:['Lê Quỳnh Hương','qhuong@gmail.com'],s:'ACTIVE',plan:'Trung tâm',gia:599000,het:'02/11/2026',mem:14,mb:1830},
+ {n:'Mai Anh Bridal',slug:'maianh-bridal',k:'TEAM',o:['Đặng Mai Anh','maianh.bridal@gmail.com'],s:'EXPIRED',plan:'Đội nhỏ',gia:299000,het:'14/10/2026',grace:'21/10/2026',mem:5,mb:220},
+ {n:'Thu Makeup',slug:'thu-makeup',k:'INDIVIDUAL',o:['Phạm Hoài Thu','thu.mkp@gmail.com'],s:'TRIAL',plan:'Dùng thử',gia:0,het:'25/10/2026',mem:1,mb:35},
+ {n:'Nhà Gạo Studio',slug:'nha-gao',k:'TEAM',o:['Vũ Đức Thịnh','thinh@nhagao.vn'],s:'PAST_DUE',plan:'Đội nhỏ',gia:299000,het:'30/10/2026',mem:6,mb:640,khoa:false},
+ {n:'Bông Makeup',slug:'bong-makeup',k:'INDIVIDUAL',o:['Trần Bông','bong@gmail.com'],s:'ACTIVE',plan:'Cá nhân',gia:99000,het:'18/03/2027',mem:1,mb:58,khoa:true},
+];
+const O=ORG[0];
+const PLANS=[{c:'trial',n:'Dùng thử',g:0,st:3,ap:100,mb:200,hv:null,kh:null,dom:false,ft:['Lịch','Bảng giá','Hợp đồng'],on:true},{c:'ca_nhan',n:'Cá nhân',g:99000,st:1,ap:150,mb:1024,hv:null,kh:null,dom:false,ft:['Lịch','Bảng giá','Hợp đồng','Thu tiền'],on:true},{c:'doi_nho',n:'Đội nhỏ',g:299000,st:10,ap:600,mb:5120,hv:null,kh:null,dom:false,ft:['Mọi tính năng studio','Trang giới thiệu'],on:true},{c:'trung_tam',n:'Trung tâm',g:599000,st:30,ap:null,mb:20480,hv:300,kh:30,dom:true,ft:['Mọi tính năng','Đào tạo','Tên miền riêng'],on:true}];
+const lim=v=>v==null?'Không giới hạn':v.toLocaleString('vi-VN').replace(/,/g,'.');
+const PH=(t,s)=>`<div class="ph"><h1>${t}</h1>${s?`<span class="sub">${s}</span>`:''}</div>`;
+
+function hangOrg(o,sel){
+  return `<a class="lr noav ${sel?'sel':''}" href="#b-ct"><span class="org-n"${f('name')}>${o.n}${o.khoa?' <span class="tag huy"'+f('status = SUSPENDED')+'>Đang khoá</span>':''}</span><span class="rt" style="grid-row:span 2">${tagS(o.s)}<span class="fx"${f('subscription.endsAt')}>${o.s==='EXPIRED'?'hết '+o.het:'đến '+o.het}</span></span><span class="d"${f('slug · owner.email')}>${o.slug} · ${o.o[1]}</span></a>`;
+}
+function danhSach(sel){
+  return `<div class="card left"><div class="sch"><div class="srch">${icon('search','s')}<input class="ctl" placeholder="Tên, đường dẫn hoặc email chủ"${f('GET /platform/organizations?q')}></div>
+   <div class="chips scroll"${f('subscriptionStatus / expiringWithinDays / status')}><a class="chip on">Tất cả <span class="k">128</span></a><a class="chip">Sắp hết hạn <span class="k">12</span></a><a class="chip">Hết hạn <span class="k">7</span></a><a class="chip">Chậm thanh toán <span class="k">6</span></a><a class="chip">Dùng thử <span class="k">31</span></a><a class="chip">Đang khoá <span class="k">3</span></a></div>
+   <select class="ctl sm"${f('planCode')}><option>Mọi gói cước</option>${PLANS.map(p=>`<option>${p.n}</option>`).join('')}</select></div>
+   <div class="ls">${ORG.map((o,i)=>hangOrg(o,i===sel)).join('')}<div style="padding:12px 14px"><button class="btn" style="width:100%">Xem thêm 20 tổ chức</button></div></div></div>`;
+}
+function chiTiet(o){
+  return `<div class="card"><div class="ch2"><div style="flex:1;min-width:0"><h2${f('name')}>${o.n}</h2><div class="fx"${f('slug · kind · createdAt')}>/${o.slug} · ${KIND[o.k]} · tạo 03/03/2026</div></div>${tagS(o.s)}</div>
+   <dl class="kv"><dt>Chủ tài khoản</dt><dd${f('owners[].fullName · email')}>${o.o[0]} · ${o.o[1]}</dd><dt>Thành viên</dt><dd${f('memberCount')}>${o.mem} người đang hoạt động</dd><dt>Trạng thái tổ chức</dt><dd${f('status')}>${o.khoa?'<span class="tag huy">Đang khoá</span>':'Hoạt động'}</dd></dl>
+   <div class="cf" style="justify-content:flex-start"><a class="btn pri" href="#gia-han"${f('POST /platform/organizations/:id/subscriptions')}>Đổi gói / gia hạn</a><a class="btn danger" href="#khoa"${f('PATCH /platform/organizations/:id {status, reason}')}>Tạm khoá</a></div></div>
+  <div class="card"><div class="ch2"><h2>Thuê bao hiện hành</h2></div><dl class="kv"><dt>Gói</dt><dd${f('effectivePlan.plan.name · priceMonthly')}><b>${o.plan}</b> · ${vnd(o.gia)}/tháng</dd><dt>Thời hạn</dt><dd${f('currentSubscription.startsAt – endsAt')}>12/10/2026 → ${o.het}</dd>
+   <dt>Ghi dữ liệu ${tip('Hết hạn thì còn '+'7 ngày ân hạn vẫn ghi được; sau đó tổ chức chỉ xem.')}</dt><dd${f('currentSubscription.writable · inGrace · graceEndsAt')}>Được</dd><dt>Ghi chú</dt><dd${f('currentSubscription.note')}>Chuyển khoản 12 tháng, đã nhận 10/10</dd></dl></div>
+  <div class="card"><div class="ch2"><h2>Mức dùng so với gói</h2></div><div class="cb">
+   <div class="us"${f('usage.staff / plan.maxStaff')}><span>Thành viên</span><span class="bar"><i style="width:90%" class="hi"></i></span><span class="v">9 / 10</span></div>
+   <div class="us"${f('usage.appointmentsThisMonth / maxAppointmentsPerMonth')}><span>Lịch tháng này</span><span class="bar"><i style="width:31%"></i></span><span class="v">188 / 600</span></div>
+   <div class="us"${f('usage.storageMb / maxStorageMb')}><span>Dung lượng</span><span class="bar"><i style="width:8%"></i></span><span class="v">412 MB / 5 GB</span></div></div></div>
+  <div class="card"><div class="ch2"><h2>Lịch sử thuê bao</h2></div><table class="tbl m-cards"><thead><tr><th>Gói</th><th>Trạng thái</th><th>Thời hạn</th><th class="t-hide">Ghi chú</th></tr></thead><tbody>
+   <tr class="sel"><td${f('subscriptions[].plan.name · isCurrent')}><b>Đội nhỏ</b> <span class="tag nv">Hiện hành</span></td><td data-l="Trạng thái"${f('subscriptions[].status')}>Đang dùng</td><td data-l="Thời hạn"${f('startsAt – endsAt')}>12/10/2026 → 12/11/2026</td><td class="t-hide"${f('note')}>Chuyển khoản 12 tháng</td></tr>
+   <tr><td><b>Dùng thử</b></td><td data-l="Trạng thái">Dùng thử</td><td data-l="Thời hạn">03/03/2026 → 02/04/2026</td><td class="t-hide faint">—</td></tr></tbody></table></div>`;
+}
+/* ===== A — giống SS Pro: tab + bảng + hộp thoại ===== */
+man('a',{shell:'nentang',nav:'pf-org',title:'Quản trị nền tảng'},`${PH('Quản trị nền tảng')}
+<div class="tabs"><a class="on">Tổ chức</a><a>Gói cước</a><a>Thống kê</a></div>
+<div class="card"><div class="sch" style="flex-direction:row;flex-wrap:wrap"><div class="srch" style="flex:1;min-width:220px">${icon('search','s')}<input class="ctl" placeholder="Tên, đường dẫn hoặc email chủ"></div><select class="ctl" style="width:190px"><option>Mọi trạng thái</option></select><select class="ctl" style="width:170px"><option>Mọi gói cước</option></select></div>
+<table class="tbl m-cards"><thead><tr><th>Tổ chức</th><th class="t-hide">Chủ</th><th>Gói</th><th>Thuê bao</th><th>Hết hạn</th><th class="r t-hide">Thành viên</th></tr></thead><tbody>
+${ORG.map(o=>`<tr><td><b class="org-n">${o.n}</b><div class="fx">/${o.slug} · ${KIND[o.k]}</div></td><td class="t-hide">${o.o[0]}<div class="fx">${o.o[1]}</div></td><td data-l="Gói">${o.plan}</td><td data-l="Thuê bao">${tagS(o.s)}${o.khoa?' <span class="tag huy">Đang khoá</span>':''}</td><td data-l="Hết hạn">${o.het}</td><td class="r t-hide">${o.mem}</td></tr>`).join('')}
+</tbody></table><div class="pager"><span class="fx">1–20 / 128</span><button class="btn sm">‹</button><button class="btn sm">›</button></div></div>`);
+man('a-ct',{shell:'nentang',nav:'pf-org',title:'Quản trị nền tảng'},`${PH('Quản trị nền tảng')}<div class="tabs"><a class="on">Tổ chức</a><a>Gói cước</a><a>Thống kê</a></div><div class="card" style="height:400px"></div>
+<div class="dlg-bg"><div class="dlg w" style="width:min(760px,100%)"><div class="dh"><h2>Chi tiết tổ chức</h2><button class="btn icon ghost">${icon('x')}</button></div><div class="db vstack" style="padding-top:14px">${chiTiet(O)}</div></div></div>`);
+
+/* ===== B — trang chủ việc cần làm + danh sách hai cột (ĐỀ XUẤT) ===== */
+man('b',{shell:'nentang',nav:'pf-home',title:'Trang chủ'},`${PH('Trang chủ quản trị','số liệu lúc 18/10/2026 15:40')}
+<div class="so4"><div class="so"${f('organizations.total · byStatus')}><span>Tổ chức</span><b>128</b><small>3 đang khoá</small></div>
+<div class="so"${f('bySubscriptionStatus.ACTIVE · TRIAL')}><span>Đang dùng trả phí</span><b>78</b><small>31 đang dùng thử</small></div>
+<div class="so red"${f('expiringIn30Days')}><span>Sắp hết hạn 30 ngày</span><b>12</b><small>7 đã hết hạn · 6 chậm thanh toán</small></div>
+<div class="so hl"${f('projectedMonthlyRevenue (+ Note)')}><span>Doanh thu thuê bao dự kiến/tháng ${tip('Dự kiến: tổng giá/tháng HIỆN TẠI của gói ở các thuê bao đang dùng (chưa quá hạn). Không phải tiền đã thu.')}</span><b>${vnd(23340000)}</b><small>không phải tiền đã thu</small></div></div>
+<div class="g2" style="margin-top:16px">
+ <div class="card tasks"><div class="ch2"><h2>Sắp hết hạn</h2><small>30 ngày tới</small><a class="btn sm ghost" href="#b-ds">Xem tất cả</a></div>
+  ${[ORG[3],ORG[1],ORG[4],ORG[0]].map(o=>`<div class="lr noav"><span class="org-n"${f('GET /platform/organizations?expiringWithinDays=30')}>${o.n}<div class="fx">${o.plan} · ${tagS(o.s)}</div></span><span class="rt" style="grid-row:span 2"><b class="num"${f('subscription.endsAt')}>${o.het}</b><a class="btn sm" href="#gia-han">Gia hạn</a></span></div>`).join('')}</div>
+ <div class="card tasks"><div class="ch2"><h2>Hết hạn, còn ân hạn</h2><small>còn ghi được tới hết ân hạn</small></div>
+  <div class="lr noav"><span class="org-n">${ORG[2].n}<div class="fx">Hết 14/10 · ${tagS('EXPIRED')}</div></span><span class="rt" style="grid-row:span 2"><span class="fx"${f('subscription.inGrace · graceEndsAt')}>ân hạn đến <b>21/10</b></span><a class="btn sm" href="#gia-han">Gia hạn</a></span></div>
+  <div class="lh" style="margin-top:4px">Tổ chức mới 7 ngày qua</div>
+  ${[['Hà Linh Bridal','Dùng thử','17/10'],['Kim Ngân Academy','Dùng thử','15/10']].map(([n,p,d])=>`<div class="lr noav"><span class="org-n"${f('createdAt (sắp xếp mới nhất)')}>${n}<div class="fx">${p}</div></span><span class="fx">${d}</span></div>`).join('')}</div>
+</div>`);
+man('b-ds',{shell:'nentang',nav:'pf-org',title:'Tổ chức',mobile:'list'},`${PH('Tổ chức')}<div class="c2">${danhSach(0)}<div class="right">${chiTiet(O)}</div></div>`);
+man('b-ct',{shell:'nentang',nav:'pf-org',title:'Studio Chiến Makeup',back:'#b-ds',mobile:'detail'},`${PH('Tổ chức')}<div class="c2">${danhSach(0)}<div class="right">${chiTiet(O)}</div></div>`);
+man('b-goi',{shell:'nentang',nav:'pf-plan',title:'Gói cước'},`<div class="ph"><h1>Gói cước</h1><span class="sp"></span><a class="btn pri" href="#goi-sua">${icon('plus','s')}Gói mới</a></div>
+<div class="plans">${PLANS.map(p=>`<div class="card"><div class="plan"><div class="row"><b style="flex:1"${f('name · code')}>${p.n} <span class="fx">${p.c}</span></b>${p.on?'<span class="tag ok"'+f('isActive')+'>Đang bán</span>':'<span class="tag draft">Ngừng bán</span>'}</div>
+<div class="p num"${f('priceMonthly')}>${vnd(p.g)}<span class="fx"> /tháng</span></div>
+<ul${f('maxStaff · maxAppointmentsPerMonth · maxStorageMb · maxStudents · maxCourses · customDomain')}><li>Thành viên: ${lim(p.st)}</li><li>Lịch mỗi tháng: ${lim(p.ap)}</li><li>Dung lượng: ${p.mb>=1024?p.mb/1024+' GB':p.mb+' MB'}</li>${p.hv?`<li>Học viên: ${lim(p.hv)} · Khoá học: ${lim(p.kh)}</li>`:''}<li>Tên miền riêng: ${p.dom?'có':'không'}</li></ul>
+<div class="row"${f('features[]')}>${p.ft.map(x=>`<span class="tag">${x}</span>`).join('')}</div></div><div class="cf"><a class="btn sm" href="#goi-sua">Sửa</a></div></div>`).join('')}</div>`);
+man('gia-han',{shell:'nentang',nav:'pf-org',title:'Đổi gói / gia hạn',back:'#b-ct',mobile:'detail'},`${PH('Tổ chức')}<div class="c2">${danhSach(0)}<div class="right">${chiTiet(O)}</div></div>
+<div class="dlg-bg"><div class="dlg" style="width:min(600px,100%)"><div class="dh"><div style="flex:1"><div class="fx">Studio Chiến Makeup · đang dùng Đội nhỏ đến 12/11/2026</div><h2>Đổi gói / gia hạn</h2></div><button class="btn icon ghost">${icon('x')}</button></div>
+<div class="db"><div class="set"><label>Gói cước</label><select class="ctl"${f('planId ← GET /platform/plans')}>${PLANS.map(p=>`<option ${p.c==='doi_nho'?'selected':''}>${p.n} · ${vnd(p.g)}/tháng</option>`).join('')}</select></div>
+<div class="set wide"><label>Trạng thái</label><span class="r"><span class="seg sm"${f('status')}><button>Dùng thử</button><button class="on">Đang dùng</button><button>Chậm thanh toán</button></span></span></div>
+<div class="set"><label>Bắt đầu ${tip('Không được trước ngày bắt đầu của thuê bao mới nhất (12/10/2026).')}</label><input class="ctl"${f('startsAt')} value="12/11/2026"></div>
+<div class="set wide"><label>Thời hạn</label><span class="r"><span class="seg sm"${f('months | endsAt | endsAt=null')}><button>1 tháng</button><button>3</button><button>6</button><button class="on">12 tháng</button><button>Đến ngày…</button><button>Không hạn</button></span></span></div>
+<div class="set wide"><label>Hết hạn</label><span class="r b num">12/11/2027</span></div>
+<div class="set wide stack"><label>Ghi chú</label><textarea class="ctl" rows="2"${f('note (≤500)')} placeholder="Ví dụ: đã nhận chuyển khoản 3.588.000 ₫ ngày 18/10"></textarea></div>
+<div class="bn grey" style="margin-top:6px">${icon('clock','s')}<span>Thêm một dòng thuê bao mới; dòng cũ giữ làm lịch sử.</span></div></div>
+<footer><button class="btn">Huỷ</button><button class="btn pri">Lưu thuê bao</button></footer></div></div>`);
+man('khoa',{shell:'nentang',nav:'pf-org',title:'Tạm khoá',back:'#b-ct',mobile:'detail'},`${PH('Tổ chức')}<div class="c2">${danhSach(0)}<div class="right">${chiTiet(O)}</div></div>
+<div class="dlg-bg"><div class="dlg" style="width:min(460px,100%)"><div class="dh"><h2>Tạm khoá Studio Chiến Makeup?</h2><button class="btn icon ghost">${icon('x')}</button></div>
+<div class="db"><p class="small muted" style="margin:8px 0 10px">Mọi thành viên không vào được tổ chức; trang giới thiệu công khai tắt. Dữ liệu giữ nguyên, mở khoá lúc nào cũng được.</p>
+<div class="set stack"><label>Lý do<span class="req">*</span></label><textarea class="ctl" rows="2"${f('reason (bắt buộc khi khoá)')} placeholder="Ví dụ: quá hạn 30 ngày, đã gọi 3 lần không nghe"></textarea></div></div>
+<footer><button class="btn">Huỷ</button><button class="btn pri">Tạm khoá</button></footer></div></div>`);
+man('goi-sua',{shell:'nentang',nav:'pf-plan',title:'Sửa gói cước',back:'#b-goi',mobile:'detail'},`<div class="ph"><h1>Gói cước</h1></div><div class="card" style="height:300px"></div>
+<div class="dlg-bg"><div class="dlg" style="width:min(640px,100%)"><div class="dh"><div style="flex:1"><div class="fx">Mã gói: doi_nho (không đổi được)</div><h2>Sửa gói "Đội nhỏ"</h2></div><button class="btn icon ghost">${icon('x')}</button></div>
+<div class="db"><div class="set"><label>Tên gói</label><input class="ctl"${f('name')} value="Đội nhỏ"></div>
+<div class="set"><label>Giá mỗi tháng</label><input class="ctl money"${f('priceMonthly')} value="299.000 ₫"></div>
+<div class="bn yel">${icon('warn','s')}<span>Đổi giá áp cho <b>mọi thuê bao đang dùng gói này</b> (42 tổ chức).</span></div>
+<div class="grp">Giới hạn ${tip('Để trống = không giới hạn.')}</div><div class="lim">
+ <div class="set"><label>Thành viên</label><input class="ctl r"${f('maxStaff')} value="10"></div><div class="set"><label>Lịch mỗi tháng</label><input class="ctl r"${f('maxAppointmentsPerMonth')} value="600"></div>
+ <div class="set"><label>Dung lượng (MB)</label><input class="ctl r"${f('maxStorageMb')} value="5120"></div><div class="set"><label>Học viên</label><input class="ctl r"${f('maxStudents')} placeholder="Không giới hạn"></div>
+ <div class="set"><label>Khoá học</label><input class="ctl r"${f('maxCourses')} placeholder="Không giới hạn"></div><div class="set"><label>Tên miền riêng</label><span class="r"><span class="sw"${f('customDomain')}></span></span></div></div>
+<div class="grp">Bày bán</div><div class="set wide"><label>Tính năng ghi trên gói</label><div class="row"${f('features[] (≤50)')}><span class="chip on">Mọi tính năng studio ✕</span><span class="chip on">Trang giới thiệu ✕</span><button class="btn sm dashed">+ Thêm</button></div></div>
+<div class="set"><label>Đang bán</label><span class="r"><span class="sw on"${f('isActive')}></span></span></div><div class="set"><label>Thứ tự</label><input class="ctl r"${f('sortOrder')} value="2"></div></div>
+<footer><button class="btn">Huỷ</button><button class="btn pri"${f('PATCH /platform/plans/:id')}>Lưu gói</button></footer></div></div>`);
+
+/* ===== C — hai cột thuần, số liệu nằm trong chip ===== */
+man('c',{shell:'nentang',nav:'pf-org',title:'Tổ chức',mobile:'list'},`${PH('Tổ chức','128 tổ chức · doanh thu thuê bao dự kiến 23.340.000 ₫/tháng')}<div class="c2">${danhSach(4)}<div class="right">${chiTiet(ORG[4])}</div></div>`);
+
+man('khong-quyen',{shell:'none',title:'Không có trang'},`<div style="min-height:100vh;display:grid;place-items:center;padding:16px"><div class="empty"><b style="font-size:18px;color:var(--text)">Không có trang này.</b><a class="btn sm" href="#">Về trang đầu</a></div></div>`);
+man('trang-thai',{shell:'nentang',nav:'pf-org',title:'Trạng thái'},`${PH('Trạng thái của trang Quản trị')}
+<div class="states">
+ <div class="card"><h4>Đang tải</h4><div class="so4" style="grid-template-columns:1fr 1fr">${[1,2,3,4].map(()=>'<div class="so"><span class="sk" style="width:60%;height:10px"></span><span class="sk" style="margin-top:8px;height:18px"></span></div>').join('')}</div></div>
+ <div class="card"><h4>Lỗi cấu hình gói</h4><div class="bn red">${icon('warn','s')}<span>Thiếu gói mặc định "trial" — tổ chức chưa có thuê bao không áp được giới hạn. (configError từ máy chủ)</span></div></div>
+ <div class="card"><h4>409</h4><div class="bn red">${icon('warn','s')}<span>Ngày bắt đầu không được trước ngày bắt đầu của thuê bao mới nhất.</span></div><div class="bn red" style="margin-top:8px">${icon('warn','s')}<span>Gói này đã ngừng bán.</span></div></div>
+ <div class="card"><h4>Không phải quản trị nền tảng</h4><div class="bn grey">${icon('lock','s')}<span>Máy chủ trả 404 y như đường không có. Web hiện "Không có trang này." — không lộ là có trang quản trị.</span></div></div>
+</div>`);
+mucLuc('Quản trị nền tảng SaaS — R&D vòng 4','Không có cửa đăng nhập riêng, không có mật khẩu dùng chung: người được cấp quyền (bằng lệnh trên máy chủ) đăng nhập như thường rồi mở /quan-tri. Bấm "Hiện trường dữ liệu" để thấy trường.',[
+ ['Phương án A — giống SS Pro: tab + bảng + hộp chi tiết',[['a','Tab Tổ chức (bảng)'],['a-ct','Hộp chi tiết tổ chức']]],
+ ['Phương án B — trang chủ việc cần làm + danh sách hai cột (đề xuất, đã chọn thay)',[['b','Trang chủ'],['b-ds','Tổ chức: danh sách + chi tiết'],['b-ct','Chi tiết (điện thoại: màn con)'],['gia-han','Đổi gói / gia hạn'],['khoa','Tạm khoá có lý do'],['b-goi','Gói cước + hạn mức'],['goi-sua','Sửa gói cước'],['trang-thai','Trạng thái'],['khong-quyen','Người thường mở /quan-tri']]],
+ ['Phương án C — hai cột thuần, không trang chủ',[['c','Tổ chức (chip có số đếm)']]],
+]);
+V4.boot();
+</script>
+</body>
+</html>

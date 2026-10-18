@@ -4,6 +4,7 @@ import type { Permission } from '@makeup/shared';
 import type { Env } from '../env';
 import type { Db } from '../lib/prisma';
 import type { Logger } from '../lib/logger';
+import { fieldsFilledWhenMissing } from './partial';
 
 // platform = người quản trị toàn nền tảng (bảng platform_admins); người khác nhận 404.
 export type Scope = 'public' | 'auth' | 'org' | 'platform';
@@ -91,6 +92,17 @@ export function defineRoute<
   Q extends AnySchema = z.ZodUndefined,
   P extends AnySchema = z.ZodUndefined,
 >(def: RouteDef<B, Q, P>): AnyRoute {
+  // PATCH = sửa một phần: trường không gửi phải giữ nguyên. Thân có .default()/.prefault()/.catch() ở trường
+  // (kể cả object lồng) sẽ bị zod điền giá trị mặc định cho trường vắng mặt → lỗi lúc khởi động, không chạy âm thầm.
+  if (def.method === 'patch') {
+    const filled = fieldsFilledWhenMissing(def.body);
+    if (filled.length > 0) {
+      throw new Error(
+        `Đường PATCH ${def.path}: thân yêu cầu có giá trị mặc định ở ${filled.join(', ')} — trường không gửi sẽ bị ghi đè. ` +
+          'Bỏ .default() trong thân sửa một phần (dùng .optional()).',
+      );
+    }
+  }
   if (def.scope === 'org') {
     if (!def.permission) {
       throw new Error(`Đường ${def.method.toUpperCase()} ${def.path} thuộc tổ chức nhưng không khai quyền`);

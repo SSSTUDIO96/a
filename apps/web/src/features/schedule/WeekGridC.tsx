@@ -1,6 +1,6 @@
 // Chế độ C — lưới tuần thợ × ngày (máy tính, máy tính bảng). Bản mẫu docs/rnd/phuong-an-C.html.
 import type { Appointment } from '../../api/types';
-import { IconWarn } from './icons';
+import { IconWarn } from '../../ui';
 import { cellKey, countByDay, countByLane, indexByCell, UNASSIGNED, type ConflictMarks, type StaffLane } from './model';
 import { ApptChip, cx, LaneAvatar } from './parts';
 import { ddmm, hhmm, isWeekend, todayKey, weekDays, weekdayLong, type DayKey } from './time';

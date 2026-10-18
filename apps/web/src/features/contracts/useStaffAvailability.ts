@@ -40,7 +40,6 @@ export function useStaffAvailability(orgId: string, args: AvailabilityQueryArgs 
       });
     return () => controller.abort();
     // args đọc qua key (so theo nội dung).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orgId, key]);
   return state;
 }

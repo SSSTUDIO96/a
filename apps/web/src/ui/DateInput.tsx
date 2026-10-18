@@ -84,6 +84,7 @@ export function usePickerPopover(anchorRef: RefObject<HTMLElement | null>, width
       if (!popRef.current?.contains(t) && !anchorRef.current?.contains(t)) setOpen(false);
     };
     const pop = popRef.current;
+    const anchor = anchorRef.current;
     const onKey = (e: globalThis.KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.stopPropagation();
@@ -95,12 +96,15 @@ export function usePickerPopover(anchorRef: RefObject<HTMLElement | null>, width
     window.addEventListener('scroll', onScroll, true);
     window.addEventListener('resize', onScroll);
     document.addEventListener('pointerdown', onDown);
+    // Esc khi tiêu điểm ở trong bảng HOẶC ở ô/nút mở bảng: chỉ đóng bảng, không đóng Dialog bên ngoài.
     pop?.addEventListener('keydown', onKey);
+    anchor?.addEventListener('keydown', onKey);
     return () => {
       window.removeEventListener('scroll', onScroll, true);
       window.removeEventListener('resize', onScroll);
       document.removeEventListener('pointerdown', onDown);
       pop?.removeEventListener('keydown', onKey);
+      anchor?.removeEventListener('keydown', onKey);
     };
   }, [open, place, anchorRef]);
 
