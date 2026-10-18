@@ -18,6 +18,8 @@ import { fileRoutes } from './modules/files/routes';
 import { paymentRoutes } from './modules/payments/routes';
 import { platformRoutes } from './modules/platform/routes';
 import { profileRoutes } from './modules/profile/routes';
+import { courseRoutes } from './modules/courses/routes';
+import { designRoutes } from './modules/designs/routes';
 import { createHash, type Hash } from 'node:crypto';
 import { RAW_ROUTE, rawFileHandler } from './modules/files/raw';
 import { hasPresentedRefreshToken } from './modules/auth/transport';
@@ -26,7 +28,21 @@ import { Prisma } from '@prisma/client';
 // Lời báo lỗi mặc định của zod bằng tiếng Việt (lời riêng trong từng schema vẫn được ưu tiên).
 z.config(z.locales.vi());
 
-export const ALL_ROUTES: AnyRoute[] = [...authRoutes, ...orgRoutes, ...catalogRoutes, ...scheduleRoutes, ...contractRoutes, ...staffRoutes, ...fileRoutes, ...paymentRoutes, ...platformRoutes, ...profileRoutes];
+export const ALL_ROUTES: AnyRoute[] = [
+  ...authRoutes,
+  ...orgRoutes,
+  ...catalogRoutes,
+  ...scheduleRoutes,
+  ...contractRoutes,
+  ...staffRoutes,
+  ...fileRoutes,
+  ...paymentRoutes,
+  ...platformRoutes,
+  ...profileRoutes,
+  // Khoá & lớp (thợ gói M3), mẫu thiết kế + thẻ (thợ gói M6) — đăng ký một lần ở đây, mỗi thợ điền mảng của mình.
+  ...courseRoutes,
+  ...designRoutes,
+];
 
 export function createApp(deps: Deps, routes: AnyRoute[] = ALL_ROUTES) {
   const app = express();

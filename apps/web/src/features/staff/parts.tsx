@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { errorKind, userMessage } from '../../api/errors';
-import { Button, IconLock, IconWarn, TextInput } from '../../ui';
+import { BottomSheet, Button, Dialog, IconLock, IconWarn, TextInput } from '../../ui';
 
 // Khối nhỏ dùng riêng trong màn Thợ makeup (và màn Khách hàng nhập lại ô tìm).
 // IconSearch / IconGrip chưa có trong src/ui → dựng tạm ở đây (phiếu vướng gửi W2).
@@ -79,5 +79,67 @@ export function LoadErrorStrip({ error, retry }: { error: unknown; retry: () => 
     >
       {userMessage(error)}
     </Strip>
+  );
+}
+
+// Hộp thoại theo khổ màn: máy tính / máy tính bảng = Dialog rộng `width`; điện thoại = BottomSheet (C2 1.2, 2.2).
+export function FormDialog({
+  open,
+  phone,
+  onClose,
+  title,
+  eyebrow,
+  sub,
+  footer,
+  width = 560,
+  children,
+}: {
+  open: boolean;
+  phone: boolean;
+  onClose: () => void;
+  title: string;
+  eyebrow?: ReactNode;
+  // Dòng phụ dưới tiêu đề (12px --muted).
+  sub?: ReactNode;
+  footer: ReactNode;
+  width?: number;
+  children: ReactNode;
+}) {
+  if (phone) {
+    return (
+      <BottomSheet
+        open={open}
+        onClose={onClose}
+        closeOnOverlay={false}
+        title={
+          <span className="st-dlg-title">
+            {eyebrow !== undefined && <span className="st-dlg-title__eyebrow">{eyebrow}</span>}
+            {title}
+            {sub !== undefined && <span className="st-dlg-title__sub">{sub}</span>}
+          </span>
+        }
+        footer={footer}
+      >
+        {children}
+      </BottomSheet>
+    );
+  }
+  return (
+    <Dialog
+      open={open}
+      onClose={onClose}
+      size="sm"
+      width={width}
+      eyebrow={eyebrow}
+      title={
+        <span className="st-dlg-title">
+          {title}
+          {sub !== undefined && <span className="st-dlg-title__sub">{sub}</span>}
+        </span>
+      }
+      footer={footer}
+    >
+      {children}
+    </Dialog>
   );
 }

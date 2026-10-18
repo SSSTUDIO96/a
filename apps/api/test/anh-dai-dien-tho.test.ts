@@ -5,6 +5,7 @@ import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import request from 'supertest';
 import { Prisma } from '@prisma/client';
+import { getStorage, LocalDiskDriver, verifyToken } from '../src/lib/storage';
 import { makePng } from './png';
 import { addMember, bearer, createOrg, makeApp, makeDeps, registerUser, type App, type TestUser } from './helpers';
 
@@ -37,10 +38,13 @@ async function upload(orgId: string, owner: TestUser): Promise<string> {
   return res.body.id as string;
 }
 
-// URL ký phải là vé của ĐÚNG tệp: phần đầu vé là base64url("<storageKey>|<hết hạn>").
+// URL ký phải là vé của ĐÚNG tệp: giải vé bằng khoá ký của kho tệp → storageKey (vé đã mã hoá từ khi sửa N3 lát 2,
+// không đọc thô base64 được nữa).
 function signedKeyOf(url: string): string {
-  const token = url.split('/').pop() ?? '';
-  return Buffer.from(token.split('.')[0] ?? '', 'base64url').toString('utf8').split('|')[0] ?? '';
+  const s = getStorage();
+  if (!(s instanceof LocalDiskDriver)) throw new Error('Bài thử cần driver đĩa cục bộ');
+  const check = verifyToken(s.signingSecret, url.split('/').pop() ?? '');
+  return check.ok ? check.key : `vé hỏng: ${check.reason}`;
 }
 
 async function storageKeyOf(fileId: string) {

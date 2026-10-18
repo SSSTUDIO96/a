@@ -172,6 +172,22 @@ export function isStaffOverlapViolation(err: unknown): boolean {
   return isExclusionViolation(err) && pgExclusionConstraint(err) === STAFF_OVERLAP_CONSTRAINT;
 }
 
+// Ràng buộc 23514 do TRIGGER báo (RAISE … USING ERRCODE = '23514', CONSTRAINT = '<tên>') với lời tiếng Việt viết sẵn cho
+// người dùng (migration 20261018230000_dao_tao). Prisma 6.19 KHÔNG chuyển trường CONSTRAINT của Postgres ra lỗi (đã thí
+// nghiệm: PostgresError chỉ có code, message, detail) — nên nhận theo đúng mẫu lời của từng trigger, khai cạnh tên ràng buộc.
+// Sửa lời trong migration thì sửa mẫu ở đây (bài thử test/rang-buoc-khoa-hoc.test.ts đỏ ngay nếu lệch).
+const NAMED_CHECK_TRIGGERS: { constraint: string; pattern: RegExp }[] = [
+  { constraint: 'course_classes_single_guard', pattern: /^Khoá một lớp chỉ có một lớp — chuyển sang Nhiều lớp để mở thêm$/ },
+  { constraint: 'courses_single_mode_guard', pattern: /^Khoá đang có \d+ lớp — chỉ chuyển về Một lớp khi còn 1 lớp$/ },
+];
+
+function namedCheckViolation(err: unknown): { constraint: string; message: string } | null {
+  const message = pgRaisedMessage(err);
+  if (!message) return null;
+  const hit = NAMED_CHECK_TRIGGERS.find((t) => t.pattern.test(message));
+  return hit ? { constraint: hit.constraint, message } : null;
+}
+
 // Đổi lỗi database đã biết thành lỗi có nghĩa. Lỗi lạ trả null để bộ bắt lỗi ghi log và trả 500.
 export function databaseError(err: unknown): AppError | null {
   switch (pgErrorCode(err)) {
@@ -184,8 +200,12 @@ export function databaseError(err: unknown): AppError | null {
       return new AppError('CONFLICT', 'Trùng lịch: thợ đã có lịch khác trong khoảng thời gian này', { conflicts: [] });
     case 'P0001':
       return new AppError('CONFLICT', pgRaisedMessage(err) ?? 'Thao tác bị database từ chối');
-    case '23514':
+    case '23514': {
+      // Trigger có lời viết cho người dùng (migration đào tạo) → 409 kèm đúng lời database; CHECK thường → 400 lời chung.
+      const named = namedCheckViolation(err);
+      if (named) return new AppError('CONFLICT', named.message, { constraint: named.constraint });
       return new AppError('VALIDATION_FAILED', 'Dữ liệu vi phạm ràng buộc của hệ thống');
+    }
     case '23503':
       return new AppError('VALIDATION_FAILED', 'Dữ liệu tham chiếu tới bản ghi không tồn tại hoặc không hợp lệ');
     case '22021':

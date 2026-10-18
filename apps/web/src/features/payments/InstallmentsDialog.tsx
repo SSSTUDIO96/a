@@ -23,7 +23,6 @@ export interface InstallmentsDialogProps {
   open: boolean;
   orgId: string;
   data: ContractPayments;
-  /** Tiền cọc phải thu = summary.depositRequired. */
   onClose: () => void;
   onSaved: (data: ContractPayments) => void;
 }
@@ -51,7 +50,6 @@ export function InstallmentsDialog({ open, orgId, data, onClose, onSaved }: Inst
     setCellErrors({});
     setSuggestError(null);
     // Chỉ nạp lại khi mở hộp.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   const today = todayVn();
