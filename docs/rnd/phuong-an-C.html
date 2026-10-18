@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Makeup Pro – Phương án C</title>
+<style>
+:root{
+  --bg:#F6F4F2; --surface:#FFFFFF; --line:#E9E3DE; --line-2:#F2EDE9;
+  --text:#221C19; --muted:#716862; --faint:#A39A94;
+  --accent:#A63D62; --accent-soft:#F7E8EE;
+  --rose:#A63D62; --rose-bg:#FBEDF2;
+  --amber:#9A5B0F; --amber-bg:#FDF2E2;
+  --violet:#5B45A0; --violet-bg:#F0ECFA;
+  --danger:#B42318; --danger-bg:#FEF0EE; --danger-line:#F3B8B0;
+  --font:"Be Vietnam Pro", Inter, "Segoe UI", Roboto, Arial, sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px;line-height:1.4;-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit;color:inherit}
+svg.i{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+/* ===== Khung kiểu Studio Pro: thanh bên có nhóm ===== */
+.app{display:grid;grid-template-columns:248px minmax(0,1fr);min-height:100vh}
+.side{background:var(--surface);border-right:1px solid var(--line);display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
+.side .brand{display:flex;align-items:center;gap:10px;padding:18px 20px;font-weight:700;font-size:17px;color:var(--accent);border-bottom:1px solid var(--line)}
+.side .user{display:flex;gap:10px;align-items:center;padding:14px 20px;border-bottom:1px solid var(--line);font-size:13px}
+.side .user small{display:block;color:var(--muted);font-size:12px}
+.av{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;color:#fff;flex:none}
+.av.na{background:#fff;border:1.5px dashed var(--faint);color:var(--muted)}
+.menu{padding:12px;display:flex;flex-direction:column;gap:2px;overflow:auto}
+.menu a{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:8px;color:var(--muted);text-decoration:none;font-weight:500}
+.menu a.on{background:var(--accent);color:#fff}
+.menu .kids{margin:2px 0 6px 22px;border-left:1px solid var(--line);display:flex;flex-direction:column}
+.menu .kids a{padding:8px 14px;border-radius:0 8px 8px 0;font-size:13.5px;font-weight:400}
+.menu .kids a.on{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.side .out{margin-top:auto;padding:14px 20px;border-top:1px solid var(--line);font-size:12px;color:var(--faint)}
+.topbar{display:none}
+
+.main{padding:24px 28px 32px;min-width:0}
+.main h1{font-size:26px;font-weight:700;margin-bottom:16px}
+.screen{display:none}
+.screen.on{display:block}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.ptabs{display:flex;gap:4px;padding:0 20px;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none}
+.ptabs a{padding:14px 10px;color:var(--muted);text-decoration:none;font-weight:500;border-bottom:2px solid transparent;white-space:nowrap}
+.ptabs a.on{color:var(--accent);border-bottom-color:var(--accent)}
+.tools{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.pill{display:inline-flex;align-items:center;gap:4px;background:#F6F3F1;border:1px solid var(--line);border-radius:10px;padding:3px}
+.pill .lbl{font-weight:600;padding:0 8px;white-space:nowrap}
+.pill .today{color:var(--accent);font-weight:600;border-left:1px solid var(--line);padding:0 10px;margin-left:4px}
+.btn{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 12px;border:1px solid var(--line);background:var(--surface);border-radius:8px;cursor:pointer;font-weight:500;white-space:nowrap}
+.btn.icon{width:30px;height:30px;padding:0;justify-content:center;border:0;background:none}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.sm{height:30px;padding:0 10px;font-size:13px}
+.btn.warn{background:var(--danger-bg);border-color:var(--danger-line);color:var(--danger)}
+.tog{display:inline-flex;background:#F6F3F1;border:1px solid var(--line);border-radius:10px;padding:3px}
+.tog button{border:0;background:none;padding:0 12px;height:28px;border-radius:7px;color:var(--muted);font-weight:500;font-size:13px}
+.tog button.on{background:#fff;color:var(--accent);font-weight:600;box-shadow:0 0 0 1px var(--line)}
+.sp{flex:1}
+
+/* ===== Lưới thợ × ngày ===== */
+.mx{overflow:auto}
+.grid{display:grid;grid-template-columns:168px repeat(7,minmax(118px,1fr));width:100%}
+.gh{position:sticky;top:0;z-index:2;background:#FCFBFA;border-bottom:1px solid var(--line);border-left:1px solid var(--line-2);padding:9px 10px;text-align:center}
+.gh .w{font-size:11.5px;font-weight:700;letter-spacing:.04em;color:var(--muted);text-transform:uppercase}
+.gh .d{font-weight:600}
+.gh .c{font-size:11.5px;color:var(--faint)}
+.gh.we .w{color:var(--accent)}
+.gh.first{left:0;z-index:3;text-align:left;border-left:0;display:flex;align-items:center;font-weight:600;color:var(--muted);font-size:12.5px}
+.rh{position:sticky;left:0;z-index:1;background:var(--surface);border-bottom:1px solid var(--line-2);padding:12px;display:flex;gap:10px;align-items:flex-start}
+.rh .nm{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rh .meta{font-size:12px;color:var(--muted)}
+.cell{border-left:1px solid var(--line-2);border-bottom:1px solid var(--line-2);padding:6px;display:flex;flex-direction:column;gap:4px;min-height:96px;min-width:0}
+.cell.we{background:#FDFBFA}
+.cell.off{background:repeating-linear-gradient(135deg,#F4F1EE 0 6px,#FAF8F6 6px 12px);color:var(--muted);font-size:12.5px;align-items:center;justify-content:center}
+.cell.conf{outline:2px solid var(--danger);outline-offset:-2px;background:var(--danger-bg)}
+.cflag{display:flex;align-items:center;gap:4px;font-size:11.5px;font-weight:600;color:var(--danger)}
+.cflag svg{width:13px;height:13px}
+.ch{border-radius:6px;padding:4px 7px;font-size:12px;line-height:1.3;border-left:3px solid var(--c);background:var(--b);min-width:0}
+.ch b{font-weight:700;color:var(--c);margin-right:4px}
+.ch .s{color:var(--c);font-weight:600}
+.ch .k{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)}
+.ch.x{border:1px solid var(--danger);border-left:3px solid var(--danger)}
+.ch.na{background:#fff;border:1px dashed var(--faint);border-left:3px dashed var(--faint);--c:var(--muted)}
+.cd{--c:var(--rose);--b:var(--rose-bg)} .ah{--c:var(--amber);--b:var(--amber-bg)} .tc{--c:var(--violet);--b:var(--violet-bg)}
+.rh.na .nm{color:var(--muted)}
+.foot{display:flex;gap:16px;align-items:center;padding:10px 16px;font-size:12px;color:var(--muted);border-top:1px solid var(--line);flex-wrap:wrap}
+.foot i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+
+/* ===== Bảng giá dạng bảng ===== */
+.sec{padding:14px 20px 4px;display:flex;align-items:center;gap:10px}
+.sec h2{font-size:17px;flex:1}
+table{width:100%;border-collapse:collapse}
+.tbl{margin:8px 20px 12px;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+th{font-size:12.5px;font-weight:600;color:var(--muted);text-align:left;padding:11px 14px;background:#FCFBFA;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:9px 14px;border-bottom:1px solid var(--line-2);vertical-align:middle}
+tr:last-child td{border-bottom:0}
+td.r,th.r{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+td .n{font-weight:600}
+td .tag{display:inline-block;font-size:11.5px;padding:2px 8px;border-radius:999px;background:var(--line-2);color:var(--muted);white-space:nowrap}
+td.act{white-space:nowrap;text-align:right;color:var(--faint)}
+td.act svg{margin-left:10px}
+.gt{padding-top:7px!important;padding-bottom:7px!important;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;background:#FDFCFB}
+.cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin:8px 20px 22px}
+.pk{border:1px solid var(--line);border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;gap:8px}
+.pk .ma{font-size:12px;color:var(--faint);font-weight:600}
+.pk h3{font-size:16px}
+.pk .gia{font-size:22px;font-weight:700;color:var(--accent)}
+.pk .gia del{font-size:13px;color:var(--faint);font-weight:400;margin-left:6px}
+.pk ul{list-style:none;display:flex;flex-direction:column;gap:5px;border-top:1px solid var(--line-2);padding-top:10px}
+.pk li{font-size:13px;display:flex;gap:8px}
+.pk li::before{content:"";width:5px;height:5px;border-radius:50%;background:var(--accent);margin-top:7px;flex:none}
+.pk .wage{margin-top:auto;font-size:12.5px;color:var(--muted);border-top:1px solid var(--line-2);padding-top:10px;display:flex;justify-content:space-between}
+.pk .wage b{color:var(--text)}
+.stk{display:none}
+.tip{position:relative;display:inline-grid;place-items:center;width:15px;height:15px;border-radius:50%;border:1px solid var(--faint);color:var(--muted);font-size:10px;font-weight:700;cursor:help;margin-left:5px;vertical-align:1px;text-transform:none;letter-spacing:0}
+.tip:hover::after{content:attr(data-tip);position:absolute;right:-10px;top:calc(100% + 8px);width:230px;background:#2A2220;color:#fff;font-weight:400;font-size:12px;line-height:1.45;padding:8px 10px;border-radius:6px;z-index:50;text-align:left;white-space:normal}
+
+/* ===== Máy tính bảng ===== */
+@media (max-width:1180px){
+  .app{grid-template-columns:68px minmax(0,1fr)}
+  .side .brand span,.side .user div,.menu a span,.menu .kids,.side .out{display:none}
+  .side .brand,.side .user{justify-content:center;padding:16px 0}
+  .menu a{justify-content:center}
+  .main{padding:20px 20px 28px}
+  .main h1{font-size:22px}
+  .grid{grid-template-columns:132px repeat(7,minmax(0,1fr))}
+  .rh{padding:10px 8px;gap:8px}
+  .rh .av{width:26px;height:26px;font-size:10.5px}
+  .ch .s{display:none}
+  .ch{padding:4px 5px;font-size:11.5px}
+  .cards{grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+  .pk .gia{font-size:19px}
+  .hide-t{display:none}
+}
+/* ===== Điện thoại ===== */
+@media (max-width:640px){
+  .app{grid-template-columns:minmax(0,1fr)}
+  .side{display:none}
+  .topbar{display:flex;align-items:center;gap:12px;height:54px;padding:0 16px;background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
+  .topbar b{color:var(--accent);flex:1;font-size:16px}
+  .main{padding:14px 12px 24px}
+  .main h1{font-size:21px;margin-bottom:12px;padding-left:4px}
+  .ptabs{padding:0 10px}
+  .tools{padding:10px;gap:8px}
+  .pill .lbl{padding:0 4px;font-size:13px}
+  .tools .hide-m{display:none}
+  .grid{grid-template-columns:96px repeat(7,124px);width:max-content}
+  .ch .s{display:inline}
+  .rh{padding:10px 8px;flex-direction:column;gap:6px}
+  .rh .av{width:26px;height:26px;font-size:10.5px}
+  .rh .meta{display:none}
+  .foot{display:none}
+  .tbl table{display:none}
+  .stk{display:block}
+  .tbl{margin:8px 12px 16px}
+  .sec{padding:16px 14px 4px}
+  .sec h2{font-size:16px}
+  .cards{grid-template-columns:minmax(0,1fr);margin:8px 12px 16px}
+  .srow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;padding:12px 14px;border-bottom:1px solid var(--line-2)}
+  .srow:last-child{border-bottom:0}
+  .srow .n{font-weight:600}
+  .srow .p{font-weight:700;text-align:right;white-space:nowrap}
+  .srow .m{grid-column:1 / -1;font-size:12.5px;color:var(--muted)}
+  .sgt{padding:9px 14px;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;background:#FDFCFB;border-bottom:1px solid var(--line-2)}
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z"/></symbol>
+  <symbol id="i-lich" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></symbol>
+  <symbol id="i-gia" viewBox="0 0 24 24"><path d="M20 12l-8 8-9-9V4h7z"/><circle cx="7.5" cy="7.5" r="1.5"/></symbol>
+  <symbol id="i-khach" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5M16 4.5a3.5 3.5 0 010 7M18 14.8c1.8.7 3 2.5 3.5 5.2"/></symbol>
+  <symbol id="i-tho" viewBox="0 0 24 24"><path d="M14 3l7 7-9 9H5v-7z"/><path d="M11 6l7 7"/></symbol>
+  <symbol id="i-bc" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></symbol>
+  <symbol id="i-l" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></symbol>
+  <symbol id="i-r" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18h.01"/></symbol>
+  <symbol id="i-filter" viewBox="0 0 24 24"><path d="M3 5h18l-7 8v6l-4-2v-4z"/></symbol>
+  <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/></symbol>
+  <symbol id="i-del" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+</svg>
+
+<div class="app">
+  <aside class="side">
+    <div class="brand"><svg class="i" style="width:22px;height:22px"><use href="#i-tho"/></svg><span>Makeup Pro</span></div>
+    <div class="user"><span class="av" style="background:#7A6A62">CH</span><div>Nguyễn Trọng Chiến<small>Chủ studio</small></div></div>
+    <nav class="menu">
+      <a href="#"><svg class="i"><use href="#i-home"/></svg><span>Tổng quan</span></a>
+      <a href="#lich" data-s="lich"><svg class="i"><use href="#i-lich"/></svg><span>Lịch makeup</span></a>
+      <div class="kids" data-k="lich"><a href="#lich" class="on">Xem lịch</a><a href="#">Ngày nghỉ của thợ</a></div>
+      <a href="#bang-gia" data-s="bang-gia"><svg class="i"><use href="#i-gia"/></svg><span>Bảng giá</span></a>
+      <div class="kids" data-k="bang-gia"><a href="#bang-gia" class="on">Dịch vụ lẻ</a><a href="#bang-gia">Gói makeup</a><a href="#bang-gia">Phụ phí</a></div>
+      <a href="#"><svg class="i"><use href="#i-khach"/></svg><span>Khách hàng</span></a>
+      <a href="#"><svg class="i"><use href="#i-tho"/></svg><span>Thợ makeup</span></a>
+      <a href="#"><svg class="i"><use href="#i-bc"/></svg><span>Báo cáo</span></a>
+    </nav>
+    <div class="out">© 2026 Makeup Pro</div>
+  </aside>
+
+  <div style="min-width:0">
+    <div class="topbar"><svg class="i"><use href="#i-menu"/></svg><b>Makeup Pro</b><span class="av" style="background:#7A6A62;width:30px;height:30px;font-size:11px">CH</span></div>
+    <main class="main">
+
+      <!-- ========== MÀN LỊCH ========== -->
+      <section class="screen" id="s-lich">
+        <h1>Lịch makeup</h1>
+        <div class="panel">
+          <div class="ptabs"><a class="on" href="#lich">Xem lịch</a><a href="#">Ngày nghỉ của thợ</a></div>
+          <div class="tools">
+            <div class="pill"><button class="btn icon" title="Tuần trước"><svg class="i"><use href="#i-l"/></svg></button><span class="lbl">19 – 25/10/2026</span><button class="btn icon" title="Tuần sau"><svg class="i"><use href="#i-r"/></svg></button><span class="today hide-m">Hôm nay</span></div>
+            <button class="btn pri"><svg class="i"><use href="#i-plus"/></svg><span class="hide-m">Thêm lịch</span></button>
+            <button class="btn warn btn sm" id="warnbtn"></button>
+            <span class="sp"></span>
+            <div class="tog hide-m"><button class="on">Thợ × ngày</button><button>Tháng</button><button>Danh sách</button></div>
+            <button class="btn hide-m hide-t"><svg class="i"><use href="#i-filter"/></svg>Bộ lọc</button>
+          </div>
+          <div class="mx"><div class="grid" id="grid"></div></div>
+          <div class="foot"><span><i style="background:var(--rose)"></i>Cô dâu</span><span><i style="background:var(--amber)"></i>Ăn hỏi</span><span><i style="background:var(--violet)"></i>Tiệc &amp; sự kiện</span><span><i style="background:#fff;border:1px dashed var(--faint)"></i>Chưa có thợ</span></div>
+        </div>
+      </section>
+
+      <!-- ========== MÀN BẢNG GIÁ ========== -->
+      <section class="screen" id="s-bang-gia">
+        <h1>Bảng giá dịch vụ</h1>
+        <div class="panel">
+          <div class="ptabs"><a class="on" href="#bang-gia">Dịch vụ lẻ</a><a href="#bang-gia">Gói makeup</a><a href="#bang-gia">Phụ phí</a></div>
+          <div class="sec"><h2>Dịch vụ makeup</h2><button class="btn pri sm"><svg class="i"><use href="#i-plus"/></svg>Thêm dịch vụ</button></div>
+          <div class="tbl" id="tbl"></div>
+          <div class="sec"><h2>Gói makeup</h2><button class="btn sm"><svg class="i"><use href="#i-plus"/></svg>Thêm gói</button></div>
+          <div class="cards" id="cards"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<script>
+const THO=[
+  {id:'ha',ngan:'Thu Hà',ten:'Nguyễn Thu Hà',vt:'TH',mau:'#A63D62',bac:'Thợ chính'},
+  {id:'ma',ngan:'Minh Anh',ten:'Trần Minh Anh',vt:'MA',mau:'#5B45A0',bac:'Thợ chính'},
+  {id:'tram',ngan:'Ngọc Trâm',ten:'Lê Ngọc Trâm',vt:'NT',mau:'#2F7D72',bac:'Thợ chính'},
+  {id:'vy',ngan:'Bảo Vy',ten:'Phạm Bảo Vy',vt:'BV',mau:'#9A5B0F',bac:'Thợ phụ'},
+];
+// [ngày, thợ, giờ bắt đầu, giờ kết thúc, loại, nhãn, khách]
+const CA=[
+  [19,'ha','09:00','10:00','tc','Tiệc','Phan Minh Thư'],
+  [19,'ma','14:00','15:30','cd','Chụp cưới','Đinh Quỳnh Anh'],
+  [19,'tram','10:00','10:45','tc','Kỷ yếu','Lớp 12A3'],
+  [20,'ma','08:00','09:00','tc','Tiệc','Lương Hà My'],
+  [20,'vy','15:00','16:00','tc','Tiệc','Mai Thảo Chi'],
+  [21,'ha','05:00','06:30','ah','Ăn hỏi','Cao Thanh Vân'],
+  [21,'ha','14:00','15:30','cd','Chụp cưới','Lý Hồng Ánh'],
+  [21,'tram','09:00','10:00','tc','Tiệc','Kiều Kim Ngân'],
+  [21,'vy','16:00','16:45','tc','Mẹ cô dâu','Cô Trần Lan'],
+  [22,'ma','06:00','07:30','ah','Ăn hỏi','Tạ Diệu Linh'],
+  [22,'ma','10:00','11:00','tc','Tiệc','Hồ Bảo Anh'],
+  [22,'tram','13:00','14:30','cd','Chụp cưới','La Phương Anh'],
+  [23,'ha','06:00','08:00','cd','Cô dâu','Dương Thu Uyên'],
+  [23,'ma','09:00','10:00','tc','Tiệc','Văn Ngọc Hân'],
+  [23,'tram','05:30','07:00','ah','Ăn hỏi','Lã Hải Yến'],
+  [23,'tram','15:00','16:00','tc','Tiệc','Kha Minh Ngọc'],
+  [23,'vy','07:00','07:45','tc','Mẹ cô dâu','Cô Lê Hoa'],
+  [24,'ha','04:30','06:30','cd','Cô dâu','Tôn Nữ Hoàng Bảo Ngọc Phương Thảo'],
+  [24,'ha','06:00','07:30','ah','Ăn hỏi','Lê Thị Lan'],
+  [24,'ha','10:00','11:00','tc','Tiệc','Đỗ Quỳnh Như'],
+  [24,'ma','05:00','06:30','ah','Ăn hỏi','Vũ Hồng Nhung'],
+  [24,'ma','09:00','10:00','tc','Tiệc','Đặng Thu Trang'],
+  [24,'ma','16:00','17:00','tc','Tiệc','Hoàng Hải Yến'],
+  [24,'tram','07:00','09:00','cd','Gói cưới','Bùi Khánh Linh'],
+  [24,'tram','13:30','15:00','cd','Chụp cưới','Ngô Mai Anh'],
+  [24,'vy','08:00','08:45','tc','Mẹ cô dâu','Cô Phạm Thị Hồng'],
+  [24,'vy','11:00','12:00','tc','Kỷ yếu','Lớp 12A1 – Nguyễn Gia Hân'],
+  [24,null,'15:00','16:00','tc','Tiệc','Trịnh Minh Châu'],
+  [25,'ha','04:30','06:30','cd','Cô dâu','Mạc Khánh Huyền'],
+  [25,'ha','09:30','10:30','tc','Tiệc','Ninh Mỹ Linh'],
+  [25,'ma','05:00','07:00','cd','Cô dâu','Quách Thùy Dương'],
+  [25,'ma','11:00','12:00','tc','Tiệc','Ông Lan Chi'],
+  [25,'tram','04:00','06:00','cd','Cô dâu','Từ Hà Phương'],
+  [25,'tram','08:00','09:30','ah','Ăn hỏi','Thái Thu Thảo'],
+  [25,'vy','06:00','06:45','tc','Mẹ cô dâu','Cô Hà Mai'],
+  [25,'vy','07:00','07:45','tc','Mẹ chú rể','Cô Vũ Bình'],
+  [25,null,'16:00','17:00','tc','Tiệc','Giang Quế Anh'],
+].map(([d,t,bd,kt,l,nh,kh])=>({d,t,bd,kt,l,nh,kh}));
+const NGHI={'ha-22':'Nghỉ phép','vy-19':'Nghỉ'};
+const NGAY=[['Thứ hai',19],['Thứ ba',20],['Thứ tư',21],['Thứ năm',22],['Thứ sáu',23],['Thứ bảy',24],['Chủ nhật',25]];
+const h=t=>{const[a,b]=t.split(':').map(Number);return a+b/60};
+CA.forEach((a,i)=>CA.forEach((b,j)=>{if(j>i&&a.t&&a.t===b.t&&a.d===b.d&&h(a.bd)<h(b.kt)&&h(b.bd)<h(a.kt)){a.x=b.x=true;a.o=b.o=[b.bd,a.kt]}}));
+const soTrung=CA.filter(c=>c.x).length/2;
+
+function drawLich(){
+  document.getElementById('warnbtn').innerHTML=`<svg class="i"><use href="#i-warn"/></svg>${soTrung} ca trùng lịch`;
+  let g='<div class="gh first">Thợ</div>';
+  NGAY.forEach(([w,d],k)=>{const n=CA.filter(c=>c.d===d).length;g+=`<div class="gh${k>4?' we':''}"><div class="w">${w}</div><div class="d">${d}/10</div><div class="c">${n} ca</div></div>`});
+  [...THO,{id:null,ngan:'Chưa có thợ',vt:'?'}].forEach(t=>{
+    const tuan=CA.filter(c=>c.t===t.id).length;
+    g+=`<div class="rh${t.id?'':' na'}"><span class="av${t.id?'':' na'}" style="${t.id?'background:'+t.mau:''}">${t.vt}</span><div style="min-width:0"><div class="nm">${t.ngan}</div><div class="meta">${t.id?t.bac+' · ':''}${tuan} ca/tuần</div></div></div>`;
+    NGAY.forEach(([w,d],k)=>{
+      const off=NGHI[t.id+'-'+d];
+      if(off){g+=`<div class="cell off">${off}</div>`;return}
+      const ds=CA.filter(c=>c.t===t.id&&c.d===d);const cf=ds.find(c=>c.x);
+      g+=`<div class="cell${k>4?' we':''}${cf?' conf':''}">`;
+      if(cf)g+=`<div class="cflag"><svg class="i"><use href="#i-warn"/></svg>Trùng ${cf.o[0]}–${cf.o[1]}</div>`;
+      ds.forEach(c=>g+=`<div class="ch ${c.l}${c.x?' x':''}${t.id?'':' na'}" title="${c.bd}–${c.kt} · ${c.nh} · ${c.kh}"><b>${c.bd}</b><span class="s">${c.nh}</span><span class="k">${c.kh}</span></div>`);
+      g+='</div>';
+    });
+  });
+  document.getElementById('grid').innerHTML=g;
+}
+// Điện thoại: tự cuộn tới ngày có ca trùng để thấy cảnh báo ngay
+function cuonToiNgayTrung(){if(innerWidth<=640){const k=NGAY.findIndex(([w,d])=>CA.some(c=>c.d===d&&c.x));document.querySelector('.mx').scrollLeft=Math.max(0,k)*124;}}
+
+const DV=[
+  ['Cô dâu','Makeup cô dâu (ngày cưới)',120,2500000,700000,'Tại nhà / tiệc'],
+  ['Cô dâu','Makeup cô dâu chụp ảnh cưới',90,1200000,350000,'Tại studio'],
+  ['Cô dâu','Làm tóc cô dâu',60,800000,200000,'Tại nhà / tiệc'],
+  ['Ăn hỏi','Makeup ăn hỏi',90,1500000,450000,'Tại nhà / tiệc'],
+  ['Tiệc & sự kiện','Makeup tiệc',60,600000,150000,'Tại studio'],
+  ['Tiệc & sự kiện','Makeup mẹ cô dâu / chú rể',45,500000,120000,'Tại nhà / tiệc'],
+  ['Tiệc & sự kiện','Makeup kỷ yếu',45,350000,100000,'Tại studio'],
+  ['Tiệc & sự kiện','Makeup chú rể',20,200000,50000,'Tại nhà / tiệc'],
+];
+const GOI=[
+  {ma:'G01',ten:'Gói Cưới Trọn Vẹn',gia:4300000,le:5600000,gom:['Makeup ăn hỏi','Makeup cô dâu (ngày cưới)','Làm tóc cô dâu × 2 buổi'],cong:1550000},
+  {ma:'G02',ten:'Gói Ăn Hỏi Gia Đình',gia:2900000,le:3300000,gom:['Makeup ăn hỏi','Làm tóc cô dâu','Makeup mẹ cô dâu × 2'],cong:890000},
+  {ma:'G03',ten:'Gói Tiệc Nhóm 5 Người',gia:2500000,le:3000000,gom:['Makeup tiệc × 5 khách','Cùng một buổi, một địa điểm'],cong:750000},
+];
+const vnd=x=>x.toLocaleString('vi-VN').replace(/,/g,'.')+' ₫';
+const phut=p=>p>=60?(Math.floor(p/60)+' giờ'+(p%60?' '+p%60+' phút':'')):p+' phút';
+function drawGia(){
+  let t=`<table><thead><tr><th>Tên dịch vụ</th><th>Thời lượng</th><th class="r">Giá thu khách</th><th class="r">Tiền công thợ<span class="tip" data-tip="Số tiền trả cho thợ mỗi ca làm dịch vụ này. Dùng để tính lương cuối tháng.">?</span></th><th>Nơi làm</th><th></th></tr></thead><tbody>`;
+  let s='',last='';
+  DV.forEach(([n,ten,p,gia,cong,noi])=>{
+    if(n!==last){t+=`<tr><td colspan="6" class="gt">${n}</td></tr>`;s+=`<div class="sgt">${n}</div>`;last=n}
+    t+=`<tr><td><span class="n">${ten}</span></td><td>${phut(p)}</td><td class="r"><b>${vnd(gia)}</b></td><td class="r">${vnd(cong)}</td><td><span class="tag">${noi}</span></td><td class="act"><svg class="i"><use href="#i-edit"/></svg><svg class="i"><use href="#i-del"/></svg></td></tr>`;
+    s+=`<div class="srow"><div class="n">${ten}</div><div class="p">${vnd(gia)}</div><div class="m">${phut(p)} · ${noi} · công thợ ${vnd(cong)}</div></div>`;
+  });
+  t+='</tbody></table>';
+  document.getElementById('tbl').innerHTML=t+`<div class="stk">${s}</div>`;
+  document.getElementById('cards').innerHTML=GOI.map(g=>`<div class="pk"><span class="ma">${g.ma}</span><h3>${g.ten}</h3><div class="gia">${vnd(g.gia)}<del>${vnd(g.le)}</del></div><ul>${g.gom.map(x=>`<li>${x}</li>`).join('')}</ul><div class="wage"><span>Tiền công thợ</span><b>${vnd(g.cong)}</b></div></div>`).join('');
+}
+
+function route(){
+  const s=(location.hash||'#lich').slice(1)==='bang-gia'?'bang-gia':'lich';
+  document.querySelectorAll('.screen').forEach(x=>x.classList.toggle('on',x.id==='s-'+s));
+  document.querySelectorAll('[data-s]').forEach(a=>a.classList.toggle('on',a.dataset.s===s));
+  document.querySelectorAll('[data-k]').forEach(k=>k.style.display=k.dataset.k===s?'':'none');
+  if(s==='lich')cuonToiNgayTrung();
+}
+window.addEventListener('hashchange',route);
+drawLich();drawGia();route();
+</script>
+</body>
+</html>

@@ -93,7 +93,7 @@ svg.i{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stro
 
 /* ===== Tooltip ===== */
 .tip{position:relative;display:inline-grid;place-items:center;width:16px;height:16px;border-radius:50%;border:1px solid var(--faint);color:var(--muted);font-size:10.5px;font-weight:700;cursor:help;margin-left:6px;vertical-align:1px}
-.tip:hover::after,.tip:focus::after{content:attr(data-tip);position:absolute;left:50%;bottom:calc(100% + 8px);transform:translateX(-50%);width:240px;background:#2A2220;color:#fff;font-weight:400;font-size:12px;line-height:1.45;padding:8px 10px;border-radius:6px;z-index:50;text-align:left}
+.tip:hover::after,.tip:focus::after{content:attr(data-tip);position:absolute;left:-10px;top:calc(100% + 8px);white-space:normal;width:240px;background:#2A2220;color:#fff;font-weight:400;font-size:12px;line-height:1.45;padding:8px 10px;border-radius:6px;z-index:50;text-align:left}
 
 /* ===== Bảng giá ===== */
 .pg{flex:1;min-height:0;display:grid;grid-template-columns:220px minmax(0,1fr) 380px;gap:0}
@@ -181,6 +181,8 @@ svg.i{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stro
   .chips{padding:10px 16px 0}
   .list{padding:10px 16px 16px}
   .bar .search{display:none}
+  .pbar{display:none}
+  .row .n{white-space:normal}
 }
 .fab{display:none;position:fixed;right:16px;bottom:80px;width:52px;height:52px;border-radius:50%;background:var(--accent);color:#fff;place-items:center;z-index:21;border:0}
 .fab svg{width:24px;height:24px}
@@ -219,7 +221,7 @@ svg.i{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stro
   </aside>
 
   <div class="main">
-    <div class="topbar"><svg class="i"><use href="#i-menu"/></svg><span class="t" id="tb-title">Lịch makeup</span><span class="av" style="background:#7A6A62;width:30px;height:30px;font-size:11px">CH</span></div>
+    <div class="topbar"><svg class="i"><use href="#i-menu"/></svg><span class="t" id="tb-title">Lịch makeup</span><button class="btn pri icon" id="tb-add" title="Thêm dịch vụ" style="width:34px;height:34px"><svg class="i"><use href="#i-plus"/></svg></button><span class="av" style="background:#7A6A62;width:30px;height:30px;font-size:11px">CH</span></div>
 
     <!-- ========== MÀN LỊCH ========== -->
     <section class="screen" id="s-lich">
@@ -244,7 +246,7 @@ svg.i{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stro
 
     <!-- ========== MÀN BẢNG GIÁ ========== -->
     <section class="screen" id="s-bang-gia">
-      <div class="bar">
+      <div class="bar pbar">
         <h1>Bảng giá</h1>
         <div class="spacer"></div>
         <div class="search" style="position:relative"><svg class="i" style="position:absolute;left:10px;top:9px;color:var(--faint)"><use href="#i-search"/></svg><input class="ctl" style="width:240px;padding-left:34px" placeholder="Tìm dịch vụ hoặc gói"></div>
@@ -367,7 +369,7 @@ function drawCal(){
       const short=ht<52;
       html+=`<div class="ev ${cls}${e.c?' conflict':''}" style="top:${top}px;height:${ht}px;left:${left};width:${w}" title="${e.bd}–${e.kt} · ${e.dv} · ${e.kh}">
         <div class="tm">${e.bd}–${e.kt}${e.c?'<span class="flag">Trùng</span>':''}</div>
-        <div class="sv">${e.dv}</div>${short?'':`<div class="kh">${e.kh}</div>`}${ht>84?`<div class="nc">${e.nc}</div>`:''}
+        <div class="sv">${e.dv}</div>${short?'':`<div class="kh" style="-webkit-line-clamp:${ht>90?2:1}">${e.kh}</div>`}${ht>84?`<div class="nc">${e.nc}</div>`:''}
         ${id?'':'<div class="assign"><button class="btn sm">Phân thợ</button></div>'}</div>`;
     });
     html+='</div>';
@@ -397,6 +399,7 @@ function route(){
   document.querySelectorAll('.screen').forEach(x=>x.classList.toggle('on',x.id==='s-'+s));
   document.querySelectorAll('[data-s]').forEach(a=>a.classList.toggle('on',a.dataset.s===s));
   document.getElementById('tb-title').textContent=s==='lich'?'Lịch makeup':'Bảng giá';
+  document.getElementById('tb-add').style.display=s==='bang-gia'?'':'none';
   document.title='Makeup Pro – Phương án A – '+(s==='lich'?'Lịch':'Bảng giá');
 }
 window.addEventListener('hashchange',route);
