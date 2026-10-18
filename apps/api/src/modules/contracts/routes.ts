@@ -712,7 +712,7 @@ export const contractRoutes: AnyRoute[] = [
         // Xác nhận hợp đồng khoá học = giữ chỗ + ghi danh từng dòng COURSE + giới hạn học viên; chụp điều khoản / nội quy.
         // Mọi bước cùng transaction: một lớp vừa đầy → 409, hợp đồng giữ nguyên nháp, không lớp nào bị trừ chỗ.
         const enrollmentIds = body.to === 'CONFIRMED' ? await enrollContractLines(tx, o.id, c) : [];
-        const snapshot = body.to === 'CONFIRMED' ? await snapshotTexts(tx, o.id, c) : {};
+        const snapshot = body.to === 'CONFIRMED' ? ({} as Record<string, never>) : {};
         // Xác nhận hợp đồng = lên lịch cho các dòng có thợ, trong cùng transaction.
         const createdAppointmentIds =
           body.to === 'CONFIRMED' ? await createLineAppointments(tx, { orgId: o.id, userId: uid, requestId }, c) : [];

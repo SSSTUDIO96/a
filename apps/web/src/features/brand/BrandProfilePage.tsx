@@ -106,7 +106,7 @@ function BrandProfileScreen({ orgId, slug }: { orgId: string; slug: string }) {
   }, [scrollTick, compact]);
 
   // Rời trang khi còn thay đổi chưa lưu.
-  const blocker = { state: 'unblocked' as string, reset: undefined as undefined | (() => void), proceed: undefined as undefined | (() => void) }; void useBlocker;
+  const blocker = useBlocker(({ currentLocation, nextLocation }) => dirty && !saving && currentLocation.pathname !== nextLocation.pathname);
   useEffect(() => {
     if (!dirty) return undefined;
     const onBeforeUnload = (e: BeforeUnloadEvent) => {

@@ -597,8 +597,8 @@ export async function updateClass(tx: Tx, a: Actor, classId: string, body: Updat
     {
       startDate: body.startDate ?? cur.startDate,
       endDate: body.endDate ?? cur.endDate,
-      startTime: body.startTime ?? null,
-      endTime: body.endTime ?? null,
+      startTime: body.startTime === undefined ? cur.startTime : body.startTime,
+      endTime: body.endTime === undefined ? cur.endTime : body.endTime,
     },
     '',
   );

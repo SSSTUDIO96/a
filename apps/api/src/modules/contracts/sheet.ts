@@ -434,6 +434,7 @@ async function planTravel(
 }
 
 async function planOne(ctx: Ctx, input: LineInput, line: number): Promise<PlannedLine[]> {
+  assertLineKindAllowed(ctx.kind, input, line);
   switch (input.kind) {
     case 'COURSE':
       return [await planCourse(ctx, input, line)];
