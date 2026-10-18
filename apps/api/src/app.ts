@@ -6,7 +6,7 @@ import { rateLimit } from 'express-rate-limit';
 import { AppError } from './lib/errors';
 import { authenticate, errorHandler, loadOrgContext, requestId } from './http/middleware';
 import { buildOpenApi } from './http/openapi';
-import type { AnyRoute, Deps } from './http/route';
+import type { AnyRoute, Deps, HandlerResult } from './http/route';
 import { authRoutes } from './modules/auth/routes';
 import { orgRoutes } from './modules/orgs/routes';
 import { catalogRoutes } from './modules/catalog/routes';
@@ -82,6 +82,16 @@ export function createApp(deps: Deps, routes: AnyRoute[] = ALL_ROUTES) {
           org,
         });
       const result = route.idempotent && org && userId ? await runIdempotent(deps, req, org.id, userId, route, run) : await run();
+      for (const c of result.cookies ?? []) {
+        const opts = {
+          httpOnly: true,
+          secure: deps.env.NODE_ENV === 'production',
+          sameSite: 'strict' as const,
+          path: c.path,
+        };
+        if (c.value === null) res.clearCookie(c.name, opts);
+        else res.cookie(c.name, c.value, { ...opts, maxAge: c.maxAgeMs });
+      }
       if (result.body === undefined) {
         res.status(result.status ?? 204).end();
       } else {
@@ -107,7 +117,7 @@ async function runIdempotent(
   organizationId: string,
   userId: string,
   route: AnyRoute,
-  run: () => Promise<{ status?: number; body?: unknown }>,
+  run: () => Promise<HandlerResult>,
 ) {
   const key = req.header('idempotency-key');
   if (!key || !IdemKeySchema.test(key)) {

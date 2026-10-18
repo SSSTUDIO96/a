@@ -25,4 +25,8 @@ Anh Chiến nhắn lúc khoảng 15:13 UTC ngày 18/10/2026: *"Tự làm vào ch
 | 15:40 | Nhớ chế độ xem người dùng chọn lần trước | **Không** nhớ: mỗi lần mở lịch đều về C | Anh nói "mặc định hiển thị là chế độ C"; tự nhớ là thêm việc chưa ai yêu cầu | Được: thêm sau nếu anh muốn |
 | 15:24 | Màn bảng giá | Chưa chọn. Giao R&D vòng 2 (Bảng giá v2 + Lập hợp đồng). | Yêu cầu mới làm ba bản vòng 1 lỗi thời; bản A tự thêm ô không ai yêu cầu | — |
 
+| 16:25 | Màn Lập hợp đồng | Theo phương án C, như bảng giá anh vừa chọn ("C nhé") | Cùng một họ thiết kế; câu "C nhé" không nói riêng màn nào | Được: R&D còn giữ bản A, B |
+| 16:20 | Refresh token cho trang web | Chỉ nằm trong cookie httpOnly (SameSite=Strict, chỉ đường /api/v1/auth). Web phải gửi header `X-Client: web`. App điện thoại vẫn nhận trong thân như cũ. | Mã độc chèn vào trang không lấy trộm được thẻ dài hạn | Được |
+| 16:20 | Tên miền web và API | Web gọi `/api` trên **cùng tên miền**; Vercel chuyển tiếp sang máy chủ Railway | Cookie an toàn nhất khi cùng tên miền; không cần mở CORS cho trình duyệt | Được: đổi cấu hình triển khai |
+
 **Cần anh xem lại nhất:** phân quyền theo vai trò mẫu (dòng 15:16). Studio anh có thể muốn thợ chính thấy cả lịch của đội.

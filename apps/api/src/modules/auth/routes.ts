@@ -4,6 +4,7 @@ import { AppError } from '../../lib/errors';
 import { writeAudit } from '../../lib/audit';
 import { DUMMY_HASH, hashPassword, verifyPassword } from '../../lib/password';
 import { issueTokens, revokeFamily, rotateRefreshToken } from './service';
+import { CLEAR_REFRESH_COOKIE, deliverTokens, presentedRefreshToken } from './transport';
 
 const Email = z
   .string()
@@ -25,7 +26,7 @@ export const authRoutes = [
     summary: 'Đăng ký tài khoản',
     rateLimit: 'auth',
     body: z.object({ email: Email, password: Password, fullName: z.string().trim().min(1).max(120) }),
-    handler: async ({ deps, body, requestId }) => {
+    handler: async ({ req, deps, body, requestId }) => {
       const exists = await deps.db.user.findUnique({ where: { email: body.email }, select: { id: true } });
       if (exists) throw new AppError('CONFLICT', 'Email này đã được đăng ký');
       const passwordHash = await hashPassword(body.password);
@@ -44,7 +45,7 @@ export const authRoutes = [
         });
         return created;
       });
-      return { status: 201, body: { user, ...(await issueTokens(deps, user.id)) } };
+      return { status: 201, ...deliverTokens(req, deps, await issueTokens(deps, user.id), { user }) };
     },
   }),
 
@@ -56,7 +57,7 @@ export const authRoutes = [
     summary: 'Đăng nhập bằng email và mật khẩu',
     rateLimit: 'auth',
     body: z.object({ email: Email, password: z.string().min(1).max(128) }),
-    handler: async ({ deps, body, requestId }) => {
+    handler: async ({ req, deps, body, requestId }) => {
       const user = await deps.db.user.findUnique({ where: { email: body.email } });
       const ok = await verifyPassword(body.password, user?.passwordHash ?? DUMMY_HASH);
       if (!user || !ok || user.status !== 'ACTIVE') {
@@ -84,12 +85,9 @@ export const authRoutes = [
           requestId,
         }),
       );
-      return {
-        body: {
-          user: { id: user.id, email: user.email, fullName: user.fullName },
-          ...(await issueTokens(deps, user.id)),
-        },
-      };
+      return deliverTokens(req, deps, await issueTokens(deps, user.id), {
+        user: { id: user.id, email: user.email, fullName: user.fullName },
+      });
     },
   }),
 
@@ -100,10 +98,9 @@ export const authRoutes = [
     tag: 'Đăng nhập',
     summary: 'Đổi refresh token lấy cặp thẻ mới',
     rateLimit: 'auth',
-    body: z.object({ refreshToken: z.string().min(20).max(200) }),
-    handler: async ({ deps, body, requestId }) => ({
-      body: await rotateRefreshToken(deps, body.refreshToken, requestId),
-    }),
+    body: z.object({ refreshToken: z.string().min(20).max(200).optional() }),
+    handler: async ({ req, deps, body, requestId }) =>
+      deliverTokens(req, deps, await rotateRefreshToken(deps, presentedRefreshToken(req, body.refreshToken), requestId)),
   }),
 
   defineRoute({
@@ -112,10 +109,10 @@ export const authRoutes = [
     scope: 'public',
     tag: 'Đăng nhập',
     summary: 'Đăng xuất: thu hồi phiên trên thiết bị này',
-    body: z.object({ refreshToken: z.string().min(20).max(200) }),
-    handler: async ({ deps, body, requestId }) => {
-      await revokeFamily(deps, body.refreshToken, requestId);
-      return { status: 204 };
+    body: z.object({ refreshToken: z.string().min(20).max(200).optional() }),
+    handler: async ({ req, deps, body, requestId }) => {
+      await revokeFamily(deps, presentedRefreshToken(req, body.refreshToken), requestId);
+      return { status: 204, cookies: [CLEAR_REFRESH_COOKIE] };
     },
   }),
 

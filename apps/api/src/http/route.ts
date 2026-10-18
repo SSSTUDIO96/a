@@ -33,9 +33,18 @@ export interface HandlerCtx<B, Q, P> {
   org: OrgContext | null;
 }
 
+export interface CookieInstruction {
+  name: string;
+  // null = xoá cookie
+  value: string | null;
+  path: string;
+  maxAgeMs?: number;
+}
+
 export interface HandlerResult {
   status?: number;
   body?: unknown;
+  cookies?: CookieInstruction[];
 }
 
 type AnySchema = z.ZodType;
