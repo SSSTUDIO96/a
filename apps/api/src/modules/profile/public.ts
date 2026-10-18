@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { defineRoute } from '../../http/route';
 import { AppError } from '../../lib/errors';
+import { getCurrentSubscription } from '../../lib/quota';
 import { presentPrice, resolveCurrentPrices, type CurrentPrice } from '../catalog/prices';
 import { signImages } from './images';
 import { parseStoredHours } from './schemas';
@@ -38,6 +39,10 @@ export const publicRoutes = [
         select: { id: true, name: true, slug: true, timezone: true, status: true, profile: true },
       });
       if (!org || org.status !== 'ACTIVE' || !org.profile || !org.profile.isPublished) throw siteNotFound();
+      // Thuê bao huỷ, hoặc hết hạn quá ân hạn (chỉ còn đọc): trang công khai ẩn như chưa xuất bản (biên bản máy chủ lát 2, N11).
+      // Chưa có thuê bao (gói mặc định) hoặc còn trong ân hạn: vẫn hiện.
+      const sub = await getCurrentSubscription(deps.db, org.id);
+      if (sub.hasSubscription && !sub.writable) throw siteNotFound();
       const p = org.profile;
       const orgId = org.id;
 

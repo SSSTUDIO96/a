@@ -229,7 +229,11 @@ describe('assertQuota', () => {
       await tx.subscriptionPlan.updateMany({ where: { code: 'trial' }, data: { code: `trial_cat_${randomUUID().slice(0, 6)}` } });
       const err = await caught(assertQuota(tx, orgId, 'staff'));
       expect(err.code).toBe('INTERNAL');
-      expect(err.message).toMatch(/Lỗi cấu hình.*"trial"/);
+      // N10 (biên bản máy chủ lát 2): lời cho người dùng studio KHÔNG chứa lệnh vận hành; lệnh nằm ở operatorHint (log máy chủ).
+      expect(err.message).toBe('Hệ thống chưa cấu hình gói dịch vụ cho tổ chức này. Vui lòng liên hệ bộ phận hỗ trợ.');
+      expect(err.message).not.toMatch(/pnpm|seed|trial/);
+      expect(JSON.stringify(err.details ?? null)).not.toMatch(/pnpm/);
+      expect(err.operatorHint).toMatch(/pnpm --filter @makeup\/api platform:seed-plans -- --with-trial/);
       await assertWritable(tx, orgId); // chưa có thuê bao: không phải "hết hạn"
       await tx.subscriptionPlan.create({ data: { code: 'trial', name: 'Dùng thử', priceMonthly: 0n, features: [], maxStaff: 1, isActive: false } });
       const eff = await getEffectivePlan(tx, orgId);
@@ -238,5 +242,77 @@ describe('assertQuota', () => {
       expect(full.status).toBe(409);
       expect(full.message).toMatch(/^Đã đạt giới hạn gói Dùng thử: tối đa 1 nhân sự/);
     });
+  });
+});
+
+// GIỮ NGHĨA ba cách đếm "đang dùng bao nhiêu" (biên bản máy chủ lát 2, mục 4: đột biến Q1–Q3 làm bài thử cũ vẫn xanh).
+describe('getUsage — giữ đúng định nghĩa từng cách đếm', () => {
+  it('Q1 nhân sự: tính ACTIVE + SUSPENDED, KHÔNG tính người đã rời (REMOVED)', async () => {
+    const orgId = await createOrg(app, owner, 'quota-q1');
+    const a = await registerUser(app, 'quota-q1a');
+    const b = await registerUser(app, 'quota-q1b');
+    const c = await registerUser(app, 'quota-q1c');
+    await addMember(app, owner, orgId, a, ['artist']);
+    await addMember(app, owner, orgId, b, ['artist']);
+    await addMember(app, owner, orgId, c, ['artist']);
+    expect(await getUsage(db, orgId, 'staff')).toBe(4);
+    await db.membership.updateMany({ where: { organizationId: orgId, userId: b.id }, data: { status: 'SUSPENDED' } });
+    await db.membership.updateMany({ where: { organizationId: orgId, userId: c.id }, data: { status: 'REMOVED' } });
+    const used = await getUsage(db, orgId, 'staff');
+    console.log(`[Q1] chủ + 1 đang làm + 1 tạm khoá + 1 đã rời → đếm ${used} (đúng 3)`);
+    expect(used).toBe(3);
+    // Hệ quả lên hạn mức: gói 3 người, người đã rời không giữ chỗ → còn 0 chỗ; gói 4 người → còn 1 chỗ.
+    const p3 = await plan({ maxStaff: 4 });
+    await sub(orgId, p3.id, new Date(Date.now() - DAY), null);
+    await db.$transaction((tx) => assertQuota(tx, orgId, 'staff'));
+  });
+
+  it('Q2 dung lượng: tính tệp UPLOADING + READY, KHÔNG tính tệp đã xoá (DELETED)', async () => {
+    const orgId = await createOrg(app, owner, 'quota-q2');
+    const mk = (status: 'UPLOADING' | 'READY' | 'DELETED', mb: number) =>
+      db.storedFile.create({
+        data: {
+          organizationId: orgId,
+          purpose: 'OTHER',
+          storageKey: `k/${randomUUID()}`,
+          originalName: 'a.jpg',
+          mimeType: 'image/jpeg',
+          sizeBytes: BigInt(mb * 1024 * 1024),
+          status,
+          ...(status === 'DELETED' ? { deletedAt: new Date() } : {}),
+          createdById: owner.id,
+        },
+      });
+    await mk('READY', 2);
+    await mk('UPLOADING', 1);
+    await mk('DELETED', 5);
+    const used = await getUsage(db, orgId, 'storageMb');
+    console.log(`[Q2] READY 2 MB + UPLOADING 1 MB + DELETED 5 MB → đếm ${used} MB (đúng 3)`);
+    expect(used).toBe(3);
+  });
+
+  it('Q3 lịch trong tháng: đầu tháng tính theo MÚI GIỜ TỔ CHỨC — lịch tạo 23:50 ngày 31/10 giờ VN thuộc tháng 10, 00:10 ngày 1/11 thuộc tháng 11', async () => {
+    const orgId = await createOrg(app, owner, 'quota-q3');
+    await db.organization.update({ where: { id: orgId }, data: { timezone: 'Asia/Ho_Chi_Minh' } });
+    const appt = (createdAt: Date) =>
+      db.appointment.create({
+        data: {
+          organizationId: orgId,
+          code: `L-${randomUUID().slice(0, 6)}`,
+          kind: 'MAKEUP',
+          startsAt: new Date('2026-12-01T01:00:00Z'),
+          endsAt: new Date('2026-12-01T02:00:00Z'),
+          status: 'DRAFT',
+          createdById: owner.id,
+          createdAt,
+        },
+      });
+    await appt(new Date('2026-10-31T16:50:00Z')); // 23:50 ngày 31/10 giờ VN → tháng 10
+    await appt(new Date('2026-10-31T17:10:00Z')); // 00:10 ngày 1/11 giờ VN → tháng 11
+    const nov = await getUsage(db, orgId, 'appointmentsPerMonth', new Date('2026-10-31T17:30:00Z')); // 00:30 ngày 1/11 giờ VN
+    const endNov = await getUsage(db, orgId, 'appointmentsPerMonth', new Date('2026-11-30T16:59:00Z')); // 23:59 ngày 30/11 giờ VN
+    console.log(`[Q3] lúc 00:30 1/11 (VN) đếm ${nov} (đúng 1); lúc 23:59 30/11 (VN) đếm ${endNov} (đúng 1)`);
+    expect(nov).toBe(1);
+    expect(endNov).toBe(1);
   });
 });

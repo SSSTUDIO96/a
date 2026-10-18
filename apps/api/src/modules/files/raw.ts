@@ -24,9 +24,10 @@ export function rawFileHandler(deps: Deps): RequestHandler {
     }
     const file = await deps.db.storedFile.findUnique({
       where: { storageKey: check.key },
-      select: { status: true, mimeType: true, sizeBytes: true },
+      select: { status: true, mimeType: true, sizeBytes: true, organization: { select: { status: true } } },
     });
-    if (!file || file.status !== 'READY') return fail(res, 404, 'NOT_FOUND', 'Không tìm thấy tệp');
+    // Tổ chức bị tạm khoá: vé đã cấp (≤ 10 phút) cũng thôi phát tệp — cùng lời như tệp không có (biên bản máy chủ lát 2, N2).
+    if (!file || file.status !== 'READY' || file.organization.status !== 'ACTIVE') return fail(res, 404, 'NOT_FOUND', 'Không tìm thấy tệp');
     const remaining = Math.max(0, Math.floor((check.expiresAt.getTime() - Date.now()) / 1000));
     res.status(200);
     res.setHeader('Content-Type', file.mimeType);

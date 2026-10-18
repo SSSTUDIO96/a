@@ -286,7 +286,8 @@ export const platformRoutes: AnyRoute[] = [
         effective = await getEffectivePlan(deps.db, org.id, now);
       } catch (err) {
         if (!(err instanceof AppError)) throw err;
-        configError = err.message;
+        // Trang này chỉ quản trị nền tảng (người vận hành) xem được: hiện cả hướng dẫn sửa.
+        configError = err.operatorHint ? `${err.message} ${err.operatorHint}` : err.message;
       }
       const current = effective?.current.hasSubscription ? effective.current : null;
       const [staff, appointmentsThisMonth, storageMb] = await Promise.all([
@@ -350,6 +351,8 @@ export const platformRoutes: AnyRoute[] = [
         endsAt: z.coerce.date().nullable().optional(),
         months: z.number().int().min(1).max(120).optional(),
         note: z.string().trim().max(500).optional(),
+        // Cố ý CẮT thuê bao đang hiệu lực: dòng mới kết thúc SỚM hơn dòng đang chạy (phần còn lại của dòng cũ sẽ mất).
+        replaceCurrent: z.boolean().optional(),
       })
       .refine((b) => !(b.endsAt !== undefined && b.months !== undefined), 'Chỉ gửi một trong hai: endsAt hoặc months'),
     handler: async ({ deps, params, body, userId, requestId }) => {
@@ -383,6 +386,33 @@ export const platformRoutes: AnyRoute[] = [
             latestStartsAt: latest.startsAt,
           });
         }
+        // CHỒNG THỜI GIAN (biên bản máy chủ lát 2, N8): dòng bắt đầu sau thắng, nên một dòng ngắn thêm chồng lên kỳ đã trả
+        // làm mất phần còn lại của kỳ đó (hết dòng ngắn là tổ chức bị chỉ đọc). Chặn khi dòng mới (đang có hiệu lực:
+        // TRIAL/ACTIVE/PAST_DUE) kết thúc TRƯỚC dòng đang phủ thời điểm bắt đầu — trừ khi gửi replaceCurrent: true.
+        // Vẫn cho: hẹn gia hạn nối tiếp (bắt đầu từ ngày hết hạn trở đi), đổi/nâng gói kéo dài bằng hoặc hơn, ghi dòng
+        // huỷ/hết hạn (chủ ý chấm dứt). Kiểm trong transaction đã khoá dòng tổ chức nên hai lệnh cùng lúc xếp hàng.
+        const covering = await tx.organizationSubscription.findFirst({
+          where: { organizationId: params.organizationId, startsAt: { lte: startsAt } },
+          orderBy: [{ startsAt: 'desc' }, { createdAt: 'desc' }, { id: 'desc' }],
+          include: { plan: { select: { code: true } } },
+        });
+        const coveringLive =
+          covering !== null &&
+          (covering.status === 'TRIAL' || covering.status === 'ACTIVE' || covering.status === 'PAST_DUE') &&
+          (covering.endsAt === null || covering.endsAt.getTime() > startsAt.getTime());
+        const newLive = body.status === 'TRIAL' || body.status === 'ACTIVE' || body.status === 'PAST_DUE';
+        const cutsShort =
+          coveringLive && newLive && endsAt !== null && (covering.endsAt === null || endsAt.getTime() < covering.endsAt.getTime());
+        if (cutsShort && !body.replaceCurrent) {
+          throw new AppError(
+            'CONFLICT',
+            `Thuê bao chồng thời gian: dòng đang hiệu lực (gói ${covering.plan.code}, ` +
+              `${covering.endsAt ? `tới ${covering.endsAt.toISOString().slice(0, 10)}` : 'không hạn'}) còn dài hơn dòng mới — ` +
+              'phần còn lại của kỳ đó sẽ mất. Hẹn dòng mới bắt đầu từ ngày hết hạn của dòng cũ (gia hạn nối tiếp), ' +
+              'cho dòng mới kết thúc không sớm hơn, hoặc gửi replaceCurrent: true nếu cố ý cắt.',
+            { conflictingSubscriptionId: covering.id, conflictingEndsAt: covering.endsAt, renewFrom: covering.endsAt },
+          );
+        }
         const created = await tx.organizationSubscription.create({
           data: {
             organizationId: params.organizationId,
@@ -407,6 +437,8 @@ export const platformRoutes: AnyRoute[] = [
             startsAt: startsAt.toISOString(),
             endsAt: endsAt?.toISOString() ?? null,
             previousSubscriptionId: latest?.id ?? null,
+            // Dòng mới đè lên dòng đang hiệu lực từ startsAt (và nếu cắt ngắn: phần còn lại bị bỏ, người quản trị đã xác nhận).
+            supersedes: coveringLive && covering ? { id: covering.id, endsAt: covering.endsAt?.toISOString() ?? null, cutShort: cutsShort } : null,
             note: body.note ?? null,
           },
           requestId,
@@ -548,7 +580,7 @@ export const platformRoutes: AnyRoute[] = [
         SELECT status, effective_status, count(*)::int AS n,
                count(*) FILTER (WHERE effective_status IN ('TRIAL', 'ACTIVE', 'PAST_DUE')
                                 AND ends_at > ${now}::timestamptz AND ends_at <= ${until}::timestamptz)::int AS expiring,
-               sum(price_monthly) FILTER (WHERE effective_status = 'ACTIVE')::bigint AS revenue
+               sum(price_monthly) FILTER (WHERE effective_status = 'ACTIVE' AND status = 'ACTIVE')::bigint AS revenue
         FROM eff GROUP BY status, effective_status`;
       const byStatus: Record<string, number> = { ACTIVE: 0, SUSPENDED: 0 };
       const bySubscriptionStatus: Record<string, number> = { NONE: 0, TRIAL: 0, ACTIVE: 0, PAST_DUE: 0, EXPIRED: 0, CANCELLED: 0 };
@@ -568,7 +600,7 @@ export const platformRoutes: AnyRoute[] = [
           expiringIn30Days,
           projectedMonthlyRevenue: vndFromBigInt(revenue, 'doanh thu dự kiến'),
           projectedMonthlyRevenueNote:
-            'Dự kiến: tổng giá/tháng HIỆN TẠI của gói ở các thuê bao đang ACTIVE (chưa quá hạn). Không phải tiền đã thu.',
+            'Dự kiến: tổng giá/tháng HIỆN TẠI của gói ở các thuê bao đang ACTIVE (chưa quá hạn), KHÔNG tính tổ chức đang bị tạm khoá. Không phải tiền đã thu.',
           generatedAt: now,
         },
       };

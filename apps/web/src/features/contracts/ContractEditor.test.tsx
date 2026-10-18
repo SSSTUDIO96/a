@@ -294,9 +294,15 @@ describe('dòng phí di chuyển', () => {
     await new Promise((r) => setTimeout(r, 400));
     expect(api.quoteContract).toHaveBeenCalledTimes(1);
     await userEvent.type(within(card).getByLabelText('Số km một chiều'), '12,35');
-    await waitFor(() => expect(api.quoteContract).toHaveBeenCalledTimes(2));
-    const body = api.quoteContract.mock.calls[1]?.[1] as unknown as { lines: Record<string, unknown>[] };
-    expect(body.lines[0]).toMatchObject({ locationType: 'CUSTOMER_HOME', travel: { mode: 'PER_KM', distanceKm: 12.35 } });
+    // Máy chậm có thể gọi quote giữa các phím gõ ("1", "12"…): kiểm thân của lần gọi CUỐI.
+    await waitFor(() => {
+      const body = api.quoteContract.mock.calls.at(-1)?.[1] as unknown as { lines: Record<string, unknown>[] };
+      expect(body.lines[0]).toMatchObject({ locationType: 'CUSTOMER_HOME', travel: { mode: 'PER_KM', distanceKm: 12.35 } });
+    });
+    // Mọi lần gọi sau khi chọn Tại nhà đều có travel (không có lần nào gửi dòng tại nhà thiếu phí di chuyển).
+    for (const call of api.quoteContract.mock.calls.slice(1)) {
+      expect((call[1] as unknown as { lines: Record<string, unknown>[] }).lines[0]).toHaveProperty('travel');
+    }
   });
 });
 

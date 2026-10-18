@@ -109,10 +109,12 @@ export function ListRow({
 
   if (as || href) {
     const Tag: ElementType = as ?? 'a';
+    // Thẻ tự chọn (Link) tự tính href từ linkProps; không đè bằng href rỗng.
+    const hrefProp = as ? {} : { href: disabled ? undefined : href };
     return (
       <Tag
         {...linkProps}
-        href={as ? undefined : disabled ? undefined : href}
+        {...hrefProp}
         className={cls}
         aria-current={current}
         aria-disabled={disabled || undefined}

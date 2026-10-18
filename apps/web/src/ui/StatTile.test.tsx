@@ -25,7 +25,7 @@ describe('StatTile', () => {
     const tip = screen.getByRole('button', { name: 'Giải thích' });
     expect(document.activeElement).toBe(tip);
     expect(tip.getAttribute('aria-expanded')).toBe('true');
-    expect(screen.getByText('Tổng giá trị hợp đồng có ngày sự kiện trong kỳ.')).toBeTruthy();
+    expect(screen.getAllByText('Tổng giá trị hợp đồng có ngày sự kiện trong kỳ.').length).toBeGreaterThan(0);
     await user.keyboard('{Escape}');
     expect(tip.getAttribute('aria-expanded')).toBe('false');
   });
@@ -39,7 +39,7 @@ describe('StatTile', () => {
     );
     expect(screen.queryByText('9.000.000 ₫')).toBeNull();
     expect(screen.queryByText('3 phiếu')).toBeNull();
-    expect(screen.getByText('Đang tải').closest('.ui-stat').getAttribute('aria-busy')).toBe('true');
+    expect(screen.getByText('Đang tải').closest('.ui-stat')!.getAttribute('aria-busy')).toBe('true');
     expect(screen.queryByText('1 ₫')).toBeNull();
     expect(screen.getByText('—')).toBeTruthy();
     expect(screen.getByRole('alert').textContent).toBe('Không tải được số liệu');

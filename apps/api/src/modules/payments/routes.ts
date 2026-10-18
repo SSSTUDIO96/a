@@ -3,12 +3,17 @@ import { checkInstallmentPlan, formatVnd, sortInstallments, vndFromBigInt } from
 import { defineRoute, mustOrg, mustUser, type AnyRoute } from '../../http/route';
 import { AppError } from '../../lib/errors';
 import { writeAudit } from '../../lib/audit';
-import { contractSummary, loadProgress, lockContract, paymentMath, paymentSelect, presentPayment, TAG, vnd, type Tx } from './common';
+import { contractSummary, loadProgress, lockContract, paymentMath, paymentSelect, presentPayment, TAG, vnd, vndOrNull, type Tx } from './common';
 import { ContractParams, InstallmentsBodySchema, LedgerQuery, PaymentBodySchema, PaymentParams, VoidPaymentBodySchema } from './schemas';
 import { reportRoutes } from './reports';
 
 // Cho ghi ngày thu lệch đồng hồ máy chủ tối đa 5 phút về tương lai (đồng hồ máy lễ tân chạy nhanh).
 const FUTURE_TOLERANCE_MS = 5 * 60_000;
+// Ngày thu được trước ngày lập hợp đồng tối đa 1 ngày (cọc nhận hôm trước, hôm sau mới nhập hợp đồng). Lùi xa hơn là ghi
+// sai ngày và làm đổi số "đã thu" của kỳ đã qua (biên bản máy chủ lát 2, N6).
+const BEFORE_CONTRACT_TOLERANCE_MS = 24 * 60 * 60_000;
+// Ghi lùi quá mốc này thì nhật ký đánh dấu "ghi lùi ngày" kèm số ngày lùi.
+const BACKDATE_NOTICE_MS = 24 * 60 * 60_000;
 
 // Mã PT-000001 tuần tự theo tổ chức; câu lệnh khoá dòng bộ đếm nên gửi đồng thời không trùng mã.
 async function nextPaymentCode(tx: Tx, orgId: string): Promise<string> {
@@ -40,7 +45,7 @@ const contractPaymentRoutes: AnyRoute[] = [
     params: ContractParams,
     handler: async ({ deps, org, params }) => {
       const o = mustOrg(org);
-      return { body: await loadProgress(deps.db, o.id, params.contractId, new Date()) };
+      return { body: await loadProgress(deps.db, o.id, params.contractId, new Date(), o) };
     },
   }),
 
@@ -91,7 +96,7 @@ const contractPaymentRoutes: AnyRoute[] = [
           data: { code: c.code, before: installmentAuditView(before), after: installmentAuditView(next) },
           requestId,
         });
-        return loadProgress(tx, o.id, c.id, new Date());
+        return loadProgress(tx, o.id, c.id, new Date(), o);
       });
       return { body: progress };
     },
@@ -120,6 +125,13 @@ const contractPaymentRoutes: AnyRoute[] = [
       }
       const result = await deps.db.$transaction(async (tx) => {
         const c = await lockContract(tx, o.id, params.contractId);
+        if (receivedAt.getTime() < c.createdAt.getTime() - BEFORE_CONTRACT_TOLERANCE_MS) {
+          throw new AppError(
+            'VALIDATION_FAILED',
+            `Ngày thu không được trước ngày lập hợp đồng ${c.code} quá 1 ngày (hợp đồng lập ${c.createdAt.toISOString()})`,
+            { fields: ['receivedAt'], contractCreatedAt: c.createdAt },
+          );
+        }
         if (c.status === 'CANCELLED' && body.kind === 'RECEIPT') {
           throw new AppError('CONFLICT', 'Hợp đồng đã huỷ — chỉ ghi được phiếu hoàn tiền');
         }
@@ -176,6 +188,10 @@ const contractPaymentRoutes: AnyRoute[] = [
             receivedAt: receivedAt.toISOString(),
             note: body.note ?? null,
             overpay: overBy > 0 ? { overBy, note: body.note ?? null } : null,
+            backdated:
+              now.getTime() - receivedAt.getTime() > BACKDATE_NOTICE_MS
+                ? { recordedAt: now.toISOString(), days: Math.floor((now.getTime() - receivedAt.getTime()) / (24 * 60 * 60_000)) }
+                : null,
             before: { paid: before.paid, remaining: before.remaining },
             after: { paid: after.paid, remaining: after.remaining },
           },
@@ -283,10 +299,15 @@ const contractPaymentRoutes: AnyRoute[] = [
       ]);
       const sumOf = (kind: 'RECEIPT' | 'REFUND') => {
         const g = sums.find((s) => s.kind === kind);
-        return { amount: g?._sum?.amount ? vnd(g._sum.amount, 'tổng phiếu') : 0, count: typeof g?._count === 'object' ? g._count._all : 0 };
+        return { amount: g?._sum?.amount ?? 0n, count: typeof g?._count === 'object' ? g._count._all : 0 };
       };
-      const received = sumOf('RECEIPT');
-      const refunded = sumOf('REFUND');
+      const receivedRaw = sumOf('RECEIPT');
+      const refundedRaw = sumOf('REFUND');
+      // Tổng vượt ngưỡng (dữ liệu cũ trước khi có trần 100 tỷ/phiếu): tổng = null + cờ, danh sách phiếu vẫn trả đủ.
+      const received = { amount: vndOrNull(receivedRaw.amount), count: receivedRaw.count };
+      const refunded = { amount: vndOrNull(refundedRaw.amount), count: refundedRaw.count };
+      const net = vndOrNull(receivedRaw.amount - refundedRaw.amount);
+      const totalsOverflow = received.amount === null || refunded.amount === null || net === null;
       return {
         body: {
           from: query.from,
@@ -297,8 +318,9 @@ const contractPaymentRoutes: AnyRoute[] = [
             receiptCount: received.count,
             refunded: refunded.amount,
             refundCount: refunded.count,
-            net: received.amount - refunded.amount,
+            net,
           },
+          totalsOverflow,
           items: rows.map((r) => ({ ...presentPayment(r), contract: r.contract })),
           page: query.page,
           pageSize: query.pageSize,

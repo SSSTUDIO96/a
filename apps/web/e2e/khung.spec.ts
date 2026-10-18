@@ -1,8 +1,9 @@
 import { expect, test, type APIRequestContext, type Browser, type Page } from '@playwright/test';
 import { SHOTS } from './anh';
 
-// Khung điều hướng (gói W3) ở 3 khổ 1440 / 1024 / 390 với 3 loại tài khoản tạo qua API thật:
-// chủ tổ chức, thợ (vai trò hệ thống "Thợ makeup"), và người chỉ có quyền xem lịch (vai trò tuỳ chỉnh).
+// Khung điều hướng (gói W3) ở 3 khổ 1440 / 1024 / 390 với các tài khoản tạo qua API thật:
+// chủ tổ chức INDIVIDUAL, chủ tổ chức ACADEMY, lễ tân, thợ (vai trò hệ thống "Thợ makeup"), và người chỉ có quyền xem
+// lịch (vai trò tuỳ chỉnh). Chỉ kiểm KHUNG (mục điều hướng, quyền, mục đang chọn, đường) — không phụ thuộc nội dung màn.
 
 const PASSWORD = 'mat-khau-e2e-du-dai';
 const VIEWPORTS = [
@@ -48,33 +49,62 @@ async function openAs(browser: Browser, a: Account, vp: (typeof VIEWPORTS)[numbe
   return { context, page };
 }
 
+const sideNav = (page: Page) => page.getByRole('navigation', { name: 'Mục chính', exact: true });
+const phoneNav = (page: Page) => page.getByRole('navigation', { name: 'Mục chính (điện thoại)' });
+
 // Mục điều hướng đang hiện: thanh trái (máy tính, máy tính bảng) hoặc thanh dưới (điện thoại).
 async function visibleMenu(page: Page, phone: boolean): Promise<string[]> {
   if (phone) {
-    const nav = page.getByRole('navigation', { name: 'Mục chính (điện thoại)' });
-    await expect(nav).toBeVisible();
-    return (await nav.locator('a,button').allInnerTexts()).map((t) => t.trim());
+    await expect(phoneNav(page)).toBeVisible();
+    return (await phoneNav(page).locator('a,button').allInnerTexts()).map((t) => t.trim());
   }
-  const nav = page.getByRole('navigation', { name: 'Mục chính' });
-  await expect(nav.getByRole('link').first()).toBeVisible();
-  return nav.getByRole('link').evaluateAll((els) => els.map((el) => el.getAttribute('aria-label') ?? el.textContent?.trim() ?? ''));
+  const links = sideNav(page).locator('a.sh-menu__a');
+  await expect(links.first()).toBeVisible();
+  return links.evaluateAll((els) => els.map((el) => el.getAttribute('aria-label') ?? el.textContent?.trim() ?? ''));
 }
 
-test('khung điều hướng theo quyền ở 1440 / 1024 / 390', async ({ browser, request }) => {
-  test.setTimeout(180_000);
+// Mục (và mục con) đang chọn ở thanh trái / ô đang chọn ở thanh dưới — khẳng định tự chờ (sau khi bấm chuyển đường).
+async function expectActive(page: Page, phone: boolean, names: string[]) {
+  const loc = phone ? phoneNav(page).locator('.on') : sideNav(page).locator('a.on');
+  await expect(loc).toHaveText(names);
+}
+
+async function expectSubMenu(page: Page, names: string[]) {
+  await expect(sideNav(page).locator('.sh-kids__a')).toHaveText(names);
+}
+
+async function shot(page: Page, name: string) {
+  // Chờ màn yên (không còn yêu cầu mạng) để ảnh khung không chụp giữa lúc tải; không kiểm nội dung màn.
+  await page.waitForLoadState('networkidle');
+  await page.screenshot({ path: `${SHOTS}/${name}.png`, fullPage: true });
+}
+
+test('khung điều hướng theo quyền và loại tổ chức ở 1440 / 1024 / 390', async ({ browser, request }) => {
+  test.setTimeout(300_000);
   const stamp = Date.now();
   const owner: Account = { email: `chu-${stamp}@makeup.test`, fullName: 'Nguyễn Trọng Chiến' };
+  const academyOwner: Account = { email: `chu-dt-${stamp}@makeup.test`, fullName: 'Lê Minh Thư' };
+  const receptionist: Account = { email: `le-tan-${stamp}@makeup.test`, fullName: 'Trần Ngọc Ánh' };
   const artist: Account = { email: `tho-${stamp}@makeup.test`, fullName: 'Nguyễn Thu Hà' };
   const viewer: Account = { email: `lich-${stamp}@makeup.test`, fullName: 'Phạm Bảo Vy' };
   const slug = `khung-${stamp}`;
+  const academySlug = `dao-tao-${stamp}`;
 
   // ---- Dữ liệu qua API thật ----
   const ownerToken = await register(request, owner);
+  const academyToken = await register(request, academyOwner);
+  await register(request, receptionist);
   await register(request, artist);
   await register(request, viewer);
   const auth = { Authorization: `Bearer ${ownerToken}` };
   const org = await apiJson<{ id: string }>(
-    await request.post('/api/v1/orgs', { headers: auth, data: { name: 'Studio Hoa Đào', slug, kind: 'TEAM' } }),
+    await request.post('/api/v1/orgs', { headers: auth, data: { name: 'Studio Hoa Đào', slug, kind: 'INDIVIDUAL' } }),
+  );
+  await apiJson(
+    await request.post('/api/v1/orgs', {
+      headers: { Authorization: `Bearer ${academyToken}` },
+      data: { name: 'Học viện Makeup Thư Lê', slug: academySlug, kind: 'ACADEMY' },
+    }),
   );
   await apiJson(
     await request.post(`/api/v1/orgs/${org.id}/roles`, {
@@ -82,12 +112,26 @@ test('khung điều hướng theo quyền ở 1440 / 1024 / 390', async ({ brows
       data: { key: 'chi_xem_lich', name: 'Chỉ xem lịch', permissions: ['org.read', 'schedule.read_own'] },
     }),
   );
-  await apiJson(await request.post(`/api/v1/orgs/${org.id}/members`, { headers: auth, data: { email: artist.email, roleKeys: ['artist'] } }));
-  await apiJson(await request.post(`/api/v1/orgs/${org.id}/members`, { headers: auth, data: { email: viewer.email, roleKeys: ['chi_xem_lich'] } }));
+  for (const [a, role] of [
+    [receptionist, 'receptionist'],
+    [artist, 'artist'],
+    [viewer, 'chi_xem_lich'],
+  ] as const) {
+    await apiJson(await request.post(`/api/v1/orgs/${org.id}/members`, { headers: auth, data: { email: a.email, roleKeys: [role] } }));
+  }
 
   const expected: Record<string, { desktop: string[]; phone: string[] }> = {
     chu: {
-      desktop: ['Lịch makeup', 'Hợp đồng', 'Bảng giá', 'Khách hàng', 'Thợ makeup', 'Cài đặt'],
+      desktop: ['Lịch makeup', 'Hợp đồng', 'Bảng giá', 'Khách hàng', 'Thợ makeup', 'Báo cáo', 'Cài đặt'],
+      phone: ['Lịch', 'Hợp đồng', 'Bảng giá', 'Khách', 'Thêm'],
+    },
+    'chu-dao-tao': {
+      desktop: ['Lịch makeup', 'Hợp đồng', 'Bảng giá', 'Khách hàng', 'Thợ makeup', 'Báo cáo', 'Cài đặt'],
+      // Khoá học chưa có màn → chưa có ô (bày ra được thì phải dùng được).
+      phone: ['Lịch', 'Hợp đồng', 'Thu tiền', 'Thêm'],
+    },
+    'le-tan': {
+      desktop: ['Lịch makeup', 'Hợp đồng', 'Bảng giá', 'Khách hàng', 'Thợ makeup', 'Báo cáo'],
       phone: ['Lịch', 'Hợp đồng', 'Bảng giá', 'Khách', 'Thêm'],
     },
     tho: { desktop: ['Lịch makeup', 'Bảng giá', 'Thợ makeup'], phone: ['Lịch', 'Bảng giá', 'Thêm'] },
@@ -95,6 +139,8 @@ test('khung điều hướng theo quyền ở 1440 / 1024 / 390', async ({ brows
   };
   const accounts: [string, Account][] = [
     ['chu', owner],
+    ['chu-dao-tao', academyOwner],
+    ['le-tan', receptionist],
     ['tho', artist],
     ['chi-lich', viewer],
   ];
@@ -103,22 +149,46 @@ test('khung điều hướng theo quyền ở 1440 / 1024 / 390', async ({ brows
     for (const vp of VIEWPORTS) {
       const { context, page } = await openAs(browser, account, vp);
       const phone = vp.width <= 640;
-      await expect(page.getByText('Đang dựng')).toBeVisible();
+      const base = key === 'chu-dao-tao' ? academySlug : slug;
       expect(await visibleMenu(page, phone), `${key} @${vp.name}`).toEqual(phone ? expected[key]?.phone : expected[key]?.desktop);
+      await expectActive(page, phone, [phone ? 'Lịch' : 'Lịch makeup']);
       await noHorizontalOverflow(page, `${key} @${vp.name}`);
-      await page.screenshot({ path: `${SHOTS}/w3-khung-${key}-${vp.name}.png`, fullPage: true });
+      await shot(page, `w3-khung-${key}-${vp.name}`);
 
       if (key === 'chu' && vp.name === '1440') {
         // Menu con của Bảng giá + danh sách đổi tổ chức.
-        await page.getByRole('navigation', { name: 'Mục chính' }).getByRole('link', { name: 'Bảng giá' }).click();
+        await sideNav(page).getByRole('link', { name: 'Bảng giá' }).click();
         await page.getByRole('link', { name: 'Gói theo nhân vật' }).click();
         await expect(page).toHaveURL(new RegExp(`/${slug}/bang-gia/goi$`));
         await page.getByRole('button', { name: /Đổi tổ chức/ }).click();
         await expect(page.getByText('Tổ chức của bạn')).toBeVisible();
         await noHorizontalOverflow(page, 'chủ bảng giá 1440');
         await page.screenshot({ path: `${SHOTS}/w3-khung-chu-1440-bang-gia-doi-to-chuc.png` });
-        // Mất mạng → dải cảnh báo.
         await page.keyboard.press('Escape');
+        // Hợp đồng có menu con; ở /thu-tien (đường không bắt đầu bằng hop-dong) mục "Hợp đồng" + "Thu tiền" đang chọn.
+        await sideNav(page).getByRole('link', { name: 'Hợp đồng' }).click();
+        await expect(page).toHaveURL(new RegExp(`/${slug}/hop-dong$`));
+        await expectSubMenu(page, ['Lập hợp đồng', 'Danh sách hợp đồng', 'Thu tiền']);
+        await sideNav(page).getByRole('link', { name: 'Thu tiền' }).click();
+        await expect(page).toHaveURL(new RegExp(`/${slug}/thu-tien$`));
+        await expectActive(page, false, ['Hợp đồng', 'Thu tiền']);
+        await shot(page, 'w3-khung-chu-1440-thu-tien');
+        // Thợ makeup: hai mục con.
+        await sideNav(page).getByRole('link', { name: 'Thợ makeup' }).click();
+        await expectSubMenu(page, ['Thợ & bậc lương', 'Tiền công theo gói']);
+        await sideNav(page).getByRole('link', { name: 'Tiền công theo gói' }).click();
+        await expect(page).toHaveURL(new RegExp(`/${slug}/nhan-su/tien-cong$`));
+        await expectActive(page, false, ['Thợ makeup', 'Tiền công theo gói']);
+        await shot(page, 'w3-khung-chu-1440-tien-cong');
+        // Báo cáo (chủ có cả hai quyền) + Cài đặt → Hồ sơ thương hiệu.
+        await sideNav(page).getByRole('link', { name: 'Báo cáo' }).click();
+        await expect(page).toHaveURL(new RegExp(`/${slug}/bao-cao/doanh-thu$`));
+        await expectSubMenu(page, ['Doanh thu', 'Sổ thu']);
+        await sideNav(page).getByRole('link', { name: 'Cài đặt' }).click();
+        await expect(page).toHaveURL(new RegExp(`/${slug}/cai-dat/thuong-hieu$`));
+        await expectActive(page, false, ['Cài đặt', 'Hồ sơ thương hiệu']);
+        await shot(page, 'w3-khung-chu-1440-thuong-hieu');
+        // Mất mạng → dải cảnh báo.
         await context.setOffline(true);
         await expect(page.getByText(/Mất kết nối mạng/)).toBeVisible();
         await page.screenshot({ path: `${SHOTS}/w3-khung-chu-1440-mat-mang.png` });
@@ -131,15 +201,16 @@ test('khung điều hướng theo quyền ở 1440 / 1024 / 390', async ({ brows
       }
       if (key === 'chu' && vp.name === '1024') {
         // Máy tính bảng: chỉ biểu tượng, tên mục hiện ở tooltip khi rê chuột.
-        await page.getByRole('link', { name: 'Hợp đồng' }).hover();
+        await sideNav(page).getByRole('link', { name: 'Hợp đồng' }).hover();
         await expect(page.getByRole('tooltip')).toHaveText('Hợp đồng');
         await page.screenshot({ path: `${SHOTS}/w3-khung-chu-1024-tooltip.png` });
       }
       if (key === 'chu' && vp.name === '390') {
-        // Ngăn "Thêm": Thợ makeup, Cài đặt, tổ chức, đăng xuất.
-        await page.getByRole('button', { name: 'Thêm' }).click();
+        // Ngăn "Thêm": Thợ makeup, Báo cáo, Cài đặt, tổ chức, đăng xuất.
+        await phoneNav(page).getByRole('button', { name: 'Thêm' }).click();
         const sheet = page.getByRole('dialog', { name: 'Thêm' });
         await expect(sheet.getByRole('link', { name: 'Thợ makeup' })).toBeVisible();
+        await expect(sheet.getByRole('link', { name: 'Báo cáo' })).toBeVisible();
         await expect(sheet.getByRole('link', { name: 'Cài đặt' })).toBeVisible();
         await expect(sheet.getByRole('button', { name: 'Đăng xuất' })).toBeVisible();
         await noHorizontalOverflow(page, 'chủ ngăn Thêm 390');
@@ -147,20 +218,62 @@ test('khung điều hướng theo quyền ở 1440 / 1024 / 390', async ({ brows
         await sheet.getByRole('link', { name: 'Thợ makeup' }).click();
         await expect(page).toHaveURL(new RegExp(`/${slug}/nhan-su$`));
         await expect(page.locator('.sh-top__title')).toHaveText('Thợ makeup');
+        await expectActive(page, true, ['Thêm']);
+        // INDIVIDUAL: /thu-tien thuộc ô "Hợp đồng".
+        await page.goto(`/${slug}/thu-tien`);
+        await expect(phoneNav(page).locator('.on')).toHaveText('Hợp đồng');
       }
-      if (key === 'chi-lich' && vp.name === '1440') {
+      if (key === 'chu-dao-tao' && vp.name === '390') {
+        // ACADEMY: ô "Thu tiền" riêng, đang chọn ở /thu-tien; "Bảng giá", "Khách hàng" vào ngăn "Thêm".
+        await phoneNav(page).getByRole('link', { name: 'Thu tiền' }).click();
+        await expect(page).toHaveURL(new RegExp(`/${academySlug}/thu-tien$`));
+        await expectActive(page, true, ['Thu tiền']);
+        await shot(page, 'w3-khung-chu-dao-tao-390-thu-tien');
+        await phoneNav(page).getByRole('button', { name: 'Thêm' }).click();
+        const sheet = page.getByRole('dialog', { name: 'Thêm' });
+        expect((await sheet.locator('.sh-more__list').first().locator('a').allInnerTexts()).map((t) => t.trim())).toEqual([
+          'Bảng giá',
+          'Khách hàng',
+          'Thợ makeup',
+          'Báo cáo',
+          'Cài đặt',
+        ]);
+        await page.screenshot({ path: `${SHOTS}/w3-khung-chu-dao-tao-390-them.png` });
+      }
+      if (key === 'le-tan' && vp.name === '1440') {
+        // Lễ tân có payments.read mà không reports.read: "Báo cáo" chỉ có Sổ thu; Doanh thu → 403.
+        await sideNav(page).getByRole('link', { name: 'Báo cáo' }).click();
+        await expect(page).toHaveURL(new RegExp(`/${slug}/bao-cao/so-thu$`));
+        await expectSubMenu(page, ['Sổ thu']);
+        await expectActive(page, false, ['Báo cáo', 'Sổ thu']);
+        await shot(page, 'w3-khung-le-tan-1440-so-thu');
+        await page.goto(`/${slug}/bao-cao/doanh-thu`);
+        await expect(page.getByRole('alert')).toHaveText('Bạn không có quyền xem doanh thu.');
+        await page.screenshot({ path: `${SHOTS}/w3-khung-le-tan-1440-doanh-thu-403.png` });
+        // Không có payroll.read: Thợ makeup chỉ có "Thợ & bậc lương".
+        await sideNav(page).getByRole('link', { name: 'Thợ makeup' }).click();
+        await expectSubMenu(page, ['Thợ & bậc lương']);
+      }
+      if (key === 'chi-lich' && (vp.name === '1440' || vp.name === '390')) {
         // Vào thẳng đường không có quyền → dải 403.
-        await page.goto(`/${slug}/hop-dong`);
+        await page.goto(`/${base}/hop-dong`);
         await expect(page.getByRole('alert')).toHaveText('Bạn không có quyền xem hợp đồng.');
-        await page.screenshot({ path: `${SHOTS}/w3-khung-chi-lich-1440-403.png` });
-      }
-      if (key === 'chi-lich' && vp.name === '390') {
-        await page.goto(`/${slug}/hop-dong`);
-        await expect(page.getByRole('alert')).toHaveText('Bạn không có quyền xem hợp đồng.');
-        await noHorizontalOverflow(page, 'chỉ lịch 403 390');
-        await page.screenshot({ path: `${SHOTS}/w3-khung-chi-lich-390-403.png` });
+        await noHorizontalOverflow(page, `chỉ lịch 403 ${vp.name}`);
+        await page.screenshot({ path: `${SHOTS}/w3-khung-chi-lich-${vp.name}-403.png` });
       }
       await context.close();
     }
   }
+});
+
+test('đường ngoài khung: /trang/:slug mở khi chưa đăng nhập; /quan-tri chưa đăng nhập → đăng nhập', async ({ page }) => {
+  await page.goto('/trang/khong-ton-tai');
+  await page.waitForLoadState('networkidle');
+  await expect(page).toHaveURL(/\/trang\/khong-ton-tai$/);
+  await expect(page.getByRole('navigation', { name: 'Mục chính', exact: true })).toHaveCount(0);
+  await page.screenshot({ path: `${SHOTS}/w3-khung-trang-cong-khai-chua-dang-nhap.png` });
+
+  await page.goto('/quan-tri/to-chuc');
+  await expect(page).toHaveURL(/\/dang-nhap$/);
+  await expect(page.getByRole('heading', { name: 'Đăng nhập' })).toBeVisible();
 });

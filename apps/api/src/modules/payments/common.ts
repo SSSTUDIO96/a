@@ -1,5 +1,5 @@
 import type { Prisma } from '@prisma/client';
-import { allocateToInstallments, PaymentMathError, summarizePayments, vndFromBigInt, type Vnd } from '@makeup/shared';
+import { allocateToInstallments, PaymentMathError, summarizePayments, vndFromBigInt, type Permission, type Vnd } from '@makeup/shared';
 import { AppError } from '../../lib/errors';
 
 export type Tx = Prisma.TransactionClient;
@@ -20,6 +20,13 @@ export function vnd(v: bigint, field: string): Vnd {
   return vndFromBigInt(v, field);
 }
 
+// TỔNG GỘP nhiều phiếu (sổ thu, báo cáo): vượt ngưỡng số nguyên an toàn thì trả null thay vì ném lỗi 500 — danh sách
+// phiếu vẫn trả về để người dùng tìm ra phiếu gõ nhầm (biên bản máy chủ lát 2, M3: sổ thu là công cụ đối soát mà chính nó sập).
+// Nơi gọi đặt cờ totalsOverflow để giao diện báo "tổng quá lớn, kiểm lại phiếu".
+export function vndOrNull(v: bigint): Vnd | null {
+  return v > BigInt(Number.MAX_SAFE_INTEGER) || v < BigInt(Number.MIN_SAFE_INTEGER) ? null : Number(v);
+}
+
 // Khoá dòng hợp đồng: phiếu thu, huỷ phiếu, đổi tiến độ của cùng hợp đồng xếp hàng — kiểm "vượt tổng"/"hoàn vượt thu"
 // luôn dựa trên số liệu mới nhất. Hợp đồng của tổ chức khác trả đúng lỗi như mã bịa.
 export async function lockContract(tx: Tx, orgId: string, contractId: string) {
@@ -28,7 +35,7 @@ export async function lockContract(tx: Tx, orgId: string, contractId: string) {
   if (rows.length === 0) throw new AppError('NOT_FOUND', 'Không tìm thấy hợp đồng');
   return tx.contract.findUniqueOrThrow({
     where: { id: contractId },
-    select: { id: true, code: true, status: true, total: true, depositRequired: true },
+    select: { id: true, code: true, status: true, total: true, depositRequired: true, createdAt: true },
   });
 }
 
@@ -69,7 +76,9 @@ export async function contractSummary(db: Tx, orgId: string, c: { id: string; to
 }
 
 // Toàn bộ tình hình thu tiền của một hợp đồng: tiến độ + trạng thái từng đợt, phiếu (mới nhất trước), tóm tắt.
-export async function loadProgress(db: Tx, orgId: string, contractId: string, now: Date) {
+// Số điện thoại khách chỉ trả cho người có quyền xem khách (customers.read) — quyền thu tiền không kéo theo quyền xem
+// thông tin liên lạc của khách (biên bản máy chủ lát 2, N5). Không có quyền: phone = null, phoneHidden = true.
+export async function loadProgress(db: Tx, orgId: string, contractId: string, now: Date, viewer: { permissions: ReadonlySet<Permission> }) {
   const contract = await db.contract.findFirst({
     where: { id: contractId, organizationId: orgId },
     select: {
@@ -118,7 +127,9 @@ export async function loadProgress(db: Tx, orgId: string, contractId: string, no
       status: contract.status,
       eventDate: contract.eventDate,
       confirmedAt: contract.confirmedAt,
-      customer: contract.customer,
+      customer: viewer.permissions.has('customers.read')
+        ? { ...contract.customer, phoneHidden: false }
+        : { id: contract.customer.id, fullName: contract.customer.fullName, phone: null, phoneHidden: true },
     },
     summary,
     installments: allocated,

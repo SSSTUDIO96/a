@@ -25,11 +25,20 @@ export const PURPOSE_POLICY: Record<FilePurpose, { maxBytes: number; types: read
   DESIGN_CARD: { maxBytes: 10 * MB, types: IMAGES },
 };
 
-const MAX_IMAGE_SIDE = 20_000;
+// Kích thước ảnh tối đa (biên bản máy chủ lát 2, N4): cạnh dài ≤ 12.000 điểm ảnh VÀ tổng ≤ 64 triệu điểm ảnh.
+// Lý do: trình duyệt/điện thoại giải mã ảnh ra RGBA (4 byte/điểm) — 64 triệu điểm ≈ 256 MB bộ nhớ, ngưỡng còn mở được trên
+// điện thoại tầm trung; ảnh 20000×20000 (400 triệu điểm ≈ 1,6 GB) làm treo máy khách xem trang. 64 triệu (không phải 60)
+// để vẫn nhận ảnh gốc máy full-frame 61 MP (vd. 9504×6336 ≈ 60,2 triệu); ảnh medium-format 100 MP phải xuất nhỏ lại.
+export const MAX_IMAGE_SIDE = 12_000;
+export const MAX_IMAGE_PIXELS = 64_000_000;
+// Thân vượt giới hạn vẫn được ĐỌC BỎ tới mốc này rồi mới trả 400 — máy khách đang gửi dở nhận được lời báo lỗi thay vì
+// lỗi mạng (N1). Vượt mốc (gửi bừa vài chục MB trở lên) thì cắt kết nối để khỏi tốn băng thông vô hạn.
+const DRAIN_LIMIT_BYTES = 64 * MB;
 // Hạn URL đọc tệp: 10 phút.
 export const SIGNED_URL_TTL_SEC = 600;
 
-// Đọc thân nhị phân, dừng khi vượt giới hạn. Phần vượt vẫn được rút cạn (tối đa thêm 1 MB) để máy khách nhận được lời báo lỗi.
+// Đọc thân nhị phân, dừng giữ dữ liệu khi vượt giới hạn. Phần vượt được đọc bỏ (không giữ trong bộ nhớ) tới DRAIN_LIMIT_BYTES
+// để máy khách gửi xong và nhận lời "Tệp vượt giới hạn …" (trước đây cắt kết nối sau 1 MB thừa → máy khách chỉ thấy ECONNRESET).
 export async function readLimitedBody(req: Request, maxBytes: number): Promise<Buffer> {
   if (req.body !== undefined) {
     throw new AppError('VALIDATION_FAILED', 'Gửi nội dung tệp dạng nhị phân (Content-Type: application/octet-stream hoặc image/*), không gửi JSON');
@@ -43,7 +52,7 @@ export async function readLimitedBody(req: Request, maxBytes: number): Promise<B
     total += chunk.length;
     if (total > maxBytes) over = true;
     if (over) {
-      if (total > maxBytes + MB) {
+      if (total > DRAIN_LIMIT_BYTES) {
         req.destroy();
         break;
       }
@@ -76,8 +85,12 @@ export function checkContent(purpose: FilePurpose, data: Buffer, declaredSha256?
   if (type !== 'application/pdf') {
     const size = imageSize(data, type);
     if (!size) throw new AppError('VALIDATION_FAILED', 'Ảnh hỏng hoặc không đọc được kích thước');
-    if (size.width > MAX_IMAGE_SIDE || size.height > MAX_IMAGE_SIDE) {
-      throw new AppError('VALIDATION_FAILED', `Ảnh quá lớn (tối đa ${MAX_IMAGE_SIDE} điểm ảnh mỗi cạnh)`);
+    if (size.width > MAX_IMAGE_SIDE || size.height > MAX_IMAGE_SIDE || size.width * size.height > MAX_IMAGE_PIXELS) {
+      throw new AppError(
+        'VALIDATION_FAILED',
+        `Ảnh quá lớn (${size.width}×${size.height}): tối đa ${MAX_IMAGE_SIDE} điểm ảnh mỗi cạnh và ${MAX_IMAGE_PIXELS / 1_000_000} triệu điểm ảnh — hãy xuất ảnh nhỏ lại`,
+        { width: size.width, height: size.height, maxSide: MAX_IMAGE_SIDE, maxPixels: MAX_IMAGE_PIXELS },
+      );
     }
     ({ width, height } = size);
   }

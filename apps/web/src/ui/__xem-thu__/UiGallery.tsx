@@ -37,6 +37,7 @@ import {
   type AvatarPerson,
   type Vnd,
 } from '../index';
+import { GalleryC2 } from './GalleryC2';
 import './gallery.css';
 
 function Cell({ cap, children }: { cap: string; children: ReactNode }) {
@@ -780,6 +781,9 @@ export function UiGallery() {
           </Card>
         </div>
       </div>
+
+      {/* ===== Component bản vẽ C2 mục 0.1–0.2 ===== */}
+      <GalleryC2 />
 
       {/* ===== Dialog ===== */}
       <Dialog

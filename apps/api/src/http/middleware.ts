@@ -82,6 +82,10 @@ export function errorHandler(deps: Deps) {
     let appErr: AppError;
     if (err instanceof AppError) {
       appErr = err;
+      // Lỗi cấu hình / lỗi máy chủ có chủ đích: người dùng chỉ đọc lời ngắn, người vận hành đọc hướng dẫn trong log.
+      if (err.code === 'INTERNAL' || err.operatorHint) {
+        deps.logger.error({ requestId, path: req.path, code: err.code, operatorHint: err.operatorHint }, err.message);
+      }
     } else if (err instanceof z.ZodError) {
       // Trả cả đường dẫn đầy đủ của từng lỗi (vd "lines.0.travel.amount") để giao diện đặt lỗi đúng ô.
       appErr = new AppError('VALIDATION_FAILED', 'Dữ liệu gửi lên không hợp lệ', {

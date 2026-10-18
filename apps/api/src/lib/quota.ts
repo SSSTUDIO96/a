@@ -108,10 +108,13 @@ export async function getEffectivePlan(
   if (current.hasSubscription) return { plan: current.subscription.plan, source: 'subscription', current };
   const plan = await tx.subscriptionPlan.findUnique({ where: { code: DEFAULT_PLAN_CODE } });
   if (!plan) {
+    // Lời cho người dùng studio KHÔNG chứa lệnh vận hành (biên bản máy chủ lát 2, N10); lệnh nằm trong log máy chủ.
     throw new AppError(
       'INTERNAL',
-      `Lỗi cấu hình: tổ chức chưa có thuê bao và hệ thống chưa có gói mặc định mã "${DEFAULT_PLAN_CODE}". ` +
-        'Người vận hành tạo gói này (pnpm --filter @makeup/api platform:seed-plans -- --with-trial) hoặc gán thuê bao cho tổ chức.',
+      'Hệ thống chưa cấu hình gói dịch vụ cho tổ chức này. Vui lòng liên hệ bộ phận hỗ trợ.',
+      { reason: 'DEFAULT_PLAN_MISSING' },
+      `Tổ chức ${orgId} chưa có thuê bao và hệ thống chưa có gói mặc định mã "${DEFAULT_PLAN_CODE}". ` +
+        'Tạo gói: pnpm --filter @makeup/api platform:seed-plans -- --with-trial (bản build: pnpm --filter @makeup/api platform:seed-plans:prod -- --with-trial), hoặc gán thuê bao cho tổ chức.',
     );
   }
   return { plan, source: 'default', current };

@@ -23,6 +23,8 @@ export class AppError extends Error {
     readonly code: ErrorCode,
     message: string,
     readonly details?: unknown,
+    // Hướng dẫn cho NGƯỜI VẬN HÀNH (lệnh sửa cấu hình…): chỉ ghi vào log máy chủ, KHÔNG gửi cho máy khách.
+    readonly operatorHint?: string,
   ) {
     super(message);
     this.status = STATUS[code];

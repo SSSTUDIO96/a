@@ -59,3 +59,24 @@
 .xt-row > .ui-skel-group { flex: 1; }
 .xt-ng-gap { margin-top: 18px; }
 .ui-btn.xt-add { padding: 0; margin: 4px 0 2px; }
+
+/* Phần C2 (ListDetail, ListRow, StatTile, PersonChip, ImageUpload, ConfirmDialog) */
+.xt-c2 { margin-top: 16px; }
+.xt-ld-frame { background: var(--bg); border: 1px solid var(--line-2); border-radius: var(--r-card); padding: 14px; min-width: 0; }
+.xt-ld-search { padding: 12px 14px; border-bottom: 1px solid var(--line); }
+.xt-ld-narrow { margin-top: 14px; }
+.xt-rows { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 14px 16px; padding: 14px 18px; }
+.xt-rows .xt-cell > .ui-lrow, .xt-rows .xt-cell > [role='status'] { border: 1px solid var(--line-2); border-radius: var(--r-ctl); }
+.xt-faint { color: var(--faint); font-size: 13px; }
+.xt-b { font-weight: 700; }
+.xt-block { display: block; }
+.xt-m-only { display: none; }
+@media (max-width: 640px) {
+  .xt-ld-frame { padding: 8px; }
+  .xt-m-only { display: inline-flex; }
+  .xt-rows { padding: 12px 14px; }
+}
+.xt-c2 .ui-card__sub { white-space: normal; }
+.xt-ld-ctl { margin: 4px 0 12px; }
+.xt-cells--fill > .ui-stat { flex: 1 1 180px; }
+.xt-cells--fill > .ui-stats { flex: 1 1 100%; }

@@ -103,11 +103,13 @@ describe('Cửa vào quản trị nền tảng', () => {
     expect(await deps.db.organizationSubscription.count({ where: { organizationId: orgId } })).toBe(0);
   });
 
-  it('chưa đăng nhập → 401 ở mọi đường /platform', async () => {
+  // Trước đây đòi 401 — chính bài thử ép hành vi làm lộ đường quản trị (biên bản máy chủ lát 2, M2). Nay: 404 như đường bịa.
+  it('chưa đăng nhập → 404 "Không có đường API này" ở mọi đường /platform (không lộ đường có thật)', async () => {
     const ids = { organizationId: orgId, planId };
     for (const r of platformRoutes) {
       const res = await send(r, fill(r, ids), {});
-      expect(res.status, `${r.method} ${r.path}`).toBe(401);
+      expect(res.status, `${r.method} ${r.path}`).toBe(404);
+      expect(res.body.error.message).toBe('Không có đường API này');
     }
   });
 
@@ -282,5 +284,89 @@ describe('Danh sách và thống kê', () => {
     expect(d((s) => s.expiringIn30Days)).toBe(2); // soon (10 ngày) + suspended (TRIAL còn 20 ngày)
     expect(d((s) => s.projectedMonthlyRevenue)).toBe(2 * price);
     expect(statsAfter.projectedMonthlyRevenueNote).toMatch(/Dự kiến/);
+  });
+});
+
+describe('Sửa nghiệm thu máy chủ lát 2', () => {
+  it('S1 — PATCH gói chỉ gửi priceMonthly → 9 thông số khác GIỮ NGUYÊN; tổ chức ở giới hạn 2 nhân sự vẫn bị chặn sau khi đổi giá', async () => {
+    const created = await request(app)
+      .post('/api/v1/platform/plans')
+      .set(bearer(admin))
+      .send({ code: `s1_${randomUUID().slice(0, 8)}`, name: 'Gói nhỏ', priceMonthly: 99_000, maxStaff: 2, maxAppointmentsPerMonth: 30, maxStorageMb: 500, maxStudents: 0, maxCourses: 0, customDomain: true, features: ['web'], isActive: false, sortOrder: 7 })
+      .expect(201);
+    const upd = await request(app).patch(`/api/v1/platform/plans/${created.body.id}`).set(bearer(admin)).send({ priceMonthly: 129_000 }).expect(200);
+    const keys = ['maxStaff', 'maxAppointmentsPerMonth', 'maxStorageMb', 'maxStudents', 'maxCourses', 'customDomain', 'features', 'isActive', 'sortOrder', 'name', 'code'];
+    const changed = keys.filter((k) => JSON.stringify(created.body[k]) !== JSON.stringify(upd.body[k]));
+    console.log(`[S1] PATCH {priceMonthly} → trường không gửi bị đổi: ${changed.length}/${keys.length}`);
+    expect(changed).toEqual([]);
+    expect(upd.body.priceMonthly).toBe(129_000);
+    // Đọc lại từ database, không chỉ tin phản hồi.
+    const row = await deps.db.subscriptionPlan.findUniqueOrThrow({ where: { id: created.body.id } });
+    expect({ maxStaff: row.maxStaff, isActive: row.isActive, features: row.features, sortOrder: row.sortOrder }).toEqual({ maxStaff: 2, isActive: false, features: ['web'], sortOrder: 7 });
+    // Nhật ký ghi trạng thái sau THẬT và đúng danh sách trường đã gửi.
+    const log = await deps.db.auditLog.findFirst({ where: { entityId: created.body.id, action: 'platform.plan_updated' } });
+    expect(log?.data).toMatchObject({ before: { priceMonthly: 99_000, maxStaff: 2 }, after: { priceMonthly: 129_000, maxStaff: 2, isActive: false }, changedFields: ['priceMonthly'] });
+    // Mã gói không đổi được: gửi code → 400 (trước đây lặng lẽ bỏ qua). Thân rỗng → 400.
+    expect((await request(app).patch(`/api/v1/platform/plans/${created.body.id}`).set(bearer(admin)).send({ code: 'doi_ma' })).status).toBe(400);
+    expect((await request(app).patch(`/api/v1/platform/plans/${created.body.id}`).set(bearer(admin)).send({})).status).toBe(400);
+  });
+
+  it('M2 — người CHƯA đăng nhập / thẻ rác gọi đường /platform/ thật → 404 GIỐNG HỆT đường bịa (không phân biệt được 0/8)', async () => {
+    const strip = (b: { error?: Record<string, unknown> }) => JSON.stringify(withoutRequestId(b));
+    let distinct = 0;
+    for (const r of platformRoutes) {
+      for (const headers of [{}, { authorization: 'Bearer rac' }] as Record<string, string>[]) {
+        const real = await send(r, fill(r, { organizationId: randomUUID(), planId: randomUUID() }), headers);
+        const fake = await send(r, `/api/v1/platform/bia-${randomUUID()}`, headers);
+        if (real.status !== 404 || real.status !== fake.status || strip(real.body) !== strip(fake.body)) distinct++;
+      }
+    }
+    console.log(`[M2] chưa đăng nhập + thẻ rác: phân biệt được ${distinct}/${platformRoutes.length * 2}`);
+    expect(distinct).toBe(0);
+    // GIỮ: quản trị nền tảng vẫn dùng được.
+    await request(app).get('/api/v1/platform/stats').set(bearer(admin)).expect(200);
+  });
+
+  it('N8 — thuê bao 1 năm đã trả + dòng ngắn chồng lên → 409, không ghi; cố ý cắt (replaceCurrent) → được, nhật ký ghi rõ; hẹn gia hạn nối tiếp → được', async () => {
+    const o = await createOrg(app, owner, 'qtnt-chong');
+    const now = Date.now();
+    const year = await addSub(o, { planId, status: 'ACTIVE', startsAt: new Date(now - 10 * DAY).toISOString(), endsAt: new Date(now + 355 * DAY).toISOString() });
+    const short = await request(app)
+      .post(`/api/v1/platform/organizations/${o}/subscriptions`)
+      .set(bearer(admin))
+      .send({ planId, status: 'TRIAL', startsAt: new Date(now - 5 * DAY).toISOString(), endsAt: new Date(now - DAY).toISOString() });
+    console.log(`[N8] dòng ngắn chồng lên năm đã trả → ${short.status} ${short.body.error?.message?.slice(0, 60)}`);
+    expect(short.status).toBe(409);
+    expect(short.body.error.details).toMatchObject({ conflictingSubscriptionId: year.id });
+    expect(await deps.db.organizationSubscription.count({ where: { organizationId: o } })).toBe(1);
+    // Đổi gói giữa kỳ mà dòng mới ngắn hơn: cũng 409 nếu không xác nhận cắt.
+    const p2 = await makePlan(200_000);
+    const mid = await request(app).post(`/api/v1/platform/organizations/${o}/subscriptions`).set(bearer(admin)).send({ planId: p2.id, months: 1 });
+    expect(mid.status).toBe(409);
+    // Nâng gói kéo dài hơn kỳ cũ: được (dòng mới đè từ hôm nay).
+    const up = await addSub(o, { planId: p2.id, months: 13 });
+    // Hẹn gia hạn NỐI TIẾP (bắt đầu đúng ngày hết hạn): được.
+    const upRow = await deps.db.organizationSubscription.findUniqueOrThrow({ where: { id: up.id } });
+    await addSub(o, { planId, startsAt: upRow.endsAt?.toISOString(), months: 12 });
+    // Cố ý cắt: replaceCurrent → được, nhật ký ghi cutShort.
+    const o2 = await createOrg(app, owner, 'qtnt-cat');
+    await addSub(o2, { planId, months: 12 });
+    const cut = await addSub(o2, { planId: p2.id, months: 1, replaceCurrent: true, note: 'Khách xin đổi gói, hoàn tiền phần còn lại' });
+    const log = await deps.db.auditLog.findFirst({ where: { entityId: cut.id, action: 'platform.subscription_added' } });
+    expect(log?.data).toMatchObject({ supersedes: { cutShort: true } });
+    // Ghi dòng HUỶ (chủ ý chấm dứt) không bị chặn.
+    await addSub(o2, { planId, status: 'CANCELLED', note: 'Chấm dứt' });
+  });
+
+  it('N9 — doanh thu dự kiến KHÔNG cộng tổ chức đang bị tạm khoá; ghi chú nói rõ', async () => {
+    const o = await createOrg(app, owner, 'qtnt-dt');
+    const p = await makePlan(777_777);
+    await addSub(o, { planId: p.id, months: 1 });
+    const s1 = (await request(app).get('/api/v1/platform/stats').set(bearer(admin)).expect(200)).body;
+    await request(app).patch(`/api/v1/platform/organizations/${o}`).set(bearer(admin)).send({ status: 'SUSPENDED', reason: 'thử' }).expect(200);
+    const s2 = (await request(app).get('/api/v1/platform/stats').set(bearer(admin)).expect(200)).body;
+    console.log(`[N9] doanh thu dự kiến trước khoá ${s1.projectedMonthlyRevenue}, sau khoá ${s2.projectedMonthlyRevenue}`);
+    expect(s1.projectedMonthlyRevenue - s2.projectedMonthlyRevenue).toBe(777_777);
+    expect(s2.projectedMonthlyRevenueNote).toMatch(/tạm khoá/);
   });
 });

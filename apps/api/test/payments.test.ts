@@ -52,6 +52,11 @@ async function setStatus(o: Org, contractId: string, to: 'CONFIRMED' | 'CANCELLE
   if (res.status !== 200) throw new Error(`Đổi trạng thái thất bại ${res.status}: ${JSON.stringify(res.body)}`);
 }
 
+// Lùi ngày lập hợp đồng (dữ liệu thử): phiếu thu được trước ngày lập hợp đồng tối đa 1 ngày (N6).
+async function backdateContract(contractId: string, days: number) {
+  await deps.db.$executeRaw`UPDATE contracts SET created_at = now() - make_interval(days => ${days}::int) WHERE id = ${contractId}::uuid`;
+}
+
 function pay(u: TestUser, orgId: string, contractId: string, body: object, key = idem()) {
   return request(app).post(api(orgId, `/contracts/${contractId}/payments`)).set(bearer(u)).set('idempotency-key', key).send(body);
 }
@@ -146,6 +151,7 @@ describe('tiến độ thanh toán', () => {
       ['Đợt 1', 0, 'OVERDUE'],
       ['Đợt 2', 0, 'DUE'],
     ]);
+    await backdateContract(c.id, 5);
     await pay(receptionist, A.orgId, c.id, { method: 'CASH', amount: 3_000_000, receivedAt: at(-3 * DAY), note: 'Cọc' }).expect(201);
     expect(await states()).toEqual([
       ['Đặt cọc', 3_000_000, 'PAID'],
@@ -289,6 +295,7 @@ describe('sổ thu và báo cáo doanh thu', () => {
   it('khớp từng đồng với tổng các phiếu: theo tháng, theo hợp đồng, sổ thu', async () => {
     const R = await newOrg('bao-cao');
     const c1 = await newContract(R, 10_000_000, 3_000_000);
+    await backdateContract(c1.id, 41);
     const c2 = await newContract(R, 5_000_000, 1_000_000);
     const c3 = await newContract(R, 2_000_000);
     const c4 = await newContract(R, 4_000_000);
@@ -429,5 +436,105 @@ describe('cách ly tổ chức và quyền', () => {
     expect((await request(app).get(api(A.orgId, '/reports/revenue')).query(q).set(bearer(receptionist))).status).toBe(403);
     expect((await request(app).get(api(A.orgId, '/reports/revenue')).query(q).set(bearer(accountant))).status).toBe(200);
     expect(await deps.db.payment.count({ where: { contractId: cA.id } })).toBe(1);
+  });
+});
+
+describe('sửa nghiệm thu máy chủ lát 2 — thu tiền', () => {
+  it('M3 — một phiếu > 100 tỷ → 400, không ghi; đúng 100 tỷ (cho thu vượt + ghi chú) → được', async () => {
+    const o = await newOrg('m3-tran');
+    const c = await newContract(o, 1_000_000);
+    const over = await pay(o.owner, o.orgId, c.id, { method: 'CASH', amount: 100_000_000_001, allowOverpay: true, note: 'gõ thừa số 0' });
+    console.log(`[M3] phiếu 100.000.000.001 đ → ${over.status} ${over.body.error?.details?.issues?.[0]?.message ?? ''}`);
+    expect(over.status).toBe(400);
+    const huge = await pay(o.owner, o.orgId, c.id, { method: 'CASH', amount: 5_000_000_000_000_000, allowOverpay: true, note: 'tấn công' });
+    expect(huge.status).toBe(400);
+    expect(await deps.db.payment.count({ where: { contractId: c.id } })).toBe(0);
+    await pay(o.owner, o.orgId, c.id, { method: 'CASH', amount: 100_000_000_000, allowOverpay: true, note: 'trần' }).expect(201);
+  });
+
+  it('M3 — dữ liệu cũ: 2 phiếu 5 triệu tỷ (ghi thẳng database, trước khi có trần) → báo cáo + sổ thu 200, tổng null + cờ totalsOverflow, danh sách phiếu vẫn đủ', async () => {
+    const o = await newOrg('m3-cu');
+    const c1 = await newContract(o, 1_000_000);
+    const c2 = await newContract(o, 1_000_000);
+    await pay(o.owner, o.orgId, c1.id, { method: 'CASH', amount: 1_000 }).expect(201);
+    for (const [i, c] of [c1, c2].entries()) {
+      await deps.db.payment.create({
+        data: { organizationId: o.orgId, contractId: c.id, code: `PT-CU-${i}`, kind: 'RECEIPT', method: 'CASH', amount: 5_000_000_000_000_000n, receivedAt: new Date(), note: 'dữ liệu cũ', createdById: o.owner.id },
+      });
+    }
+    const from = at(-DAY);
+    const to = at(DAY);
+    const ledger = await request(app).get(api(o.orgId, '/payments')).query({ from, to }).set(bearer(o.owner));
+    const month = await request(app).get(api(o.orgId, '/reports/revenue')).query({ from, to, groupBy: 'month' }).set(bearer(o.owner));
+    const byC = await request(app).get(api(o.orgId, '/reports/revenue')).query({ from, to, groupBy: 'contract' }).set(bearer(o.owner));
+    console.log(`[M3] dữ liệu cũ vượt ngưỡng: sổ thu → ${ledger.status} (${ledger.body.items?.length} phiếu, tổng thu ${ledger.body.totals?.received}); báo cáo tháng → ${month.status}; theo hợp đồng → ${byC.status}`);
+    expect([ledger.status, month.status, byC.status]).toEqual([200, 200, 200]);
+    expect(ledger.body.items).toHaveLength(3);
+    expect(ledger.body.items.some((i: { amount: number }) => i.amount === 5_000_000_000_000_000)).toBe(true);
+    expect(ledger.body.totals.received).toBeNull();
+    expect(ledger.body.totalsOverflow).toBe(true);
+    expect(month.body.totalsOverflow).toBe(true);
+    expect(month.body.totals.received).toBeNull();
+    expect(byC.body.totalsOverflow).toBe(true);
+    expect(byC.body.rows).toHaveLength(2);
+    // Từng hợp đồng vẫn đọc được số của mình (một phiếu không vượt ngưỡng).
+    expect(byC.body.rows.map((r: { paid: number }) => r.paid).sort()).toEqual([5_000_000_000_000_000, 5_000_000_000_001_000].sort());
+  });
+
+  it('N5 — vai trò chỉ có payments.read (không có customers.read) → tiến độ thu tiền KHÔNG có SĐT khách; có customers.read → có', async () => {
+    const o = await newOrg('n5');
+    const res = await request(app)
+      .post(api(o.orgId, '/contracts'))
+      .set(bearer(o.owner))
+      .set('idempotency-key', idem())
+      .send({ newCustomer: { fullName: 'Khách có SĐT', phone: '0912345678' }, lines: [{ kind: 'CUSTOM', name: 'Gói', unitPrice: 1_000_000, quantity: 1 }] })
+      .expect(201);
+    await request(app).post(api(o.orgId, '/roles')).set(bearer(o.owner)).set('idempotency-key', idem()).send({ key: 'thu_ngan', name: 'Thu ngân', permissions: ['payments.read'] }).expect(201);
+    const cashier = await registerUser(app, 'tt-n5-thu-ngan');
+    await addMember(app, o.owner, o.orgId, cashier, ['thu_ngan']);
+    const asCashier = await progress(cashier, o.orgId, res.body.id).expect(200);
+    const asOwner = await progress(o.owner, o.orgId, res.body.id).expect(200);
+    console.log(`[N5] thu ngân (không customers.read) thấy SĐT: ${JSON.stringify(asCashier.body).includes('0912345678')}; chủ thấy: ${asOwner.body.contract.customer.phone}`);
+    expect(JSON.stringify(asCashier.body)).not.toContain('0912345678');
+    expect(asCashier.body.contract.customer).toMatchObject({ fullName: 'Khách có SĐT', phone: null, phoneHidden: true });
+    expect(asOwner.body.contract.customer).toMatchObject({ phone: '0912345678', phoneHidden: false });
+    // Lập tiến độ (cũng trả tiến độ) — cùng luật: chủ có quyền khách thì thấy.
+    const putRes = await plan(o.owner, o.orgId, res.body.id, [{ name: 'Một lần', dueDate: at(DAY), amount: 1_000_000 }]).expect(200);
+    expect(putRes.body.contract.customer.phone).toBe('0912345678');
+  });
+
+  it('N6 — ngày thu trước ngày lập hợp đồng quá 1 ngày → 400 không ghi; trong 1 ngày → được; lùi > 24 giờ ghi nhật ký "backdated"', async () => {
+    const o = await newOrg('n6');
+    const c = await newContract(o, 10_000_000);
+    const old = await pay(o.owner, o.orgId, c.id, { method: 'CASH', amount: 1_000, receivedAt: '1990-01-01T00:00:00.000Z' });
+    const twoDays = await pay(o.owner, o.orgId, c.id, { method: 'CASH', amount: 1_000, receivedAt: at(-2 * DAY) });
+    console.log(`[N6] lùi về 1990 → ${old.status}; lùi 2 ngày (hợp đồng lập hôm nay) → ${twoDays.status}`);
+    expect([old.status, twoDays.status]).toEqual([400, 400]);
+    expect(await deps.db.payment.count({ where: { contractId: c.id } })).toBe(0);
+    const ok = await pay(o.owner, o.orgId, c.id, { method: 'CASH', amount: 1_000, receivedAt: at(-23 * 60 * 60_000) }).expect(201);
+    const fresh = await pay(o.owner, o.orgId, c.id, { method: 'CASH', amount: 1_000 }).expect(201);
+    await backdateContract(c.id, 10);
+    const back = await pay(o.owner, o.orgId, c.id, { method: 'CASH', amount: 1_000, receivedAt: at(-5 * DAY) }).expect(201);
+    const logOf = async (id: string) => (await deps.db.auditLog.findFirst({ where: { entityId: id, action: 'payment.created' } }))?.data as Record<string, unknown>;
+    expect((await logOf(back.body.id)).backdated).toMatchObject({ days: 5 });
+    expect((await logOf(fresh.body.id)).backdated).toBeNull();
+    expect((await logOf(ok.body.id)).backdated).toBeNull();
+    // Tương lai quá 5 phút vẫn bị chặn như cũ.
+    expect((await pay(o.owner, o.orgId, c.id, { method: 'CASH', amount: 1_000, receivedAt: at(6 * 60_000) })).status).toBe(400);
+  });
+
+  it('P1 (GIỮ khoá chống đua) — 20 phiếu 100 nghìn gửi SONG SONG vào hợp đồng 1 triệu → tổng đã thu không vượt 1 triệu, đúng 10 qua', async () => {
+    const o = await newOrg('p1-dua');
+    const c = await newContract(o, 1_000_000);
+    const results = await Promise.all(Array.from({ length: 20 }, () => pay(o.owner, o.orgId, c.id, { method: 'CASH', amount: 100_000 })));
+    const ok = results.filter((r) => r.status === 201).length;
+    const rows = await deps.db.payment.findMany({ where: { contractId: c.id, voidedAt: null } });
+    const total = rows.reduce((s, r) => s + Number(r.amount), 0);
+    console.log(`[P1] 20 phiếu song song: qua ${ok}/20, tổng thu ${total} trên hợp đồng 1.000.000; còn lại trả ${[...new Set(results.filter((r) => r.status !== 201).map((r) => r.status))].join(',')}`);
+    expect(total).toBeLessThanOrEqual(1_000_000);
+    expect(ok).toBe(10);
+    expect(total).toBe(1_000_000);
+    const summary = (await progress(o.owner, o.orgId, c.id).expect(200)).body.summary;
+    expect(summary.paid).toBe(1_000_000);
   });
 });

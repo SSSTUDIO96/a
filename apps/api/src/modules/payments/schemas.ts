@@ -14,6 +14,12 @@ const Amount = z
   .positive('Số tiền phải lớn hơn 0')
   .max(Number.MAX_SAFE_INTEGER, 'Số tiền vượt ngưỡng cho phép');
 
+// Trần MỘT phiếu thu/hoàn: 100 tỷ đồng (biên bản máy chủ lát 2, M3). Lý do: hợp đồng makeup lớn nhất thực tế cỡ vài trăm
+// triệu; trần cũ là Number.MAX_SAFE_INTEGER (~9 triệu tỷ) nên hai phiếu gõ thừa số 0 cộng lại vượt ngưỡng số nguyên an toàn
+// và làm sập báo cáo/sổ thu của cả tổ chức. Với trần này, tổng một kỳ chỉ vượt ngưỡng khi có > 90.000 phiếu 100 tỷ.
+export const MAX_PAYMENT_AMOUNT = 100_000_000_000;
+const PaymentAmount = Amount.max(MAX_PAYMENT_AMOUNT, 'Số tiền một phiếu tối đa 100.000.000.000 đ (100 tỷ) — kiểm lại số 0 gõ thừa');
+
 const DateTime = z.iso.datetime({ offset: true, error: 'Thời gian phải theo dạng ISO 8601, ví dụ 2026-11-01T08:00:00+07:00' });
 const Note = z.string().trim().min(1).max(1000);
 
@@ -35,7 +41,7 @@ export const InstallmentsBodySchema = strict({
 export const PaymentBodySchema = strict({
   kind: z.enum(PAYMENT_KINDS).default('RECEIPT'),
   method: z.enum(PAYMENT_METHODS),
-  amount: Amount,
+  amount: PaymentAmount,
   receivedAt: DateTime.optional(),
   note: Note.optional(),
   allowOverpay: z.boolean().optional(),

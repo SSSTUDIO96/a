@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
 import express from 'express';
+import http from 'node:http';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import request from 'supertest';
 import { createStorageFromEnv, getStorage, LocalDiskDriver, S3Driver, signToken, verifyToken } from '../src/lib/storage';
@@ -341,5 +342,127 @@ describe('cách ly tổ chức', () => {
     expect(real.body.error.message).toBe(fake.body.error.message);
     expect((await request(outer).delete(`/api/v1/orgs/${orgB}/files/${f.body.id}`).set(bearer(ownerB))).status).toBe(404);
     expect((await deps.db.storedFile.findUniqueOrThrow({ where: { id: f.body.id } })).status).toBe('READY');
+  });
+});
+
+// PNG chỉ có chữ ký + IHDR khai kích thước tuỳ ý (máy chủ đọc kích thước từ IHDR, không giải mã ảnh).
+function pngOfSize(w: number, h: number): Buffer {
+  const b = makePng(1, 1);
+  b.writeUInt32BE(w, 16);
+  b.writeUInt32BE(h, 20);
+  return b;
+}
+
+describe('sửa nghiệm thu máy chủ lát 2 — tệp', () => {
+  it('N1 — 30 MB gửi kiểu chunked cho logo (giới hạn 2 MB) → máy khách NHẬN được 400 "Tệp vượt giới hạn 2 MB" (không phải lỗi mạng), không lưu', async () => {
+    const server = outer.listen(0);
+    try {
+      const { port } = server.address() as { port: number };
+      const send = () =>
+        new Promise<{ status: number | string; body: string }>((resolve) => {
+          let sent = 0;
+          const total = 30 * 1024 * 1024;
+          const req = http.request(
+            {
+              host: '127.0.0.1',
+              port,
+              method: 'POST',
+              path: `/api/v1/orgs/${orgA}/files?purpose=ORG_LOGO&name=x.png`,
+              headers: { ...bearer(ownerA), 'idempotency-key': randomUUID(), 'content-type': 'application/octet-stream', 'transfer-encoding': 'chunked' },
+            },
+            (res) => {
+              let body = '';
+              res.setEncoding('utf8');
+              res.on('data', (c: string) => (body += c));
+              res.on('end', () => resolve({ status: res.statusCode ?? 0, body }));
+            },
+          );
+          req.on('error', (e) => resolve({ status: `lỗi mạng: ${(e as NodeJS.ErrnoException).code}`, body: '' }));
+          const chunk = Buffer.alloc(64 * 1024, 1);
+          const first = Buffer.concat([makePng(), chunk.subarray(makePng().length)]);
+          const pump = () => {
+            while (sent < total) {
+              const c = sent === 0 ? first : chunk;
+              sent += c.length;
+              if (!req.write(c)) return void req.once('drain', pump);
+            }
+            req.end();
+          };
+          pump();
+        });
+      const before = await deps.db.storedFile.count({ where: { organizationId: orgA, purpose: 'ORG_LOGO' } });
+      const results = [await send(), await send(), await send()];
+      console.log(`[N1] 3 lần 30 MB chunked: ${results.map((r) => `${r.status} ${r.body.slice(0, 80)}`).join(' | ')}`);
+      for (const r of results) {
+        expect(r.status).toBe(400);
+        expect(JSON.parse(r.body).error.message).toBe('Tệp vượt giới hạn 2 MB');
+      }
+      expect(await deps.db.storedFile.count({ where: { organizationId: orgA, purpose: 'ORG_LOGO' } })).toBe(before);
+    } finally {
+      server.close();
+    }
+  });
+
+  it('N2 — tổ chức bị tạm khoá: vé đã cấp → 404 (không phát tệp); mở khoá → đọc lại được', async () => {
+    const owner = await registerUser(makeApp(deps), 'tep-n2');
+    const org = await createOrg(makeApp(deps), owner, 'tep-n2');
+    const f = await upload(org, owner, makePng(4, 4), avatarQuery);
+    expect((await request(outer).get(f.body.signedUrl)).status).toBe(200);
+    await deps.db.organization.update({ where: { id: org }, data: { status: 'SUSPENDED' } });
+    const locked = await request(outer).get(f.body.signedUrl);
+    const fake = await request(outer).get(`/api/v1/files/raw/${signToken(local().signingSecret, `org/${randomUUID()}/x.png`, new Date(Date.now() + 60_000))}`);
+    console.log(`[N2] tổ chức bị khoá: raw → ${locked.status} (khoá bịa → ${fake.status})`);
+    expect(locked.status).toBe(404);
+    expect(locked.body.error.message).toBe(fake.body.error.message);
+    await deps.db.organization.update({ where: { id: org }, data: { status: 'ACTIVE' } });
+    expect((await request(outer).get(f.body.signedUrl)).status).toBe(200);
+  });
+
+  it('N3 — vé đọc tệp KHÔNG để lộ mã tổ chức / khoá lưu trữ: giải base64 mọi phần của vé không ra chữ đọc được', async () => {
+    const f = await upload(orgA, ownerA, makePng(7, 7), avatarQuery);
+    const row = await deps.db.storedFile.findUniqueOrThrow({ where: { id: f.body.id } });
+    const token = String(f.body.signedUrl).split('/').pop() ?? '';
+    const decoded = token
+      .split('.')
+      .map((part) => Buffer.from(part, 'base64url').toString('latin1'))
+      .join('|');
+    const leaks = [orgA, row.storageKey, 'org/', 'staff-avatar', row.id].filter((x) => decoded.includes(x) || token.includes(x));
+    console.log(`[N3] vé ${token.length} ký tự; giải ra còn lộ: ${leaks.length ? leaks.join(', ') : 'không gì'}`);
+    expect(leaks).toEqual([]);
+    // GIỮ: vé vẫn đọc đúng tệp, và verifyToken trả đúng khoá.
+    expect((await request(outer).get(f.body.signedUrl)).status).toBe(200);
+    expect(verifyToken(local().signingSecret, token)).toMatchObject({ ok: true, key: row.storageKey });
+  });
+
+  it('N4 — ảnh quá lớn: cạnh > 12000 điểm ảnh hoặc tổng > 64 triệu điểm ảnh → 400; 12000×5000 và 8000×8000 → nhận', async () => {
+    const st = async (w: number, h: number) => (await upload(orgA, ownerA, pngOfSize(w, h), { purpose: 'ALBUM_IMAGE', name: `${w}x${h}.png` })).status;
+    const res = {
+      '20000x20000': await st(20_000, 20_000),
+      '12001x1': await st(12_001, 1),
+      '1x12001': await st(1, 12_001),
+      '9000x9000': await st(9_000, 9_000),
+      '12000x5334': await st(12_000, 5_334),
+      '12000x5000': await st(12_000, 5_000),
+      '8000x8000': await st(8_000, 8_000),
+    };
+    console.log(`[N4] ${JSON.stringify(res)}`);
+    expect(res).toEqual({ '20000x20000': 400, '12001x1': 400, '1x12001': 400, '9000x9000': 400, '12000x5334': 400, '12000x5000': 201, '8000x8000': 201 });
+  });
+
+  it('GIỮ (F1) — phát tệp luôn kèm nosniff + CSP sandbox + đúng Content-Type theo bản ghi', async () => {
+    const f = await upload(orgA, ownerA, Buffer.concat([makePng(1, 1), Buffer.from('<html><script>alert(1)</script></html>')]), avatarQuery);
+    const raw = await request(outer).get(f.body.signedUrl).expect(200);
+    expect(raw.headers['content-type']).toBe('image/png');
+    expect(raw.headers['x-content-type-options']).toBe('nosniff');
+    expect(raw.headers['content-security-policy']).toBe("default-src 'none'; sandbox");
+  });
+
+  it('GIỮ (F3, F4) — xoá tệp ghi nhật ký; tên tệp bỏ / \\ và ký tự điều khiển', async () => {
+    const f = await upload(orgA, ownerA, makePng(2, 2), { purpose: 'STAFF_AVATAR', name: '../..\\a\u0001b.png' });
+    expect(f.status).toBe(201);
+    expect(f.body.originalName).toBe('.._.._a_b.png');
+    await request(outer).delete(`/api/v1/orgs/${orgA}/files/${f.body.id}`).set(bearer(ownerA)).expect(204);
+    const log = await deps.db.auditLog.findFirst({ where: { entityId: f.body.id, action: 'file.deleted' } });
+    expect(log).toMatchObject({ organizationId: orgA, actorUserId: ownerA.id });
   });
 });

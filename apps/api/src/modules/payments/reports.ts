@@ -1,7 +1,7 @@
 import type { ContractStatus } from '@makeup/shared';
 import { defineRoute, mustOrg, type AnyRoute } from '../../http/route';
 import type { Db } from '../../lib/prisma';
-import { vnd } from './common';
+import { vndOrNull } from './common';
 import { RevenueQuery } from './schemas';
 
 // Tháng tính theo giờ Việt Nam (UTC+7, không đổi giờ mùa hè).
@@ -152,18 +152,22 @@ const emptyBucket = (): Bucket => ({
   refunded: 0n,
 });
 
+// Số vượt ngưỡng số nguyên an toàn (dữ liệu cũ trước trần 100 tỷ/phiếu) → null, KHÔNG ném lỗi 500 làm sập cả báo cáo
+// (biên bản máy chủ lát 2, M3). Phản hồi có cờ totalsOverflow để giao diện báo "tổng quá lớn — kiểm lại phiếu".
 function presentBucket(b: Bucket) {
   return {
     contractCount: b.contractCount,
-    sales: vnd(b.sales, 'doanh số'),
-    depositRequired: vnd(b.depositRequired, 'cọc phải thu'),
-    depositOutstanding: vnd(b.depositOutstanding, 'cọc còn thiếu'),
-    outstanding: vnd(b.sales - b.paidToDate, 'còn lại'),
-    received: vnd(b.received, 'tổng thu'),
-    refunded: vnd(b.refunded, 'tổng hoàn'),
-    collected: vnd(b.received - b.refunded, 'đã thu thực tế'),
+    sales: vndOrNull(b.sales),
+    depositRequired: vndOrNull(b.depositRequired),
+    depositOutstanding: vndOrNull(b.depositOutstanding),
+    outstanding: vndOrNull(b.sales - b.paidToDate),
+    received: vndOrNull(b.received),
+    refunded: vndOrNull(b.refunded),
+    collected: vndOrNull(b.received - b.refunded),
   };
 }
+
+const hasOverflow = (x: Record<string, unknown>) => Object.values(x).some((v) => v === null);
 
 export const reportRoutes: AnyRoute[] = [
   defineRoute({
@@ -208,19 +212,19 @@ export const reportRoutes: AnyRoute[] = [
         all.received += b.received;
         all.refunded += b.refunded;
       }
-      const common = { from: query.from, to: query.to, groupBy: query.groupBy, basis: BASIS, totals: presentBucket(all) };
+      const totals = presentBucket(all);
+      const common = { from: query.from, to: query.to, groupBy: query.groupBy, basis: BASIS, totals };
       if (query.groupBy === 'month') {
-        return { body: { ...common, rows: [...months].map(([period, b]) => ({ period, ...presentBucket(b) })) } };
+        const rows = [...months].map(([period, b]) => ({ period, ...presentBucket(b) }));
+        return { body: { ...common, rows, totalsOverflow: hasOverflow(totals) || rows.some(hasOverflow) } };
       }
-      const rows = await byContract(deps.db, o.id, from, to);
-      return {
-        body: {
-          ...common,
-          rows: rows.map((r) => {
-            const total = vnd(r.total, 'tổng hợp đồng');
-            const depositRequired = vnd(r.deposit_required, 'tiền cọc');
-            const paid = vnd(r.paid, 'đã thu');
+      const raw = await byContract(deps.db, o.id, from, to);
+      const rows = raw.map((r) => {
+            const total = vndOrNull(r.total);
+            const depositRequired = vndOrNull(r.deposit_required);
+            const paid = vndOrNull(r.paid);
             const cancelled = r.status === 'CANCELLED';
+            const known = total !== null && depositRequired !== null && paid !== null;
             return {
               contractId: r.id,
               code: r.code,
@@ -233,12 +237,18 @@ export const reportRoutes: AnyRoute[] = [
               total,
               depositRequired,
               paid,
-              paidInPeriod: vnd(r.paid_in_period, 'thu trong kỳ'),
+              paidInPeriod: vndOrNull(r.paid_in_period),
               // Hợp đồng đã huỷ không còn phải thu: null thay vì một con số dễ hiểu lầm.
-              remaining: cancelled ? null : total - paid,
-              depositOutstanding: cancelled ? null : Math.max(0, depositRequired - paid),
+              remaining: cancelled || !known ? null : total - paid,
+              depositOutstanding: cancelled || !known ? null : Math.max(0, depositRequired - paid),
+              overflow: !known || vndOrNull(r.paid_in_period) === null,
             };
-          }),
+          });
+      return {
+        body: {
+          ...common,
+          rows: rows.map(({ overflow: _o, ...row }) => row),
+          totalsOverflow: hasOverflow(totals) || rows.some((r) => r.overflow),
         },
       };
     },
