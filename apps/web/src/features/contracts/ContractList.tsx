@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
 import { CONTRACT_STATUS_LABELS, CONTRACT_STATUSES, type ContractStatus } from '@makeup/shared';
 import { listContracts } from '../../api/contracts';
 import { errorKind, userMessage } from '../../api/errors';
+import { getCustomer } from '../../api/schedule';
 import type { ContractSummary, Page } from '../../api/types';
 import { ForbiddenBanner } from '../../layout/ErrorStates';
 import { PageHeader } from '../../layout/PageHeader';
@@ -11,6 +12,14 @@ import { displayDate } from './model';
 import './contracts.css';
 
 // Danh sách hợp đồng (bản vẽ 4.3, mục con): mã · khách · ngày sự kiện · tổng · trạng thái. Dựng theo danh sách gọn 4.2a.
+// ?customerId=<id> (màn Khách hàng dẫn sang, "Xem tất cả n hợp đồng"): lọc theo khách đó, có dải "Đang lọc … · Bỏ lọc".
+// Mã lạ / không thuộc tổ chức: bỏ lọc, báo một dòng — không đoán.
+
+type CustomerFilter =
+  | { status: 'none' }
+  | { status: 'checking'; id: string }
+  // name null = không có quyền xem khách (403) — vẫn lọc theo mã, không hiện tên.
+  | { status: 'ok'; id: string; name: string | null };
 export interface ContractListProps {
   orgId: string;
   slug: string;
@@ -26,6 +35,60 @@ export function ContractList({ orgId, slug, tz, canCreate }: ContractListProps) 
   const [term, setTerm] = useState('');
   const [page, setPage] = useState(1);
   const [attempt, setAttempt] = useState(0);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const customerParam = searchParams.get('customerId');
+  const [filter, setFilter] = useState<CustomerFilter>(customerParam ? { status: 'checking', id: customerParam } : { status: 'none' });
+  const [filterNote, setFilterNote] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!customerParam) {
+      setFilter({ status: 'none' });
+      return undefined;
+    }
+    const controller = new AbortController();
+    setFilter({ status: 'checking', id: customerParam });
+    setPage(1);
+    getCustomer(orgId, customerParam, controller.signal)
+      .then((c) => {
+        setFilter({ status: 'ok', id: c.id, name: c.fullName });
+        setFilterNote(null);
+      })
+      .catch((err: unknown) => {
+        if (controller.signal.aborted) return;
+        const kind = errorKind(err);
+        if (kind === 'forbidden') {
+          setFilter({ status: 'ok', id: customerParam, name: null });
+          return;
+        }
+        // 404 (khách của tổ chức khác / đã xoá) hoặc 400 (không phải mã hợp lệ): bỏ lọc, báo một dòng.
+        setFilter({ status: 'none' });
+        setFilterNote(
+          kind === 'not_found' || kind === 'validation'
+            ? 'Không tìm thấy khách này trong tổ chức — đang hiện tất cả hợp đồng.'
+            : `${userMessage(err)} — đang hiện tất cả hợp đồng.`,
+        );
+        setSearchParams(
+          (sp) => {
+            const next = new URLSearchParams(sp);
+            next.delete('customerId');
+            return next;
+          },
+          { replace: true },
+        );
+      });
+    return () => controller.abort();
+  }, [orgId, customerParam, setSearchParams]);
+
+  const clearFilter = () => {
+    setFilterNote(null);
+    setPage(1);
+    setSearchParams((sp) => {
+      const next = new URLSearchParams(sp);
+      next.delete('customerId');
+      return next;
+    });
+  };
+  const customerId = filter.status === 'ok' ? filter.id : null;
   const [state, setState] = useState<{ status: 'loading' } | { status: 'error'; error: unknown } | { status: 'ready'; data: Page<ContractSummary> }>({
     status: 'loading',
   });
@@ -39,15 +102,21 @@ export function ContractList({ orgId, slug, tz, canCreate }: ContractListProps) 
   }, [q]);
 
   useEffect(() => {
+    // Đang kiểm mã khách: chưa gọi danh sách (không gửi mã lạ lên máy chủ, không hiện nhầm danh sách chưa lọc).
+    if (filter.status === 'checking') return undefined;
     const controller = new AbortController();
     setState((s) => (s.status === 'ready' ? s : { status: 'loading' }));
-    listContracts(orgId, { page, pageSize: PAGE_SIZE, ...(status ? { status } : {}), ...(term ? { q: term } : {}) }, controller.signal)
+    listContracts(
+      orgId,
+      { page, pageSize: PAGE_SIZE, ...(status ? { status } : {}), ...(term ? { q: term } : {}), ...(customerId ? { customerId } : {}) },
+      controller.signal,
+    )
       .then((data) => setState({ status: 'ready', data }))
       .catch((error: unknown) => {
         if (!controller.signal.aborted) setState({ status: 'error', error });
       });
     return () => controller.abort();
-  }, [orgId, page, status, term, attempt]);
+  }, [orgId, page, status, term, attempt, customerId, filter.status]);
 
   const newLink = (
     <Link to={`/${slug}/hop-dong/moi`} className="ui-btn ui-btn--primary" style={{ textDecoration: 'none' }}>
@@ -72,6 +141,22 @@ export function ContractList({ orgId, slug, tz, canCreate }: ContractListProps) 
       ) : (
         <Card flush>
           <div className="ct-list__bar">
+            {filter.status === 'ok' && (
+              <div className="ct-filter" role="status" data-o="loc-khach">
+                <span>
+                  Đang lọc theo khách {filter.name ? <b>{filter.name}</b> : 'đã chọn'}
+                </span>
+                <span aria-hidden="true">·</span>
+                <Button size="sm" variant="ghost" onClick={clearFilter}>
+                  Bỏ lọc
+                </Button>
+              </div>
+            )}
+            {filterNote && (
+              <div className="ct-fx" role="status" data-o="loc-khach-la">
+                {filterNote}
+              </div>
+            )}
             <TextInput
               className="ct-list__search"
               placeholder="Tìm theo mã, tên hoặc số điện thoại khách"
@@ -113,8 +198,8 @@ export function ContractList({ orgId, slug, tz, canCreate }: ContractListProps) 
           )}
           {state.status === 'ready' && state.data.items.length === 0 && (
             <EmptyState
-              message={term || status ? 'Không có hợp đồng phù hợp.' : 'Chưa có hợp đồng nào.'}
-              action={canCreate && !term && !status ? newLink : undefined}
+              message={customerId ? 'Khách này chưa có hợp đồng phù hợp.' : term || status ? 'Không có hợp đồng phù hợp.' : 'Chưa có hợp đồng nào.'}
+              action={canCreate && !term && !status && !customerId ? newLink : undefined}
             />
           )}
           {state.status === 'ready' && state.data.items.length > 0 && (

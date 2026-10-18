@@ -53,6 +53,8 @@ interface FormState {
   day: DayKey;
   start: string;
   end: string;
+  // T3: ca kết thúc hôm sau CHỈ khi người dùng tick rõ "Kết thúc hôm sau" — không tự đoán từ giờ ngược.
+  nextDay: boolean;
   travelBefore: number | null;
   travelAfter: number | null;
   locationType: LocationType | null;
@@ -73,6 +75,7 @@ function formFrom(a: Appointment): FormState {
     day: dayKeyOf(a.startsAt),
     start: hhmm(a.startsAt),
     end: hhmm(a.endsAt),
+    nextDay: dayKeyOf(a.endsAt) !== dayKeyOf(a.startsAt),
     travelBefore: a.travelBeforeMin,
     travelAfter: a.travelAfterMin,
     locationType: a.locationType,
@@ -91,6 +94,7 @@ function emptyForm(day: DayKey, laneId?: string): FormState {
     day,
     start: '',
     end: '',
+    nextDay: false,
     travelBefore: 0,
     travelAfter: 0,
     locationType: null,
@@ -103,10 +107,25 @@ function emptyForm(day: DayKey, laneId?: string): FormState {
   };
 }
 
-// Giờ kết thúc ≤ giờ bắt đầu → ca kết thúc ngày hôm sau (ca qua đêm, máy chủ cho tối đa 24 giờ). Màn ghi rõ ngày kết thúc.
-export function timesOf(f: Pick<FormState, 'day' | 'start' | 'end'>): { startsAt: string; endsAt: string; endDay: DayKey } | null {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(f.day) || !/^\d{2}:\d{2}$/.test(f.start) || !/^\d{2}:\d{2}$/.test(f.end)) return null;
-  const endDay = f.end <= f.start ? addDays(f.day, 1) : f.day;
+// T3 (biên bản web 2 — sửa quyết định 7 cũ của thợ W6): giờ kết thúc ≤ giờ bắt đầu là LỖI, trừ khi người dùng tick
+// "Kết thúc hôm sau". Trước đây màn tự hiểu là ca qua đêm → gõ nhầm 09:00 – 08:30 thành ca 23,5 giờ.
+// Ca qua đêm tối đa 24 giờ (MAX_APPOINTMENT_MS của máy chủ) → khi đã tick, giờ kết thúc hôm sau không được muộn hơn giờ bắt đầu.
+export const END_BEFORE_START = 'Giờ kết thúc phải sau giờ bắt đầu';
+export const OVERNIGHT_TOO_LONG = 'Ca qua đêm tối đa 24 giờ — giờ kết thúc hôm sau phải sớm hơn hoặc bằng giờ bắt đầu';
+
+const validDay = (d: string) => /^\d{4}-\d{2}-\d{2}$/.test(d);
+const validTime = (t: string) => /^\d{2}:\d{2}$/.test(t);
+
+export function timeOrderError(f: Pick<FormState, 'start' | 'end' | 'nextDay'>): string | null {
+  if (!validTime(f.start) || !validTime(f.end)) return null;
+  if (!f.nextDay && f.end <= f.start) return END_BEFORE_START;
+  if (f.nextDay && f.end > f.start) return OVERNIGHT_TOO_LONG;
+  return null;
+}
+
+export function timesOf(f: Pick<FormState, 'day' | 'start' | 'end' | 'nextDay'>): { startsAt: string; endsAt: string; endDay: DayKey } | null {
+  if (!validDay(f.day) || !validTime(f.start) || !validTime(f.end) || timeOrderError(f)) return null;
+  const endDay = f.nextDay ? addDays(f.day, 1) : f.day;
   return { startsAt: vnIso(f.day, f.start), endsAt: vnIso(endDay, f.end), endDay };
 }
 
@@ -147,6 +166,12 @@ export function AppointmentDialog({
   const [general, setGeneral] = useState<string | null>(null);
   const [conflicts, setConflicts] = useState<AppointmentConflict[] | null>(null);
   const [conflictMessage, setConflictMessage] = useState<string | undefined>(undefined);
+  // Đổi mỗi lần hộp TỰ đặt lại form từ ca (Sửa, Đổi thợ/Đổi giờ) → ô phút bỏ chữ lỗi cũ dù số không đổi (N-J1).
+  const [resetKey, setResetKey] = useState(0);
+  const resetForm = (a: Appointment) => {
+    setForm(formFrom(a));
+    setResetKey((k) => k + 1);
+  };
   const idemKey = useRef(newIdempotencyKey());
   const startRef = useRef<HTMLInputElement>(null);
   const staffRef = useRef<HTMLDivElement>(null);
@@ -212,7 +237,7 @@ export function AppointmentDialog({
   function goFix(which: 'staff' | 'time') {
     pendingFocus.current = which;
     if (mode === 'view') {
-      if (appt) setForm(formFrom(appt));
+      if (appt) resetForm(appt);
       setMode('edit');
     } else {
       // Đã ở chế độ nhập: chạy lại hiệu ứng đặt tiêu điểm.
@@ -232,6 +257,8 @@ export function AppointmentDialog({
     if (!form.day) local.day = 'Chọn ngày';
     if (!form.start) local.startsAt = 'Chọn giờ bắt đầu';
     if (!form.end) local.endsAt = 'Chọn giờ kết thúc';
+    const order = timeOrderError(form);
+    if (order) local.endsAt = order;
     if (form.newCustomer && !form.newCustomer.fullName.trim()) local['newCustomer.fullName'] = 'Nhập họ tên khách';
     if (Object.keys(local).length > 0 || !times) {
       setErrors(local);
@@ -322,7 +349,7 @@ export function AppointmentDialog({
           <Button
             variant="primary"
             onClick={() => {
-              if (appt) setForm(formFrom(appt));
+              if (appt) resetForm(appt);
               resetErrors();
               setMode('edit');
             }}
@@ -390,6 +417,7 @@ export function AppointmentDialog({
           startRef={startRef}
           staffRef={staffRef}
           onInputError={onInputError}
+          resetKey={resetKey}
         />
       )}
     </Dialog>
@@ -524,6 +552,7 @@ function FormBody({
   startRef,
   staffRef,
   onInputError,
+  resetKey,
 }: {
   orgId: string;
   mode: 'create' | 'edit';
@@ -537,9 +566,12 @@ function FormBody({
   startRef: RefObject<HTMLInputElement | null>;
   staffRef: RefObject<HTMLDivElement | null>;
   onInputError: (key: string, message: string | null) => void;
+  resetKey: number;
 }) {
   const times = timesOf(form);
   const overnight = times && times.endDay !== form.day;
+  // T3: lỗi thứ tự giờ hiện NGAY dưới ô giờ kết thúc (không đợi bấm Lưu).
+  const orderError = timeOrderError(form);
   return (
     <div className="ws-form">
       <div className="ws-form__col">
@@ -563,24 +595,38 @@ function FormBody({
             error={errors.day}
           />
         </SettingRow>
-        <SettingRow label="Giờ" required controlWidth={300} className="ws-row-wide ws-row-stack-phone" tip="Giờ kết thúc sớm hơn giờ bắt đầu nghĩa là ca kết thúc vào ngày hôm sau.">
-          <div className="ws-times">
-            <TimeInput
-              ref={startRef}
-              aria-label="Giờ bắt đầu"
-              value={form.start || null}
-              onChange={(v) => update({ start: v ?? '' })}
-              onInputError={(m) => onInputError('start', m)}
-              error={errors.startsAt}
-            />
-            <span aria-hidden="true">–</span>
-            <TimeInput
-              aria-label="Giờ kết thúc"
-              value={form.end || null}
-              onChange={(v) => update({ end: v ?? '' })}
-              onInputError={(m) => onInputError('end', m)}
-              error={errors.endsAt}
-              hint={overnight ? `Kết thúc ${weekdayLong(times.endDay)} ${ddmm(times.endDay)}` : undefined}
+        <SettingRow
+          label="Giờ"
+          required
+          controlWidth={300}
+          className="ws-row-wide ws-row-stack-phone"
+          tip="Ca kéo qua nửa đêm: tick “Kết thúc hôm sau”. Không tick thì giờ kết thúc phải sau giờ bắt đầu."
+        >
+          <div className="ws-timebox">
+            <div className="ws-times">
+              <TimeInput
+                ref={startRef}
+                aria-label="Giờ bắt đầu"
+                value={form.start || null}
+                onChange={(v) => update({ start: v ?? '' })}
+                onInputError={(m) => onInputError('start', m)}
+                error={errors.startsAt}
+              />
+              <span aria-hidden="true">–</span>
+              <TimeInput
+                aria-label="Giờ kết thúc"
+                value={form.end || null}
+                onChange={(v) => update({ end: v ?? '' })}
+                onInputError={(m) => onInputError('end', m)}
+                error={orderError ?? errors.endsAt}
+                hint={overnight ? `Kết thúc ${weekdayLong(times.endDay)} ${ddmm(times.endDay)}` : undefined}
+              />
+            </div>
+            <Checkbox
+              className="ws-nextday"
+              label="Kết thúc hôm sau"
+              checked={form.nextDay}
+              onChange={(e) => update({ nextDay: e.target.checked })}
             />
           </div>
         </SettingRow>
@@ -592,6 +638,7 @@ function FormBody({
             max={MAX_TRAVEL_MIN}
             value={form.travelBefore}
             onChange={(v) => update({ travelBefore: v })}
+            resetKey={resetKey}
             error={errors.travelBeforeMin}
           />
         </SettingRow>
@@ -603,6 +650,7 @@ function FormBody({
             max={MAX_TRAVEL_MIN}
             value={form.travelAfter}
             onChange={(v) => update({ travelAfter: v })}
+            resetKey={resetKey}
             error={errors.travelAfterMin}
           />
         </SettingRow>

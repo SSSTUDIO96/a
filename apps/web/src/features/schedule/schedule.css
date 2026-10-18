@@ -313,6 +313,7 @@
 .ws-times { display: flex; align-items: flex-start; gap: 6px; width: 100%; }
 .ws-times > .ui-field { flex: 1; min-width: 0; }
 .ws-times > span { line-height: 36px; color: var(--muted); }
+.ws-timebox { display: flex; flex-direction: column; gap: 6px; width: 100%; min-width: 0; }
 .ws-ro { color: var(--muted); }
 .ws-kh { display: flex; align-items: center; gap: 8px; justify-content: space-between; width: 100%; padding: 6px 6px 6px 10px; border: 1px solid var(--line); border-radius: var(--r-ctl); background: var(--soft); }
 .ws-kh-find { display: flex; flex-direction: column; align-items: stretch; gap: 6px; width: 100%; }
@@ -325,7 +326,9 @@
 .ws-pick { display: flex; flex-direction: column; }
 .ws-pick__row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px; border-bottom: 1px solid var(--line-2); flex-wrap: wrap; }
 .ws-pick__row.is-on { background: var(--accent-soft); }
-.ws-pick__row > .ui-field { flex: 1 1 160px; min-width: 0; }
+/* N2: cột tên không bị nhóm "Chính/Phụ" và tên bậc ép tới mức bẻ giữa chữ ("Nguyễ / n") — hẹp quá thì nhóm nút xuống dòng. */
+.ws-pick__row > .ui-field { flex: 1 1 200px; min-width: min(200px, 100%); }
+.ws-pick__row .ui-check__label { overflow-wrap: normal; word-break: normal; }
 
 /* ---------- Khung chờ ---------- */
 .ws-skel { display: flex; flex-direction: column; gap: 12px; padding: 16px; }

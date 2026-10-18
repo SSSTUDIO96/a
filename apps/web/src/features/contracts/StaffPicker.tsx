@@ -4,7 +4,7 @@ import type { StaffAvailability } from '../../api/types';
 import { Avatar, BottomSheet, Button, Dialog, Segmented, StatusTag, Tooltip } from '../../ui';
 import { timeOf, type StaffAssignment, type WarnRange } from './model';
 import type { StaffPerson } from './StaffRow';
-import { groupByTier, useStaffAvailability, type AvailabilityQueryArgs } from './useStaffAvailability';
+import { groupByTier, pickableStaff, useStaffAvailability, type AvailabilityQueryArgs } from './useStaffAvailability';
 
 // Ô chọn thợ phụ trách (bản vẽ 4.3, bổ sung 18/10/2026). Máy tính/máy tính bảng: Dialog rộng min(560px, 100%);
 // điện thoại: BottomSheet. Thợ trùng giờ VẪN chọn được (chủ studio có thể đang định dời ca kia) — cảnh báo hiện ở thẻ dòng.
@@ -75,7 +75,7 @@ export function StaffPicker(props: StaffPickerProps) {
   else
     body = (
       <div>
-        {groupByTier(state.items, state.tiers).map((g) => (
+        {groupByTier(pickableStaff(state.items, state.members, new Set(props.initial.map((s) => s.membershipId))), state.tiers).map((g) => (
           <div key={g.id ?? 'chua-xep-bac'} role="group" aria-label={g.name}>
             <div className="ct-lbl">{g.name}</div>
             {g.items.map((s) => (

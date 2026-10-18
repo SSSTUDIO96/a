@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { getStaffAvailability, listStaffTiers } from '../../api/staff';
-import type { StaffAvailability, StaffTier } from '../../api/types';
+import { getStaffAvailability, listStaff, listStaffTiers } from '../../api/staff';
+import type { StaffAvailability, StaffMember, StaffTier } from '../../api/types';
+import { isMakeupStaff } from '../schedule/model';
 
 // Ô chọn thợ: tình trạng từng thợ cho khung giờ của dòng (GET /staff/availability) + thứ tự bậc (GET /staff-tiers).
 export interface AvailabilityQueryArgs {
@@ -14,7 +15,7 @@ export type AvailabilityState =
   | { status: 'idle' }
   | { status: 'loading' }
   | { status: 'error'; error: unknown }
-  | { status: 'ready'; items: StaffAvailability[]; tiers: StaffTier[] };
+  | { status: 'ready'; items: StaffAvailability[]; tiers: StaffTier[]; members: StaffMember[] | null };
 
 export function useStaffAvailability(orgId: string, args: AvailabilityQueryArgs | null): AvailabilityState {
   const [state, setState] = useState<AvailabilityState>({ status: 'idle' });
@@ -33,8 +34,15 @@ export function useStaffAvailability(orgId: string, args: AvailabilityQueryArgs 
         controller.signal,
       ),
       listStaffTiers(orgId, controller.signal),
+      // Hồ sơ thợ + vai trò để lọc đúng luật của Lịch (N9). Không đọc được thì không lọc (vẫn chọn được).
+      Promise.resolve()
+        .then(() => listStaff(orgId, undefined, controller.signal))
+        .then(
+          (r) => r.items,
+          () => null,
+        ),
     ])
-      .then(([a, t]) => setState({ status: 'ready', items: a.items, tiers: t.items }))
+      .then(([a, t, m]) => setState({ status: 'ready', items: a.items, tiers: t.items, members: m }))
       .catch((error: unknown) => {
         if (!controller.signal.aborted) setState({ status: 'error', error });
       });
@@ -42,6 +50,19 @@ export function useStaffAvailability(orgId: string, args: AvailabilityQueryArgs 
     // args đọc qua key (so theo nội dung).
   }, [orgId, key]);
   return state;
+}
+
+/**
+ * N9: ô chọn thợ của hợp đồng dùng CÙNG luật với lưới Lịch và hộp sửa ca (schedule/model buildStaffLanes,
+ * StaffChecklist): người đang nhận lịch có hồ sơ thợ hoặc vai trò Thợ makeup / Thợ phụ. Tổ chức chưa có ai như vậy
+ * (studio một người) thì cho chọn mọi người đang nhận lịch. Thợ đã gán sẵn cho dòng luôn còn trong danh sách.
+ */
+export function pickableStaff(items: StaffAvailability[], members: StaffMember[] | null, keepIds: ReadonlySet<string>): StaffAvailability[] {
+  if (!members) return items;
+  const bookable = members.filter((m) => m.isBookable);
+  const makeup = bookable.filter((m) => isMakeupStaff(m));
+  const ids = new Set((makeup.length > 0 ? makeup : bookable).map((m) => m.membershipId));
+  return items.filter((s) => ids.has(s.membershipId) || keepIds.has(s.membershipId));
 }
 
 export interface TierGroup {

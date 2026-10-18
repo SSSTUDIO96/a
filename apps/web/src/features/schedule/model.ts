@@ -181,6 +181,17 @@ export function buildStaffLanes(input: {
   return lanes;
 }
 
+/**
+ * N3: tên ngắn trên đầu hàng / đầu cột thợ như bản mẫu ("Nguyễn Thu Hà" → "Thu Hà") để không bị cắt "Nguyễn Thu …".
+ * Hai thợ trùng tên ngắn thì giữ tên đầy đủ cho cả hai (không đoán). Tên đầy đủ vẫn ở title / tên đọc.
+ */
+export function laneShortNames(lanes: readonly Pick<StaffLane, 'membershipId' | 'name'>[]): Map<string, string> {
+  const short = (n: string) => n.trim().split(/\s+/).slice(-2).join(' ');
+  const count = new Map<string, number>();
+  for (const l of lanes) count.set(short(l.name), (count.get(short(l.name)) ?? 0) + 1);
+  return new Map(lanes.map((l) => [l.membershipId, (count.get(short(l.name)) ?? 0) > 1 ? l.name : short(l.name)]));
+}
+
 // ---------------- Ca theo ngày ----------------
 // Các ngày (giờ Việt Nam) mà ca [startsAt, endsAt) chạm vào. Ca kết thúc đúng 00:00 không tính sang ngày sau.
 export function daysOf(a: Pick<Appointment, 'startsAt' | 'endsAt'>): DayKey[] {

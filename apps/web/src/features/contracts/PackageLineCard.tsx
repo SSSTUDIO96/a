@@ -53,6 +53,7 @@ export interface PackageLineCardProps {
   onPickStaff: () => void;
   canPickStaff: boolean;
   pickBlockedReason: string | null;
+  resetKey?: number;
   scheduleHref: string | null;
   // Đã xác nhận: nút "Huỷ dòng" (quyền contracts.adjust).
   onVoid: (() => void) | null;
@@ -238,6 +239,7 @@ export function PackageLineCard(p: PackageLineCardProps) {
           </span>
           <TravelControl
             idPrefix={idp}
+            resetKey={p.resetKey}
             value={line.travel}
             onChange={(travel) => p.onChange({ travel })}
             hasTiers={(p.policy?.tiers.length ?? 0) > 0}

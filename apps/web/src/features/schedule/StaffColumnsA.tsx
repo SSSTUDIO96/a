@@ -4,7 +4,7 @@
 import type { CSSProperties } from 'react';
 import type { Appointment } from '../../api/types';
 import { StatusTag } from '../../ui';
-import { appointmentsOfDay, axisHours, blockSpan, dayLoad, kindText, laneIdsOf, layoutLanes, UNASSIGNED, type ConflictMarks, type StaffLane } from './model';
+import { appointmentsOfDay, axisHours, blockSpan, dayLoad, kindText, laneIdsOf, laneShortNames, layoutLanes, UNASSIGNED, type ConflictMarks, type StaffLane } from './model';
 import { apptClasses, apptTip, cx, LaneAvatar, placeText, timeRange, useSwatchOf } from './parts';
 import { formatHours, minutesFromDayStart, type DayKey } from './time';
 
@@ -30,6 +30,7 @@ export function StaffColumnsA({
   const [fromH, toH] = axisHours(dayItems.map(blockSpan), day);
   const hours = Array.from({ length: toH - fromH }, (_, i) => fromH + i);
   const cols: (StaffLane | null)[] = [...lanes, ...(showUnassigned ? [null] : [])];
+  const short = laneShortNames(lanes);
   const height = (toH - fromH) * hourPx;
   const y = (min: number) => ((min - fromH * 60) / 60) * hourPx;
   const style = {
@@ -48,7 +49,9 @@ export function StaffColumnsA({
             <div key={id} role="columnheader" className={cx('ws-a__colh', !lane && 'is-na')}>
               <LaneAvatar lane={lane} />
               <span className="ws-a__who">
-                <span className="ws-a__nm">{lane ? lane.name : 'Chưa có thợ'}</span>
+                <span className="ws-a__nm" title={lane?.name}>
+                  {lane ? (short.get(lane.membershipId) ?? lane.name) : 'Chưa có thợ'}
+                </span>
                 <span className="ws-a__meta">
                   {load.count} ca{lane ? ` · ${formatHours(load.minutes)}` : ''}
                 </span>

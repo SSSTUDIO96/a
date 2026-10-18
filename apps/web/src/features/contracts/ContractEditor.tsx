@@ -14,7 +14,7 @@ import { errorKind, fieldErrors, userMessage } from '../../api/errors';
 import { newIdempotencyKey } from '../../api/idempotency';
 import { getCustomer } from '../../api/schedule';
 import { useQuote } from '../../api/useQuote';
-import type { AppointmentConflict, Service, ServicePackage } from '../../api/types';
+import type { AppointmentConflict, ContractUpdateInput, Service, ServicePackage } from '../../api/types';
 import { NotFoundView, useOnline } from '../../layout/ErrorStates';
 import { PageHeader } from '../../layout/PageHeader';
 import { useBreakpoint } from '../../layout/useBreakpoint';
@@ -43,22 +43,30 @@ import {
   conflictsForLine,
   confirmBlockedReason,
   conflictsOf,
+  confirmResultText,
   contractAbilities,
+  draftDiffs,
   displayDate,
   displayDateTime,
   draftFromDetail,
   errorLineOf,
   isPlaced,
+  isStaleVersion,
+  liveErrors,
   lineInput,
   localOverlaps,
   matchQuote,
   mergeWarnings,
+  moneyFieldOf,
   newPackageLine,
   newLineKey,
   overlapLineCount,
   patchBody,
   placedFromView,
+  prettyMoneyText,
   serverWarnings,
+  staffGapText,
+  staffGaps,
   timeOf,
   validateDraft,
   weekdayShort,
@@ -98,8 +106,14 @@ type LoadState = { status: 'ready' } | { status: 'loading' } | { status: 'error'
 interface Alert {
   text: string;
   conflicts?: AppointmentConflict[];
-  tone?: 'danger' | 'warn';
+  tone?: 'danger' | 'warn' | 'ok';
+  // Liên kết đi kèm (ví dụ "Xem lịch" sau khi xác nhận).
+  link?: { to: string; label: string };
 }
+
+// T2: bản trên máy chủ đã đổi so với bản đang sửa. 'conflict' = vừa bị từ chối, bản nháp đang nhập giữ nguyên;
+// 'loaded' = đã tải bản mới, giữ bản của người dùng (mine) để so và dùng lại nếu muốn.
+type Stale = { phase: 'conflict' } | { phase: 'loaded'; mine: ContractDraft; diffs: string[] };
 
 function sig(draft: ContractDraft, tz: string): string {
   return JSON.stringify(patchBody(draft, tz));
@@ -134,6 +148,10 @@ export function ContractEditor({ orgId, slug, tz, has, contractId }: ContractEdi
   // Đã sửa ô cọc: hiện đúng số người nhập (trống = theo gợi ý); chưa sửa: hiện số máy chủ trả.
   const [depositTouched, setDepositTouched] = useState(false);
   const [refreshed, setRefreshed] = useState<{ key: string; data: ContractQuote } | null>(null);
+  const [stale, setStale] = useState<Stale | null>(null);
+  const [reloading, setReloading] = useState(false);
+  // Đổi mỗi lần màn TỰ đặt lại nháp (nạp, tải bản mới, dùng lại bản cũ) → ô tiền/km bỏ chữ lỗi cũ dù số không đổi.
+  const [resetKey, setResetKey] = useState(0);
   const idemKey = useRef(newIdempotencyKey());
   const pickRef = useRef<HTMLDivElement>(null);
 
@@ -183,6 +201,7 @@ export function ContractEditor({ orgId, slug, tz, has, contractId }: ContractEdi
         setDetail(dx);
         setDraft(dr);
         setSavedSig(sig(dr, tz));
+        setResetKey((k) => k + 1);
         setLoad({ status: 'ready' });
       })
       .catch((error: unknown) => {
@@ -211,27 +230,36 @@ export function ContractEditor({ orgId, slug, tz, has, contractId }: ContractEdi
   const quoteBody = draftMode && Object.keys(localErrors).length === 0 ? buildBody(draft, tz) : null;
   const quote = useQuote(draftMode ? orgId : null, quoteBody);
   const quoteKey = quoteBody ? JSON.stringify(quoteBody) : null;
+  // Bảng tính lỗi với dữ liệu đang nhập (vd giảm giá lớn hơn tạm tính): KHÔNG hiện số của lần tính trước ở thẻ tổng /
+  // thanh tổng trong khi thẻ dòng đã thành "—" (N8) — mọi ô tiền cùng về "—", lỗi hiện dưới đúng ô.
+  const quoteFailed = Boolean(quoteBody) && !quote.loading && quote.error !== null && quote.error !== undefined;
   const quoteData: ContractQuote | null = quoteBody
     ? refreshed && refreshed.key === quoteKey
       ? refreshed.data
-      : (quote.data as ContractQuote | null)
+      : quoteFailed
+        ? null
+        : (quote.data as ContractQuote | null)
     : null;
   const views = matchQuote(draft, quoteData);
   const pending = quote.loading;
 
   // ---- Lỗi hiện dưới ô ----
+  const quoteMoneyError = quoteBody && quote.error ? moneyFieldOf(quote.error) : null;
   const errors: Record<string, string> = {
-    ...(showErrors ? localErrors : {}),
+    ...(showErrors ? localErrors : liveErrors(localErrors)),
     ...(quoteBody ? quote.fieldErrors : {}),
+    ...(quoteMoneyError ? { [quoteMoneyError.field]: quoteMoneyError.message } : {}),
     ...serverErrors.fields,
   };
   const lineErrorAt = (i: number): string | null => {
     if (serverErrors.line === i) return serverErrors.message;
-    if (quoteBody && quote.errorLine === i) return userMessage(quote.error);
+    if (quoteBody && quote.errorLine === i) return prettyMoneyText(userMessage(quote.error));
     return null;
   };
   const quoteGeneralError =
-    quoteBody && quote.error && quote.errorLine === null && Object.keys(quote.fieldErrors).length === 0 ? userMessage(quote.error) : null;
+    quoteBody && quote.error && !quoteMoneyError && quote.errorLine === null && Object.keys(quote.fieldErrors).length === 0
+      ? prettyMoneyText(userMessage(quote.error))
+      : null;
 
   // ---- Thợ: tên, ảnh; cảnh báo 3 mức ----
   const people = useMemo(() => {
@@ -259,6 +287,7 @@ export function ContractEditor({ orgId, slug, tz, has, contractId }: ContractEdi
     return out;
   }, [draft, views, detail, draftMode, tz, subjectName]);
   const blockedReason = confirmBlockedReason(overlapLineCount(warnings));
+  const gapText = draftMode && ab.canEdit ? staffGapText(staffGaps(draft)) : null;
 
   // ---- Sửa nháp ----
   const dirty = savedSig === null || sig(draft, tz) !== savedSig;
@@ -300,15 +329,58 @@ export function ContractEditor({ orgId, slug, tz, has, contractId }: ContractEdi
     });
 
   const applyError = (err: unknown) => {
-    const fields = fieldErrors(err);
+    if (isStaleVersion(err)) {
+      // T2: không đè im lặng — giữ nguyên chữ đang nhập, báo và cho tải bản mới.
+      setStale({ phase: 'conflict' });
+      scrollToFirstError();
+      return;
+    }
+    const money = moneyFieldOf(err);
+    const fields = money ? { ...fieldErrors(err), [money.field]: money.message } : fieldErrors(err);
     const line = errorLineOf(err);
     const conflicts = conflictsOf(err);
-    setServerErrors({ fields, line, message: line !== null ? userMessage(err) : null });
-    if (conflicts.length > 0) setAlert({ text: userMessage(err), conflicts });
-    else if (line === null && Object.keys(fields).length === 0) setAlert({ text: userMessage(err) });
-    else if (errorKind(err) !== 'validation') setAlert({ text: userMessage(err) });
+    const text = prettyMoneyText(userMessage(err));
+    setServerErrors({ fields, line, message: line !== null ? text : null });
+    if (conflicts.length > 0) setAlert({ text, conflicts });
+    else if (line === null && Object.keys(fields).length === 0) setAlert({ text });
+    else if (errorKind(err) !== 'validation') setAlert({ text });
     scrollToFirstError();
   };
+
+  // T2: tải bản mới của máy chủ; bản đang nhập giữ lại (mine) để so và dùng lại nếu muốn.
+  async function reloadLatest() {
+    if (!detail) return;
+    setReloading(true);
+    try {
+      const fresh = (await getContract(orgId, detail.id)) as ContractDetail;
+      const theirs = draftFromDetail(fresh, tz);
+      const mine = draft;
+      setDetail(fresh);
+      setDraft(theirs);
+      setSavedSig(sig(theirs, tz));
+      setResetKey((k) => k + 1);
+      setServerErrors({ fields: {}, line: null, message: null });
+      setAlert(null);
+      setStale({ phase: 'loaded', mine, diffs: draftDiffs(mine, theirs, tz) });
+    } catch (err) {
+      setAlert({ text: userMessage(err) });
+    } finally {
+      setReloading(false);
+    }
+  }
+
+  function restoreMine() {
+    if (stale?.phase !== 'loaded') return;
+    // Bản máy chủ đã nạp (detail.updatedAt mới) — lưu lần tới là người dùng CHỦ Ý ghi bản của mình lên bản mới.
+    setDraft(stale.mine);
+    setResetKey((k) => k + 1);
+    setStale(null);
+  }
+
+  // Thân PATCH: kèm updatedAt của bản đang sửa để máy chủ từ chối (409 STALE_VERSION) khi bản đã bị sửa nơi khác.
+  // Lớp API (src/api/types.ts) chưa khai expectedUpdatedAt — phiếu vướng; ghép tại đây.
+  const withVersion = (d: ContractDetail, body: ContractUpdateInput): ContractUpdateInput =>
+    ({ ...body, expectedUpdatedAt: d.updatedAt }) as ContractUpdateInput;
 
   async function save(): Promise<ContractDetail | null> {
     setShowErrors(true);
@@ -324,12 +396,16 @@ export function ContractEditor({ orgId, slug, tz, has, contractId }: ContractEdi
       if (!detail) {
         d = (await createContract(orgId, body, idemKey.current)) as ContractDetail;
         setDetail(d);
+        // N6: khách mới đã thành khách có sẵn — thẻ khách thay cho hai ô nhập (máy chủ không nhận sửa khách qua hợp đồng).
+        const c = d.customer;
+        setDraft((x) => ({ ...x, customer: { kind: 'existing', id: c.id, fullName: c.fullName, phone: c.phone, email: c.email } }));
         setSavedSig(sig(draft, tz));
         void navigate(`/${slug}/hop-dong/${d.id}`, { replace: true });
       } else {
-        d = (await updateContract(orgId, detail.id, patchBody(draft, tz))) as ContractDetail;
+        d = (await updateContract(orgId, detail.id, withVersion(detail, patchBody(draft, tz)))) as ContractDetail;
         setDetail(d);
         setSavedSig(sig(draft, tz));
+        setStale(null);
       }
       // Máy chủ chỉ giữ ghi chú/khách theo bản đã lưu; giữ nguyên nháp đang nhập.
       return d;
@@ -352,9 +428,10 @@ export function ContractEditor({ orgId, slug, tz, has, contractId }: ContractEdi
       const d = dirty || !detail ? await save() : detail;
       if (!d) return;
       try {
-        const res = (await changeContractStatus(orgId, d.id, { to: 'CONFIRMED' })) as unknown as ContractDetail;
-        setDetail(res);
-        setAlert(null);
+        const res = await changeContractStatus(orgId, d.id, { to: 'CONFIRMED' });
+        setDetail(res as unknown as ContractDetail);
+        // S1: báo đúng số lịch máy chủ đã tạo (kể cả lịch chưa có thợ).
+        setAlert({ text: confirmResultText(res as unknown as ContractDetail & { createdAppointments: { contractLineId: string | null }[] }), tone: 'ok', link: (has('schedule.read_all') || has('schedule.read_own')) ? { to: `/${slug}/lich`, label: 'Xem lịch' } : undefined });
       } catch (err) {
         applyError(err);
         // 409 trùng giờ: hợp đồng vẫn là nháp. Gọi lại quote để dải đỏ hiện đúng dòng.
@@ -375,7 +452,7 @@ export function ContractEditor({ orgId, slug, tz, has, contractId }: ContractEdi
   async function saveNotes() {
     if (!detail || status !== 'CONFIRMED' || (detail.notes ?? '') === draft.notes) return;
     try {
-      const d = (await updateContract(orgId, detail.id, { notes: draft.notes.trim() ? draft.notes : null })) as ContractDetail;
+      const d = (await updateContract(orgId, detail.id, withVersion(detail, { notes: draft.notes.trim() ? draft.notes : null }))) as ContractDetail;
       setDetail(d);
       setServerErrors({ fields: {}, line: null, message: null });
     } catch (err) {
@@ -424,6 +501,14 @@ export function ContractEditor({ orgId, slug, tz, has, contractId }: ContractEdi
   }
 
   const title = draftMode ? (detail ? `Lập hợp đồng ${detail.code}` : 'Lập hợp đồng mới') : `Hợp đồng ${detail?.code ?? ''}`;
+  // N1: mã hợp đồng không bẻ dòng ở dấu gạch ("HĐ- / 000001" ở 1024) — cả mã xuống dòng cùng nhau.
+  const headTitle = detail ? (
+    <>
+      {draftMode ? 'Lập hợp đồng' : 'Hợp đồng'} <span className="ct-code">{detail.code}</span>
+    </>
+  ) : (
+    title
+  );
   const statusTag =
     status === 'CONFIRMED' && detail?.confirmedAt ? (
       <StatusTag tone="ok">Đã xác nhận · {displayDateTime(detail.confirmedAt, tz)}</StatusTag>
@@ -568,7 +653,7 @@ export function ContractEditor({ orgId, slug, tz, has, contractId }: ContractEdi
         <div className="ct-col">
           <Card
             className="ct-head"
-            title={title}
+            title={headTitle}
             actions={
               <>
                 {statusTag}
@@ -590,6 +675,7 @@ export function ContractEditor({ orgId, slug, tz, has, contractId }: ContractEdi
                 <span className="ct-set__l">Khách hàng</span>
                 <CustomerBlock
                   orgId={orgId}
+                  customerHref={detail && has('customers.read') ? `/${slug}/khach-hang/${detail.customer.id}` : null}
                   value={draft.customer}
                   onChange={(customer) => update((d) => ({ ...d, customer }))}
                   locked={detail !== null || !ab.canEdit}
@@ -636,6 +722,49 @@ export function ContractEditor({ orgId, slug, tz, has, contractId }: ContractEdi
             </div>
           )}
 
+          {stale && (
+            <div className="ct-alert ct-alert--warn ct-stale" role="alert" data-o="ban-moi">
+              <IconWarn />
+              <div className="ct-stale__b">
+                {stale.phase === 'conflict' ? (
+                  <>
+                    <b>Hợp đồng vừa được người khác sửa.</b> Chưa lưu thay đổi của bạn — chữ bạn đang nhập vẫn còn nguyên. Tải bản mới để xem họ đã
+                    đổi gì; bản của bạn được giữ lại để so.
+                  </>
+                ) : (
+                  <>
+                    <b>Đã tải bản mới.</b> Bản bạn đang nhập vẫn được giữ.
+                    {stale.diffs.length > 0 ? (
+                      <ul>
+                        {stale.diffs.map((x) => (
+                          <li key={x}>{x}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      ' Hai bản giống nhau.'
+                    )}
+                  </>
+                )}
+                <div className="ct-stale__acts">
+                  {stale.phase === 'conflict' ? (
+                    <Button size="sm" variant="primary" loading={reloading} onClick={() => void reloadLatest()}>
+                      Tải bản mới
+                    </Button>
+                  ) : (
+                    <>
+                      <Button size="sm" onClick={restoreMine}>
+                        Dùng lại bản của tôi
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => setStale(null)}>
+                        Giữ bản mới
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           {status === 'CONFIRMED' && (
             <div className="ct-okband" role="status">
               <IconLock />
@@ -678,6 +807,7 @@ export function ContractEditor({ orgId, slug, tz, has, contractId }: ContractEdi
                 pending={draftMode && pending}
                 locked={!draftMode || !ab.canEdit}
                 errors={draftMode ? errors : {}}
+                resetKey={resetKey}
                 lineError={draftMode ? lineErrorAt(i) : null}
                 warnings={warnings.get(l.key) ?? []}
                 people={l.staff.map((s) => ({ ...s, displayName: nameOf(s.membershipId), initials: people.get(s.membershipId)?.initials, avatarUrl: people.get(s.membershipId)?.avatarUrl }))}
@@ -728,6 +858,7 @@ export function ContractEditor({ orgId, slug, tz, has, contractId }: ContractEdi
             notesLocked={!ab.canEditNotes}
             pending={draftMode && pending}
             errors={errors}
+            resetKey={resetKey}
             onDiscount={(discount) => update((d) => ({ ...d, discount }))}
             onDeposit={(depositRequired) => {
               setDepositTouched(true);
@@ -737,8 +868,18 @@ export function ContractEditor({ orgId, slug, tz, has, contractId }: ContractEdi
             onNotesBlur={status === 'CONFIRMED' ? () => void saveNotes() : undefined}
           />
 
-          {(alert || quoteGeneralError) && (
-            <div className={`ct-alert`} role="alert">
+          {alert?.tone === 'ok' ? (
+            <div className="ct-okband" role="status">
+              <IconLock />
+              <span>{alert.text}</span>
+              {alert.link && (
+                <Link className="ct-lnk" to={alert.link.to}>
+                  {alert.link.label}
+                </Link>
+              )}
+            </div>
+          ) : (alert || quoteGeneralError) && (
+            <div className={`ct-alert${alert?.tone === 'warn' ? ' ct-alert--warn' : ''}`} role={alert?.tone === 'warn' ? 'status' : 'alert'}>
               <IconWarn />
               <div>
                 {alert?.conflicts && alert.conflicts.length > 0 ? null : (alert?.text ?? quoteGeneralError)}
@@ -755,7 +896,16 @@ export function ContractEditor({ orgId, slug, tz, has, contractId }: ContractEdi
             </div>
           )}
 
-          <StickyTotalBar total={totals?.total ?? null} deposit={deposit} pending={draftMode && pending} actions={actions} />
+          {/* S1: thanh tổng kèm một dòng vàng khi còn dòng chưa có thợ / chưa có giờ — nhắc, KHÔNG chặn xác nhận. */}
+          <div className={`ct-totbar${gapText ? ' ct-totbar--note' : ''}`}>
+            {gapText && (
+              <div className="ct-totbar__note" role="status" data-o="thieu-tho">
+                <IconWarn />
+                <span>{gapText}</span>
+              </div>
+            )}
+            <StickyTotalBar position="static" total={totals?.total ?? null} deposit={deposit} pending={draftMode && pending} actions={actions} />
+          </div>
         </div>
       </div>
 

@@ -611,7 +611,8 @@ export function contractAbilities(has: (p: Permission) => boolean, status: Contr
     // Sau xác nhận, huỷ dòng làm giảm tiền → máy chủ đòi thêm contracts.adjust.
     canVoidLine: write && confirmed && has('contracts.adjust'),
     canEditNotes: write && (draft || confirmed),
-    canCancel: write && status !== null && canTransitionContract(status, 'CANCELLED'),
+    // T4: huỷ hợp đồng ĐÃ xác nhận = giảm tiền về 0 → máy chủ đòi contracts.adjust như huỷ dòng (routes.ts assertCanAdjust).
+    canCancel: write && status !== null && canTransitionContract(status, 'CANCELLED') && (!confirmed || has('contracts.adjust')),
     showCatalog: has('catalog.read') && write && (draft || confirmed),
     canPickStaff: has('staff.read') && write && draft,
     canSearchCustomers: has('customers.read'),

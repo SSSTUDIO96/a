@@ -68,7 +68,12 @@ export function StaffRow({ people, mode, onPick, pickBlockedReason, scheduleHref
             </Link>
           )}
         </div>
-        {error && <div className="ct-err">{error}</div>}
+        {error ? (
+          <div className="ct-err">{error}</div>
+        ) : (
+          // N7: lý do khoá nút chọn thợ hiện thành chữ, không chỉ nằm trong aria-label / tooltip.
+          mode === 'edit' && pickBlockedReason && <div className="ct-fx" data-o="ly-do-khoa-tho">{pickBlockedReason}</div>
+        )}
       </div>
     </div>
   );

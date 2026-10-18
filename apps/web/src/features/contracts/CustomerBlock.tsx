@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router';
 import { userMessage } from '../../api/errors';
 import { listCustomers } from '../../api/schedule';
 import type { Customer } from '../../api/types';
@@ -10,16 +11,20 @@ export interface CustomerBlockProps {
   orgId: string;
   value: CustomerDraft | null;
   onChange: (v: CustomerDraft | null) => void;
-  // Đã lưu hợp đồng: máy chủ không cho đổi khách → không có nút "Đổi".
+  // Đã lưu hợp đồng: máy chủ không cho đổi khách → không có nút "Đổi"; khối khách luôn là thẻ khách (không ô nhập).
   locked: boolean;
+  // Trang hồ sơ khách (sửa tên, số điện thoại ở đó) — có khi hợp đồng đã lưu và người dùng xem được khách.
+  customerHref?: string | null;
   canSearch: boolean;
   canCreate: boolean;
   errors: Record<string, string>;
 }
 
-export function CustomerBlock({ orgId, value, onChange, locked, canSearch, canCreate, errors }: CustomerBlockProps) {
-  if (value?.kind === 'existing') {
-    const sub = [value.phone, value.email].filter(Boolean).join(' · ');
+export function CustomerBlock({ orgId, value, onChange, locked, customerHref, canSearch, canCreate, errors }: CustomerBlockProps) {
+  // N6: sau lần lưu đầu (hoặc khi không được sửa) khách mới cũng hiện thành thẻ — không còn ô nhập mà sửa xong bị bỏ im lặng.
+  if (value?.kind === 'existing' || (value?.kind === 'new' && locked)) {
+    const email = value.kind === 'existing' ? value.email : null;
+    const sub = [value.phone, email].filter(Boolean).join(' · ');
     return (
       <div className="ct-kh">
         <div className="ct-kh__main">
@@ -30,6 +35,11 @@ export function CustomerBlock({ orgId, value, onChange, locked, canSearch, canCr
           <Button size="sm" onClick={() => onChange(null)}>
             Đổi
           </Button>
+        )}
+        {locked && customerHref && (
+          <Link className="ct-lnk" to={customerHref} title="Tên, số điện thoại của khách sửa ở hồ sơ khách">
+            Sửa ở hồ sơ khách
+          </Link>
         )}
       </div>
     );

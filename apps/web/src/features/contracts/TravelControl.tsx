@@ -14,9 +14,10 @@ export interface TravelControlProps {
   disabled: boolean;
   errors: { distanceKm?: string; amount?: string; line?: string };
   idPrefix: string;
+  resetKey?: number;
 }
 
-export function TravelControl({ value, onChange, hasTiers, fixedNeedsKm, quoteTravel, disabled, errors, idPrefix }: TravelControlProps) {
+export function TravelControl({ value, onChange, hasTiers, fixedNeedsKm, quoteTravel, disabled, errors, idPrefix, resetKey }: TravelControlProps) {
   const modes: TravelFeeMode[] = ['FIXED', 'PER_KM', ...(hasTiers || value.mode === 'TIERED' ? (['TIERED'] as const) : []), 'MANUAL'];
   const options: SegmentedOption<TravelFeeMode>[] = modes.map((m) => ({ value: m, label: TRAVEL_MODE_LABEL[m] }));
   const showKm = value.mode === 'PER_KM' || value.mode === 'TIERED' || (value.mode === 'FIXED' && (fixedNeedsKm || value.distanceKm !== null));
@@ -41,6 +42,7 @@ export function TravelControl({ value, onChange, hasTiers, fixedNeedsKm, quoteTr
             aria-label="Số km một chiều"
             value={value.distanceKm}
             onChange={(distanceKm) => onChange({ ...value, distanceKm })}
+            resetKey={resetKey}
             disabled={disabled}
             error={errors.distanceKm}
           />
@@ -53,6 +55,7 @@ export function TravelControl({ value, onChange, hasTiers, fixedNeedsKm, quoteTr
             aria-label="Phí di chuyển nhập tay"
             value={value.amount}
             onChange={(amount) => onChange({ ...value, amount })}
+            resetKey={resetKey}
             disabled={disabled}
             error={errors.amount}
           />

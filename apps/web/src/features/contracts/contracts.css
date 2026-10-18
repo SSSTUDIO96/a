@@ -55,6 +55,17 @@
 .ct-alert { display: flex; gap: 8px; align-items: flex-start; padding: 10px 14px; border: 1px solid var(--danger-line); background: var(--danger-bg); color: var(--danger); border-radius: 12px; font-size: 13.5px; }
 .ct-alert ul { margin: 4px 0 0 18px; }
 .ct-alert .ui-ico { width: 16px; height: 16px; margin-top: 2px; }
+.ct-alert--warn { border-color: var(--warn-line); background: var(--warn-bg); color: var(--warn); }
+.ct-okband .ct-lnk { margin-left: auto; white-space: nowrap; }
+.ct-stale__b { flex: 1; min-width: 0; }
+.ct-stale__acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.ct-code { white-space: nowrap; }
+
+/* ---------- Thanh tổng + dòng nhắc thiếu thợ (S1) ---------- */
+.ct-totbar { position: sticky; bottom: 0; z-index: 15; margin-top: 4px; display: flex; flex-direction: column; }
+.ct-totbar__note { display: flex; gap: 8px; align-items: flex-start; padding: 6px 14px; font-size: 13px; color: var(--warn); background: var(--warn-bg); border: 1px solid var(--warn-line); border-bottom: 0; border-radius: 12px 12px 0 0; }
+.ct-totbar__note .ui-ico { width: 15px; height: 15px; flex: none; margin-top: 2px; }
+.ct-totbar--note > .ui-total { border-top-left-radius: 0; border-top-right-radius: 0; }
 
 /* ---------- Thẻ dòng gói ---------- */
 .ct-ln { background: #fff; border: 1px solid var(--line); border-radius: 12px; }
@@ -136,7 +147,10 @@
 /* ---------- Danh sách hợp đồng ---------- */
 .ct-list__bar { padding: 12px 16px; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 10px; }
 .ct-list__search { max-width: 360px; }
-.ct-gl { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; gap: 16px; align-items: center; padding: 12px 16px; border-top: 1px solid var(--line-2); color: var(--text); text-decoration: none; }
+/* N4: cột ngày / tổng / trạng thái rộng cố định để các dòng thẳng hàng (mỗi dòng là một lưới riêng). */
+.ct-gl { display: grid; grid-template-columns: minmax(0, 1fr) 96px 130px 118px; gap: 16px; align-items: center; padding: 12px 16px; border-top: 1px solid var(--line-2); color: var(--text); text-decoration: none; }
+.ct-gl > .ui-tag { justify-self: start; }
+.ct-filter { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 13.5px; padding: 6px 10px; border-radius: 8px; background: var(--accent-soft); border: 1px solid var(--accent-line); }
 .ct-gl:first-child { border-top: 0; }
 .ct-gl:hover { background: var(--soft); }
 .ct-gl:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
@@ -146,8 +160,6 @@
 .ct-gl__p { font-weight: 700; text-align: right; min-width: 92px; }
 .ct-pager { display: flex; justify-content: flex-end; align-items: center; gap: 8px; padding: 10px 16px; border-top: 1px solid var(--line); font-size: 13px; color: var(--muted); }
 
-/* Thanh tổng nằm trong cột phải */
-.ct-col > .ui-total { margin-top: 4px; }
 
 /* ===== Máy tính bảng ===== */
 @media (max-width: 1180px) {
@@ -161,6 +173,11 @@
   .ct-addm { display: flex; }
   .ct-phone-acts { display: flex; justify-content: flex-end; align-items: center; gap: 12px; }
   .ct-page { padding-bottom: 84px; }
+  .ct-page:has(.ct-totbar--note) { padding-bottom: 124px; }
+  /* Điện thoại: thanh tổng dính trên thanh dưới, tràn mép (như StickyTotalBar sticky của ui). */
+  .ct-totbar { position: fixed; left: 0; right: 0; bottom: var(--h-bottomnav); z-index: 25; margin-top: 0; }
+  .ct-totbar > .ui-total { border-radius: 0; border-left: 0; border-right: 0; }
+  .ct-totbar__note { border-radius: 0; border-left: 0; border-right: 0; padding: 6px 14px; font-size: 12.5px; }
   .ct-head > .ui-card__head { display: none; }
   .ct-set { grid-template-columns: 96px minmax(0, 1fr); }
   .ct-rw { grid-template-columns: 1fr; gap: 6px; }

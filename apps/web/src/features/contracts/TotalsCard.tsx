@@ -13,6 +13,8 @@ export interface TotalsCardProps {
   notesLocked: boolean;
   pending: boolean;
   errors: Record<string, string>;
+  // Màn tự đặt lại giá trị (nạp lại, tải bản mới) → ô tiền bỏ chữ lỗi cũ dù số không đổi.
+  resetKey?: number;
   onDiscount: (v: Vnd) => void;
   onDeposit: (v: Vnd | null) => void;
   onNotes: (v: string) => void;
@@ -41,6 +43,7 @@ export function TotalsCard(p: TotalsCardProps) {
             value={p.discount === 0 ? null : p.discount}
             placeholder="0 ₫"
             onChange={(v) => p.onDiscount(v ?? 0)}
+            resetKey={p.resetKey}
             disabled={p.moneyLocked}
             error={p.errors.discount}
           />
@@ -64,6 +67,7 @@ export function TotalsCard(p: TotalsCardProps) {
             value={p.deposit}
             placeholder={p.suggestedDeposit !== null ? `Gợi ý ${formatVnd(p.suggestedDeposit)}` : undefined}
             onChange={p.onDeposit}
+            resetKey={p.resetKey}
             disabled={p.moneyLocked}
             error={p.errors.depositRequired}
           />

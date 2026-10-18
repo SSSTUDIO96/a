@@ -115,6 +115,13 @@ Mỗi lỗi ghi đủ: triệu chứng · gốc bệnh · số đo · cách ch�
 - **Cách chặn:** chỉ giao chấm một mã đã qua `pnpm build` và typecheck ngay trên đúng mã đó, chạy trong một bản tách riêng. Ghi lệnh và kết quả vào đầu bài giao chấm. Bản chụp việc dở ghi rõ "CHƯA nghiệm thu" và không bao giờ đem đi chấm.
 - **Bài học cho studio khác:** "lưu cho khỏi mất" và "bản để nghiệm thu" là hai việc khác nhau. Lẫn hai thứ đó thì người chấm mất nửa buổi vào lỗi không phải của người được chấm.
 
+### 20. "Sửa giá" xoá luôn 9 thông số khác của gói thuê bao
+- **Triệu chứng (thợ chấm độc lập tìm ra):** quản trị viên chỉ sửa giá một gói thuê bao. Sau đó cả 9 thông số khác của gói bị đặt lại: mọi giới hạn thành "không giới hạn", gói đã ngừng bán được bật bán lại. Một studio đang bị chặn ở mức 2 nhân sự liền thêm được người.
+- **Gốc bệnh:** thân yêu cầu "sửa một phần" được dựng bằng cách lấy khuôn của "tạo mới" rồi cho mọi trường thành tuỳ chọn. Khuôn tạo mới có giá trị mặc định, và công cụ kiểm dữ liệu (zod 4) vẫn điền mặc định vào những trường người dùng không gửi. Bài thử của thợ không thấy, vì nó gửi kèm đủ trường rồi chỉ kiểm hai trường vừa gửi.
+- **Số đo:** 9/9 trường bị đổi trước khi sửa, 0/9 sau khi sửa. Soát cả máy chủ: có 37 chỗ dùng giá trị mặc định, chỉ đúng 1 chỗ mắc bệnh.
+- **Cách chặn:** hai lớp chặn. (1) Lúc khởi động, máy chủ duyệt mọi đường sửa một phần; trường nào bị tự điền khi vắng mặt thì máy chủ từ chối khởi động. (2) Cửa gác "sửa một phần" chạy với mọi đường sửa: gửi đủ trường, rồi gửi đúng một trường, so mọi giá trị còn lại phải y nguyên. Đã thử: cài lại lỗi thì cả hai lớp đều bắt.
+- **Bài học cho studio khác:** với mọi nút "sửa", phải thử kiểu "chỉ đổi một ô rồi xem các ô khác còn nguyên không". Lỗi loại này không làm sập gì, chỉ âm thầm đổi cài đặt — nên chỉ phép thử đúng kiểu đó mới thấy.
+
 ---
 
 ## Phần CỦA RIÊNG DỰ ÁN NÀY

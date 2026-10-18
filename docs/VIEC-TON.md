@@ -52,3 +52,5 @@ Danh sách việc các thợ, thợ chấm và R&D đã nêu nhưng **chưa làm
 | 34 | Thẻ `og:` cho Zalo/Facebook in sẵn từ máy chủ; đặt `VITE_PUBLIC_SITE_ORIGIN` trên Vercel | thợ Thương hiệu |
 | 35 | `GET /staff` trả ngày vào studio ("tham gia …") và tên vai trò | thợ Nhân sự |
 | 36 | src/ui thêm IconSearch, IconGrip, ô tìm có kính lúp, hộp thoại tự đổi Dialog/ngăn kéo đáy theo khổ (nay đang dựng tạm trong features/staff) | thợ Nhân sự |
+| 37 | Web: hiện `totalsOverflow`/tổng null ở sổ thu–báo cáo; `phoneHidden`; quản trị gửi `replaceCurrent` khi cố ý cắt kỳ, hiện `renewedUntil` | thợ O |
+| 38 | Thuê bao: đổi sang mô hình "dòng mới cắt kỳ cũ" để database chặn chồng thời gian bằng EXCLUDE | thợ O |

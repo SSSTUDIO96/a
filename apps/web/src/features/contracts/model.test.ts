@@ -253,6 +253,12 @@ describe('quyền → phần nào hiện', () => {
     expect(contractAbilities(reception, 'CONFIRMED')).toMatchObject({ canAddExtra: true, canVoidLine: false });
   });
 
+  it('T4: lễ tân KHÔNG huỷ được hợp đồng đã xác nhận (cần contracts.adjust như máy chủ); nháp thì huỷ được', () => {
+    expect(contractAbilities(reception, 'CONFIRMED').canCancel).toBe(false);
+    expect(contractAbilities(reception, 'DRAFT').canCancel).toBe(true);
+    expect(contractAbilities(owner, 'CONFIRMED').canCancel).toBe(true);
+  });
+
   it('kế toán (chỉ contracts.read): chỉ xem', () => {
     const a = contractAbilities(accountant, 'DRAFT');
     expect(a).toMatchObject({ canEdit: false, canConfirm: false, canEditNotes: false, showCatalog: false, canPickStaff: false, canCancel: false });

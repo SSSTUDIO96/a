@@ -1,7 +1,7 @@
 // Chế độ C — lưới tuần thợ × ngày (máy tính, máy tính bảng). Bản mẫu docs/rnd/phuong-an-C.html.
 import type { Appointment } from '../../api/types';
 import { IconWarn } from '../../ui';
-import { cellKey, countByDay, countByLane, indexByCell, UNASSIGNED, type ConflictMarks, type StaffLane } from './model';
+import { cellKey, countByDay, countByLane, indexByCell, laneShortNames, UNASSIGNED, type ConflictMarks, type StaffLane } from './model';
 import { ApptChip, cx, LaneAvatar } from './parts';
 import { ddmm, hhmm, isWeekend, todayKey, weekDays, weekdayLong, type DayKey } from './time';
 
@@ -21,6 +21,7 @@ export function WeekGridC({ day, lanes, showUnassigned, appointments, marks, onO
   const perLane = countByLane(appointments);
   const today = todayKey();
   const rows: (StaffLane | null)[] = [...lanes, ...(showUnassigned ? [null] : [])];
+  const short = laneShortNames(lanes);
 
   return (
     <div className="ws-c" data-testid="che-do-C">
@@ -45,7 +46,9 @@ export function WeekGridC({ day, lanes, showUnassigned, appointments, marks, onO
               <div role="rowheader" className={cx('ws-c__rh', !lane && 'is-na')}>
                 <LaneAvatar lane={lane} />
                 <span className="ws-c__who">
-                  <span className="ws-c__nm">{lane ? lane.name : 'Chưa có thợ'}</span>
+                  <span className="ws-c__nm" title={lane?.name}>
+                    {lane ? (short.get(lane.membershipId) ?? lane.name) : 'Chưa có thợ'}
+                  </span>
                   <span className="ws-c__meta">{[lane?.tierName, `${n} ca/tuần`].filter(Boolean).join(' · ')}</span>
                 </span>
               </div>

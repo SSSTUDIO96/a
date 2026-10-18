@@ -312,7 +312,7 @@ describe('ẩn / khoá theo quyền', () => {
     api.getContract.mockResolvedValue(detail('DRAFT') as never);
     api.quoteContract.mockResolvedValue(quote([]) as never);
     renderEditor(SYSTEM_ROLES.accountant.permissions);
-    await screen.findByText('Lập hợp đồng HĐ-2026-0142');
+    await screen.findByRole('heading', { name: 'Lập hợp đồng HĐ-2026-0142' });
     expect(screen.queryByRole('button', { name: 'Lưu nháp' })).toBeNull();
     expect(screen.queryByRole('button', { name: /Xác nhận hợp đồng/ })).toBeNull();
     expect(screen.queryByText('Bảng giá')).toBeNull();
@@ -398,7 +398,167 @@ describe('liên kết "Thu tiền"', () => {
     api.getContract.mockResolvedValue(detail('DRAFT') as never);
     api.quoteContract.mockResolvedValue(quote([]) as never);
     renderEditor(OWNER);
-    await screen.findByText('Lập hợp đồng HĐ-2026-0142');
+    await screen.findByRole('heading', { name: 'Lập hợp đồng HĐ-2026-0142' });
     expect(screen.queryByRole('link', { name: 'Thu tiền' })).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// Biên bản nghiệm thu web 2 (thợ T): S1, T1, T2, T4, N1, N6, N7, N8.
+describe('biên bản web 2', () => {
+  const HOLD = {
+    membershipId: 'm2',
+    level: 'OVERLAP', // máy chủ gán OVERLAP khi chỉ có giữ chỗ nháp — web không tin mức này
+    overlaps: [],
+    sameDay: [],
+    draftHolds: [
+      {
+        contractId: 'hd-khac',
+        code: 'HĐ-2026-0139',
+        lineId: 'lx',
+        lineName: 'Mẹ – Trang điểm nhẹ nhàng',
+        scheduledStart: '2026-10-23T22:00:00.000Z',
+        scheduledEnd: '2026-10-23T22:45:00.000Z',
+        overlaps: true,
+      },
+    ],
+  };
+
+  it('T1: giữ chỗ của hợp đồng NHÁP khác → dải xám "Giữ chỗ nháp ở HĐ-…", KHÔNG đỏ, nút Xác nhận bấm được', async () => {
+    api.getContract.mockResolvedValue(detail('DRAFT') as never);
+    api.quoteContract.mockResolvedValue(quote([HOLD]) as never);
+    renderEditor(OWNER);
+    const band = await screen.findByText(/Giữ chỗ nháp ở HĐ-2026-0139/);
+    expect(band.closest('[data-muc]')?.getAttribute('data-muc')).toBe('DRAFT_HOLD');
+    expect(screen.queryByText(/hợp đồng sẽ không xác nhận được/)).toBeNull();
+    expect(((await confirmButton()) as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('S1: dòng có giờ chưa có thợ → dòng vàng ở thanh tổng, KHÔNG chặn xác nhận; xác nhận xong báo số lịch máy chủ đã tạo', async () => {
+    const noStaff = detail('DRAFT', { lines: [line({ staff: [] })] });
+    api.getContract.mockResolvedValue(noStaff as never);
+    api.quoteContract.mockResolvedValue({ ...quote([]), lines: [line({ id: null, staff: [], staffWarnings: [] })] } as never);
+    api.changeContractStatus.mockResolvedValue({
+      ...detail('CONFIRMED', { lines: [line({ staff: [] })] }),
+      createdAppointments: [{ id: 'a9', code: 'LH-000009', startsAt: '2026-10-23T22:00:00.000Z', status: 'CONFIRMED', contractLineId: 'l1' }],
+      cancelledAppointments: [],
+    } as never);
+    renderEditor(OWNER);
+    const bar = await screen.findByRole('region', { name: 'Tổng tiền' });
+    const note = await screen.findByText('1 dòng chưa có thợ — lịch sẽ nằm ở hàng Chưa có thợ');
+    expect(note.closest('.ct-totbar')?.contains(bar)).toBe(true);
+    const btn = await confirmButton();
+    await waitFor(() => expect((btn as HTMLButtonElement).disabled).toBe(false));
+    await screen.findByText('600.000 ₫', { selector: '.ct-ln__ft b' });
+    await userEvent.click(btn);
+    await waitFor(() => expect(api.changeContractStatus).toHaveBeenCalledWith('org-1', 'hd-1', { to: 'CONFIRMED' }));
+    expect(await screen.findByText('Đã xác nhận hợp đồng · đã tạo 1 lịch (1 lịch chưa có thợ — ở hàng Chưa có thợ).')).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Xem lịch' }).getAttribute('href')).toBe('/studio/lich');
+  });
+
+  it('T2: Lưu gửi kèm expectedUpdatedAt; 409 STALE_VERSION → dải "vừa được người khác sửa", giữ chữ đang nhập; Tải bản mới → so khác biệt, dùng lại được bản của mình', async () => {
+    const v1 = detail('DRAFT', { updatedAt: '2026-10-18T10:00:00.000Z' });
+    const v2 = detail('DRAFT', { updatedAt: '2026-10-18T10:05:00.000Z', discount: 100_000, total: 500_000 });
+    api.getContract.mockResolvedValueOnce(v1 as never).mockResolvedValueOnce(v2 as never);
+    api.quoteContract.mockResolvedValue(quote([]) as never);
+    api.updateContract.mockRejectedValue(
+      new ApiError('CONFLICT', 'Hợp đồng vừa được người khác sửa — tải lại để xem bản mới', 409, 'r', {
+        reason: 'STALE_VERSION',
+        currentUpdatedAt: '2026-10-18T10:05:00.000Z',
+        expectedUpdatedAt: '2026-10-18T10:00:00.000Z',
+      }),
+    );
+    renderEditor(OWNER);
+    const discount = await screen.findByLabelText('Giảm giá');
+    await userEvent.type(discount, '150000');
+    await userEvent.click(screen.getByRole('button', { name: 'Lưu nháp' }));
+    await waitFor(() => expect(api.updateContract).toHaveBeenCalledTimes(1));
+    expect(api.updateContract.mock.calls[0]?.[2]).toMatchObject({ expectedUpdatedAt: '2026-10-18T10:00:00.000Z', discount: 150_000 });
+    expect(await screen.findByText('Hợp đồng vừa được người khác sửa.')).toBeTruthy();
+    // Không đè im lặng: ô vẫn giữ số đang nhập.
+    expect((screen.getByLabelText('Giảm giá') as HTMLInputElement).value).toContain('150.000');
+    await userEvent.click(screen.getByRole('button', { name: 'Tải bản mới' }));
+    expect(await screen.findByText('Giảm giá: bản của bạn 150.000 ₫ · bản mới 100.000 ₫')).toBeTruthy();
+    await waitFor(() => expect((screen.getByLabelText('Giảm giá') as HTMLInputElement).value).toContain('100.000'));
+    await userEvent.click(screen.getByRole('button', { name: 'Dùng lại bản của tôi' }));
+    await waitFor(() => expect((screen.getByLabelText('Giảm giá') as HTMLInputElement).value).toContain('150.000'));
+    // Lần lưu sau dùng phiên bản MỚI (người dùng chủ ý ghi bản của mình lên bản mới).
+    api.updateContract.mockResolvedValue({ ...v2, discount: 150_000, updatedAt: '2026-10-18T10:06:00.000Z' } as never);
+    await userEvent.click(screen.getByRole('button', { name: 'Lưu nháp' }));
+    await waitFor(() => expect(api.updateContract.mock.calls.at(-1)?.[2]).toMatchObject({ expectedUpdatedAt: '2026-10-18T10:05:00.000Z' }));
+  });
+
+  it('resetKey: ô Giảm giá đang lỗi "-5", tải bản mới (cùng số 0) → ô hết lỗi', async () => {
+    const v1 = detail('DRAFT', { updatedAt: '2026-10-18T10:00:00.000Z' });
+    api.getContract.mockResolvedValue(v1 as never);
+    api.quoteContract.mockResolvedValue(quote([]) as never);
+    api.updateContract.mockRejectedValue(new ApiError('CONFLICT', 'x', 409, 'r', { reason: 'STALE_VERSION' }));
+    renderEditor(OWNER);
+    await userEvent.type(await screen.findByLabelText('Ghi chú hợp đồng'), 'a');
+    await userEvent.click(screen.getByRole('button', { name: 'Lưu nháp' }));
+    await screen.findByText('Hợp đồng vừa được người khác sửa.');
+    await userEvent.type(screen.getByLabelText('Giảm giá'), '-5');
+    expect(await screen.findByText('Số tiền không được âm.')).toBeTruthy();
+    await userEvent.click(screen.getByRole('button', { name: 'Tải bản mới' }));
+    await screen.findByText('Đã tải bản mới.', { exact: false });
+    await waitFor(() => expect(screen.queryByText('Số tiền không được âm.')).toBeNull());
+  });
+
+  it('N6: hợp đồng mới với khách mới — lưu xong khối khách thành thẻ (không còn ô nhập), có liên kết sửa ở hồ sơ khách', async () => {
+    api.quoteContract.mockResolvedValue(quote([]) as never);
+    api.createContract.mockResolvedValue(detail('DRAFT', { customer: { id: 'c-moi', fullName: 'Lê Thu Trang', phone: null, email: null } }) as never);
+    renderEditor(OWNER, null, '/studio/hop-dong/moi');
+    await userEvent.click(await screen.findByRole('button', { name: 'Khách mới' }));
+    await userEvent.type(screen.getByLabelText('Họ tên khách'), 'Lê Thu Trang');
+    // Thêm gói từ bảng giá (cột trái).
+    await userEvent.click((await screen.findAllByRole('button', { name: 'Thêm Mẹ – Trang điểm nhẹ nhàng' }))[0]!);
+    await userEvent.click(screen.getByRole('button', { name: 'Lưu nháp' }));
+    await waitFor(() => expect(api.createContract).toHaveBeenCalled());
+    await waitFor(() => expect(screen.queryByLabelText('Họ tên khách')).toBeNull());
+    expect(screen.getByText('Lê Thu Trang')).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Sửa ở hồ sơ khách' }).getAttribute('href')).toBe('/studio/khach-hang/c-moi');
+  });
+
+  it('N8: lời lỗi giảm giá của máy chủ in tiền Việt dưới ô Giảm giá; thẻ tổng + thanh tổng về "—", không giữ số cũ', async () => {
+    api.getContract.mockResolvedValue(detail('DRAFT') as never);
+    api.quoteContract.mockResolvedValueOnce(quote([]) as never);
+    renderEditor(OWNER);
+    await screen.findByText('600.000 ₫', { selector: '.ct-ln__ft b' });
+    api.quoteContract.mockRejectedValue(new ApiError('VALIDATION_FAILED', 'Giảm giá hợp đồng (99000000) lớn hơn tổng các dòng (600000)', 400, 'r', {}));
+    await userEvent.type(screen.getByLabelText('Giảm giá'), '99000000');
+    expect(await screen.findByText('Giảm giá hợp đồng (99.000.000 ₫) lớn hơn tổng các dòng (600.000 ₫)')).toBeTruthy();
+    expect(screen.queryByText(/99000000/)).toBeNull();
+    await waitFor(() => expect(screen.getByText('—', { selector: '[data-o="tong"]' })).toBeTruthy());
+    const bar = screen.getByRole('region', { name: 'Tổng tiền' });
+    expect(within(bar).queryByText('600.000 ₫')).toBeNull();
+  });
+
+  it('N7: giờ kết thúc trước giờ bắt đầu báo NGAY dưới ô (không đợi Lưu); lý do khoá "Chọn thợ" hiện thành chữ', async () => {
+    api.getContract.mockResolvedValue(detail('DRAFT', { lines: [line({ staff: [] })] }) as never);
+    api.quoteContract.mockResolvedValue({ ...quote([]), lines: [line({ id: null, staff: [], staffWarnings: [] })] } as never);
+    renderEditor(OWNER);
+    const end = await screen.findByLabelText('Giờ kết thúc');
+    await userEvent.clear(end);
+    await userEvent.type(end, '04:00');
+    await userEvent.tab();
+    expect(await screen.findByText('Giờ kết thúc phải sau giờ bắt đầu.')).toBeTruthy();
+    expect(screen.getByText('Giờ kết thúc phải sau giờ bắt đầu.', { selector: '[data-o="ly-do-khoa-tho"]' })).toBeTruthy();
+  });
+
+  it('T4: hợp đồng đã xác nhận + lễ tân → không có nút "Huỷ hợp đồng"; chủ thì có', async () => {
+    api.getContract.mockResolvedValue(detail('CONFIRMED') as never);
+    const { unmount } = renderEditor(SYSTEM_ROLES.receptionist.permissions);
+    await screen.findByText('Dòng đã chốt. Chỉ thêm phát sinh hoặc huỷ dòng kèm lý do.');
+    expect(screen.queryByRole('button', { name: 'Huỷ hợp đồng' })).toBeNull();
+    unmount();
+    renderEditor(OWNER);
+    expect((await screen.findAllByRole('button', { name: 'Huỷ hợp đồng' })).length).toBeGreaterThan(0);
+  });
+
+  it('N1: mã hợp đồng nằm trong một khối không bẻ dòng', async () => {
+    api.getContract.mockResolvedValue(detail('CONFIRMED') as never);
+    renderEditor(OWNER);
+    const code = await screen.findByText('HĐ-2026-0142', { selector: '.ct-code' });
+    expect(code.tagName).toBe('SPAN');
   });
 });
