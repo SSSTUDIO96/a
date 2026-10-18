@@ -1,0 +1,119 @@
+/*
+ * Design tokens — bản vẽ thông số C, mục 1 (docs/rnd/BAN-VE-C.md).
+ * Giá trị lấy đúng từ docs/rnd/v2-phuong-an-C.html.
+ * Tên biến màu ở khối đầu giữ Y NHƯ bản vẽ. Các biến phía dưới (loại ca, tooltip, lớp phủ, sọc,
+ * màu ảnh đại diện, màu rê chuột) là giá trị bản vẽ có ghi nhưng chưa đặt tên.
+ * Chế độ tối: bản mẫu chưa có, bản vẽ để sau lát 1 — không làm ở đây.
+ */
+:root {
+  /* 1.1 Màu — tên y như bản vẽ */
+  --bg: #F6F4F2;
+  --surface: #FFFFFF;
+  --line: #E9E3DE;
+  --line-2: #F2EDE9;
+  --soft: #FBFAF9;
+  --text: #221C19;
+  --muted: #716862;
+  --faint: #A39A94;
+  --accent: #A63D62;
+  --accent-soft: #F7E8EE;
+  --accent-line: #E7B8C9;
+  --ok: #2F7D72;
+  --ok-bg: #E6F3F0;
+  --warn: #8A5A00;
+  --warn-bg: #FFF6E0;
+  --warn-line: #EED6A0;
+  --danger: #B42318;
+  --danger-bg: #FEF0EE;
+  --danger-line: #F3B8B0;
+
+  /* Màu loại ca trên lịch */
+  --kind-bride: #A63D62;
+  --kind-bride-bg: #FBEDF2;
+  --kind-engagement: #9A5B0F;
+  --kind-engagement-bg: #FDF2E2;
+  --kind-event: #5B45A0;
+  --kind-event-bg: #F0ECFA;
+
+  /* Tooltip, lớp phủ, sọc "không làm được" */
+  --tip-bg: #2A2220;
+  --tip-text: #FFFFFF;
+  --overlay-dialog: rgba(34, 28, 25, .42);
+  --overlay-sheet: rgba(34, 28, 25, .45);
+  --stripe-off: repeating-linear-gradient(135deg, #F4F1EE 0 6px, #FAF8F6 6px 12px);
+
+  /* Màu bản vẽ mục 3 ghi thẳng giá trị (rê chuột, khoá, nhãn Nháp) */
+  --line-hover: #D8CFC9;
+  --accent-hover: #8F3354;
+  --dashed-bg: #FFFCFD;
+  --switch-off: #D9D2CD;
+  --seg-off-text: #CFC7C1;
+  --draft-bg: #EFEBE8;
+
+  /* Ảnh đại diện chữ viết tắt: chọn theo membershipId (băm, lấy dư 6), chữ trắng */
+  --av-0: #A63D62;
+  --av-1: #5B45A0;
+  --av-2: #2F7D72;
+  --av-3: #9A5B0F;
+  --av-4: #7A6A62;
+  --av-5: #3D6A9A;
+
+  /* 1.2 Chữ */
+  --font: "Be Vietnam Pro", Inter, "Segoe UI", Roboto, Arial, sans-serif;
+  --fs-body: 14px;
+  --lh-body: 1.45;
+  --fs-h1: 24px;
+  --fs-h1-tablet: 21px;
+  --fs-topbar: 16px;
+  --fs-h2: 16px;
+  --fs-h2-subject: 15px;
+  --fs-group: 13px;
+  --fs-caps: 12px;
+  --fs-fx: 12px;
+  --fs-tag: 11.5px;
+  --fs-total: 18px;
+  --fs-total-phone: 16px;
+
+  /* 1.3 Thang khoảng cách (px) */
+  --sp-2: 2px;
+  --sp-4: 4px;
+  --sp-6: 6px;
+  --sp-8: 8px;
+  --sp-10: 10px;
+  --sp-12: 12px;
+  --sp-14: 14px;
+  --sp-16: 16px;
+  --sp-18: 18px;
+  --sp-20: 20px;
+  --sp-24: 24px;
+  --sp-28: 28px;
+
+  /* Bo góc */
+  --r-card: 12px;
+  --r-dialog: 14px;
+  --r-sheet: 16px;
+  --r-ctl: 8px;
+  --r-seg: 10px;
+  --r-seg-in: 7px;
+  --r-pill: 999px;
+  --r-tip: 6px;
+  --r-skel: 6px;
+
+  /* Đổ bóng: không có. Mục đang chọn dùng viền trong. */
+  --sel-row: inset 3px 0 0 var(--accent);
+  --sel-seg: 0 0 0 1px var(--line);
+  --focus-ring: 2px solid var(--accent);
+  --focus-offset: 2px;
+  --input-ring: 0 0 0 3px var(--accent-soft);
+
+  /* Chiều cao điều khiển */
+  --h-ctl: 36px;
+  --h-ctl-sm: 30px;
+  --h-topbar: 54px;
+  --h-bottomnav: 64px;
+
+  /*
+   * 1.4 Điểm gãy (biến CSS không dùng được trong @media — ghi để tra):
+   *   máy tính ≥ 1181px · máy tính bảng 641–1180px · điện thoại ≤ 640px
+   */
+}

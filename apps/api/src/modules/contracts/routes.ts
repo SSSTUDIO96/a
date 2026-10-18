@@ -5,6 +5,7 @@ import {
   CONTRACT_STATUS_LABELS,
   normalizeVnPhone,
   vndFromBigInt,
+  WORK_STATUS_LABELS,
   type ContractStatus,
   type Vnd,
 } from '@makeup/shared';
@@ -24,6 +25,7 @@ import {
 } from './schemas';
 import { buildSheet, insertLines, money, planLines } from './sheet';
 import { contractSummarySelect, loadContractDetail, presentSheet, presentSummary } from './present';
+import { cancelAppointmentsOfContractTx } from '../schedule/service';
 
 type Tx = Prisma.TransactionClient;
 
@@ -502,6 +504,24 @@ export const contractRoutes: AnyRoute[] = [
           const active = await tx.contractLine.count({ where: { contractId: c.id, organizationId: o.id, voidedAt: null } });
           if (active === 0) throw new AppError('CONFLICT', 'Hợp đồng chưa có dòng nào còn hiệu lực — không xác nhận được');
         }
+        // Huỷ hợp đồng thì huỷ luôn các lịch đã gắn, trong cùng transaction; còn lịch đang làm thì không huỷ gì cả.
+        let cancelledIds: string[] = [];
+        if (body.to === 'CANCELLED' && body.reason) {
+          const r = await cancelAppointmentsOfContractTx(tx, { orgId: o.id, userId: uid, requestId }, c.id, body.reason);
+          if (r.blocking.length > 0) {
+            const busy = await tx.appointment.findMany({
+              where: { id: { in: r.blocking }, organizationId: o.id },
+              select: { id: true, code: true, status: true },
+              orderBy: { code: 'asc' },
+            });
+            throw new AppError(
+              'CONFLICT',
+              `Còn lịch đang thực hiện: ${busy.map((a) => `${a.code} (${WORK_STATUS_LABELS[a.status]})`).join(', ')} — xử lý xong lịch trước khi huỷ hợp đồng`,
+              { appointments: busy },
+            );
+          }
+          cancelledIds = r.cancelled;
+        }
         await tx.contract.update({
           where: { id: c.id },
           data: {
@@ -516,10 +536,12 @@ export const contractRoutes: AnyRoute[] = [
           action: 'contract.status_changed',
           entityType: 'contract',
           entityId: c.id,
-          data: { from: c.status, to: body.to, reason: body.reason ?? null },
+          data: { from: c.status, to: body.to, reason: body.reason ?? null, cancelledAppointmentIds: cancelledIds },
           requestId,
         });
-        return loadContractDetail(tx, o.id, c.id);
+        const full = await loadContractDetail(tx, o.id, c.id);
+        const cancelled = new Set(cancelledIds);
+        return { ...full, cancelledAppointments: full.appointments.filter((a) => cancelled.has(a.id)) };
       }, TX_OPTS);
       return { body: detail };
     },

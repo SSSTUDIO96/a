@@ -587,6 +587,87 @@ describe('vòng đời hợp đồng', () => {
   });
 });
 
+describe('huỷ hợp đồng kéo theo lịch đã gắn', () => {
+  async function confirmedContract() {
+    const c = (
+      await create(A.owner, A.orgId, { customerId: customerA, lines: [{ kind: 'SERVICE', serviceId: A.party, quantity: 1 }] }).expect(201)
+    ).body;
+    await request(app).post(url(A.orgId, `/${c.id}/status`)).set(bearer(A.owner)).send({ to: 'CONFIRMED' }).expect(200);
+    return c as { id: string; lines: Line[] };
+  }
+
+  async function appointment(c: { id: string; lines: Line[] }, status: 'CONFIRMED' | 'COMPLETED' | 'IN_PROGRESS', startsAt: Date) {
+    const m = await deps.db.membership.findFirstOrThrow({ where: { organizationId: A.orgId, userId: A.owner.id } });
+    const endsAt = new Date(startsAt.getTime() + 2 * 3_600_000);
+    const a = await deps.db.appointment.create({
+      data: {
+        organizationId: A.orgId,
+        code: `LH-G${randomUUID().slice(0, 6)}`,
+        customerId: customerA,
+        startsAt,
+        endsAt,
+        status,
+        contractId: c.id,
+        contractLineId: c.lines[0]!.id,
+        createdById: A.owner.id,
+      },
+    });
+    // Khoảng bận do database tự tính lại từ lịch.
+    await deps.db.appointmentStaff.create({
+      data: { organizationId: A.orgId, appointmentId: a.id, membershipId: m.id, blockStart: startsAt, blockEnd: endsAt, isBlocking: true },
+    });
+    return { appt: a, membershipId: m.id, endsAt };
+  }
+
+  const cancel = (contractId: string) =>
+    request(app).post(url(A.orgId, `/${contractId}/status`)).set(bearer(A.owner)).send({ to: 'CANCELLED', reason: 'Khách huỷ cưới' });
+
+  const bookSameSlot = (membershipId: string, startsAt: Date, endsAt: Date) =>
+    request(app)
+      .post(`/api/v1/orgs/${A.orgId}/appointments`)
+      .set(bearer(A.owner))
+      .set('idempotency-key', idem())
+      .send({
+        customerId: customerA,
+        startsAt: startsAt.toISOString(),
+        endsAt: endsAt.toISOString(),
+        status: 'CONFIRMED',
+        staff: [{ membershipId, role: 'PRIMARY' }],
+      });
+
+  it('lịch đã xác nhận bị huỷ và thợ được nhả giờ; lịch đã hoàn thành giữ nguyên', async () => {
+    const c = await confirmedContract();
+    const slot = new Date('2027-03-01T01:00:00Z');
+    const live = await appointment(c, 'CONFIRMED', slot);
+    const done = await appointment(c, 'COMPLETED', new Date('2027-03-02T01:00:00Z'));
+    // Trước khi huỷ: giờ của thợ đang bị giữ.
+    expect((await bookSameSlot(live.membershipId, slot, live.endsAt)).status).toBe(409);
+
+    const res = await cancel(c.id).expect(200);
+    expect(res.body.status).toBe('CANCELLED');
+    expect(res.body.cancelledAppointments).toEqual([expect.objectContaining({ id: live.appt.id, status: 'CANCELLED' })]);
+    const after = await deps.db.appointment.findMany({ where: { contractId: c.id }, select: { id: true, status: true, cancelReason: true } });
+    expect(after.find((a) => a.id === live.appt.id)).toMatchObject({ status: 'CANCELLED', cancelReason: 'Khách huỷ cưới' });
+    expect(after.find((a) => a.id === done.appt.id)?.status).toBe('COMPLETED');
+
+    // Sau khi huỷ: đặt lịch mới đúng giờ đó cho đúng thợ đó được.
+    const rebook = await bookSameSlot(live.membershipId, slot, live.endsAt);
+    expect(rebook.status, JSON.stringify(rebook.body)).toBe(201);
+  });
+
+  it('còn lịch đang làm → 409, hợp đồng và lịch không đổi gì', async () => {
+    const c = await confirmedContract();
+    const busy = await appointment(c, 'IN_PROGRESS', new Date('2027-03-03T01:00:00Z'));
+    const other = await appointment(c, 'CONFIRMED', new Date('2027-03-04T01:00:00Z'));
+    const res = await cancel(c.id);
+    expect(res.status).toBe(409);
+    expect(res.body.error.message).toMatch(/Còn lịch đang thực hiện: .*Đang làm/);
+    expect((await deps.db.contract.findUniqueOrThrow({ where: { id: c.id } })).status).toBe('CONFIRMED');
+    expect((await deps.db.appointment.findUniqueOrThrow({ where: { id: busy.appt.id } })).status).toBe('IN_PROGRESS');
+    expect((await deps.db.appointment.findUniqueOrThrow({ where: { id: other.appt.id } })).status).toBe('CONFIRMED');
+  });
+});
+
 describe('danh sách hợp đồng', () => {
   it('lọc theo trạng thái, khách, mã, tên, số điện thoại, ngày sự kiện; tiền là số', async () => {
     const cust = await newCustomer(A.orgId, 'Phạm Lọc Thử', '0977000111');
