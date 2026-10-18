@@ -93,6 +93,9 @@ function setStatus(u: TestUser, orgId: string, id: string, to: string, reason?: 
     .set(bearer(u))
     .send({ to, ...(reason ? { reason } : {}) });
 }
+async function ver(contractId: string) {
+  return (await db.contract.findUniqueOrThrow({ where: { id: contractId }, select: { updatedAt: true } })).updatedAt.toISOString();
+}
 async function enrolled(classId: string) {
   return (await db.courseClass.findUniqueOrThrow({ where: { id: classId }, select: { enrolledCount: true } })).enrolledCount;
 }
@@ -177,10 +180,10 @@ describe('lập hợp đồng khoá học', () => {
     const svcContract = (await createContract(A.owner, A.orgId, { customerId: cust, lines: [{ kind: 'CUSTOM', name: 'Phí', unitPrice: 1000, quantity: 1 }] }).expect(201)).body;
     const addCourse = await request(app).post(cUrl(A.orgId, `/${svcContract.id}/lines`)).set(bearer(A.owner)).set('idempotency-key', idem()).send({ kind: 'COURSE', courseClassId: k.id });
     expect(addCourse.status).toBe(400);
-    const patchCourse = await request(app).patch(cUrl(A.orgId, `/${svcContract.id}`)).set(bearer(A.owner)).send({ lines: [{ kind: 'COURSE', courseClassId: k.id }] });
-    expect(patchCourse.status).toBe(400);
+    const patchCourse = await request(app).patch(cUrl(A.orgId, `/${svcContract.id}`)).set(bearer(A.owner)).send({ expectedUpdatedAt: await ver(svcContract.id), lines: [{ kind: 'COURSE', courseClassId: k.id }] });
+    expect([patchCourse.status, patchCourse.body.error.message]).toEqual([400, 'Hợp đồng dịch vụ không thêm được dòng khoá học — lập hợp đồng khoá học riêng']);
     // Loại hợp đồng không đổi được sau khi tạo.
-    const changeKind = await request(app).patch(cUrl(A.orgId, `/${mixed.id}`)).set(bearer(A.owner)).send({ kind: 'SERVICE' });
+    const changeKind = await request(app).patch(cUrl(A.orgId, `/${mixed.id}`)).set(bearer(A.owner)).send({ expectedUpdatedAt: await ver(mixed.id), kind: 'SERVICE' });
     expect([changeKind.status, changeKind.body.error.message]).toEqual([400, 'Dữ liệu gửi lên không hợp lệ']);
     expect(JSON.stringify(changeKind.body.error.details)).toContain('Không nhận trường: kind');
     // Một lớp chỉ một dòng trong cùng hợp đồng.
@@ -499,14 +502,14 @@ describe('sửa nháp không được hạ tổng xuống dưới số đã thu 
     const cust = await customer(A, 'Khách N7');
     const c = (await createContract(A.owner, A.orgId, { customerId: cust, lines: [{ kind: 'CUSTOM', name: 'Gói', unitPrice: 1_000_000, quantity: 1 }] }).expect(201)).body;
     await request(app).post(`/api/v1/orgs/${A.orgId}/contracts/${c.id}/payments`).set(bearer(A.owner)).set('idempotency-key', idem()).send({ method: 'CASH', amount: 1_000_000 }).expect(201);
-    const lower = await request(app).patch(cUrl(A.orgId, `/${c.id}`)).set(bearer(A.owner)).send({ lines: [{ kind: 'CUSTOM', name: 'Gói', unitPrice: 200_000, quantity: 1 }] });
+    const lower = await request(app).patch(cUrl(A.orgId, `/${c.id}`)).set(bearer(A.owner)).send({ expectedUpdatedAt: await ver(c.id), lines: [{ kind: 'CUSTOM', name: 'Gói', unitPrice: 200_000, quantity: 1 }] });
     expect(lower.status).toBe(409);
     expect(lower.body.error.details).toMatchObject({ reason: 'TOTAL_BELOW_PAID', paid: 1_000_000, newTotal: 200_000, total: 1_000_000 });
-    const disc = await request(app).patch(cUrl(A.orgId, `/${c.id}`)).set(bearer(A.owner)).send({ discount: 1 });
+    const disc = await request(app).patch(cUrl(A.orgId, `/${c.id}`)).set(bearer(A.owner)).send({ expectedUpdatedAt: await ver(c.id), discount: 1 });
     expect([disc.status, disc.body.error.details.newTotal]).toEqual([409, 999_999]);
     expect((await db.contract.findUniqueOrThrow({ where: { id: c.id } })).total).toBe(1_000_000n);
-    await request(app).patch(cUrl(A.orgId, `/${c.id}`)).set(bearer(A.owner)).send({ notes: 'Ghi chú' }).expect(200);
-    await request(app).patch(cUrl(A.orgId, `/${c.id}`)).set(bearer(A.owner)).send({ lines: [{ kind: 'CUSTOM', name: 'Gói', unitPrice: 1_500_000, quantity: 1 }] }).expect(200);
+    await request(app).patch(cUrl(A.orgId, `/${c.id}`)).set(bearer(A.owner)).send({ expectedUpdatedAt: await ver(c.id), notes: 'Ghi chú' }).expect(200);
+    await request(app).patch(cUrl(A.orgId, `/${c.id}`)).set(bearer(A.owner)).send({ expectedUpdatedAt: await ver(c.id), lines: [{ kind: 'CUSTOM', name: 'Gói', unitPrice: 1_500_000, quantity: 1 }] }).expect(200);
   });
 });
 

@@ -275,15 +275,16 @@ describe('phiên bản giá', () => {
     expect(await deps.db.priceVersion.count({ where: { serviceId: s.id } })).toBe(2);
   });
 
-  it('số tiền lớn (2 tỷ, 9 nghìn tỷ) lưu/đọc đúng; số lẻ, số âm, chuỗi, vượt ngưỡng an toàn → 400', async () => {
+  it('số tiền lớn (2 tỷ, đúng trần 100 tỷ) lưu/đọc đúng; số lẻ, số âm, chuỗi, vượt trần chung (9 nghìn tỷ) → 400', async () => {
     const s = await newService(ownerA, orgA, { listPrice: 2_000_000_000 });
     expect(s.currentPrice?.listPrice).toBe(2_000_000_000);
-    await changePrice(ownerA, orgA, `/services/${s.id}/prices`, { listPrice: 9_000_000_000_000 }).expect(201);
+    // Trần chung mọi số tiền = 100 tỷ (lib/money.ts; thợ chấm web 2, T6) — trước đây 9 nghìn tỷ cũng lọt.
+    await changePrice(ownerA, orgA, `/services/${s.id}/prices`, { listPrice: 100_000_000_000 }).expect(201);
     const cur = await request(app).get(url(orgA, `/services/${s.id}`)).set(bearer(ownerA)).expect(200);
-    expect(cur.body.currentPrice.listPrice).toBe(9_000_000_000_000);
+    expect(cur.body.currentPrice.listPrice).toBe(100_000_000_000);
     const row = await deps.db.priceVersion.findFirstOrThrow({ where: { serviceId: s.id }, orderBy: { createdAt: 'desc' } });
-    expect(row.listPrice).toBe(9_000_000_000_000n);
-    for (const listPrice of [1500.5, -1, '1000', Number.MAX_SAFE_INTEGER + 1]) {
+    expect(row.listPrice).toBe(100_000_000_000n);
+    for (const listPrice of [1500.5, -1, '1000', 9_000_000_000_000, Number.MAX_SAFE_INTEGER + 1]) {
       const res = await changePrice(ownerA, orgA, `/services/${s.id}/prices`, { listPrice });
       expect(res.status, `listPrice=${String(listPrice)}`).toBe(400);
     }
