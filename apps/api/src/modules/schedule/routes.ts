@@ -1,4 +1,5 @@
 import type { AnyRoute } from '../../http/route';
+import { appointmentRoutes } from './appointments';
+import { customerRoutes } from './customers';
 
-// Thợ phụ trách module lịch điền các đường API vào đây.
-export const scheduleRoutes: AnyRoute[] = [];
+export const scheduleRoutes: AnyRoute[] = [...customerRoutes, ...appointmentRoutes];

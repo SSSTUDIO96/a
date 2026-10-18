@@ -4,7 +4,8 @@ import type { Prisma } from '@prisma/client';
 import { defineRoute, mustOrg, mustUser } from '../../http/route';
 import { AppError } from '../../lib/errors';
 import { writeAudit } from '../../lib/audit';
-import { assertCanGrant, assertCanTouchMember, assertKeepsAnOwner } from './guards';
+import { assertCanEditRole, assertCanGrant, assertCanTouchMember, assertKeepsAnOwner } from './guards';
+import { lockOrgAndRecheck } from '../../http/middleware';
 
 const Slug = z
   .string()
@@ -28,16 +29,24 @@ const MemberParams = OrgParams.extend({ membershipId: z.uuid() });
 const RoleParams = OrgParams.extend({ roleId: z.uuid() });
 const RoleKeys = z.array(z.string().min(1).max(32)).min(1).max(10);
 
-// Khoá dòng tổ chức trong transaction: mọi thay đổi thành viên/vai trò của cùng tổ chức xếp hàng,
-// nên hai chủ không thể đồng thời hạ quyền nhau rồi tổ chức mất chủ.
-async function lockOrg(tx: Prisma.TransactionClient, orgId: string) {
-  await tx.$queryRaw`SELECT id FROM organizations WHERE id = ${orgId}::uuid FOR UPDATE`;
-}
-
+// Chủ "đang hoạt động" = thành viên ACTIVE, tài khoản ACTIVE, giữ vai trò owner.
 async function countActiveOwners(tx: Prisma.TransactionClient, orgId: string) {
   return tx.membership.count({
-    where: { organizationId: orgId, status: 'ACTIVE', roles: { some: { role: { key: 'owner' } } } },
+    where: {
+      organizationId: orgId,
+      status: 'ACTIVE',
+      user: { status: 'ACTIVE' },
+      roles: { some: { role: { key: 'owner' } } },
+    },
   });
+}
+
+async function rolesOfMember(tx: Prisma.TransactionClient, membershipId: string) {
+  const rows = await tx.membershipRole.findMany({
+    where: { membershipId },
+    select: { role: { select: { key: true, permissions: true } } },
+  });
+  return rows.map((r) => r.role);
 }
 
 async function loadRolesByKeys(tx: Prisma.TransactionClient, orgId: string, keys: string[]) {
@@ -141,6 +150,7 @@ export const orgRoutes = [
     handler: async ({ deps, org, body, userId, requestId }) => {
       const o = mustOrg(org);
       const row = await deps.db.$transaction(async (tx) => {
+        await lockOrgAndRecheck(tx, o, 'org.update');
         const before = await tx.organization.findUniqueOrThrow({ where: { id: o.id } });
         const after = await tx.organization.update({ where: { id: o.id }, data: body });
         await writeAudit(tx, {
@@ -194,13 +204,13 @@ export const orgRoutes = [
     handler: async ({ deps, org, body, userId, requestId }) => {
       const o = mustOrg(org);
       const member = await deps.db.$transaction(async (tx) => {
-        await lockOrg(tx, o.id);
+        const actor = await lockOrgAndRecheck(tx, o, 'members.invite');
         const user = await tx.user.findUnique({ where: { email: body.email }, select: { id: true, status: true } });
         if (!user || user.status !== 'ACTIVE') {
           throw new AppError('NOT_FOUND', 'Chưa có tài khoản hoạt động với email này');
         }
         const roles = await loadRolesByKeys(tx, o.id, body.roleKeys);
-        assertCanGrant(o, roles);
+        assertCanGrant(actor, roles);
         const existing = await tx.membership.findUnique({
           where: { organizationId_userId: { organizationId: o.id, userId: user.id } },
         });
@@ -243,17 +253,17 @@ export const orgRoutes = [
     handler: async ({ deps, org, params, body, userId, requestId }) => {
       const o = mustOrg(org);
       const member = await deps.db.$transaction(async (tx) => {
-        await lockOrg(tx, o.id);
+        const actor = await lockOrgAndRecheck(tx, o, 'members.update');
         const target = await tx.membership.findFirst({
           where: { id: params.membershipId, organizationId: o.id, status: { not: 'REMOVED' } },
           select: memberSelect,
         });
         if (!target) throw new AppError('NOT_FOUND', 'Không tìm thấy nhân sự');
         const beforeKeys = target.roles.map((r) => r.role.key);
-        assertCanTouchMember(o, beforeKeys);
+        assertCanTouchMember(actor, await rolesOfMember(tx, target.id));
         if (body.roleKeys) {
           const roles = await loadRolesByKeys(tx, o.id, body.roleKeys);
-          assertCanGrant(o, roles);
+          assertCanGrant(actor, roles);
           await tx.membershipRole.deleteMany({ where: { membershipId: target.id } });
           await tx.membershipRole.createMany({
             data: roles.map((r) => ({ organizationId: o.id, membershipId: target.id, roleId: r.id })),
@@ -289,16 +299,13 @@ export const orgRoutes = [
     handler: async ({ deps, org, params, userId, requestId }) => {
       const o = mustOrg(org);
       await deps.db.$transaction(async (tx) => {
-        await lockOrg(tx, o.id);
+        const actor = await lockOrgAndRecheck(tx, o, 'members.remove');
         const target = await tx.membership.findFirst({
           where: { id: params.membershipId, organizationId: o.id, status: { not: 'REMOVED' } },
           select: memberSelect,
         });
         if (!target) throw new AppError('NOT_FOUND', 'Không tìm thấy nhân sự');
-        assertCanTouchMember(
-          o,
-          target.roles.map((r) => r.role.key),
-        );
+        assertCanTouchMember(actor, await rolesOfMember(tx, target.id));
         await tx.membership.update({ where: { id: target.id }, data: { status: 'REMOVED' } });
         assertKeepsAnOwner(await countActiveOwners(tx, o.id));
         await writeAudit(tx, {
@@ -307,7 +314,7 @@ export const orgRoutes = [
           action: 'member.removed',
           entityType: 'membership',
           entityId: target.id,
-          data: { userId: target.user.id },
+          data: { userId: target.user.id, roleKeys: target.roles.map((r) => r.role.key) },
           requestId,
         });
       });
@@ -350,8 +357,9 @@ export const orgRoutes = [
         throw new AppError('CONFLICT', 'Mã này dành cho vai trò hệ thống');
       }
       const permissions = normalizePermissions(body.permissions);
-      assertCanGrant(o, [{ key: body.key, permissions }]);
       const role = await deps.db.$transaction(async (tx) => {
+        const actor = await lockOrgAndRecheck(tx, o, 'roles.manage');
+        assertCanGrant(actor, [{ key: body.key, permissions }]);
         const created = await tx.role.create({
           data: { organizationId: o.id, key: body.key, name: body.name, permissions },
         });
@@ -385,11 +393,11 @@ export const orgRoutes = [
       const o = mustOrg(org);
       const permissions = body.permissions ? normalizePermissions(body.permissions) : undefined;
       const role = await deps.db.$transaction(async (tx) => {
-        await lockOrg(tx, o.id);
+        const actor = await lockOrgAndRecheck(tx, o, 'roles.manage');
         const target = await tx.role.findFirst({ where: { id: params.roleId, organizationId: o.id } });
         if (!target) throw new AppError('NOT_FOUND', 'Không tìm thấy vai trò');
         if (target.isSystem) throw new AppError('FORBIDDEN', 'Vai trò hệ thống không sửa được');
-        if (permissions) assertCanGrant(o, [{ key: target.key, permissions }]);
+        assertCanEditRole(actor, target, { key: target.key, permissions: permissions ?? target.permissions });
         const updated = await tx.role.update({
           where: { id: target.id },
           data: { ...(body.name ? { name: body.name } : {}), ...(permissions ? { permissions } : {}) },

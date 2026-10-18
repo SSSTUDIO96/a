@@ -6,7 +6,7 @@ import type { Db } from '../lib/prisma';
 import type { Logger } from '../lib/logger';
 
 export type Scope = 'public' | 'auth' | 'org';
-export type Method = 'get' | 'post' | 'patch' | 'delete';
+export type Method = 'get' | 'post' | 'put' | 'patch' | 'delete';
 
 export interface Deps {
   db: Db;
@@ -16,6 +16,7 @@ export interface Deps {
 
 export interface OrgContext {
   id: string;
+  userId: string;
   membershipId: string;
   roleKeys: string[];
   permissions: ReadonlySet<Permission>;
@@ -74,6 +75,8 @@ export function defineRoute<
     if (def.idempotent && def.method !== 'post') {
       throw new Error(`Đường ${def.method.toUpperCase()} ${def.path}: chống gửi trùng chỉ dùng cho POST`);
     }
+  } else if (def.path.includes(':orgId')) {
+    throw new Error(`Đường ${def.method.toUpperCase()} ${def.path} có :orgId nhưng không khai scope "org"`);
   } else if (def.idempotent) {
     throw new Error(`Đường ${def.method.toUpperCase()} ${def.path}: chống gửi trùng chỉ dùng cho đường thuộc tổ chức`);
   } else if (def.permission) {

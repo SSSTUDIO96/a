@@ -51,15 +51,23 @@ model User {
   @@map("users")
 }
 
+enum RevokeReason {
+  ROTATED
+  LOGOUT
+  REUSE_DETECTED
+}
+
 model RefreshToken {
-  id           String    @id @default(uuid()) @db.Uuid
-  userId       String    @map("user_id") @db.Uuid
-  familyId     String    @map("family_id") @db.Uuid
-  tokenHash    String    @unique @map("token_hash")
-  expiresAt    DateTime  @map("expires_at") @db.Timestamptz(3)
-  revokedAt    DateTime? @map("revoked_at") @db.Timestamptz(3)
-  replacedById String?   @map("replaced_by_id") @db.Uuid
-  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  id           String        @id @default(uuid()) @db.Uuid
+  userId       String        @map("user_id") @db.Uuid
+  familyId     String        @map("family_id") @db.Uuid
+  tokenHash    String        @unique @map("token_hash")
+  expiresAt    DateTime      @map("expires_at") @db.Timestamptz(3)
+  revokedAt    DateTime?     @map("revoked_at") @db.Timestamptz(3)
+  // Lý do thu hồi: chỉ thẻ bị thu hồi do XOAY VÒNG mà đem dùng lại mới là dấu hiệu đánh cắp.
+  revokeReason RevokeReason? @map("revoke_reason")
+  replacedById String?       @map("replaced_by_id") @db.Uuid
+  createdAt    DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
 
   user User @relation(fields: [userId], references: [id], onDelete: Restrict)
 
@@ -100,6 +108,9 @@ model Organization {
   travelFeePolicy   TravelFeePolicy?
   contracts         Contract[]
   contractLines     ContractLine[]
+  staffTiers        StaffTier[]
+  staffProfiles     StaffProfile[]
+  staffPayRates     StaffPayRate[]
 
   @@map("organizations")
 }
@@ -136,6 +147,7 @@ model Membership {
   user         User               @relation(fields: [userId], references: [id], onDelete: Restrict)
   roles        MembershipRole[]
   assignments  AppointmentStaff[]
+  staffProfile StaffProfile?
 
   @@unique([organizationId, userId])
   @@unique([id, organizationId])
@@ -232,6 +244,7 @@ model Service {
   prices        PriceVersion[]
   packageItems  PackageItem[]
   contractLines ContractLine[]
+  payRates      StaffPayRate[]
 
   @@unique([organizationId, code])
   @@unique([id, organizationId])
@@ -262,6 +275,7 @@ model ServicePackage {
   organization  Organization   @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   subject       MakeupSubject? @relation(fields: [subjectId, organizationId], references: [id, organizationId], onDelete: Restrict)
   items         PackageItem[]
+  payRates      StaffPayRate[]
   contractLines ContractLine[]
   prices        PriceVersion[]
 
@@ -629,4 +643,70 @@ model ContractLine {
   @@unique([id, organizationId])
   @@index([contractId])
   @@map("contract_lines")
+}
+
+// ==================== NHÂN SỰ & BẬC LƯƠNG ====================
+
+// Bậc lương do tổ chức tự đặt (Thợ chính bậc 1, Thợ chính bậc 2, Thợ phụ…).
+model StaffTier {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  name           String
+  sortOrder      Int      @default(0) @map("sort_order")
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  profiles     StaffProfile[]
+  payRates     StaffPayRate[]
+
+  @@unique([organizationId, name])
+  @@unique([id, organizationId])
+  @@map("staff_tiers")
+}
+
+// Hồ sơ thợ trong một tổ chức (1–1 với thành viên): tên hiển thị, ảnh đại diện, bậc lương.
+model StaffProfile {
+  membershipId   String   @id @map("membership_id") @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  displayName    String?  @map("display_name")
+  // Đường dẫn ảnh đại diện; tải ảnh lên làm cùng module lưu trữ tệp. Trống → giao diện hiện chữ viết tắt.
+  avatarUrl      String?  @map("avatar_url")
+  phone          String?
+  tierId         String?  @map("tier_id") @db.Uuid
+  isBookable     Boolean  @default(true) @map("is_bookable")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  membership   Membership   @relation(fields: [membershipId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  tier         StaffTier?   @relation(fields: [tierId, organizationId], references: [id, organizationId], onDelete: Restrict)
+
+  @@unique([membershipId, organizationId])
+  @@index([organizationId, tierId])
+  @@map("staff_profiles")
+}
+
+// Tiền công thợ cho MỘT gói hoặc MỘT dịch vụ, theo từng bậc lương.
+// Lúc trả lương sẽ chụp lại số tiền (bảng chi trả thuộc module tài chính) — sửa mức công sau không đổi khoản đã trả.
+model StaffPayRate {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  packageId      String?  @map("package_id") @db.Uuid
+  serviceId      String?  @map("service_id") @db.Uuid
+  tierId         String   @map("tier_id") @db.Uuid
+  amount         BigInt
+  updatedById    String   @map("updated_by_id") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  package      ServicePackage? @relation(fields: [packageId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  service      Service?        @relation(fields: [serviceId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  tier         StaffTier       @relation(fields: [tierId, organizationId], references: [id, organizationId], onDelete: Restrict)
+
+  @@unique([packageId, tierId])
+  @@unique([serviceId, tierId])
+  @@map("staff_pay_rates")
 }

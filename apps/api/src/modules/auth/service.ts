@@ -33,11 +33,15 @@ export async function rotateRefreshToken(deps: Deps, presented: string, requestI
   if (!row) {
     throw new AppError('UNAUTHENTICATED', 'Phiên đăng nhập không hợp lệ');
   }
+  if (row.revokedAt && row.revokeReason !== 'ROTATED') {
+    // Thẻ đã đăng xuất / đã bị thu hồi cả họ: chỉ từ chối, không phải dấu hiệu đánh cắp mới.
+    throw new AppError('UNAUTHENTICATED', 'Phiên đăng nhập đã kết thúc, vui lòng đăng nhập lại');
+  }
   if (row.revokedAt) {
     await deps.db.$transaction(async (tx) => {
       await tx.refreshToken.updateMany({
         where: { familyId: row.familyId, revokedAt: null },
-        data: { revokedAt: new Date() },
+        data: { revokedAt: new Date(), revokeReason: 'REUSE_DETECTED' },
       });
       await writeAudit(tx, {
         organizationId: null,
@@ -60,7 +64,7 @@ export async function rotateRefreshToken(deps: Deps, presented: string, requestI
   // Điều kiện revokedAt = null trong cùng câu lệnh: hai yêu cầu đồng thời chỉ một cái thắng.
   const claimed = await deps.db.refreshToken.updateMany({
     where: { id: row.id, revokedAt: null },
-    data: { revokedAt: new Date() },
+    data: { revokedAt: new Date(), revokeReason: 'ROTATED' },
   });
   if (claimed.count !== 1) {
     throw new AppError('UNAUTHENTICATED', 'Phiên đăng nhập đã được dùng');
@@ -74,11 +78,23 @@ export async function rotateRefreshToken(deps: Deps, presented: string, requestI
   return pair;
 }
 
-export async function revokeFamily(deps: Deps, presented: string): Promise<void> {
+export async function revokeFamily(deps: Deps, presented: string, requestId: string): Promise<void> {
   const row = await deps.db.refreshToken.findUnique({ where: { tokenHash: hashRefreshToken(presented) } });
   if (!row) return;
-  await deps.db.refreshToken.updateMany({
-    where: { familyId: row.familyId, revokedAt: null },
-    data: { revokedAt: new Date() },
+  await deps.db.$transaction(async (tx) => {
+    const res = await tx.refreshToken.updateMany({
+      where: { familyId: row.familyId, revokedAt: null },
+      data: { revokedAt: new Date(), revokeReason: 'LOGOUT' },
+    });
+    if (res.count > 0) {
+      await writeAudit(tx, {
+        organizationId: null,
+        actorUserId: row.userId,
+        action: 'auth.logout',
+        entityType: 'refresh_token_family',
+        entityId: row.familyId,
+        requestId,
+      });
+    }
   });
 }

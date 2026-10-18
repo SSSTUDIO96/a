@@ -10,7 +10,11 @@ const Email = z
   .trim()
   .toLowerCase()
   .pipe(z.email({ error: 'Email không hợp lệ' }).max(254));
-const Password = z.string().min(10, 'Mật khẩu tối thiểu 10 ký tự').max(128);
+// bcrypt chỉ dùng 72 byte đầu: mật khẩu dài hơn sẽ bị cắt âm thầm, nên chặn ngay ở cửa (biên bản mốc 2, L9).
+const Password = z
+  .string()
+  .min(10, 'Mật khẩu tối thiểu 10 ký tự')
+  .refine((p) => Buffer.byteLength(p, 'utf8') <= 72, 'Mật khẩu tối đa 72 byte (khoảng 24–72 ký tự tuỳ dấu)');
 
 export const authRoutes = [
   defineRoute({
@@ -52,12 +56,34 @@ export const authRoutes = [
     summary: 'Đăng nhập bằng email và mật khẩu',
     rateLimit: 'auth',
     body: z.object({ email: Email, password: z.string().min(1).max(128) }),
-    handler: async ({ deps, body }) => {
+    handler: async ({ deps, body, requestId }) => {
       const user = await deps.db.user.findUnique({ where: { email: body.email } });
       const ok = await verifyPassword(body.password, user?.passwordHash ?? DUMMY_HASH);
       if (!user || !ok || user.status !== 'ACTIVE') {
+        if (user) {
+          await deps.db.$transaction((tx) =>
+            writeAudit(tx, {
+              organizationId: null,
+              actorUserId: user.id,
+              action: 'auth.login_failed',
+              entityType: 'user',
+              entityId: user.id,
+              requestId,
+            }),
+          );
+        }
         throw new AppError('UNAUTHENTICATED', 'Email hoặc mật khẩu không đúng');
       }
+      await deps.db.$transaction((tx) =>
+        writeAudit(tx, {
+          organizationId: null,
+          actorUserId: user.id,
+          action: 'auth.login',
+          entityType: 'user',
+          entityId: user.id,
+          requestId,
+        }),
+      );
       return {
         body: {
           user: { id: user.id, email: user.email, fullName: user.fullName },
@@ -87,8 +113,8 @@ export const authRoutes = [
     tag: 'Đăng nhập',
     summary: 'Đăng xuất: thu hồi phiên trên thiết bị này',
     body: z.object({ refreshToken: z.string().min(20).max(200) }),
-    handler: async ({ deps, body }) => {
-      await revokeFamily(deps, body.refreshToken);
+    handler: async ({ deps, body, requestId }) => {
+      await revokeFamily(deps, body.refreshToken, requestId);
       return { status: 204 };
     },
   }),

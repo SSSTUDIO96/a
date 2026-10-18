@@ -31,8 +31,9 @@ export async function authenticate(req: Request, deps: Deps): Promise<string> {
 const OrgIdSchema = z.uuid();
 
 // Quyền luôn tra lại từ database theo từng yêu cầu — không tin organization_id hay vai trò do máy khách gửi.
+// Nhận cả transaction client để tra lại quyền SAU khi khoá tổ chức (xem lockOrgAndRecheck).
 export async function loadOrgContext(
-  deps: Deps,
+  db: Prisma.TransactionClient,
   userId: string,
   rawOrgId: string | undefined,
   required: Permission,
@@ -41,7 +42,7 @@ export async function loadOrgContext(
   if (!parsed.success) {
     throw new AppError('NOT_FOUND', 'Không tìm thấy tổ chức');
   }
-  const membership = await deps.db.membership.findUnique({
+  const membership = await db.membership.findUnique({
     where: { organizationId_userId: { organizationId: parsed.data, userId } },
     select: {
       id: true,
@@ -68,6 +69,7 @@ export async function loadOrgContext(
   }
   return {
     id: parsed.data,
+    userId,
     membershipId: membership.id,
     roleKeys: membership.roles.map((r) => r.role.key),
     permissions,
@@ -86,8 +88,8 @@ export function errorHandler(deps: Deps) {
       appErr = new AppError('CONFLICT', 'Dữ liệu bị trùng', { fields: err.meta?.target });
     } else if (isExclusionViolation(err)) {
       appErr = new AppError('CONFLICT', 'Trùng lịch: thợ đã có lịch khác trong khoảng thời gian này');
-    } else if (isBodyParseError(err)) {
-      appErr = new AppError('VALIDATION_FAILED', 'Nội dung gửi lên không phải JSON hợp lệ');
+    } else if (bodyErrorMessage(err)) {
+      appErr = new AppError('VALIDATION_FAILED', bodyErrorMessage(err) ?? '');
     } else {
       deps.logger.error({ err, requestId, path: req.path }, 'Lỗi không lường trước');
       appErr = new AppError('INTERNAL', 'Máy chủ gặp lỗi, vui lòng thử lại');
@@ -98,8 +100,18 @@ export function errorHandler(deps: Deps) {
   };
 }
 
-function isBodyParseError(err: unknown): boolean {
-  return typeof err === 'object' && err !== null && (err as { type?: string }).type === 'entity.parse.failed';
+const BODY_ERROR_MESSAGES: Record<string, string> = {
+  'entity.parse.failed': 'Nội dung gửi lên không phải JSON hợp lệ',
+  'entity.too.large': 'Nội dung gửi lên quá lớn (tối đa 100 KB)',
+  'encoding.unsupported': 'Kiểu nén nội dung không được hỗ trợ',
+  'charset.unsupported': 'Bảng mã ký tự không được hỗ trợ',
+  'request.aborted': 'Yêu cầu bị ngắt giữa chừng',
+};
+
+function bodyErrorMessage(err: unknown): string | null {
+  if (typeof err !== 'object' || err === null) return null;
+  const type = (err as { type?: string }).type;
+  return type ? (BODY_ERROR_MESSAGES[type] ?? null) : null;
 }
 
 // Database từ chối do ràng buộc EXCLUDE (chặn trùng lịch, mã Postgres 23P01).
@@ -114,4 +126,16 @@ export function isExclusionViolation(err: unknown): boolean {
     return err.message.includes('23P01');
   }
   return false;
+}
+
+// Khoá dòng tổ chức rồi TRA LẠI quyền người thao tác bên trong cùng transaction.
+// Quyền tra ở cửa vào có thể đã cũ: một người vừa bị hạ quyền vẫn ra lệnh được nếu yêu cầu của họ
+// đã qua cửa trước khi lệnh hạ quyền xong. Mọi thao tác đổi người/vai trò phải dùng ngữ cảnh trả về từ đây.
+export async function lockOrgAndRecheck(
+  tx: Prisma.TransactionClient,
+  actor: OrgContext,
+  required: Permission,
+): Promise<OrgContext> {
+  await tx.$queryRaw`SELECT id FROM organizations WHERE id = ${actor.id}::uuid FOR UPDATE`;
+  return loadOrgContext(tx, actor.userId, actor.id, required);
 }

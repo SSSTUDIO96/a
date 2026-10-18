@@ -20,6 +20,10 @@ export const PERMISSIONS = {
   'schedule.write': 'Tạo, sửa, đổi trạng thái lịch',
   'contracts.read': 'Xem hợp đồng',
   'contracts.write': 'Lập, sửa, xác nhận hợp đồng',
+  'staff.read': 'Xem hồ sơ thợ, bậc lương của thợ',
+  'staff.write': 'Sửa hồ sơ thợ, gán bậc lương, quản lý danh sách bậc',
+  'payroll.read': 'Xem tiền công theo gói',
+  'payroll.write': 'Đặt tiền công theo gói, theo bậc',
 } as const;
 
 export type Permission = keyof typeof PERMISSIONS;
@@ -51,22 +55,23 @@ export const SYSTEM_ROLES: Record<SystemRoleKey, { name: string; permissions: Pe
       'org.read', 'members.read', 'members.invite', 'members.update', 'roles.read',
       'catalog.read', 'catalog.write', 'prices.write', 'customers.read', 'customers.write',
       'schedule.read_own', 'schedule.read_all', 'schedule.write', 'contracts.read', 'contracts.write',
+      'staff.read', 'staff.write',
     ],
   },
-  artist: { name: 'Thợ makeup', permissions: ['org.read', 'members.read', 'catalog.read', 'schedule.read_own'] },
-  assistant: { name: 'Thợ phụ', permissions: ['org.read', 'members.read', 'catalog.read', 'schedule.read_own'] },
+  artist: { name: 'Thợ makeup', permissions: ['org.read', 'members.read', 'catalog.read', 'schedule.read_own', 'staff.read'] },
+  assistant: { name: 'Thợ phụ', permissions: ['org.read', 'members.read', 'catalog.read', 'schedule.read_own', 'staff.read'] },
   receptionist: {
     name: 'Lễ tân',
     permissions: [
       'org.read', 'members.read', 'catalog.read', 'customers.read', 'customers.write',
-      'schedule.read_own', 'schedule.read_all', 'schedule.write', 'contracts.read', 'contracts.write',
+      'schedule.read_own', 'schedule.read_all', 'schedule.write', 'contracts.read', 'contracts.write', 'staff.read',
     ],
   },
   accountant: {
     name: 'Kế toán',
     permissions: [
       'org.read', 'members.read', 'audit.read', 'catalog.read', 'customers.read',
-      'schedule.read_own', 'schedule.read_all', 'contracts.read',
+      'schedule.read_own', 'schedule.read_all', 'contracts.read', 'staff.read', 'payroll.read', 'payroll.write',
     ],
   },
   instructor: { name: 'Giảng viên', permissions: ['org.read', 'members.read', 'catalog.read', 'schedule.read_own'] },

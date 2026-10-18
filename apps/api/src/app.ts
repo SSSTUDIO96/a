@@ -12,21 +12,32 @@ import { orgRoutes } from './modules/orgs/routes';
 import { catalogRoutes } from './modules/catalog/routes';
 import { scheduleRoutes } from './modules/schedule/routes';
 import { contractRoutes } from './modules/contracts/routes';
+import { staffRoutes } from './modules/staff/routes';
 import { createHash } from 'node:crypto';
 import { Prisma } from '@prisma/client';
 
-export const ALL_ROUTES: AnyRoute[] = [...authRoutes, ...orgRoutes, ...catalogRoutes, ...scheduleRoutes, ...contractRoutes];
+export const ALL_ROUTES: AnyRoute[] = [...authRoutes, ...orgRoutes, ...catalogRoutes, ...scheduleRoutes, ...contractRoutes, ...staffRoutes];
 
 export function createApp(deps: Deps, routes: AnyRoute[] = ALL_ROUTES) {
   const app = express();
   app.disable('x-powered-by');
-  app.set('trust proxy', 1);
+  app.set('trust proxy', deps.env.TRUST_PROXY_HOPS);
   app.use(requestId);
   app.use(pinoHttp({ logger: deps.logger, customProps: (_req, res) => ({ requestId: res.locals.requestId }) }));
   app.use(helmet());
   const origins = deps.env.CORS_ORIGINS.split(',').map((s) => s.trim()).filter(Boolean);
   app.use(cors({ origin: origins, credentials: false }));
-  app.use(express.json({ limit: '100kb' }));
+  app.use(
+    express.json({
+      limit: '100kb',
+      // Ký tự rỗng \u0000 làm PostgreSQL báo lỗi 500 — từ chối ngay ở cửa (biên bản mốc 2, L6).
+      verify: (_req, _res, buf) => {
+        if (buf.includes('\\u0000')) {
+          throw new AppError('VALIDATION_FAILED', 'Nội dung chứa ký tự không hợp lệ (\\u0000)');
+        }
+      },
+    }),
+  );
 
   const authLimiter = rateLimit({
     windowMs: 60_000,
@@ -52,7 +63,12 @@ export function createApp(deps: Deps, routes: AnyRoute[] = ALL_ROUTES) {
       const userId = route.scope === 'public' ? null : await authenticate(req, deps);
       const org =
         route.scope === 'org' && userId && route.permission
-          ? await loadOrgContext(deps, userId, typeof req.params.orgId === "string" ? req.params.orgId : undefined, route.permission)
+          ? await loadOrgContext(
+              deps.db,
+              userId,
+              typeof req.params.orgId === 'string' ? req.params.orgId : undefined,
+              route.permission,
+            )
           : null;
       const run = () =>
         route.handler({
