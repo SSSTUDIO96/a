@@ -1,7 +1,8 @@
 import { defineConfig } from 'tsup';
 
 export default defineConfig({
-  entry: ['src/server.ts'],
+  // Lệnh đồng bộ vai trò cũng được đóng gói để chạy trên máy thật mà không cần công cụ phát triển (tsx).
+  entry: ['src/server.ts', 'src/scripts/run-sync-system-roles.ts'],
   format: ['esm'],
   target: 'node22',
   platform: 'node',

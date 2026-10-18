@@ -86,8 +86,10 @@ export function errorHandler(deps: Deps) {
       appErr = new AppError('VALIDATION_FAILED', 'Dữ liệu gửi lên không hợp lệ', z.flattenError(err));
     } else if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
       appErr = new AppError('CONFLICT', 'Dữ liệu bị trùng', { fields: err.meta?.target });
-    } else if (isExclusionViolation(err)) {
-      appErr = new AppError('CONFLICT', 'Trùng lịch: thợ đã có lịch khác trong khoảng thời gian này');
+    } else if (databaseError(err)) {
+      appErr = databaseError(err) ?? new AppError('INTERNAL', '');
+      // Ràng buộc database phải bắt được lỗi thì máy chủ đã để lọt dữ liệu sai — ghi lại để sửa ở khâu trước.
+      if (appErr.code === 'VALIDATION_FAILED') deps.logger.warn({ requestId, path: req.path, pg: pgErrorCode(err) }, 'Database chặn dữ liệu sai');
     } else if (bodyErrorMessage(err)) {
       appErr = new AppError('VALIDATION_FAILED', bodyErrorMessage(err) ?? '');
     } else {
@@ -114,18 +116,52 @@ function bodyErrorMessage(err: unknown): string | null {
   return type ? (BODY_ERROR_MESSAGES[type] ?? null) : null;
 }
 
-// Database từ chối do ràng buộc EXCLUDE (chặn trùng lịch, mã Postgres 23P01).
-// Prisma 6.19 báo lỗi này theo hai dạng (đã thí nghiệm thật):
-// - qua create/update: PrismaClientUnknownRequestError, không có code, mã nằm trong message;
+// Mã lỗi PostgreSQL bên trong lỗi Prisma. Prisma 6.19 báo theo hai dạng (đã thí nghiệm thật):
+// - qua create/update: PrismaClientUnknownRequestError, không có code — mã nằm trong message (code: "23P01");
 // - qua $queryRaw/$executeRaw: PrismaClientKnownRequestError P2010, meta.code = '23P01'.
-export function isExclusionViolation(err: unknown): boolean {
+export function pgErrorCode(err: unknown): string | null {
   if (err instanceof Prisma.PrismaClientKnownRequestError) {
-    return err.code === 'P2010' && (err.meta as { code?: string } | undefined)?.code === '23P01';
+    const code = (err.meta as { code?: unknown } | undefined)?.code;
+    return err.code === 'P2010' && typeof code === 'string' ? code : null;
   }
   if (err instanceof Prisma.PrismaClientUnknownRequestError) {
-    return err.message.includes('23P01');
+    return /code: "([0-9A-Z]{5})"/.exec(err.message)?.[1] ?? null;
   }
-  return false;
+  return null;
+}
+
+// Lời của RAISE EXCEPTION trong trigger (mã P0001) — đã viết sẵn bằng tiếng Việt cho người dùng đọc.
+function pgRaisedMessage(err: unknown): string | null {
+  const text =
+    err instanceof Prisma.PrismaClientKnownRequestError
+      ? String((err.meta as { message?: unknown } | undefined)?.message ?? '')
+      : err instanceof Error
+        ? err.message
+        : '';
+  return /message: "((?:[^"\\]|\\.)*)"/.exec(text)?.[1] ?? /ERROR: ([^\n]+)/.exec(text)?.[1] ?? null;
+}
+
+export function isExclusionViolation(err: unknown): boolean {
+  return pgErrorCode(err) === '23P01';
+}
+
+// Đổi lỗi database đã biết thành lỗi có nghĩa. Lỗi lạ trả null để bộ bắt lỗi ghi log và trả 500.
+export function databaseError(err: unknown): AppError | null {
+  switch (pgErrorCode(err)) {
+    case '23P01':
+      return new AppError('CONFLICT', 'Trùng lịch: thợ đã có lịch khác trong khoảng thời gian này');
+    case 'P0001':
+      return new AppError('CONFLICT', pgRaisedMessage(err) ?? 'Thao tác bị database từ chối');
+    case '23514':
+      return new AppError('VALIDATION_FAILED', 'Dữ liệu vi phạm ràng buộc của hệ thống');
+    case '23503':
+      return new AppError('VALIDATION_FAILED', 'Dữ liệu tham chiếu tới bản ghi không tồn tại hoặc không hợp lệ');
+    case '22021':
+    case '22P05':
+      return new AppError('VALIDATION_FAILED', 'Nội dung chứa ký tự không hợp lệ');
+    default:
+      return null;
+  }
 }
 
 // Khoá dòng tổ chức rồi TRA LẠI quyền người thao tác bên trong cùng transaction.

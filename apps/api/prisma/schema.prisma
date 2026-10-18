@@ -44,9 +44,16 @@ model User {
   createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt    DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  memberships   Membership[]
-  refreshTokens RefreshToken[]
-  auditLogs     AuditLog[]
+  memberships          Membership[]
+  refreshTokens        RefreshToken[]
+  auditLogs            AuditLog[]
+  appointmentsCreated  Appointment[]              @relation("AppointmentCreatedBy")
+  contractsCreated     Contract[]                 @relation("ContractCreatedBy")
+  contractLinesCreated ContractLine[]             @relation("ContractLineCreatedBy")
+  priceVersionsCreated PriceVersion[]             @relation("PriceVersionCreatedBy")
+  statusChanges        AppointmentStatusHistory[] @relation("StatusChangedBy")
+  payRatesUpdated      StaffPayRate[]             @relation("PayRateUpdatedBy")
+  idempotencyKeys      IdempotencyKey[]
 
   @@map("users")
 }
@@ -313,10 +320,13 @@ model PriceVersion {
   createdById    String   @map("created_by_id") @db.Uuid
   createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
-  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  service      Service?        @relation(fields: [serviceId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  package      ServicePackage? @relation(fields: [packageId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  organization  Organization    @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  service       Service?        @relation(fields: [serviceId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  package       ServicePackage? @relation(fields: [packageId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  contractLines ContractLine[]
+  createdBy     User            @relation("PriceVersionCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
 
+  @@unique([id, organizationId])
   @@index([serviceId, effectiveFrom])
   @@index([packageId, effectiveFrom])
   @@map("price_versions")
@@ -394,12 +404,15 @@ model Appointment {
   createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt       DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  organization  Organization               @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  customer      Customer?                  @relation(fields: [customerId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  contract      Contract?                  @relation(fields: [contractId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  contractLine  ContractLine?              @relation(fields: [contractLineId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  staff         AppointmentStaff[]
-  statusHistory AppointmentStatusHistory[]
+  organization           Organization               @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  customer               Customer?                  @relation(fields: [customerId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  contract               Contract?                  @relation(fields: [contractId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  contractLine           ContractLine?              @relation(fields: [contractLineId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  // Dòng hợp đồng phải thuộc CHÍNH hợp đồng của lịch (database tự chặn).
+  contractLineInContract ContractLine?              @relation("AppointmentLineOfContract", fields: [contractLineId, contractId], references: [id, contractId], onDelete: Restrict)
+  createdBy              User                       @relation("AppointmentCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  staff                  AppointmentStaff[]
+  statusHistory          AppointmentStatusHistory[]
 
   @@unique([organizationId, code])
   @@unique([id, organizationId])
@@ -419,7 +432,7 @@ model AppointmentStaff {
   isBlocking     Boolean   @map("is_blocking")
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  appointment  Appointment  @relation(fields: [appointmentId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  appointment  Appointment  @relation(fields: [appointmentId, organizationId], references: [id, organizationId], onDelete: Restrict)
   membership   Membership   @relation(fields: [membershipId, organizationId], references: [id, organizationId], onDelete: Restrict)
 
   @@id([appointmentId, membershipId])
@@ -438,7 +451,8 @@ model AppointmentStatusHistory {
   changedAt      DateTime    @default(now()) @map("changed_at") @db.Timestamptz(3)
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  appointment  Appointment  @relation(fields: [appointmentId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  appointment  Appointment  @relation(fields: [appointmentId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  changedBy    User         @relation("StatusChangedBy", fields: [changedById], references: [id], onDelete: Restrict)
 
   @@index([appointmentId, changedAt])
   @@map("appointment_status_history")
@@ -470,6 +484,7 @@ model IdempotencyKey {
   createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Restrict)
 
   @@id([organizationId, userId, key])
   @@map("idempotency_keys")
@@ -585,6 +600,7 @@ model Contract {
   customer     Customer       @relation(fields: [customerId, organizationId], references: [id, organizationId], onDelete: Restrict)
   lines        ContractLine[]
   appointments Appointment[]
+  createdBy    User           @relation("ContractCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
 
   @@unique([organizationId, code])
   @@unique([id, organizationId])
@@ -630,17 +646,21 @@ model ContractLine {
   createdById       String           @map("created_by_id") @db.Uuid
   createdAt         DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
 
-  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  contract       Contract        @relation(fields: [contractId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  parent         ContractLine?   @relation("LineAddons", fields: [parentLineId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  addons         ContractLine[]  @relation("LineAddons")
-  service        Service?        @relation(fields: [serviceId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  package        ServicePackage? @relation(fields: [packageId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  subject        MakeupSubject?  @relation(fields: [subjectId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  studioLocation StudioLocation? @relation(fields: [studioLocationId, organizationId], references: [id, organizationId], onDelete: Restrict)
-  appointments   Appointment[]
+  organization           Organization    @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  contract               Contract        @relation(fields: [contractId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  parent                 ContractLine?   @relation("LineAddons", fields: [parentLineId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  addons                 ContractLine[]  @relation("LineAddons")
+  service                Service?        @relation(fields: [serviceId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  package                ServicePackage? @relation(fields: [packageId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  subject                MakeupSubject?  @relation(fields: [subjectId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  studioLocation         StudioLocation? @relation(fields: [studioLocationId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  appointments           Appointment[]
+  appointmentsInContract Appointment[]   @relation("AppointmentLineOfContract")
+  priceVersion           PriceVersion?   @relation(fields: [priceVersionId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  createdBy              User            @relation("ContractLineCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
 
   @@unique([id, organizationId])
+  @@unique([id, contractId])
   @@index([contractId])
   @@map("contract_lines")
 }
@@ -705,6 +725,7 @@ model StaffPayRate {
   package      ServicePackage? @relation(fields: [packageId, organizationId], references: [id, organizationId], onDelete: Restrict)
   service      Service?        @relation(fields: [serviceId, organizationId], references: [id, organizationId], onDelete: Restrict)
   tier         StaffTier       @relation(fields: [tierId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  updatedBy    User            @relation("PayRateUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
 
   @@unique([packageId, tierId])
   @@unique([serviceId, tierId])
