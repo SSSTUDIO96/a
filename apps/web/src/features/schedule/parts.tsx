@@ -37,6 +37,13 @@ export function apptClasses(a: Appointment, conflict: boolean): string {
   );
 }
 
+// Chữ loại trên ô lưới C (ô hẹp, bản mẫu ghi "Tiệc", "Ăn hỏi"): bỏ chữ "Makeup" đứng đầu tên ca — app chỉ có ca makeup.
+// Tên ca đầy đủ vẫn nằm trong tooltip và hộp chi tiết.
+export function chipKind(a: Pick<Appointment, 'title' | 'kind'>): string {
+  const t = kindText(a).replace(/^makeup\s+/iu, '');
+  return t.charAt(0).toLocaleUpperCase('vi') + t.slice(1);
+}
+
 // Ô ca của lưới C (máy tính, máy tính bảng): giờ bắt đầu đậm · loại · tên khách một dòng.
 export function ApptChip({
   a,
@@ -54,7 +61,7 @@ export function ApptChip({
       <button type="button" className={cx('ws-chip', apptClasses(a, conflict))} onClick={() => onOpen(a)} data-appt={a.id}>
         <span className="ws-chip__top">
           <b className="num">{startLabel(a, day)}</b>
-          <span className="ws-chip__kind">{kindText(a)}</span>
+          <span className="ws-chip__kind">{chipKind(a)}</span>
         </span>
         {a.customer && <span className="ws-chip__who">{a.customer.fullName}</span>}
       </button>
