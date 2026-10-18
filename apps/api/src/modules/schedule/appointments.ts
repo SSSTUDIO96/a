@@ -24,7 +24,8 @@ import {
   guardOverlap,
   loadHistory,
   lockAppointment,
-  presentAppointment,
+  presentAppointmentList,
+  presentAppointmentOne,
   visibleWhere,
 } from './service';
 
@@ -128,7 +129,7 @@ export const appointmentRoutes = [
         orderBy: [{ startsAt: 'asc' }, { code: 'asc' }],
       });
       return {
-        body: { items: rows.map((r) => presentAppointment(r)), from: query.from.toISOString(), to: query.to.toISOString() },
+        body: { items: await presentAppointmentList(deps.db, o.id, rows), from: query.from.toISOString(), to: query.to.toISOString() },
       };
     },
   }),
@@ -149,7 +150,7 @@ export const appointmentRoutes = [
       }
       const ctx = { orgId: o.id, userId: mustUser(userId), requestId };
       const row = await deps.db.$transaction((tx) => createAppointmentTx(tx, ctx, body));
-      return { status: 201, body: presentAppointment(row, await loadHistory(deps.db, o.id, row.id)) };
+      return { status: 201, body: await presentAppointmentOne(deps.db, o.id, row, await loadHistory(deps.db, o.id, row.id)) };
     },
   }),
 
@@ -168,7 +169,7 @@ export const appointmentRoutes = [
         include: appointmentInclude,
       });
       if (!row) throw new AppError('NOT_FOUND', 'Không tìm thấy lịch');
-      return { body: presentAppointment(row, await loadHistory(deps.db, o.id, row.id)) };
+      return { body: await presentAppointmentOne(deps.db, o.id, row, await loadHistory(deps.db, o.id, row.id)) };
     },
   }),
 
@@ -277,7 +278,7 @@ export const appointmentRoutes = [
         });
         return tx.appointment.findUniqueOrThrow({ where: { id: before.id }, include: appointmentInclude });
       });
-      return { body: presentAppointment(row, await loadHistory(deps.db, o.id, row.id)) };
+      return { body: await presentAppointmentOne(deps.db, o.id, row, await loadHistory(deps.db, o.id, row.id)) };
     },
   }),
 
@@ -298,7 +299,7 @@ export const appointmentRoutes = [
         await applyStatusChangeTx(tx, { orgId: o.id, userId: uid, requestId }, before, body.to, body.reason ?? null);
         return tx.appointment.findUniqueOrThrow({ where: { id: before.id }, include: appointmentInclude });
       });
-      return { body: presentAppointment(row, await loadHistory(deps.db, o.id, row.id)) };
+      return { body: await presentAppointmentOne(deps.db, o.id, row, await loadHistory(deps.db, o.id, row.id)) };
     },
   }),
 ];

@@ -501,7 +501,7 @@ describe('Bổ sung theo duyệt của điều phối: nhân vật chưa có gó
     setupServer(OWNER);
     renderAt('/chien/bang-gia/dich-vu');
     const section = await screen.findByRole('region', { name: 'Dịch vụ trong gói' });
-    await user.click(within(section).getByRole('button', { name: /Makeup cô dâu/ }));
+    await user.click(await within(section).findByRole('button', { name: /Makeup cô dâu/ }));
     const dlg = await screen.findByRole('dialog', { name: 'Makeup cô dâu' });
     expect(dlg.querySelector('.ui-dialog__eyebrow')?.textContent).toBe('Dịch vụ trong gói · MCD');
     expect(within(dlg).getByRole('switch', { name: 'Đang bán' })).toBeTruthy();

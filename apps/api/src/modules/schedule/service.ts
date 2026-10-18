@@ -16,6 +16,7 @@ import type { OrgContext } from '../../http/route';
 import { AppError } from '../../lib/errors';
 import { writeAudit } from '../../lib/audit';
 import { isStaffOverlapViolation } from '../../http/middleware';
+import { avatarSelect, resolveAvatarUrls, type AvatarSource } from '../files/service';
 
 export type InitialStatus = (typeof INITIAL_STATUSES)[number];
 
@@ -53,6 +54,8 @@ export interface TxCtx {
 export const appointmentInclude = {
   customer: { select: { id: true, fullName: true, phone: true } },
   contract: { select: { id: true, code: true, status: true } },
+  // Nhân vật makeup của ca = bản chụp tên nhân vật trên dòng hợp đồng gắn với ca (giống hợp đồng hiển thị).
+  contractLine: { select: { subjectName: true } },
   staff: {
     select: {
       membershipId: true,
@@ -60,7 +63,9 @@ export const appointmentInclude = {
       blockStart: true,
       blockEnd: true,
       isBlocking: true,
-      membership: { select: { user: { select: { fullName: true } } } },
+      membership: {
+        select: { user: { select: { fullName: true } }, staffProfile: { select: { displayName: true, ...avatarSelect } } },
+      },
     },
     orderBy: [{ role: 'asc' }, { membershipId: 'asc' }],
   },
@@ -78,8 +83,30 @@ const historySelect = {
 
 export type HistoryRow = Prisma.AppointmentStatusHistoryGetPayload<{ select: typeof historySelect }>;
 
+export type AvatarOf = (p: AvatarSource | null | undefined) => string | null;
+
+// Ảnh đại diện thợ của các ca, đổi thành URL ký có hạn qua đúng hàm dùng chung resolveAvatarUrls (modules/files):
+// MỘT câu truy vấn tệp cho cả danh sách ca, không N+1.
+export function avatarsOfAppointments(db: Prisma.TransactionClient, orgId: string, rows: AppointmentRow[]): Promise<AvatarOf> {
+  return resolveAvatarUrls(
+    db,
+    orgId,
+    rows.flatMap((r) => r.staff.map((s) => s.membership.staffProfile)),
+  );
+}
+
+// MỌI cửa trả lịch (danh sách, xem, tạo, sửa, đổi trạng thái) đi qua đây hoặc presentAppointmentList.
+export async function presentAppointmentOne(db: Prisma.TransactionClient, orgId: string, row: AppointmentRow, history?: HistoryRow[]) {
+  return presentAppointment(row, await avatarsOfAppointments(db, orgId, [row]), history);
+}
+
+export async function presentAppointmentList(db: Prisma.TransactionClient, orgId: string, rows: AppointmentRow[]) {
+  const avatarOf = await avatarsOfAppointments(db, orgId, rows);
+  return rows.map((r) => presentAppointment(r, avatarOf));
+}
+
 // Trả về JSON thuần (chuỗi ISO, số) để kết quả lưu vào bảng chống gửi trùng giống hệt lần đầu.
-export function presentAppointment(a: AppointmentRow, history?: HistoryRow[]) {
+export function presentAppointment(a: AppointmentRow, avatarOf: AvatarOf, history?: HistoryRow[]) {
   return {
     id: a.id,
     code: a.code,
@@ -89,6 +116,8 @@ export function presentAppointment(a: AppointmentRow, history?: HistoryRow[]) {
     customer: a.customer,
     contract: a.contract,
     contractLineId: a.contractLineId,
+    // Ca không gắn dòng hợp đồng → null (không đoán theo tên ca).
+    subjectName: a.contractLine?.subjectName ?? null,
     startsAt: a.startsAt.toISOString(),
     endsAt: a.endsAt.toISOString(),
     travelBeforeMin: a.travelBeforeMin,
@@ -102,6 +131,8 @@ export function presentAppointment(a: AppointmentRow, history?: HistoryRow[]) {
     staff: a.staff.map((s) => ({
       membershipId: s.membershipId,
       fullName: s.membership.user.fullName,
+      displayName: s.membership.staffProfile?.displayName ?? s.membership.user.fullName,
+      avatarUrl: avatarOf(s.membership.staffProfile),
       role: s.role,
       blockStart: s.blockStart.toISOString(),
       blockEnd: s.blockEnd.toISOString(),

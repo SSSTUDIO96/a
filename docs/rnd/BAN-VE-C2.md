@@ -509,3 +509,135 @@ export interface RevenueReport<R> { from: string; to: string; groupBy: 'month' |
 export function getRevenueByMonth(orgId: string, q: { from: IsoDateTime; to: IsoDateTime }, signal?: AbortSignal): Promise<RevenueReport<RevenueBucket & { period: string }>>;      // groupBy=month
 export function getRevenueByContract(orgId: string, q: { from: IsoDateTime; to: IsoDateTime }, signal?: AbortSignal): Promise<RevenueReport<RevenueByContractRow>>;                // groupBy=contract
 ```
+
+---
+
+## 4. Hồ sơ thương hiệu & trang giới thiệu — phương án C "Sửa bên trái, xem trước bên phải" (quyết định thay)
+
+Bản mẫu: /home/user/a/docs/rnd/v4-thuong-hieu.html — `#c`, `#c-xem`, `#c-chua`, `#c-go` (màn sửa) và `#trang`, `#trang-404` (trang công khai).
+
+Ảnh (3 khổ): /home/user/a/docs/rnd/anh/v4-thuong-hieu-c-{desktop,tablet,mobile}.png, …-c-xem-…, …-c-chua-…, …-c-go-…, …-trang-{desktop,tablet,mobile}.png, …-trang-404-…; có nhãn trường: /home/user/a/docs/rnd/anh/v4-thuong-hieu-truong-c-desktop.png, /home/user/a/docs/rnd/anh/v4-thuong-hieu-truong-trang-desktop.png
+
+### 4.1 Đường
+
+| Đường | Màn | Ai vào |
+|---|---|---|
+| `/:orgSlug/cai-dat/thuong-hieu` | Sửa hồ sơ thương hiệu (mục con duy nhất của "Cài đặt" lúc này; vào `/cai-dat` thì chuyển thẳng tới đây) | `org.update` (mục "Cài đặt" đã có trong `nav.ts`) |
+| `/trang/:slug` | Trang giới thiệu công khai | **mọi người, không cần đăng nhập** |
+
+**Rủi ro trùng đường — cần máy chủ sửa trước khi phát hành:** web dùng `/:orgSlug/...`, nên `/trang/...` chỉ an toàn nếu không tổ chức nào được đặt đường dẫn `trang`. Danh sách cấm `RESERVED_SLUGS` (/home/user/a/apps/api/src/modules/orgs/routes.ts dòng 11) **chưa có** `trang` → đề xuất thêm (một dòng, việc của đội máy chủ). Khi chưa thêm, trang công khai của tổ chức có slug `trang` sẽ bị đè.
+
+### 4.2 Bố cục màn sửa
+
+- **Thanh xuất bản** (thẻ ngang trên cùng, đệm 12 18): StatusTag "Đang công khai từ dd/mm/yyyy" (ok) hoặc "Chưa xuất bản" (nháp) · đường dẫn "makeuppro.vn/trang/**{slug}**" 13px `--muted` (tên miền lấy từ cấu hình web, không cứng) · "Sao chép liên kết" · khi đang công khai: "Mở trang" (tab mới) + "Gỡ trang" (viền đỏ); khi chưa: "Xuất bản" (primary).
+- **Thân hai cột**: `1fr | 420px` (máy tính bảng `1fr | 340px`), khe 20.
+  - Trái: một thẻ form, 6 nhóm có tiêu đề nhóm (BAN-VE-C: 13/700, gạch dưới), dòng "wide" (nhãn | ô 360px).
+  - Phải: khối **Xem trước** dính đầu (`top:16px`): hàng "Xem trước" + Segmented sm "Điện thoại · Máy tính" (đổi bề rộng khung: 375px hoặc 100% có thu nhỏ); khung viền `--line` bo 12, cao tối đa `100vh − 120px`, cuộn riêng, hiện component `SiteView` (4.4) **từ bản nháp đang sửa** — gõ tới đâu đổi tới đó.
+  - Điện thoại: không có cột phải; đầu trang có Segmented 2 ô "Sửa hồ sơ · Xem trước" (`#c-xem`).
+- **Thanh lưu dính đáy** (StickyTotalBar dùng lại): chỉ hiện khi có thay đổi: "Có thay đổi chưa lưu" · "Bỏ thay đổi" · **"Lưu hồ sơ"**. Khi trang chưa xuất bản thêm nút "Lưu và xuất bản" (PUT rồi POST publish).
+
+*Các nhóm form*
+
+| Nhóm | Dòng (nhãn → điều khiển) | Trường |
+|---|---|---|
+| Thương hiệu | Tên thương hiệu `*` → TextInput | `brandName` (1–120) |
+| | Câu giới thiệu ngắn ? → TextInput | `tagline` (≤200) |
+| | Giới thiệu → Textarea 3 dòng (nhãn trên) | `bio` (≤5000) |
+| | Kinh nghiệm → TextInput | `experience` (≤2000) |
+| | Phong cách ? → các Chip đang bật có "✕" + nút dashed "+ Thêm" (mở ô nhập nhỏ, Enter để thêm) | `styles[]` (≤20 mục, mỗi mục ≤50) |
+| | Khu vực phục vụ → TextInput | `serviceArea` (≤500) |
+| Ảnh ? | 3 ô ImageUpload: Logo (vuông 96) · Ảnh đại diện (tròn 96) · Ảnh bìa (ngang, phần còn lại) — mỗi ô: "Đổi"/"Tải ảnh", "Bỏ" | `logoFileId` (tải với `purpose=ORG_LOGO`, ≤2 MB) · `avatarFileId` và `coverFileId` (tải với `purpose=ALBUM_IMAGE`, ≤15 MB) |
+| Liên hệ | Địa chỉ · Số điện thoại · Zalo ? · Email · Facebook · TikTok · Instagram · Website | `address, phone, zalo, email, facebook, tiktok, instagram, website` (mạng xã hội/website: chỉ `https://…`; Zalo: số hoặc `https://zalo.me/…`) |
+| Giờ làm việc ? | 7 hàng Thứ Hai → Chủ nhật: tên thứ 84px · Switch (mở cửa) · ca 1 "08:00 – 12:00" (2 ô giờ sm 76px) · ca 2 nếu có · nút ghost "+ Ca 2" | `workingHours[{weekday 1–7, open 'HH:mm', close 'HH:mm'}]` (mỗi thứ ≤2 ca, đóng sau mở, không chồng) |
+| Chính sách | Đặt lịch · Đặt cọc · Huỷ lịch → Textarea 2 dòng (nhãn trên) | `bookingPolicy, depositPolicy, cancellationPolicy` (≤5000) |
+| Gói hiện trên trang ? | Mỗi gói đang bán: tên · giá 12.5px · Switch | `isPublic` của gói → **`PATCH /packages/:id {isPublic}` lưu ngay** (không chờ "Lưu hồ sơ"); chỉ `catalog.write`, thiếu quyền thì Switch khoá |
+
+*Luật lưu*
+- `PUT /profile` **ghi toàn bộ**: trường không gửi bị xoá trắng. Giao diện giữ bản nháp đầy đủ lấy từ `GET /profile` và **luôn gửi đủ 21 trường** (kể cả 3 `*FileId`). Không gửi `isPublished`/`publishedAt` (máy chủ từ chối trường lạ).
+- Ảnh: chọn tệp → `uploadFile` (mục 0.3) → ghi `id` vào bản nháp → xem trước dùng `signedUrl` vừa nhận → bấm "Lưu hồ sơ" mới gắn. "Bỏ" = đặt `null`.
+- URL ảnh có hạn 10 phút (`logo.expiresAt`…): khi quay lại tab mà đã quá hạn thì gọi lại `GET /profile` (chỉ thay URL, không đè bản nháp đang sửa).
+- Rời trang khi còn thay đổi: ConfirmDialog "Bỏ thay đổi hồ sơ?".
+
+*Xuất bản / gỡ*
+- "Xuất bản" → `POST /profile/publish`. Chưa có hồ sơ hoặc tên trống → 400; giao diện chặn trước: nút khoá + tooltip "Lưu tên thương hiệu trước".
+- "Gỡ trang" → ConfirmDialog (`#c-go`) "Gỡ trang giới thiệu? Khách mở liên kết sẽ thấy "Không tìm thấy trang giới thiệu". Hồ sơ vẫn giữ nguyên, xuất bản lại lúc nào cũng được." → `POST /profile/unpublish`.
+- Chưa có hồ sơ (`hasProfile = false`, `#c-chua`): dải xám giải thích + EmptyState có một ô "Tên thương hiệu" và nút "Lưu và tiếp tục" (PUT chỉ với `brandName`), sau đó hiện form đầy đủ.
+
+### 4.3 Trang công khai `/trang/:slug`
+
+- Không có khung app (không thanh trái/dưới). Nền trắng, giữa trang rộng tối đa 1080px.
+- Gọi `GET /public/sites/:slug` (không gửi thẻ đăng nhập; máy chủ cho trình duyệt giữ 60 giây). 404 → trang "Không tìm thấy trang giới thiệu" + "Liên kết có thể sai, hoặc studio đã gỡ trang." (`#trang-404`) — mọi lý do (sai slug, chưa xuất bản, tổ chức bị khoá) cùng một chữ, đúng như máy chủ.
+- Bố cục theo **bề rộng khung chứa** (container query, để dùng lại được trong khung xem trước):
+  - < 760px (điện thoại, khung xem trước): một cột: Ảnh bìa 150px → logo tròn 76 đè lên bìa −38px → tên 21/700 → câu giới thiệu → 2 nút "Gọi {SĐT}" (primary, `tel:`) · "Nhắn Zalo" (`https://zalo.me/{số}` hoặc liên kết có sẵn) → Bảng giá → Giới thiệu → Giờ làm việc → Chính sách → Liên hệ → chân "Trang tạo bằng Makeup Pro".
+  - ≥ 760px: bìa 260px, logo 104; đầu trang thành hàng ngang (logo · tên + câu · 2 nút bên phải); thân 2 cột `1fr | 320px`: trái Bảng giá (thẻ gói 2 cột) + Giới thiệu; phải Giờ làm việc, Chính sách, Liên hệ.
+- **Bảng giá**: nhóm theo `packages[].subject.name` (theo thứ tự `subjects[]`; gói không nhân vật vào nhóm "Gói khác" cuối). Thẻ gói: tên 15/700 · giá `price.unitPrice` 700 bên phải (nếu `salePrice` < `listPrice`: giá niêm yết gạch ngang 12px dưới) · dòng "{thời lượng} · {nơi làm}" · mỗi món `included[]` "✓ {tên} × {số}" · "Miễn phí di chuyển trong {includedKm} km" (chỉ khi gói cho làm tại nhà/nơi khác và `includedKm` có) · các nhãn "+ {dịch vụ phụ} {giá}" từ `addons[]`. Không có `price` (chưa đặt giá) → hiện "Liên hệ".
+- Dịch vụ lẻ `services[]` (nếu có): nhóm "Dịch vụ lẻ" cuối Bảng giá, mỗi dòng tên · giá.
+- Ô trống thì **ẩn cả mục** (ví dụ không có chính sách nào → không có mục Chính sách).
+- Phần chia sẻ lên Zalo/Facebook cần thẻ `og:` do máy chủ in sẵn — web một trang không làm được (đề xuất 4.7-3).
+
+### 4.4 Ô ↔ trường
+
+| Ô | Đọc | Ghi |
+|---|---|---|
+| Mọi ô của form | `GET /profile` → `{hasProfile, profile: {brandName, tagline, bio, experience, styles, serviceArea, address, phone, email, zalo, facebook, instagram, tiktok, website, logoFileId, avatarFileId, coverFileId, workingHours, bookingPolicy, cancellationPolicy, depositPolicy, isPublished, publishedAt, updatedAt, logo{url,expiresAt}\|null, avatar…, cover…}}` | `PUT /profile` (đủ trường) |
+| Trạng thái công khai | `isPublished`, `publishedAt` | `POST /profile/publish`, `POST /profile/unpublish` |
+| Đường dẫn trang | `slug` của tổ chức (`GET /auth/me` → `organizations[].slug`) | — |
+| Gói hiện trên trang | `GET /packages?isActive=true` → `id, name, isPublic, currentPrice.unitPrice` | `PATCH /packages/:id {isPublic}` |
+| Trang công khai | `GET /public/sites/:slug` → `site{name, slug, timezone}`, `profile{…, logo, avatar, cover}`, `services[{id, kind, name, description, durationMinutes, category, price}]`, `packages[{id, name, description, durationMinutes, staffCount, subject, locationTypes, includedKm, terms, price{listPrice, salePrice, unitPrice}, included[{name, quantity}], addons[{serviceId, name, durationMinutes, quantity, price}]}]`, `subjects[]`, `travel{freeKm}` | — |
+
+Khung xem trước ở màn sửa **dựng dữ liệu giống trang công khai từ bản nháp + `GET /packages`** (chỉ gói `isPublic`), nên có thể lệch nhẹ với trang thật (dịch vụ phụ không công khai, km miễn phí lấy mức chung). Nút "Mở trang" để xem bản thật.
+
+### 4.5 Trạng thái, quyền
+
+| Tình huống | Hiển thị |
+|---|---|
+| Tải lần đầu | Skeleton form (6 nhóm × 2 vạch) và khung xem trước xám |
+| 400 (liên kết không https, số sai, giờ chồng) | Lỗi dưới đúng ô; giờ làm việc: lỗi dưới hàng thứ đó (máy chủ trả đường dẫn `[i, 'close']` hoặc câu "Thứ 3: ca … và ca … chồng nhau") |
+| 400 ảnh (sai loại, quá dung lượng, không thuộc tổ chức) | Lỗi dưới ô ảnh, giữ ảnh cũ |
+| 403 | Không vào được trang (menu "Cài đặt" ẩn khi thiếu `org.update`) |
+| Mất mạng khi lưu | Dải vàng, giữ bản nháp |
+
+| Quyền | Hiện / bật |
+|---|---|
+| `org.update` | Vào màn, sửa, xuất bản, gỡ |
+| `files.write` | Nút tải/đổi ảnh (không có thì ô ảnh chỉ xem) |
+| `catalog.read` / `catalog.write` | Nhóm "Gói hiện trên trang" (xem / bật tắt) |
+
+### 4.6 Gói việc theo tệp
+
+| Gói | Tệp sở hữu | Nội dung | Phụ thuộc |
+|---|---|---|---|
+| **W11 Thương hiệu** | `src/features/brand/**`: `BrandProfilePage.tsx`, `PublishBar.tsx`, `BrandForm.tsx`, `groups/IdentityGroup.tsx`, `groups/ImagesGroup.tsx`, `groups/ContactGroup.tsx`, `groups/WorkingHoursGroup.tsx`, `groups/PoliciesGroup.tsx`, `groups/PublicPackagesGroup.tsx`, `PreviewPane.tsx`, `draftToSite.ts`, `useProfileDraft.ts`; **`src/api/profile.ts` (mới)** | 4.2 | `src/api/files.ts` (W8), `SiteView` (W12), `src/api/catalog.ts` (`listPackages`, `updatePackage`) |
+| **W12 Trang công khai** | `src/features/public-site/**`: `PublicSitePage.tsx`, `SiteView.tsx` (nhận `PublicSite`, không gọi API — để W11 dùng làm xem trước), `site.css`; **`src/api/publicSite.ts` (mới)** | 4.3 | — (làm trước hoặc song song W11; W11 dùng tạm khung rỗng nếu chưa có) |
+| Yêu cầu W3 | `routes.tsx`: `/trang/:slug` (ngoài `RequireAuth`, **trước** `:orgSlug`), `cai-dat` → `cai-dat/thuong-hieu`; `nav.ts`: mục con "Hồ sơ thương hiệu" | | |
+| Yêu cầu đội máy chủ | thêm `'trang'` vào `RESERVED_SLUGS` | | |
+
+### 4.7 Đề xuất trường / đường mới (KHÔNG vẽ)
+
+1. **Album ảnh** (Fresha bắt ít nhất 3 ảnh cơ sở khi tạo trang): `OrganizationProfile.galleryFileIds[]`.
+2. **Liên kết bản đồ** (Studio Pro có ô "Link Google Map"): `OrganizationProfile.mapUrl`.
+3. **Trang in sẵn thẻ `og:`** (ảnh, tên, câu giới thiệu) phía máy chủ để chia sẻ Zalo/Facebook hiện đẹp.
+4. **Nút "Đặt lịch" trên trang công khai** — chưa có đường đặt lịch cho khách; anh chưa yêu cầu.
+5. Dọn tệp ảnh đã tải mà không lưu hồ sơ (hiện để lại tệp mồ côi).
+6. Tên miền riêng (gói thuê bao có cờ `customDomain` nhưng chưa có cấu hình).
+
+### 4.8 Hàm API web cần thêm
+
+```ts
+// src/api/profile.ts (mới, W11)
+export interface WorkingShift { weekday: 1|2|3|4|5|6|7; open: string; close: string }   // 'HH:mm'
+export interface SignedImage { url: string; expiresAt: IsoDateTime }
+export interface ProfileInput { brandName: string; tagline: string|null; bio: string|null; experience: string|null; styles: string[]; serviceArea: string|null; address: string|null; phone: string|null; email: string|null; zalo: string|null; facebook: string|null; instagram: string|null; tiktok: string|null; website: string|null; logoFileId: string|null; avatarFileId: string|null; coverFileId: string|null; workingHours: WorkingShift[]; bookingPolicy: string|null; cancellationPolicy: string|null; depositPolicy: string|null }
+export interface BrandProfile extends ProfileInput { isPublished: boolean; publishedAt: IsoDateTime|null; updatedAt: IsoDateTime; logo: SignedImage|null; avatar: SignedImage|null; cover: SignedImage|null }
+export type ProfileResult = { hasProfile: false; profile: null } | { hasProfile: true; profile: BrandProfile };
+export function getProfile(orgId: string, signal?: AbortSignal): Promise<ProfileResult>;     // GET  /orgs/:orgId/profile
+export function putProfile(orgId: string, input: ProfileInput): Promise<ProfileResult>;      // PUT  — luôn gửi đủ trường
+export function publishProfile(orgId: string): Promise<ProfileResult>;                       // POST /profile/publish
+export function unpublishProfile(orgId: string): Promise<ProfileResult>;                     // POST /profile/unpublish
+
+// src/api/publicSite.ts (mới, W12) — gọi KHÔNG kèm thẻ đăng nhập, 401 không được kích hoạt "hết phiên"
+export interface PublicPrice { listPrice: Vnd; salePrice: Vnd|null; unitPrice: Vnd }
+export interface PublicSite { site: { name: string; slug: string; timezone: string }; profile: Omit<BrandProfile, 'isPublished'|'updatedAt'|'logoFileId'|'avatarFileId'|'coverFileId'>; services: { id: string; kind: ServiceKind; name: string; description: string|null; durationMinutes: number|null; category: string|null; price: PublicPrice|null }[]; packages: { id: string; name: string; description: string|null; durationMinutes: number; staffCount: number; subject: { id: string; name: string }|null; locationTypes: LocationType[]; includedKm: number|null; terms: string|null; price: PublicPrice|null; included: { name: string; quantity: number }[]; addons: { serviceId: string; name: string; durationMinutes: number|null; quantity: number; price: PublicPrice|null }[] }[]; subjects: { id: string; name: string }[]; travel: { freeKm: number|null } }
+export function getPublicSite(slug: string, signal?: AbortSignal): Promise<PublicSite>;      // GET /public/sites/:slug
+```
+(Kiểu `durationMinutes`, `description` của gói/dịch vụ: thợ W12 đối chiếu lại `select` trong /home/user/a/apps/api/src/modules/profile/public.ts và schema.prisma — có thể null hay không.)
