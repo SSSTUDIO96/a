@@ -10,6 +10,7 @@ import {
   currentSubscriptionsSql,
   describeSubscription,
   effectiveStatusSql,
+  expiringSql,
   getEffectivePlan,
   getUsage,
 } from '../../lib/quota';
@@ -211,9 +212,7 @@ export const platformRoutes: AnyRoute[] = [
       if (query.planCode) conds.push(Prisma.sql`plan_code = ${query.planCode}`);
       if (query.expiringWithinDays) {
         const until = new Date(now.getTime() + query.expiringWithinDays * DAY_MS);
-        conds.push(
-          Prisma.sql`effective_status IN ('TRIAL', 'ACTIVE', 'PAST_DUE') AND ends_at > ${now}::timestamptz AND ends_at <= ${until}::timestamptz`,
-        );
+        conds.push(expiringSql(now, until));
       }
       if (query.q) {
         const like = likePattern(query.q);
@@ -290,6 +289,14 @@ export const platformRoutes: AnyRoute[] = [
         configError = err.operatorHint ? `${err.message} ${err.operatorHint}` : err.message;
       }
       const current = effective?.current.hasSubscription ? effective.current : null;
+      // Kỳ gia hạn nối tiếp xa nhất (cùng luật với "sắp hết hạn"): null = không có kỳ nối tiếp; renewedOpenEnded = nối tiếp không hạn.
+      const cov = await deps.db.$queryRaw<{ ends_at: Date | null; coverage_end: Date | null }[]>`
+        WITH cur AS (${currentSubscriptionsSql(now)}) SELECT ends_at, coverage_end FROM cur WHERE id = ${org.id}::uuid`;
+      const endsAt = cov[0]?.ends_at ?? null;
+      const coverageEnd = cov[0]?.coverage_end ?? null;
+      // coverage_end NULL mà kỳ hiện hành có hạn ⇒ có kỳ nối tiếp không hạn.
+      const renewedOpenEnded = endsAt !== null && coverageEnd === null;
+      const renewedUntil = coverageEnd && endsAt && coverageEnd.getTime() > endsAt.getTime() ? coverageEnd : null;
       const [staff, appointmentsThisMonth, storageMb] = await Promise.all([
         getUsage(deps.db, org.id, 'staff', now),
         getUsage(deps.db, org.id, 'appointmentsPerMonth', now),
@@ -317,6 +324,8 @@ export const platformRoutes: AnyRoute[] = [
             : null,
           effectivePlan: effective ? { source: effective.source, plan: presentPlan(effective.plan) } : null,
           configError,
+          renewedUntil,
+          renewedOpenEnded,
           graceDays: GRACE_DAYS,
           // Học viên / khoá học: chưa có module — null nghĩa là chưa đếm được.
           usage: { staff, appointmentsThisMonth, storageMb: Math.round(storageMb * 100) / 100, students: null, courses: null },
@@ -578,8 +587,7 @@ export const platformRoutes: AnyRoute[] = [
         WITH cur AS (${currentSubscriptionsSql(now)}),
              eff AS (SELECT cur.*, ${effectiveStatusSql(now)} AS effective_status FROM cur)
         SELECT status, effective_status, count(*)::int AS n,
-               count(*) FILTER (WHERE effective_status IN ('TRIAL', 'ACTIVE', 'PAST_DUE')
-                                AND ends_at > ${now}::timestamptz AND ends_at <= ${until}::timestamptz)::int AS expiring,
+               count(*) FILTER (WHERE ${expiringSql(now, until)})::int AS expiring,
                sum(price_monthly) FILTER (WHERE effective_status = 'ACTIVE' AND status = 'ACTIVE')::bigint AS revenue
         FROM eff GROUP BY status, effective_status`;
       const byStatus: Record<string, number> = { ACTIVE: 0, SUSPENDED: 0 };

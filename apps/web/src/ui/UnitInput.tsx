@@ -29,6 +29,11 @@ export interface UnitInputProps extends NativeInput, FieldMessages {
   max?: number;
   min?: number;
   onInputError?: (message: string | null) => void;
+  /**
+   * Đổi giá trị này mỗi lần form TỰ đặt lại giá trị cho ô (nút "Huỷ thay đổi", tải lại dữ liệu) → ô bỏ chữ đang gõ và lỗi
+   * tự phát hiện, hiện theo `value` — kể cả khi `value` bằng đúng số cũ (lúc đó `value` không đổi nên ô không tự biết).
+   */
+  resetKey?: string | number;
   size?: 'md' | 'sm';
   className?: string;
 }
@@ -55,6 +60,7 @@ export function UnitInput({
   max,
   min,
   onInputError,
+  resetKey,
   size = 'md',
   error,
   hint,
@@ -70,10 +76,12 @@ export function UnitInput({
 
   const [draft, setDraft] = useState<string | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
-  // Như MoneyInput: form đặt giá trị mới từ ngoài → bỏ chữ đang gõ và lỗi cũ.
+  // Như MoneyInput: form đặt giá trị mới từ ngoài (hoặc đổi `resetKey` khi đặt lại đúng số cũ) → bỏ chữ đang gõ và lỗi cũ.
   const [knownValue, setKnownValue] = useState<number | null>(value);
-  if (!Object.is(value, knownValue)) {
+  const [knownResetKey, setKnownResetKey] = useState(resetKey);
+  if (!Object.is(value, knownValue) || !Object.is(resetKey, knownResetKey)) {
     setKnownValue(value);
+    setKnownResetKey(resetKey);
     setDraft(null);
     setLocalError(null);
   }

@@ -54,11 +54,33 @@ export function effectiveStatusSql(now: Date): Prisma.Sql {
 
 // Câu chọn "thuê bao hiện hành" của từng tổ chức: dòng có startsAt ≤ now, mới nhất trước
 // (cùng startsAt thì dòng tạo sau thắng). Dùng chung cho danh sách và thống kê ở module platform.
+// Thêm cột coverage_end: ngày hết của CHUỖI gia hạn nối tiếp (bằng ends_at nếu không có kỳ nối tiếp; NULL nếu thuê bao
+// không hạn HOẶC có kỳ nối tiếp không hạn — Prisma không đọc được 'infinity'). Kỳ nối tiếp = dòng TRIAL/ACTIVE/PAST_DUE bắt đầu sau bây giờ, không muộn hơn mốc hết của
+// mắt xích trước (không hở), và hết sau mốc đó. Lọc "sắp hết hạn" dùng coverage_end (expiringSql) — studio đã gia hạn
+// nối tiếp không bị đếm là sắp hết hạn (thợ màn quản trị W13).
 export function currentSubscriptionsSql(now: Date): Prisma.Sql {
   return Prisma.sql`
     SELECT o.id, o.name, o.slug, o.kind::text AS kind, o.status::text AS status, o.created_at,
            s.id AS sub_id, s.status::text AS sub_status, s.starts_at, s.ends_at,
-           p.id AS plan_id, p.code AS plan_code, p.name AS plan_name, p.price_monthly
+           p.id AS plan_id, p.code AS plan_code, p.name AS plan_name, p.price_monthly,
+           CASE WHEN s.ends_at IS NULL THEN NULL ELSE NULLIF((
+             WITH RECURSIVE chain(until) AS (
+               SELECT s.ends_at::timestamptz
+               UNION ALL
+               SELECT nxt.ends_at FROM chain
+               CROSS JOIN LATERAL (
+                 SELECT COALESCE(y.ends_at::timestamptz, 'infinity'::timestamptz) AS ends_at
+                 FROM organization_subscriptions y
+                 WHERE y.organization_id = o.id AND y.status IN ('TRIAL', 'ACTIVE', 'PAST_DUE')
+                   AND y.starts_at > ${now}::timestamptz AND y.starts_at <= chain.until
+                   AND COALESCE(y.ends_at, 'infinity'::timestamptz) > chain.until
+                 ORDER BY COALESCE(y.ends_at, 'infinity'::timestamptz) DESC
+                 LIMIT 1
+               ) nxt
+               WHERE chain.until < 'infinity'::timestamptz
+             )
+             SELECT max(until) FROM chain
+           ), 'infinity'::timestamptz) END AS coverage_end
     FROM organizations o
     LEFT JOIN LATERAL (
       SELECT x.id, x.status, x.starts_at, x.ends_at, x.plan_id
@@ -68,6 +90,14 @@ export function currentSubscriptionsSql(now: Date): Prisma.Sql {
       LIMIT 1
     ) s ON true
     LEFT JOIN subscription_plans p ON p.id = s.plan_id`;
+}
+
+// MỘT luật "sắp hết hạn" dùng chung cho danh sách (expiringWithinDays) và thống kê (expiringIn30Days): thuê bao hiện hành
+// còn hiệu lực, đã có hạn trong tương lai, và CHUỖI nối tiếp hết trong khoảng [now, until]. Đầu vào: bí danh cột
+// effective_status, ends_at, coverage_end (từ currentSubscriptionsSql + effectiveStatusSql).
+export function expiringSql(now: Date, until: Date): Prisma.Sql {
+  return Prisma.sql`(effective_status IN ('TRIAL', 'ACTIVE', 'PAST_DUE')
+    AND ends_at > ${now}::timestamptz AND coverage_end <= ${until}::timestamptz)`;
 }
 
 const subscriptionInclude = { plan: true } satisfies Prisma.OrganizationSubscriptionInclude;

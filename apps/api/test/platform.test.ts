@@ -382,4 +382,39 @@ describe('Sửa nghiệm thu máy chủ lát 2', () => {
     expect(await find(`50%Xgiam-${u}`)).toEqual([]);
     expect(await find(`50A_giam-${u}`)).toEqual([]);
   });
+
+  it('W13 — gia hạn NỐI TIẾP: tổ chức hết hạn sau 10 ngày nhưng đã có kỳ nối tiếp → không nằm trong "sắp hết hạn" (danh sách + thống kê); chi tiết có renewedUntil', async () => {
+    const statsBefore = (await request(app).get('/api/v1/platform/stats').set(bearer(admin)).expect(200)).body;
+    const u = randomUUID().slice(0, 6);
+    const boss = await registerUser(app, `qtnt-w13-${u}`);
+    const plain = await createOrg(app, boss, `qtnt-w13-a-${u}`);
+    const renewed = await createOrg(app, boss, `qtnt-w13-b-${u}`);
+    const chain2 = await createOrg(app, boss, `qtnt-w13-c-${u}`);
+    const end = new Date(Date.now() + 10 * DAY);
+    for (const o of [plain, renewed, chain2]) await addSub(o, { planId, startsAt: new Date(Date.now() - DAY).toISOString(), endsAt: end.toISOString() });
+    // renewed: kỳ nối tiếp bắt đầu đúng lúc kỳ hiện hành hết, dài 12 tháng.
+    const next = await addSub(renewed, { planId, startsAt: end.toISOString(), months: 12 });
+    const nextRow = await deps.db.organizationSubscription.findUniqueOrThrow({ where: { id: next.id } });
+    // chain2: nối tiếp nhưng chỉ 5 ngày → vẫn hết trong 30 ngày → vẫn "sắp hết hạn".
+    await addSub(chain2, { planId, startsAt: end.toISOString(), endsAt: new Date(end.getTime() + 5 * DAY).toISOString() });
+    const list = async () =>
+      ((await request(app).get('/api/v1/platform/organizations').set(bearer(admin)).query({ q: boss.email, expiringWithinDays: '30', pageSize: '100' }).expect(200)).body.items as { id: string }[]).map((i) => i.id).sort();
+    const got = await list();
+    const statsAfter = (await request(app).get('/api/v1/platform/stats').set(bearer(admin)).expect(200)).body;
+    console.log(`[W13] sắp hết hạn 30 ngày: không nối tiếp ${got.includes(plain)}, nối tiếp 12 tháng ${got.includes(renewed)}, nối tiếp 5 ngày ${got.includes(chain2)}; thống kê tăng ${statsAfter.expiringIn30Days - statsBefore.expiringIn30Days}`);
+    expect(got).toEqual([plain, chain2].sort());
+    expect(statsAfter.expiringIn30Days - statsBefore.expiringIn30Days).toBe(2);
+    const d1 = (await request(app).get(`/api/v1/platform/organizations/${renewed}`).set(bearer(admin)).expect(200)).body;
+    const d2 = (await request(app).get(`/api/v1/platform/organizations/${plain}`).set(bearer(admin)).expect(200)).body;
+    expect(new Date(d1.renewedUntil).getTime()).toBe(nextRow.endsAt?.getTime());
+    expect(d1.renewedOpenEnded).toBe(false);
+    expect(d2.renewedUntil).toBeNull();
+    // Kỳ nối tiếp không hạn → renewedOpenEnded.
+    const open = await createOrg(app, boss, `qtnt-w13-d-${u}`);
+    await addSub(open, { planId, startsAt: new Date(Date.now() - DAY).toISOString(), endsAt: end.toISOString() });
+    await addSub(open, { planId, startsAt: end.toISOString() });
+    const d3 = (await request(app).get(`/api/v1/platform/organizations/${open}`).set(bearer(admin)).expect(200)).body;
+    expect(d3).toMatchObject({ renewedUntil: null, renewedOpenEnded: true });
+    expect(await list()).not.toContain(open);
+  });
 });

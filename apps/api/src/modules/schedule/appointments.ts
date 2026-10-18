@@ -221,7 +221,7 @@ export const appointmentRoutes = [
         const mayOverlap = isBlocking && (timeChanged || body.staff !== undefined);
         if (mayOverlap) {
           // Khoá thợ (thợ SAU khi sửa) trước bước kiểm: hai lệnh ghi cùng thợ xếp hàng, không khoá chết (T-I1).
-          await lockStaffSchedule(tx, check.orgId, check.membershipIds, 'shared');
+
           await assertNoOverlap(tx, check.orgId, check.membershipIds, check.block, check.excludeAppointmentId);
         }
         const write = async () => {

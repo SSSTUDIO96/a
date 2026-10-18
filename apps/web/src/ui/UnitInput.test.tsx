@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { UnitInput } from './UnitInput';
+import { formatKm } from './format';
 
 function Harness({ unit = 'km', initial = null, onValue = () => {} }: { unit?: string; initial?: number | null; onValue?: (v: number | null) => void }) {
   const [value, setValue] = useState<number | null>(initial);
@@ -205,5 +206,79 @@ describe('UnitInput — chọn hết rồi gõ thay cả ô', () => {
     await user.keyboard('90');
     expect(input().value).toBe('90');
     expect(onValue).toHaveBeenLastCalledWith(90);
+  });
+});
+
+// Nghiệm thu đợt sửa 1, N-J1 (ô km): như MoneyInput — form đặt lại đúng giá cũ thì báo bằng `resetKey`.
+describe('UnitInput — form đặt lại đúng giá cũ (N-J1)', () => {
+  function ResetHarness({ onInputError }: { onInputError?: (m: string | null) => void }) {
+    const [form, setForm] = useState({ km: 12.5 as number | null, note: '', rev: 0 });
+    return (
+      <>
+        <UnitInput
+          aria-label="Số đo"
+          unit="km"
+          value={form.km}
+          resetKey={form.rev}
+          onChange={(km) => setForm((f) => ({ ...f, km }))}
+          onInputError={onInputError}
+        />
+        <input aria-label="Ghi chú" value={form.note} onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))} />
+        <button type="button" onClick={() => setForm((f) => ({ km: 12.5, note: '', rev: f.rev + 1 }))}>
+          Huỷ thay đổi
+        </button>
+      </>
+    );
+  }
+
+  it('ô đang lỗi (",,"), form đặt lại đúng 12,5 → ô hiện "12,5", hết lỗi, báo form hết lỗi', async () => {
+    const user = userEvent.setup();
+    const onInputError = vi.fn();
+    render(<ResetHarness onInputError={onInputError} />);
+    const el = input();
+    await user.click(el);
+    await user.type(el, ',,', { initialSelectionStart: 0, initialSelectionEnd: el.value.length });
+    await user.click(screen.getByLabelText('Ghi chú'));
+    expect(el.value).toBe(',,');
+    expect(el.getAttribute('aria-invalid')).toBe('true');
+    await user.click(screen.getByText('Huỷ thay đổi'));
+    expect(el.value).toBe('12,5');
+    expect(el.hasAttribute('aria-invalid')).toBe(false);
+    expect(onInputError).toHaveBeenLastCalledWith(null);
+  });
+
+  it('GIỮ: form vẽ lại vì ô khác đổi (cùng giá, cùng resetKey) → ô km vẫn giữ chữ sai và lỗi', async () => {
+    const user = userEvent.setup();
+    render(<ResetHarness />);
+    const el = input();
+    await user.click(el);
+    await user.type(el, ',,', { initialSelectionStart: 0, initialSelectionEnd: el.value.length });
+    await user.click(screen.getByLabelText('Ghi chú'));
+    await user.keyboard('abc');
+    expect(el.value).toBe(',,');
+    expect(el.getAttribute('aria-invalid')).toBe('true');
+  });
+
+  it('N-J3: dán đúng chữ app in ra (formatKm) vào ô km → đọc lại đúng số', async () => {
+    const user = userEvent.setup();
+    const onValue = vi.fn();
+    render(<Harness onValue={onValue} />);
+    for (const km of [2500, 12_345.6, 0.5]) {
+      await user.click(input());
+      await user.clear(input());
+      await user.paste(formatKm(km));
+      expect(input().hasAttribute('aria-invalid'), formatKm(km)).toBe(false);
+      expect(onValue).toHaveBeenLastCalledWith(km);
+    }
+  });
+
+  it('N-J3: gõ "1 5" vào ô km → báo lỗi, không thành 15 km', async () => {
+    const user = userEvent.setup();
+    const onValue = vi.fn();
+    render(<Harness onValue={onValue} />);
+    await user.click(input());
+    await user.keyboard('1 5');
+    expect(onValue).not.toHaveBeenCalledWith(15);
+    expect(input().getAttribute('aria-invalid')).toBe('true');
   });
 });

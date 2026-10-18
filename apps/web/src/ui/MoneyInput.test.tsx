@@ -299,3 +299,75 @@ describe('MoneyInput — chọn hết rồi gõ thay cả ô', () => {
     expect([el.selectionStart, el.selectionEnd]).toEqual([3, 3]);
   });
 });
+
+// Nghiệm thu đợt sửa 1, N-J1: ô đang lỗi, form đặt lại ĐÚNG giá cũ ("Huỷ thay đổi") → ô vẫn hiện chữ sai.
+// Số không đổi thì `value` không mang tín hiệu gì (React còn bỏ qua cả lần vẽ khi setState cùng số), nên form báo bằng
+// `resetKey`: đổi khoá mỗi lần form tự đặt lại giá trị → ô bỏ chữ đang gõ và lỗi, hiện theo `value`.
+describe('MoneyInput — form đặt lại đúng giá cũ (N-J1)', () => {
+  function ResetHarness({ onInputError }: { onInputError?: (m: string | null) => void }) {
+    const [form, setForm] = useState({ price: 3_000_000 as Vnd | null, note: '', rev: 0 });
+    return (
+      <>
+        <MoneyInput
+          aria-label="Giá bán"
+          value={form.price}
+          resetKey={form.rev}
+          onChange={(price) => setForm((f) => ({ ...f, price }))}
+          onInputError={onInputError}
+        />
+        <input aria-label="Ghi chú" value={form.note} onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))} />
+        <button type="button" onClick={() => setForm((f) => ({ price: 3_000_000, note: '', rev: f.rev + 1 }))}>
+          Huỷ thay đổi
+        </button>
+        <output data-testid="gia-tri">{String(form.price)}</output>
+      </>
+    );
+  }
+
+  it('ô đang lỗi ("-5"), form đặt lại đúng 3.000.000 → ô hiện "3.000.000 ₫", hết lỗi, báo form hết lỗi', async () => {
+    const user = userEvent.setup();
+    const onInputError = vi.fn();
+    render(<ResetHarness onInputError={onInputError} />);
+    const el = input();
+    await user.click(el);
+    await user.type(el, '-5', { initialSelectionStart: 0, initialSelectionEnd: el.value.length });
+    await user.click(screen.getByLabelText('Ghi chú'));
+    expect(el.value).toBe('-5');
+    expect(screen.getByTestId('gia-tri').textContent).toBe('3000000');
+    expect(onInputError).toHaveBeenLastCalledWith('Số tiền không được âm.');
+    await user.click(screen.getByText('Huỷ thay đổi'));
+    expect(el.value).toBe('3.000.000 ₫');
+    expect(el.hasAttribute('aria-invalid')).toBe(false);
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(onInputError).toHaveBeenLastCalledWith(null);
+  });
+
+  it('ô đang lỗi dấu chấm ("1.5", chế độ đọc chặt), đặt lại đúng giá cũ → gõ lại thì tự chia nhóm như thường', async () => {
+    const user = userEvent.setup();
+    render(<ResetHarness />);
+    const el = input();
+    await user.click(el);
+    await user.type(el, '1.5', { initialSelectionStart: 0, initialSelectionEnd: el.value.length });
+    expect(el.getAttribute('aria-invalid')).toBe('true');
+    await user.click(screen.getByText('Huỷ thay đổi'));
+    expect(el.value).toBe('3.000.000 ₫');
+    await user.click(el);
+    await user.keyboard('0');
+    expect(el.value).toBe('30.000.000');
+    expect(screen.getByTestId('gia-tri').textContent).toBe('30000000');
+  });
+
+  it('GIỮ: form vẽ lại vì ô khác đổi (cùng giá, cùng resetKey) → ô vẫn giữ chữ sai và lỗi, form vẫn bị chặn', async () => {
+    const user = userEvent.setup();
+    const onInputError = vi.fn();
+    render(<ResetHarness onInputError={onInputError} />);
+    const el = input();
+    await user.click(el);
+    await user.type(el, '-5', { initialSelectionStart: 0, initialSelectionEnd: el.value.length });
+    await user.click(screen.getByLabelText('Ghi chú'));
+    await user.keyboard('abc');
+    expect(el.value).toBe('-5');
+    expect(el.getAttribute('aria-invalid')).toBe('true');
+    expect(onInputError).not.toHaveBeenLastCalledWith(null);
+  });
+});

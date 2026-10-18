@@ -132,3 +132,39 @@ describe('đầu vào mơ hồ → báo lỗi, không đoán (nghiệm thu web 1
     expect(formatDecimal(1234.5, 2, false)).toBe('1234,5');
   });
 });
+
+describe('vòng in → đọc: chữ app in ra thì ô đọc lại đúng số (nghiệm thu đợt sửa 1, N-J3)', () => {
+  it('km: parseKm(formatKm(x)) === x với 0; 0,5; 12,35; 999; 1000; 2500; 12345,6; 99.999,99', () => {
+    for (const km of [0, 0.5, 12.35, 999, 1000, 2500, 12_345.6, MAX_DISTANCE_KM]) {
+      const shown = formatKm(km);
+      expect(parseKm(shown), shown).toEqual({ ok: true, value: km });
+    }
+  });
+  it('km: formatKm không ngăn nghìn bằng dấu chấm (dấu chấm là dạng mơ hồ ô km phải từ chối)', () => {
+    expect(formatKm(2500)).toBe('2500 km');
+    expect(formatKm(12_345.6)).toBe('12345,6 km');
+    expect(formatKm(12.35)).toBe('12,35 km');
+  });
+  it('tiền: parseMoney(formatVnd(x)) === x', () => {
+    for (const vnd of [0, 1, 999, 1000, 2500, 1_500_000, 3_000_000, 123_456_789, Number.MAX_SAFE_INTEGER]) {
+      const shown = formatVnd(vnd);
+      expect(parseMoney(shown), shown).toEqual({ ok: true, value: vnd });
+    }
+  });
+  it('km: dấu cách xen giữa chữ số ("1 5", "12 5", "1 2,5", "12,5 5") → lỗi, không lặng lẽ ghép số', () => {
+    for (const s of ['1 5', '12 5', '1 2,5', '12,5 5', '1  500', '1 500.000', '0 500']) expect(parseKm(s).ok, s).toBe(false);
+  });
+  it('km: khoảng trắng ở hai đầu, trước đơn vị, hoặc ngăn nghìn đúng nhóm 3 thì vẫn nhận', () => {
+    expect(parseKm('  12,5 km ')).toEqual({ ok: true, value: 12.5 });
+    expect(parseKm('12,5 km')).toEqual({ ok: true, value: 12.5 });
+    expect(parseKm('2 500')).toEqual({ ok: true, value: 2500 });
+    expect(parseKm('12 345,6 km')).toEqual({ ok: true, value: 12_345.6 });
+  });
+  it('tiền: "1 5" → lỗi; "1 500 000đ", "  2 500 " vẫn nhận', () => {
+    expect(parseMoney('1 5').ok).toBe(false);
+    expect(parseMoney('15 00').ok).toBe(false);
+    expect(parseMoney('1 500 000đ')).toEqual({ ok: true, value: 1_500_000 });
+    expect(parseMoney('  2 500 ')).toEqual({ ok: true, value: 2500 });
+    expect(parseMoney('1500000\t')).toEqual({ ok: true, value: 1_500_000 });
+  });
+});

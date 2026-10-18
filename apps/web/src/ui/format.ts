@@ -13,6 +13,25 @@ const fail = <T>(error: string): ParseResult<T> => ({ ok: false, error });
 // Khoảng trắng thường, khoảng trắng không ngắt (Intl hay chèn) và khoảng trắng hẹp.
 const SPACES = /[\s  ]/g;
 
+export const ERR_SPACE_IN_NUMBER = 'Có dấu cách xen giữa chữ số: gõ liền, ví dụ 2500.';
+
+// Một khoảng trắng (thường, không ngắt, hẹp) — dùng trong regex dựng sẵn bên dưới.
+const SP = '[\\s\u00a0\u202f]';
+const DIGIT_RUN_WITH_SPACES = new RegExp(`\\d+(?:${SP}+\\d+)+`, 'gu');
+const SPACE_GROUPED = new RegExp(`^[1-9]\\d{0,2}(?:${SP}\\d{3})+$`, 'u');
+
+/**
+ * Bỏ khoảng trắng trước khi đọc số. Khoảng trắng ở hai đầu hay cạnh đơn vị ("12,5 km", "1.500.000 ₫") thì bỏ thoải mái;
+ * khoảng trắng XEN GIỮA chữ số chỉ nhận khi là ngăn nghìn đúng nhóm 3 ("2 500", "1 500 000") — "1 5" là gõ nhầm,
+ * không lặng lẽ ghép thành 15. Trả null khi có khoảng trắng sai chỗ.
+ */
+function stripSpaces(input: string): string | null {
+  for (const run of input.match(DIGIT_RUN_WITH_SPACES) ?? []) {
+    if (!SPACE_GROUPED.test(run)) return null;
+  }
+  return input.replace(SPACES, '');
+}
+
 /** Chữ số có dấu chấm ngăn nghìn đúng nhóm 3 ("1.500.000") hoặc liền ("1500000"). */
 function readGroupedInteger(text: string): string | null {
   if (/^\d+$/.test(text)) return text;
@@ -27,7 +46,9 @@ function readGroupedInteger(text: string): string | null {
  * Báo lỗi: chữ cái, số âm, phần lẻ ("1,5"), sai nhóm dấu chấm ("1.5"), vượt Number.MAX_SAFE_INTEGER.
  */
 export function parseMoney(input: string): ParseResult<Vnd | null> {
-  let text = input.replace(SPACES, '');
+  const stripped = stripSpaces(input);
+  if (stripped === null) return fail(ERR_SPACE_IN_NUMBER);
+  let text = stripped;
   if (text === '') return ok(null);
   text = text.replace(/(₫|đ|Đ|vnđ|VNĐ|vnd|VND)$/u, '');
   if (text === '') return fail('Nhập số tiền bằng chữ số.');
@@ -61,7 +82,9 @@ export interface DecimalRules {
  * Kết quả tính qua số nguyên (phần trăm) nên không lệch kiểu 12.349999.
  */
 export function parseDecimal(input: string, rules: DecimalRules): ParseResult<number | null> {
-  let text = input.replace(SPACES, '');
+  const stripped = stripSpaces(input);
+  if (stripped === null) return fail(ERR_SPACE_IN_NUMBER);
+  let text = stripped;
   if (text === '') return ok(null);
   if (rules.unit && text.toLowerCase().endsWith(rules.unit.toLowerCase())) {
     text = text.slice(0, -rules.unit.length);
@@ -114,9 +137,13 @@ export function formatDecimal(value: number, maxFractionDigits = 2, grouping = t
   return value.toLocaleString('vi-VN', { maximumFractionDigits: maxFractionDigits, useGrouping: grouping });
 }
 
-/** 12.35 → "12,35 km". */
+/**
+ * 12.35 → "12,35 km" · 2500 → "2500 km" · 12345.6 → "12345,6 km".
+ * KHÔNG ngăn nghìn bằng dấu chấm: "2.500 km" là đúng dạng mơ hồ mà ô km (parseKm) từ chối, nên chữ app in ra
+ * phải đọc lại được — parseKm(formatKm(x)) === x (format.test.ts, "vòng in → đọc"). km tối đa 5 chữ số nên vẫn dễ đọc.
+ */
 export function formatKm(km: number): string {
-  return `${formatDecimal(km, 2)} km`;
+  return `${formatDecimal(km, 2, false)} km`;
 }
 
 /** Chèn dấu chấm ngăn nghìn vào dãy chữ số: "1500000" → "1.500.000". */

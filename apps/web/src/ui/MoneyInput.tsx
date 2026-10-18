@@ -27,6 +27,11 @@ export interface MoneyInputProps extends NativeInput, FieldMessages {
   onInputError?: (message: string | null) => void;
   /** Giới hạn trên (tính cả), tuỳ chọn. */
   max?: Vnd;
+  /**
+   * Đổi giá trị này mỗi lần form TỰ đặt lại giá trị cho ô (nút "Huỷ thay đổi", tải lại dữ liệu) → ô bỏ chữ đang gõ và lỗi
+   * tự phát hiện, hiện theo `value` — kể cả khi `value` bằng đúng số cũ (lúc đó `value` không đổi nên ô không tự biết).
+   */
+  resetKey?: string | number;
   size?: 'md' | 'sm';
   className?: string;
 }
@@ -51,6 +56,7 @@ export function MoneyInput({
   onChange,
   onInputError,
   max,
+  resetKey,
   size = 'md',
   error,
   hint,
@@ -76,9 +82,12 @@ export function MoneyInput({
   const [strictDots, setStrictDots] = useState(false);
   // Giá trị gần nhất ô đã biết (do ô tự trả ra hoặc đã đồng bộ). `value` khác số này = form vừa đặt giá trị
   // mới từ ngoài (chọn gói khác, tải lại dữ liệu) → bỏ chữ đang gõ và lỗi cũ, hiện theo giá trị mới.
+  // Form đặt lại ĐÚNG số cũ thì `value` không đổi → form báo bằng `resetKey` (N-J1).
   const [knownValue, setKnownValue] = useState<Vnd | null>(value);
-  if (!Object.is(value, knownValue)) {
+  const [knownResetKey, setKnownResetKey] = useState(resetKey);
+  if (!Object.is(value, knownValue) || !Object.is(resetKey, knownResetKey)) {
     setKnownValue(value);
+    setKnownResetKey(resetKey);
     setDraft(null);
     setLocalError(null);
     setStrictDots(false);
