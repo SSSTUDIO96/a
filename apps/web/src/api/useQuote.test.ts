@@ -9,6 +9,8 @@ const body = (n: number): ContractBody => ({
 });
 
 const quote = (total: number): ContractQuote => ({
+  kind: 'SERVICE',
+  classes: [],
   lines: [],
   travelTotal: 0,
   subtotal: total,

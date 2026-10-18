@@ -168,6 +168,7 @@
 /* ===================== Hợp đồng khoá học (bản vẽ C3 mục 2.3) ===================== */
 .ct-kind { padding: 12px 14px 4px; flex: none; }
 .ct-kind-phone { display: none; }
+.ct-kind-top .ct-kind { padding: 0; max-width: 400px; }
 .ct-courses > .ui-card__body { display: flex; flex-direction: column; gap: 10px; }
 .ct-courses__ls { display: flex; flex-direction: column; gap: 10px; }
 .ct-courses__ls:empty { display: none; }

@@ -30,12 +30,31 @@ export const ServiceKind = z.enum(['MAIN', 'ADDON', 'SURCHARGE'], { error: 'Lo�
 
 const ServiceParams = OrgParams.extend({ serviceId: z.uuid() });
 
+// Thời lượng của dịch vụ: số phút 1..1440, hoặc null = "không áp dụng". Chỉ phụ phí (SURCHARGE) được null —
+// dịch vụ chính/phụ chiếm giờ của thợ nên luôn phải có số phút. Database chặn cùng luật (chốt services_duration_positive).
+// null KHÔNG phải 0 phút: nơi nào cần cộng giờ phải bỏ qua dòng null một cách có chủ đích, không ngầm thay bằng 0.
+const ServiceDuration = Duration.nullable();
+export const DURATION_REQUIRED_MESSAGE = 'Dịch vụ chính và dịch vụ phụ phải có thời lượng (1–1440 phút); chỉ phụ phí được bỏ trống';
+
+export function durationAllowed(kind: string, durationMinutes: number | null): boolean {
+  return durationMinutes !== null || kind === 'SURCHARGE';
+}
+
+// Lỗi 400 cùng dạng lỗi zod (details.issues chỉ đúng trường durationMinutes) để giao diện đặt lỗi đúng ô.
+function durationRequired(): AppError {
+  return new AppError('VALIDATION_FAILED', DURATION_REQUIRED_MESSAGE, {
+    formErrors: [],
+    fieldErrors: { durationMinutes: [DURATION_REQUIRED_MESSAGE] },
+    issues: [{ path: 'durationMinutes', message: DURATION_REQUIRED_MESSAGE }],
+  });
+}
+
 const serviceFields = {
   kind: ServiceKind,
   code: Code,
   name: Name,
   description: Description,
-  durationMinutes: Duration,
+  durationMinutes: ServiceDuration,
   categoryId: z.uuid().nullable(),
   isActive: z.boolean(),
   isPublic: z.boolean(),
@@ -153,18 +172,27 @@ export const serviceRoutes = [
       ...serviceFields,
       kind: ServiceKind.optional(),
       description: Description.optional(),
+      // Phụ phí được bỏ trống (vắng mặt hoặc null); MAIN/ADDON bắt buộc — kiểm ở superRefine dưới.
+      durationMinutes: ServiceDuration.optional(),
       categoryId: serviceFields.categoryId.optional(),
       isActive: serviceFields.isActive.optional(),
       isPublic: serviceFields.isPublic.optional(),
       sortOrder: SortOrder.optional(),
       listPrice: Money,
       salePrice: PriceInput.salePrice,
+    }).superRefine((b, ctx) => {
+      // kind vắng mặt = MAIN (mặc định của database).
+      if (!durationAllowed(b.kind ?? 'MAIN', b.durationMinutes ?? null)) {
+        ctx.addIssue({ code: 'custom', path: ['durationMinutes'], message: DURATION_REQUIRED_MESSAGE });
+      }
     }),
     handler: async ({ deps, org, body, userId, requestId }) => {
       const o = mustOrg(org);
       assertCanSetPrice(o);
       const uid = mustUser(userId);
-      const { listPrice, salePrice, ...fields } = body;
+      const { listPrice, salePrice, ...rest } = body;
+      // Phụ phí không gửi thời lượng → lưu null ("không áp dụng") một cách tường minh.
+      const fields = { ...rest, durationMinutes: rest.durationMinutes ?? null };
       const created = await withUniqueMessage(
         deps.db.$transaction(async (tx) => {
           await assertCategoryInOrg(tx, o.id, fields.categoryId);
@@ -230,7 +258,9 @@ export const serviceRoutes = [
         code: Code.optional(),
         name: Name.optional(),
         description: Description.optional(),
-        durationMinutes: Duration.optional(),
+        // null = bỏ trống thời lượng — chỉ hợp lệ khi loại (sau khi sửa) là SURCHARGE; kiểm trong handler vì cần loại đang lưu.
+        // Không .default()/.prefault()/.catch(): trường vắng mặt phải giữ nguyên giá trị đang lưu (http/partial.ts).
+        durationMinutes: ServiceDuration.optional(),
         categoryId: serviceFields.categoryId.optional(),
         isActive: z.boolean().optional(),
         isPublic: z.boolean().optional(),
@@ -246,6 +276,11 @@ export const serviceRoutes = [
           if (!before) throw notFound('service');
           await assertCategoryInOrg(tx, o.id, body.categoryId);
           if (body.kind && body.kind !== before.kind) await assertKindFitsPackages(tx, o.id, before.id, body.kind);
+          // Loại và thời lượng SAU khi sửa: trường không gửi lấy giá trị đang lưu. Đổi phụ phí (thời lượng trống) sang
+          // MAIN/ADDON mà không gửi thời lượng, hoặc đặt null cho MAIN/ADDON → 400 chỉ đúng trường durationMinutes.
+          const nextKind = body.kind ?? before.kind;
+          const nextDuration = body.durationMinutes !== undefined ? body.durationMinutes : before.durationMinutes;
+          if (!durationAllowed(nextKind, nextDuration)) throw durationRequired();
           await tx.service.update({ where: { id: before.id }, data: body });
           await writeAudit(tx, {
             organizationId: o.id,

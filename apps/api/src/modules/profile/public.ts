@@ -141,6 +141,7 @@ export const publicRoutes = [
             kind: s.kind,
             name: s.name,
             description: s.description,
+            // null = "không áp dụng" (phụ phí bỏ trống thời lượng) — trả nguyên null, không đổi thành 0 phút.
             durationMinutes: s.durationMinutes,
             category: s.category?.name ?? null,
             price: publicPrice(servicePrices.get(s.id)),
@@ -165,6 +166,7 @@ export const publicRoutes = [
               .map((i) => ({
                 serviceId: i.service.id,
                 name: i.service.name,
+                // Dòng tick thêm chỉ nhận ADDON (catalog/packages.ts) nên luôn có số phút; null (nếu có) trả nguyên, không thành 0.
                 durationMinutes: i.service.durationMinutes,
                 quantity: i.quantity,
                 price: publicPrice(servicePrices.get(i.service.id)),

@@ -18,29 +18,29 @@ export interface PaymentsScreenProps {
 }
 
 // Dòng phụ của hợp đồng khoá học: tên các dòng khoá học còn hiệu lực ("Makeup chuyên nghiệp · K12") — tên máy chủ chép
-// lúc thêm dòng. null = không phải hợp đồng khoá học / chưa tải.
-function useCourseSubline(orgId: string, contractId: string | null, enabled: boolean): { id: string; text: string } | null {
-  const [v, setV] = useState<{ id: string; text: string } | null>(null);
+// lúc thêm dòng. Đang tải → 'loading' (chưa hiện "Chưa có ngày sự kiện" cho hợp đồng có thể là khoá học); 'service' = dòng phụ mặc định.
+type CourseSubline = { status: 'loading' } | { status: 'service' } | { status: 'course'; text: string };
+
+function useCourseSubline(orgId: string, contractId: string | null, enabled: boolean): CourseSubline {
+  const [v, setV] = useState<{ id: string; value: CourseSubline } | null>(null);
   useEffect(() => {
     if (!enabled || !contractId) return undefined;
     const controller = new AbortController();
     getContract(orgId, contractId, controller.signal)
       .then((d) => {
-        if (d.kind !== 'COURSE') return setV(null);
         const names = d.lines.filter((l) => l.kind === 'COURSE' && !l.voidedAt).map((l) => l.name);
-        setV({ id: d.id, text: names.length > 0 ? names.join(', ') : 'Khoá học' });
+        setV({ id: contractId, value: d.kind === 'COURSE' ? { status: 'course', text: names.length > 0 ? names.join(', ') : 'Khoá học' } : { status: 'service' } });
       })
       .catch(() => {
-        // Không tải được: giữ dòng phụ mặc định, không đoán.
-        if (!controller.signal.aborted) setV(null);
+        // Không tải được: dòng phụ mặc định, không đoán.
+        if (!controller.signal.aborted) setV({ id: contractId, value: { status: 'service' } });
       });
     return () => controller.abort();
   }, [orgId, contractId, enabled]);
-  return v && v.id === contractId ? v : null;
+  if (!enabled || !contractId) return { status: 'service' };
+  return v && v.id === contractId ? v.value : { status: 'loading' };
 }
 
-// Màn Thu tiền (bản vẽ C2 mục 3, phương án A): ListDetail 380 | 1fr.
-// Máy tính / máy tính bảng ở /thu-tien: mở sẵn hợp đồng đầu danh sách. Điện thoại: /thu-tien là danh sách, /thu-tien/:id là màn con.
 export function PaymentsScreen({ orgId, orgSlug, contractId, access, academy = false }: PaymentsScreenProps) {
   const bp = useBreakpoint();
   const [firstId, setFirstId] = useState<string | null>(null);
@@ -73,7 +73,7 @@ export function PaymentsScreen({ orgId, orgSlug, contractId, access, academy = f
       backTo={listPath}
       onLoaded={onLoaded}
       renderSubline={
-        course
+        course.status === 'course'
           ? (c) => (
               <>
                 {' · '}
@@ -81,7 +81,9 @@ export function PaymentsScreen({ orgId, orgSlug, contractId, access, academy = f
                 {c.phone ? ` · ${c.phone}` : ''}
               </>
             )
-          : undefined
+          : course.status === 'loading'
+            ? (c) => (c.phone ? ` · ${c.phone}` : null)
+            : undefined
       }
     />
   ) : (

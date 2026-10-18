@@ -21,14 +21,16 @@ export interface ExtrasCardProps {
   onVoid: ((key: string) => void) | null;
   onAddSurcharge: (() => void) | null;
   onAddCustom: (() => void) | null;
+  // Hợp đồng khoá học: "Khoản khác (giáo trình, dụng cụ…)".
+  title?: string;
 }
 
-export function ExtrasCard({ rows, pending, onEdit, onVoid, onAddSurcharge, onAddCustom }: ExtrasCardProps) {
+export function ExtrasCard({ rows, pending, onEdit, onVoid, onAddSurcharge, onAddCustom, title = 'Phụ phí & khoản khác' }: ExtrasCardProps) {
   if (rows.length === 0 && !onAddSurcharge && !onAddCustom) return null;
   return (
-    <section className="ct-ln" aria-label="Phụ phí & khoản khác" aria-busy={pending || undefined}>
+    <section className="ct-ln" aria-label={title} aria-busy={pending || undefined}>
       <div className="ct-ln__hd">
-        <span className="ct-ln__n">Phụ phí &amp; khoản khác</span>
+        <span className="ct-ln__n">{title}</span>
       </div>
       {rows.map((r) => {
         const voided = Boolean(r.view?.voidedAt);

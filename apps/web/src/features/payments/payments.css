@@ -153,3 +153,13 @@
   .pm-plan td:nth-child(4)::before { margin: 0; }
   .pm-plan .pm-radio { margin: 0; }
 }
+
+/* 4 ô số: số tiền 8 chữ số (17.500.000 ₫) không bị cắt "…" khi cột chi tiết hẹp (máy tính 1440 có cột hàng đợi, máy tính bảng). */
+.pm-panel { container-type: inline-size; container-name: pm-panel; }
+@container pm-panel (max-width: 820px) {
+  .pm-tiles .ui-stat { padding: 10px 12px; }
+  .pm-tiles .ui-stat__value { font-size: 17px; }
+}
+@container pm-panel (max-width: 600px) {
+  .pm-tiles.ui-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

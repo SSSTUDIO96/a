@@ -262,7 +262,9 @@ model Service {
   code            String
   name            String
   description     String?
-  durationMinutes Int         @map("duration_minutes")
+  // Số phút thực hiện. NULL = "không áp dụng" — chỉ phụ phí (SURCHARGE) được bỏ trống; MAIN/ADDON luôn 1..1440
+  // (chốt services_duration_positive, migration 20261018260000_phu_phi_khong_thoi_luong). Không coi NULL là 0 phút.
+  durationMinutes Int?        @map("duration_minutes")
   isActive        Boolean     @default(true) @map("is_active")
   // Hiện trên website giới thiệu hay không (website chỉ đọc dịch vụ isActive && isPublic).
   isPublic        Boolean     @default(false) @map("is_public")

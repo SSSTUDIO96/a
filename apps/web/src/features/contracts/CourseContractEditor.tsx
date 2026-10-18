@@ -532,17 +532,18 @@ export function CourseContractEditor({ orgId, slug, tz, orgName, has, detail: in
   return (
     <div className="ct-page ct-page--course">
       <PageHeader title={phone ? (detail ? `Hợp đồng ${detail.code}` : 'Lập hợp đồng') : draftMode ? 'Lập hợp đồng' : 'Hợp đồng'} backTo={`/${slug}/hop-dong`} phoneAction={statusTag} />
-      <div className="ct-grid" style={showPicker || kindSwitch ? undefined : { gridTemplateColumns: 'minmax(0, 1fr)' }}>
-        {(showPicker || kindSwitch) && (
+      <div className="ct-grid" style={showPicker ? undefined : { gridTemplateColumns: 'minmax(0, 1fr)' }}>
+        {showPicker && (
           <Card className="ct-pick" aria-label="Danh mục khoá học">
             {kindSwitch}
             <div ref={pickRef} className="ct-cat">
-              {showPicker ? picker : null}
+              {picker}
             </div>
           </Card>
         )}
         <div className="ct-col">
-          {phone && kindSwitch && <div className="ct-kind-phone">{kindSwitch}</div>}
+          {/* Điện thoại (cột trái ẩn) hoặc không có danh mục (đã xác nhận, chỉ xem): seg loại đứng đầu cột. */}
+          {kindSwitch && (phone || !showPicker) && <div className={phone ? 'ct-kind-phone' : 'ct-kind-top'}>{kindSwitch}</div>}
           <Card
             className="ct-head"
             title={headTitle}
@@ -614,6 +615,11 @@ export function CourseContractEditor({ orgId, slug, tz, orgName, has, detail: in
                 </div>
               </div>
             )}
+            {draftMode && !draft.customer && courseCards.length > 0 && (
+              <p className="ct-fx" style={{ margin: 0 }} data-o="chon-hoc-vien">
+                Chọn học viên để máy chủ tính học phí, tổng và cọc.
+              </p>
+            )}
             {courseCards.length === 0 && (
               <p className="ct-fx" style={{ margin: 0 }}>
                 {showErrors && errors.lines ? <span className="ct-err">{errors.lines}</span> : 'Chọn khoá ở danh mục bên trái (theo nhóm khoá của trung tâm).'}
@@ -649,6 +655,7 @@ export function CourseContractEditor({ orgId, slug, tz, orgName, has, detail: in
           </Card>
 
           <ExtrasCard
+            title="Khoản khác (giáo trình, dụng cụ…)"
             rows={extraRows}
             pending={draftMode && pending}
             onEdit={
