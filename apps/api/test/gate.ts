@@ -31,7 +31,7 @@ export interface GateCheck {
 }
 
 export type GateReport = Record<
-  'scope' | 'outsider' | 'noPerms' | 'unauth' | 'crossId' | 'leak' | 'refBase' | 'crossRef' | 'keep',
+  'scope' | 'outsider' | 'noPerms' | 'unauth' | 'crossId' | 'leak' | 'refBase' | 'crossRef' | 'keep' | 'platform',
   GateCheck
 >;
 
@@ -236,8 +236,14 @@ export async function runIsolationGate(
     refBase: check(),
     crossRef: check(),
     keep: check(),
+    platform: check(),
   };
   const orgRoutes = routes.filter((r) => r.scope === 'org');
+  // Lọc theo ĐỊA CHỈ, không theo scope khai báo: đường /platform/ bị khai nhầm scope vẫn phải vào diện kiểm
+  // (lọc theo scope thì chính đường khai nhầm tự rơi khỏi phép — đột biến 9 đã bắt được điểm mù này).
+  const platformRoutes = routes.filter((r) => r.path.startsWith('/platform/'));
+  // Đường quản trị nền tảng: mã tổ chức là của A, mã gói là mã bịa (fixture không tạo gói).
+  const platformIds = { organizationId: fx.a.orgId, planId: randomUUID() };
   const authed = routes.filter((r) => r.scope !== 'public');
   const idRoutes = orgRoutes.filter((r) => /:(?!orgId\b)[A-Za-z]+/.test(r.path));
   const secretsOfA = [fx.a.orgId, ...Object.values(fx.a.ids), fx.a.owner.email, fx.a.noPerms.email];
@@ -258,7 +264,7 @@ export async function runIsolationGate(
   }
   // 4. Không đăng nhập → 401.
   for (const r of authed) {
-    const ids = r.scope === 'org' ? fx.a.ids : {};
+    const ids = r.scope === 'org' ? fx.a.ids : r.path.startsWith('/platform/') ? platformIds : {};
     const res = await send(app, r, fill(r, ids), {}, {});
     record(report.unauth, res.status === 401, `${key(r)} → ${res.status}`);
   }
@@ -333,6 +339,18 @@ export async function runIsolationGate(
     }
     for (const path of refFieldPaths(r)) {
       if (!covered.has(path)) record(report.crossRef, false, `${key(r)}: trường ${path} chưa có mẫu tham chiếu chéo`);
+    }
+  }
+  // 9. QUẢN TRỊ NỀN TẢNG: người không có tên trong platform_admins (chủ A, chủ B, thành viên A không quyền)
+  //    gọi mọi đường /platform/ → 404 GIỐNG HỆT một đường bịa cùng phương thức (không lộ "đường này có thật").
+  for (const r of platformRoutes) {
+    for (const [who, user] of [['chủ A', fx.a.owner], ['chủ B', fx.b.owner], ['thành viên A không quyền', fx.a.noPerms]] as const) {
+      const fakeRoute = { ...r, path: `/platform/duong-bia-${randomUUID()}` } as AnyRoute;
+      const res = await send(app, r, fill(r, platformIds), bearer(user), {});
+      const bia = await send(app, fakeRoute, `/api/v1${fakeRoute.path}`, bearer(user), {});
+      const norm = (x: request.Response) => JSON.stringify(x.body ?? '').replace(/"requestId":"[^"]+"/g, '');
+      const same = res.status === bia.status && norm(res) === norm(bia);
+      record(report.platform, res.status === 404 && same, `${key(r)} (${who}) → ${res.status}${same ? '' : `, KHÁC đường bịa (${bia.status})`}`);
     }
   }
   // 8. GIỮ: chủ A dùng thật phải được trả lời đúng nghĩa — xem: 200; gửi thân rỗng: 400 (lỗi dữ liệu,

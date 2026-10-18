@@ -81,6 +81,12 @@ Mỗi lỗi ghi đủ: triệu chứng · gốc bệnh · số đo · cách ch�
 - **Cách chặn:** viết migration xong trọn vào tệp tạm ngoài kho, kiểm xong mới chuyển vào thư mục migrations bằng **một** lệnh. Khi nhiều thợ chạy song song, không bao giờ sửa dần một migration đã nằm trong thư mục.
 - **Bài học cho studio khác:** chốt chặn thiếu dù chỉ vài phút là đủ để dữ liệu sai lọt vào, và chốt sau đó không tự dọn dữ liệu đã lọt.
 
+### 15. Phép kiểm mới lọc đúng thứ nó cần bắt ra khỏi diện kiểm
+- **Triệu chứng:** thêm phép kiểm "người thường gọi vào trang quản trị nền tảng phải nhận 404". Chạy thật: 24/24 xanh. Cài lỗi "đường quản trị khai nhầm thành đường thường" → phép vẫn xanh, vi phạm 0/21.
+- **Gốc bệnh:** phép chọn đường để kiểm theo **nhãn khai báo** ("đây là đường quản trị"). Đường khai nhầm nhãn thì mất nhãn, tự rơi khỏi diện kiểm — đúng lỗi phép phải bắt. Mẫu số tụt từ 24 xuống 21 mà không ai để ý.
+- **Cách chặn:** chọn theo **địa chỉ thật** (mọi đường bắt đầu bằng `/platform/`), không theo nhãn. Đo lại: cài lỗi → vi phạm 3/24, bản đúng → 24/24.
+- **Bài học cho studio khác:** phép kiểm nào chọn đối tượng theo chính cái nhãn có thể sai, thì mù đúng với cái sai đó. Luôn cài lỗi thử, và xem cả **mẫu số** chứ không chỉ "đỏ hay xanh".
+
 ---
 
 ## Phần CỦA RIÊNG DỰ ÁN NÀY
@@ -89,3 +95,4 @@ Mỗi lỗi ghi đủ: triệu chứng · gốc bệnh · số đo · cách ch�
 - Lỗi 4: `apps/api/test/global-setup.ts`.
 - Lỗi 5: migration `20261018151403_bang_gia_lich`.
 - Lỗi 14: migration `20261018190000_tep_thu_tien_nen_tang`; database thử `makeup_test_contract` đã dọn 2 bậc chồng của tổ chức thử, áp `travel_tiers_no_overlap`, sửa checksum; `prisma migrate status` báo khớp 9/9.
+- Lỗi 15: `apps/api/test/gate.ts` phép 9 `platform`, đột biến 9 trong `apps/api/test/gate-mutants.test.ts`.

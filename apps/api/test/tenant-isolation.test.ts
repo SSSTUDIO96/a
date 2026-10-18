@@ -27,8 +27,9 @@ describe('cửa gác cách ly tổ chức', () => {
     expect(report.outsider.total).toBeGreaterThan(0);
     expect(report.crossId.total).toBeGreaterThan(0);
     expect(report.crossRef.total).toBeGreaterThan(0);
+    expect(report.platform.total).toBeGreaterThan(0);
   });
-  for (const name of ['scope', 'outsider', 'noPerms', 'unauth', 'crossId', 'leak', 'refBase', 'crossRef', 'keep'] as const) {
+  for (const name of ['scope', 'outsider', 'noPerms', 'unauth', 'crossId', 'leak', 'refBase', 'crossRef', 'keep', 'platform'] as const) {
     it(`${name}: không có vi phạm`, () => {
       expect(report[name].violations).toEqual([]);
     });

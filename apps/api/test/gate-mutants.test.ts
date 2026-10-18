@@ -158,4 +158,14 @@ describe('cửa gác chuyển đỏ với từng kiểu lỗi', () => {
     console.log(`[đột biến 8] crossRef vi phạm: ${r.crossRef.violations.length}/${r.crossRef.total}`);
     expect(r.crossRef.violations.some((v) => v.startsWith('PATCH /orgs/:orgId/staff/:membershipId [tierId'))).toBe(true);
   });
+
+  it('Đột biến 9 — đường quản trị nền tảng lọt sang scope "auth" (ai đăng nhập cũng gọi được) → phép platform đỏ', async () => {
+    const original = ALL_ROUTES.find((r) => r.method === 'get' && r.path === '/platform/stats');
+    if (!original) throw new Error('Không có route thống kê nền tảng');
+    // Dựng thẳng đối tượng để vượt qua chốt của defineRoute — giả lập người sửa nhầm khung route.
+    const mutant = { ...original, scope: 'auth' } as AnyRoute;
+    const r = await gateOn(replace(mutant));
+    console.log(`[đột biến 9] platform vi phạm: ${r.platform.violations.length}/${r.platform.total}`);
+    expect(r.platform.violations.some((v) => v.startsWith('GET /platform/stats'))).toBe(true);
+  });
 });
