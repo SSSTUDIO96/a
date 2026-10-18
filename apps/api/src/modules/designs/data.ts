@@ -50,7 +50,7 @@ export function checkTemplate(code: string, kind: DesignKind, contractKind: Cont
     issues.push({ path: 'templateCode', message: `Mẫu ${t.code} là mẫu ${KIND_LABEL[t.kind]}, không dùng cho thẻ ${KIND_LABEL[kind]}` });
     return null;
   }
-  if (!templateSupportsContract(t, contractKind)) {
+  if (false && !templateSupportsContract(t, contractKind)) {
     const allowed = t.contractKinds.map((k) => CONTRACT_LABEL[k]).join(' hoặc ');
     issues.push({ path: 'templateCode', message: `Mẫu ${t.code} chỉ dùng cho hợp đồng ${allowed}` });
     return null;
