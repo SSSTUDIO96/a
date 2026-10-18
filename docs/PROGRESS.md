@@ -1,6 +1,6 @@
 # Tiến độ — Makeup Pro
 
-Cập nhật: 18/10/2026, ≈17:05 UTC (00:05 ngày 19/10 giờ Việt Nam). **Đã đối chiếu với commit `634d6a3`.** Nguồn: kho, `docs/BAN-GIAO-PHIEN.md`, biên bản nghiệm thu trong `docs/nghiem-thu/`. Điều phối sửa tệp này mỗi khi một mốc đổi trạng thái.
+Cập nhật: 19/10/2026 (giờ Việt Nam). **Đã đối chiếu với commit `0802ee0` và biên bản `docs/nghiem-thu/BIEN-BAN-NGHIEM-THU-LAI.md` (chấm trên `d417acf`).** Điều phối sửa tệp này mỗi khi một mốc đổi trạng thái.
 
 ---
 
@@ -23,34 +23,24 @@ Cập nhật: 18/10/2026, ≈17:05 UTC (00:05 ngày 19/10 giờ Việt Nam). **�
 | Mốc | Nội dung | Trạng thái | Bằng chứng |
 |---|---|---|---|
 | 0 | Khảo sát kho cũ, quyết định xây mới | **Xong** | `docs/PROJECT_AUDIT.md` |
-| 1 | Bộ tài liệu | **Đang cập nhật** (lỗi N4) | 8 tệp trong `docs/` |
-| 2 | Nền móng | **Đạt có điều kiện** (thợ chấm độc lập). Điều kiện T3 đã sửa; N4 đang làm; chờ chấm lại | `docs/nghiem-thu/BIEN-BAN-NGHIEM-THU-MOC-2.md`, `BIEN-BAN-NGHIEM-THU-LAT-1.md` phần 1 |
-| 3 | R&D giao diện | Vòng 1–2 **xong**, anh chọn phương án C; bản vẽ thông số C đã ký. Vòng 3 (mẫu chào mừng, mẫu Feedback, đào tạo) **đang chạy** | `docs/rnd/BAN-VE-C.md`, `docs/rnd/BAO-CAO-RND-02.md`, `docs/rnd/v3-*` |
-| 4 | Lát 1 — máy chủ (bảng giá, khách + lịch, hợp đồng, nhân sự & tiền công) | **Đạt có điều kiện**; T1, T2, T3, N1–N3, G1–G5 đã sửa; chờ chấm lại | `BIEN-BAN-NGHIEM-THU-LAT-1.md` phần 2 |
-| 4 | Lát 1 — web | **Đang dựng.** W0, W1, W2, W3 có mã (bản WIP, chưa nghiệm thu); W4 Bảng giá, W5 Hợp đồng, W6 Lịch, W7 kiểm thử 3 khổ **chưa bắt đầu** | `apps/web/`, `docs/BAN-GIAO-PHIEN.md` |
-| 5 | Nghiệm thu lát 1 (cả web) | **Chưa bắt đầu** | — |
-| 6 | Trang quản trị nền tảng | Máy chủ **đang dựng** (8 đường trong kho, bài thử chưa lưu); giao diện chưa bắt đầu | `apps/api/src/modules/platform/` |
-| 7–9 | Đào tạo: R&D → máy chủ → giao diện | R&D **đang chạy** | `docs/SO-Y-MUON.md` |
+| 1 | Bộ tài liệu | **Đang cập nhật** theo mã | `docs/` |
+| 2 | Nền móng (tổ chức, phân quyền, cách ly dữ liệu giữa studio) | **Xong** — cửa gác cách ly phủ 114 đường, 10 phép xanh, chấm lại độc lập trên `d417acf` | `docs/nghiem-thu/BIEN-BAN-NGHIEM-THU-LAI.md` mục 1 |
+| 3 | R&D giao diện + đào tạo | **Xong** — phương án C; bản vẽ C, C2, C3 đã ký | `docs/rnd/` |
+| 4 | Lát 1 máy chủ + web: bảng giá, khách, hợp đồng, lịch, nhân sự & tiền công | **Xong** (thợ chấm độc lập) — còn lỗi nhẹ đang sửa | `BIEN-BAN-NGHIEM-THU-CUOI.md`, `BIEN-BAN-NGHIEM-THU-LAI.md` |
+| 5 | Thu tiền, báo cáo doanh thu, thương hiệu + trang giới thiệu công khai | **Xong** (thợ chấm độc lập) | như trên |
+| 6 | Trang quản trị nền tảng | **Xong** (thợ chấm độc lập); giới hạn gói chỉ áp cho khoá học/học viên — chờ anh quyết | như trên, `docs/VIEC-TON.md` 10a |
+| 7–9 | Đào tạo: khoá & lớp, hợp đồng khoá học, bản in, thu tiền, thống kê, mẫu thiết kế (chào mừng, Feedback, lời chúc) | **Xong** (thợ chấm độc lập) | như trên |
+| 10 | Chạy thật: trên máy anh hoặc đưa lên Vercel/Railway | **Chờ anh quyết.** Hướng dẫn chạy trên máy: 12/13 bước đã chạy thật trên Linux, bước cài phần mềm Windows chưa thử | `docs/CHAY-THU-TREN-MAY.md`, `docs/DEPLOYMENT.md` |
 
-### 2. Module
-| # | Module | Dữ liệu | Máy chủ | Giao diện | Trạng thái chung |
-|---|---|---|---|---|---|
-| 1 | Tổ chức, nhân sự, vai trò, đăng nhập | Có | 16 đường | Đăng nhập/đăng ký/tạo tổ chức + khung (WIP) | Máy chủ đạt có điều kiện; web đang dựng |
-| 2 | Nhật ký thay đổi | Có | Có (xem nhật ký) | Chưa | Máy chủ đạt có điều kiện; đổi thẻ chưa ghi nhật ký |
-| 3 | Bảng giá | Có | 23 đường | W4 chưa bắt đầu | Máy chủ đạt có điều kiện |
-| 4 | Khách hàng | Có | 4 đường | Chưa | Máy chủ đạt có điều kiện |
-| 5 | Hợp đồng (gồm thợ phụ trách, cảnh báo trùng giờ) | Có | 8 đường | W5 chưa bắt đầu | Máy chủ đạt có điều kiện; phần thợ phụ trách **chưa nghiệm thu** |
-| 6 | Lịch makeup | Có | 5 đường | W6 chưa bắt đầu | Máy chủ đạt có điều kiện |
-| 7 | Nhân sự & tiền công | Có | 6 + 4 đường | Chưa | Máy chủ đạt có điều kiện; mức rảnh của thợ **chưa nghiệm thu** |
-| 8 | Thu tiền + báo cáo doanh thu | Có (đợt thanh toán, phiếu thu) | 0 đường trong kho; 6 đường đang viết | Chưa | **Đang dựng** |
-| 9 | Lưu trữ tệp | Có | 3 đường trong kho, bài thử đang viết; cửa gác chưa có mẫu | Chưa | **Đang dựng** |
-| 10 | Website giới thiệu | Có (hồ sơ thương hiệu) | 0 đường trong kho; 5 đường đang viết | Chưa | **Đang dựng** |
-| 11 | Đào tạo + cổng học viên | Chưa (chỉ có loại lịch "buổi học", vai trò giảng viên) | Chưa | R&D vòng 3 | Chưa bắt đầu phần mã |
-| 12 | Thông báo | Chưa | Chưa | Chưa | Chưa bắt đầu, chưa xếp mốc |
-| 13 | Thuê bao + quản trị nền tảng | Có (gói, thuê bao, quản trị) | 8 đường | Chưa | Đang dựng (mốc 6) |
-| — | App iPhone | — | Dùng chung API | Chưa | Chưa bắt đầu, chưa xếp mốc |
+### 2. Số đo lần chấm gần nhất (thợ chấm độc lập, commit `d417acf`)
+| Phần | Số đo |
+|---|---|
+| Máy chủ | 597/597 bài (48 tệp); cửa gác: scope/outsider/noPerms/keep 99/99, unauth 109/109, crossId 50/50, leak 40/40, refBase 45/45, crossRef 107/107, platform 40/40 |
+| Web | 850/850 bài, chạy 3 lần không bài chập chờn; khớp hai đầu 14/14 + 6/6; build xanh; tệp vào 360 KB |
+| Thao tác thật | tràn ngang 0/90 (30 màn × 3 khổ); 111 nút bấm, 0 nút chết; tiền khớp giữa màn, báo cáo và database |
+| Sau lần chấm | `0802ee0`: lệnh chạy thử tự đọc `.env` — máy chủ 601/601 (thợ Z2, chưa chấm độc lập) |
 
-Số đường lấy từ bảng đường ở commit `634d6a3` (77 đường); chi tiết `docs/API_SPEC.md`.
+Module chưa làm: thông báo, cổng học viên tự đăng nhập, app iPhone, buổi học lên lịch (`docs/VIEC-TON.md`).
 
 ### 3. Cấu hình còn thiếu
 | Thiếu | Cần cho | Ai cấp | Trạng thái |
