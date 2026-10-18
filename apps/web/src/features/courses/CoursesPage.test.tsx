@@ -167,7 +167,7 @@ describe('Khoá & lớp — danh sách và chi tiết (C3 mục 2.1)', () => {
     expect(await screen.findByRole('heading', { name: 'Makeup cá nhân đi tiệc', level: 2 })).toBeTruthy();
   });
 
-  it('seatState 3 mức: Hết chỗ / Sắp đầy · còn 1 / còn 9 chỗ; lớp hết chỗ: nút "Hết chỗ" tắt, các lớp khác "Ghi danh" tắt kèm "Lập hợp đồng khoá học — sắp có"', async () => {
+  it('seatState 3 mức: Hết chỗ / Sắp đầy · còn 1 / còn 9 chỗ; lớp hết chỗ: nút "Hết chỗ" tắt; lớp còn chỗ: "Ghi danh" mở Lập hợp đồng khoá học chọn sẵn lớp', async () => {
     setupServer(OWNER);
     renderAt('/hv/dao-tao/nc');
     const k1 = await screen.findByRole('article', { name: 'Lớp Nâng cao K1' });
@@ -183,15 +183,15 @@ describe('Khoá & lớp — danh sách và chi tiết (C3 mục 2.1)', () => {
     expect(k3.querySelector('.kc-bar--available')).toBeTruthy();
     const full = within(k1).getByRole('button', { name: 'Hết chỗ' });
     expect(full.getAttribute('aria-disabled')).toBe('true');
-    expect(within(k1).queryByRole('button', { name: 'Ghi danh' })).toBeNull();
-    const enroll = within(k2).getByRole('button', { name: 'Ghi danh' });
-    expect(enroll.getAttribute('aria-disabled')).toBe('true');
-    const tipId = enroll.getAttribute('aria-describedby') ?? '';
-    expect(document.getElementById(tipId)?.textContent).toBe('Lập hợp đồng khoá học — sắp có');
+    expect(within(k1).queryByRole('link', { name: 'Ghi danh' })).toBeNull();
     expect(document.getElementById(full.getAttribute('aria-describedby') ?? '')?.textContent).toBe('Lớp đã đủ số học viên tối đa');
-    // Bấm nút tắt không gọi máy chủ, không chuyển trang.
-    fireEvent.click(enroll);
+    // Bấm nút tắt không chuyển trang.
+    fireEvent.click(full);
     expect(window.location.pathname).not.toContain('hop-dong');
+    // Lớp còn chỗ: "Ghi danh" là liên kết sang hợp đồng khoá học mới, chọn sẵn đúng lớp.
+    const enroll = within(k2).getByRole('link', { name: 'Ghi danh' });
+    expect(enroll.getAttribute('href')).toBe('/hv/hop-dong/moi?kind=COURSE&classId=k2');
+    expect(within(k3).getByRole('link', { name: 'Ghi danh' }).getAttribute('href')).toBe('/hv/hop-dong/moi?kind=COURSE&classId=k3');
     // 4 ô số của khoá Nhiều lớp.
     const head = screen.getByRole('region', { name: 'Khoá Makeup nâng cao' });
     expect([...head.querySelectorAll('.ui-stat__label')].map((e) => e.textContent)).toEqual(['Học phí', 'Cọc mặc định', 'Số buổi', expect.stringContaining('Tối đa mặc định')]);
@@ -215,6 +215,7 @@ describe('Khoá & lớp — danh sách và chi tiết (C3 mục 2.1)', () => {
     expect(INSTRUCTOR).toContain('courses.read');
     expect(INSTRUCTOR).not.toContain('courses.write');
     for (const name of ['Thêm khoá', 'Cài đặt nhóm', 'Sửa', 'Mở lớp', 'Ghi danh', 'Hết chỗ']) expect(screen.queryByRole('button', { name })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Ghi danh' })).toBeNull();
     expect(screen.getAllByRole('button', { name: 'Học viên' })).toHaveLength(3);
   });
 
@@ -224,6 +225,7 @@ describe('Khoá & lớp — danh sách và chi tiết (C3 mục 2.1)', () => {
     await screen.findByRole('article', { name: 'Lớp Nâng cao K1' });
     expect(screen.getByRole('button', { name: 'Mở lớp' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Ghi danh' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Ghi danh' })).toBeNull();
   });
 
   it('máy chủ trả 403 "Tổ chức chưa bật đào tạo" → dải lỗi đúng lời máy chủ, không có nút Thử lại', async () => {

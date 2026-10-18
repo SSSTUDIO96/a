@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { CONTRACT_STATUS_LABELS, type Permission } from '@makeup/shared';
 import {
@@ -101,6 +101,10 @@ export interface ContractEditorProps {
   has: (p: Permission) => boolean;
   // null = lập mới.
   contractId: string | null;
+  // Seg loại hợp đồng "Khoá học / Dịch vụ makeup" (chỉ tổ chức đào tạo — ContractKindRouter truyền vào).
+  kindSwitch?: ReactNode;
+  // Vừa tạo hợp đồng (trước khi đổi đường sang /hop-dong/:id).
+  onCreated?: (d: ContractDetail) => void;
 }
 
 type LoadState = { status: 'ready' } | { status: 'loading' } | { status: 'error'; error: unknown };
@@ -121,7 +125,7 @@ function sig(draft: ContractDraft, tz: string): string {
   return JSON.stringify(patchBody(draft, tz));
 }
 
-export function ContractEditor({ orgId, slug, tz, has, contractId }: ContractEditorProps) {
+export function ContractEditor({ orgId, slug, tz, has, contractId, kindSwitch, onCreated }: ContractEditorProps) {
   const navigate = useNavigate();
   const phone = useBreakpoint() === 'phone';
   const online = useOnline();
@@ -412,6 +416,7 @@ export function ContractEditor({ orgId, slug, tz, has, contractId }: ContractEdi
         const c = d.customer;
         setDraft((x) => ({ ...x, customer: { kind: 'existing', id: c.id, fullName: c.fullName, phone: c.phone, email: c.email } }));
         setSavedSig(sig(draft, tz));
+        onCreated?.(d);
         void navigate(`/${slug}/hop-dong/${d.id}`, { replace: true });
       } else {
         d = (await updateContract(orgId, detail.id, withVersion(detail, patchBody(draft, tz)))) as ContractDetail;
@@ -578,7 +583,8 @@ export function ContractEditor({ orgId, slug, tz, has, contractId }: ContractEdi
 
   const pickerLine = pickerFor ? (draft.lines.find((l) => l.key === pickerFor) as PlacedDraft | undefined) : undefined;
   const catalogCard = ab.showCatalog && (
-    <Card className="ct-pick" title={draftMode ? 'Bảng giá' : 'Thêm phát sinh'}>
+    <Card className="ct-pick" title={kindSwitch ? undefined : draftMode ? 'Bảng giá' : 'Thêm phát sinh'}>
+      {kindSwitch}
       <div ref={pickRef} className="ct-cat">
         {cat ? (
           <CatalogPicker
@@ -662,6 +668,8 @@ export function ContractEditor({ orgId, slug, tz, has, contractId }: ContractEdi
       <div className="ct-grid" style={ab.showCatalog ? undefined : { gridTemplateColumns: 'minmax(0, 1fr)' }}>
         {catalogCard}
         <div className="ct-col">
+          {phone && kindSwitch && <div className="ct-kind-phone">{kindSwitch}</div>}
+          {!ab.showCatalog && !phone && kindSwitch}
           <Card
             className="ct-head"
             title={headTitle}

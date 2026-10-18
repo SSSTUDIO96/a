@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router';
 import { PageSkeleton } from '../../layout/ErrorStates';
 import { useSession } from '../../app/session';
+import { usePermissionsContext } from '../../layout/usePermissions';
 import { LedgerScreen } from './LedgerScreen';
 import { RevenueScreen } from './RevenueScreen';
 
@@ -27,9 +28,10 @@ function useOrg() {
 export function RevenuePage() {
   const org = useOrg();
   const ready = useAfterFirstPaint();
+  const perms = usePermissionsContext();
   if (!org) return null;
   if (!ready) return <PageSkeleton />;
-  return <RevenueScreen orgId={org.id} orgSlug={org.slug} />;
+  return <RevenueScreen orgId={org.id} orgSlug={org.slug} academy={perms.state.status === 'ready' && perms.state.org.kind === 'ACADEMY'} />;
 }
 
 export function CashbookPage() {

@@ -219,3 +219,103 @@ describe('Sổ thu (payments.read)', () => {
     expect(screen.getByRole('button', { name: 'Thử lại' })).toBeTruthy();
   });
 });
+
+describe('Doanh thu — tổ chức đào tạo: lọc loại hợp đồng, nhóm theo nhóm khoá / khoá', () => {
+  const COURSE_TOTALS: RevenueBucket = {
+    contractCount: 2,
+    sales: 29_000_000,
+    depositRequired: 8_000_000,
+    depositOutstanding: 3_000_000,
+    outstanding: 21_000_000,
+    received: 8_000_000,
+    refunded: 0,
+    collected: 8_000_000,
+  };
+  const ALLOCATION = 'Hợp đồng khoá học có nhiều khoá: mọi số tiền của hợp đồng chia cho các khoá theo thành tiền…';
+  function setupAcademy() {
+    calls = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = decodeURIComponent(String(input));
+        calls.push(url);
+        const course = url.includes('kind=COURSE');
+        const totals = course ? COURSE_TOTALS : TOTALS;
+        if (url.includes('groupBy=contract')) {
+          return json(200, {
+            from: '', to: '', kind: course ? 'COURSE' : null, groupBy: 'contract', basis: BASIS, totals, totalsOverflow: false,
+            rows: course
+              ? [{ contractId: 'kh57', code: 'HĐKH-2026-0057', kind: 'COURSE', status: 'CONFIRMED', customer: { id: 'k', fullName: 'Phương Thảo' }, courses: [{ id: 'c1', code: 'MCP-01', name: 'Makeup chuyên nghiệp', groupId: 'g1' }], confirmedAt: '2026-10-12T03:00:00Z', eventDate: null, bookedInPeriod: true, total: 17_000_000, depositRequired: 5_000_000, paid: 5_000_000, paidInPeriod: 5_000_000, remaining: 12_000_000, depositOutstanding: 0 }]
+              : [],
+          });
+        }
+        if (url.includes('groupBy=course') || url.includes('groupBy=courseGroup')) {
+          const byCourse = url.includes('groupBy=course&') || url.endsWith('groupBy=course');
+          return json(200, {
+            from: '', to: '', kind: 'COURSE', groupBy: byCourse ? 'course' : 'courseGroup', basis: BASIS, totals: COURSE_TOTALS, totalsOverflow: false, allocation: ALLOCATION,
+            rows: [
+              { segment: 'COURSE', group: { id: 'g1', name: 'Makeup chuyên nghiệp' }, ...(byCourse ? { course: { id: 'c1', code: 'MCP-01', name: 'Makeup chuyên nghiệp' } } : {}), ...COURSE_TOTALS, contractCount: 1, sales: 17_000_000, depositRequired: 5_000_000, collected: 5_000_000, outstanding: 12_000_000 },
+              { segment: 'COURSE', group: { id: 'g2', name: 'Nâng cao' }, ...(byCourse ? { course: { id: 'c2', code: 'NC-01', name: 'Makeup cô dâu chuyên sâu' } } : {}), ...COURSE_TOTALS, contractCount: 1, sales: 12_000_000, depositRequired: 3_000_000, collected: 3_000_000, outstanding: 9_000_000 },
+            ],
+          });
+        }
+        if (url.includes('groupBy=month')) {
+          const months = ['2026-05', '2026-06', '2026-07', '2026-08', '2026-09', '2026-10'];
+          return json(200, { from: '', to: '', kind: null, groupBy: 'month', basis: BASIS, totals, totalsOverflow: false, rows: months.map((period) => ({ ...totals, period })) });
+        }
+        return err(404, 'NOT_FOUND', 'Không có đường API này');
+      }),
+    );
+  }
+  function renderAcademy(path: string) {
+    const router = createMemoryRouter([{ path: '/:orgSlug/bao-cao/doanh-thu', element: <RevenueScreen orgId={ORG} orgSlug="hv" academy /> }], { initialEntries: [path] });
+    return { router, ...render(<RouterProvider router={router} />) };
+  }
+
+  it('chip Khoá học → gửi kind=COURSE (bảng hợp đồng + biểu đồ); 4 ô = totals máy chủ; bảng hợp đồng khoá học có Cọc, Đã thu, Còn lại', async () => {
+    setupAcademy();
+    const { router } = renderAcademy('/hv/bao-cao/doanh-thu');
+    const chips = await screen.findByRole('group', { name: 'Loại hợp đồng' });
+    expect(within(chips).getAllByRole('button').map((b) => b.textContent)).toEqual(['Tất cả', 'Dịch vụ', 'Khoá học']);
+    await waitFor(() => expect(tile('sales')).toBe('58.000.000 ₫'));
+    expect(calls.some((u) => u.includes('kind='))).toBe(false);
+    fireEvent.click(within(chips).getByRole('button', { name: 'Khoá học' }));
+    await waitFor(() => expect(tile('sales')).toBe('29.000.000 ₫'));
+    expect(tile('depositRequired')).toBe('8.000.000 ₫');
+    expect(tile('collected')).toBe('8.000.000 ₫');
+    expect(tile('outstanding')).toBe('21.000.000 ₫');
+    expect(router.state.location.search).toContain('loai=khoa-hoc');
+    expect(calls.some((u) => u.includes('kind=COURSE') && u.includes('groupBy=contract'))).toBe(true);
+    expect(calls.some((u) => u.includes('kind=COURSE') && u.includes('groupBy=month'))).toBe(true);
+    const table = screen.getByRole('region', { name: 'Theo hợp đồng khoá học' });
+    const heads = [...table.querySelectorAll('th')].map((t) => t.textContent);
+    expect(heads).toEqual(expect.arrayContaining(['Cọc', 'Đã thu', 'Còn lại']));
+    expect([...table.querySelectorAll('th.rp-t-hide')].map((t) => t.textContent)).not.toContain('Cọc');
+    expect(within(table).getByText('Makeup chuyên nghiệp')).toBeTruthy();
+    expect(document.body.textContent?.toLowerCase()).not.toContain('lợi nhuận');
+  });
+
+  it('nhóm theo Khoá / Nhóm khoá → groupBy=course|courseGroup; dòng Tổng = 4 ô', async () => {
+    setupAcademy();
+    renderAcademy('/hv/bao-cao/doanh-thu?loai=khoa-hoc');
+    const seg = await screen.findByRole('radiogroup', { name: 'Nhóm theo' });
+    fireEvent.click(within(seg).getByRole('radio', { name: 'Khoá' }));
+    const table = await screen.findByRole('region', { name: 'Theo khoá' });
+    expect(calls.some((u) => u.includes('kind=COURSE') && u.includes('groupBy=course') && !u.includes('groupBy=courseGroup'))).toBe(true);
+    expect(within(table).getByText('Makeup cô dâu chuyên sâu')).toBeTruthy();
+    const total = table.querySelector('.rp-total-row') as HTMLElement;
+    expect([...total.querySelectorAll('td')].map((t) => t.textContent)).toEqual(['Tổng', '2', '29.000.000 ₫', '8.000.000 ₫', '8.000.000 ₫', '21.000.000 ₫']);
+    fireEvent.click(within(seg).getByRole('radio', { name: 'Nhóm khoá' }));
+    const groups = await screen.findByRole('region', { name: 'Theo nhóm khoá' });
+    expect(within(groups).getByText('Nâng cao')).toBeTruthy();
+    expect(calls.some((u) => u.includes('groupBy=courseGroup'))).toBe(true);
+  });
+
+  it('tổ chức không đào tạo: không có chip loại, không gửi kind', async () => {
+    setupServer();
+    renderAt('/hoa-dao/bao-cao/doanh-thu?loai=khoa-hoc');
+    await waitFor(() => expect(tile('sales')).toBe('58.000.000 ₫'));
+    expect(screen.queryByRole('group', { name: 'Loại hợp đồng' })).toBeNull();
+    expect(calls.some((u) => u.includes('kind='))).toBe(false);
+  });
+});

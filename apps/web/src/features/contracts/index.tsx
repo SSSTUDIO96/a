@@ -3,7 +3,7 @@
 import { useParams } from 'react-router';
 import { useSession } from '../../app/session';
 import { usePermissionsContext } from '../../layout/usePermissions';
-import { ContractEditor } from './ContractEditor';
+import { ContractKindRouter } from './ContractKindRouter';
 import { ContractList } from './ContractList';
 
 export const NEW_CONTRACT_SEGMENT = 'moi';
@@ -16,7 +16,10 @@ function useOrgContext() {
   const org = organizations.find((o) => o.slug === orgSlug) ?? currentOrg;
   // Múi giờ của tổ chức (GET /orgs/:orgId) để ghép giờ làm với ngày sự kiện; khung chỉ hiện màn khi quyền đã tải xong.
   const tz = perms.state.status === 'ready' ? perms.state.org.timezone : DEFAULT_TZ;
-  return { org, tz, has: perms.has };
+  // Tổ chức đào tạo (ACADEMY) mới có hợp đồng khoá học (bản vẽ C3 mục 1.0).
+  const academy = perms.state.status === 'ready' && perms.state.org.kind === 'ACADEMY';
+  const orgName = perms.state.status === 'ready' ? perms.state.org.name : (org?.name ?? '');
+  return { org, tz, has: perms.has, academy, orgName };
 }
 
 export function ContractListPage() {
@@ -27,9 +30,10 @@ export function ContractListPage() {
 
 export function ContractEditorPage() {
   const { id } = useParams();
-  const { org, tz, has } = useOrgContext();
+  const { org, tz, has, academy, orgName } = useOrgContext();
   if (!org) return null;
   const contractId = !id || id === NEW_CONTRACT_SEGMENT ? null : id;
-  // Không đặt key theo id: đổi "moi" → id sau lần lưu đầu phải giữ nguyên dữ liệu đang nhập (ContractEditor tự nạp/xoá khi cần).
-  return <ContractEditor orgId={org.id} slug={org.slug} tz={tz} has={has} contractId={contractId} />;
+  // Không đặt key theo id: đổi "moi" → id sau lần lưu đầu phải giữ nguyên dữ liệu đang nhập (màn tự nạp/xoá khi cần).
+  // Loại hợp đồng (khoá học / dịch vụ) chọn màn ở ContractKindRouter.
+  return <ContractKindRouter orgId={org.id} slug={org.slug} tz={tz} orgName={orgName} academy={academy} has={has} contractId={contractId} />;
 }

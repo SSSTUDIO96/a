@@ -7,12 +7,14 @@
 
 // ---- Giá trị liệt kê: lấy từ @makeup/shared khi shared có; còn lại khớp schema.prisma (types-shared.test.ts đối chiếu) ----
 import type {
+  ContractKindKey,
   ContractStatus,
   INITIAL_STATUSES,
   InstallmentStatus,
   PaymentKind,
   PaymentMethod,
   PaymentSummary,
+  SeatState,
   TravelFeeMode,
   Vnd,
   WorkStatus,
@@ -20,10 +22,14 @@ import type {
 
 export type { ContractStatus, InstallmentStatus, PaymentKind, PaymentMethod, PaymentSummary, TravelFeeMode, Vnd, WorkStatus };
 export type IsoDateTime = string;
+// Loại hợp đồng (BAN-VE-C3 mục 1.1): dịch vụ makeup hoặc khoá học. Đặt lúc tạo, không đổi được sau đó.
+export type ContractKind = ContractKindKey;
+// Mẫu điều khoản / nội quy (contracts/texts.ts).
+export type ContractTextKind = 'TERMS' | 'RULES';
 
 export type ServiceKind = 'MAIN' | 'ADDON' | 'SURCHARGE';
 export type LocationType = 'STUDIO' | 'CUSTOMER_HOME' | 'OTHER';
-export type ContractLineKind = 'PACKAGE' | 'SERVICE' | 'ADDON' | 'SURCHARGE' | 'TRAVEL' | 'CUSTOM';
+export type ContractLineKind = 'PACKAGE' | 'SERVICE' | 'ADDON' | 'SURCHARGE' | 'TRAVEL' | 'CUSTOM' | 'COURSE';
 // Trạng thái được phép khi TẠO lịch (INITIAL_STATUSES).
 export type InitialWorkStatus = (typeof INITIAL_STATUSES)[number];
 export type EventKind = 'MAKEUP' | 'COURSE_SESSION' | 'INTERNAL' | 'PERSONAL_BLOCK' | 'OTHER';
@@ -526,7 +532,16 @@ export interface CustomLineInput {
   note?: string;
 }
 
-export type ContractLineInput = PackageLineInput | ServiceLineInput | SurchargeLineInput | CustomLineInput;
+// Dòng khoá học (chỉ hợp đồng COURSE): tên = khoá · lớp, đơn giá = học phí lúc thêm, số lượng 1 — máy chủ chép.
+// Lớp hết chỗ / ngừng nhận → 409 khi tạo, sửa, thêm dòng (xem trước thì không chặn, báo ở ContractQuote.classes).
+export interface CourseLineInput {
+  kind: 'COURSE';
+  courseClassId: string;
+  note?: string;
+}
+
+// Luật trộn dòng (máy chủ kiểm): hợp đồng khoá học chỉ nhận COURSE + CUSTOM; hợp đồng dịch vụ không nhận COURSE.
+export type ContractLineInput = PackageLineInput | ServiceLineInput | SurchargeLineInput | CustomLineInput | CourseLineInput;
 
 export interface NewCustomerInput {
   fullName: string;
@@ -534,9 +549,18 @@ export interface NewCustomerInput {
 }
 
 interface ContractBodyFields {
+  // Mặc định SERVICE. COURSE chỉ ở tổ chức ACADEMY (khác → 403 "Tổ chức chưa bật đào tạo").
+  kind?: ContractKind;
+  // Người phụ trách (tư vấn, nhắc đóng tiền) — thành viên đang hoạt động.
+  ownerMembershipId?: string;
   eventDate?: IsoDateTime;
   notes?: string;
+  // Tự nhập điều khoản HOẶC chọn mẫu (termsTemplateId) — không gửi cả hai.
   terms?: string;
+  // Mẫu điều khoản / nội quy (nội quy chỉ hợp đồng khoá học). Nội dung được CHỤP vào hợp đồng lúc xác nhận;
+  // không chọn → lúc xác nhận lấy mẫu mặc định.
+  termsTemplateId?: string;
+  rulesTemplateId?: string;
   discount?: Vnd;
   // Bỏ trống = lấy cọc gợi ý.
   depositRequired?: Vnd;
@@ -564,6 +588,9 @@ export interface ContractUpdateInput {
   eventDate?: IsoDateTime | null;
   notes?: string | null;
   terms?: string | null;
+  // null = bỏ mẫu đã chọn.
+  termsTemplateId?: string | null;
+  rulesTemplateId?: string | null;
 }
 
 export interface ContractListQuery extends PagingQuery {
@@ -573,6 +600,7 @@ export interface ContractListQuery extends PagingQuery {
   q?: string;
   eventFrom?: IsoDateTime;
   eventTo?: IsoDateTime;
+  kind?: ContractKind;
 }
 
 export interface VoidLineInput {
@@ -610,6 +638,8 @@ export interface ContractLineView<Id extends string | null = string> {
   distanceKm: number | null;
   perKmAmount: Vnd | null;
   note: string | null;
+  // Lớp của dòng khoá học (chỉ dòng COURSE; dòng khác null).
+  courseClassId: string | null;
   addedAfterConfirm: boolean;
   // Lúc thêm dòng (dòng đã lưu); bảng tính xem trước (quote) chưa ghi nên null.
   createdAt: IsoDateTime | null;
@@ -682,6 +712,7 @@ export interface GroupedContractLine<Id extends string | null = string> extends 
 
 // contracts/present.ts — presentSheet: bảng tính xem trước (POST /contracts/quote).
 export interface ContractQuote {
+  kind: ContractKind;
   lines: GroupedContractLine<null>[];
   travelTotal: Vnd;
   subtotal: Vnd;
@@ -689,12 +720,37 @@ export interface ContractQuote {
   total: Vnd;
   depositRequired: Vnd;
   suggestedDeposit: Vnd;
+  // Tình trạng chỗ của các lớp trong dòng khoá học (xem trước không chặn lớp đầy — web báo; chốt ở bước xác nhận).
+  classes: ContractClassSeats[];
+}
+
+// contracts/enroll.ts — ClassSeats. seatState theo seatState() của @makeup/shared.
+export interface ContractClassSeats {
+  classId: string;
+  name: string;
+  status: 'OPEN' | 'CLOSED' | 'CANCELLED';
+  capacity: number;
+  enrolledCount: number;
+  seatsLeft: number;
+  seatState: SeatState;
+}
+
+// Ghi danh sinh khi hợp đồng khoá học xác nhận (một dòng COURSE = một ghi danh); huỷ hợp đồng / huỷ dòng → CANCELLED.
+export interface ContractEnrollment {
+  id: string;
+  contractLineId: string;
+  courseClassId: string;
+  status: 'ACTIVE' | 'CANCELLED';
+  enrolledAt: IsoDateTime;
+  cancelledAt: IsoDateTime | null;
+  cancelReason: string | null;
 }
 
 // contracts/present.ts — presentSummary (danh sách).
 export interface ContractSummary {
   id: string;
   code: string;
+  kind: ContractKind;
   status: ContractStatus;
   eventDate: IsoDateTime | null;
   subtotal: Vnd;
@@ -710,7 +766,9 @@ export interface ContractSummary {
 export interface ContractDetail {
   id: string;
   code: string;
+  kind: ContractKind;
   status: ContractStatus;
+  ownerMembershipId: string | null;
   eventDate: IsoDateTime | null;
   subtotal: Vnd;
   discount: Vnd;
@@ -719,6 +777,12 @@ export interface ContractDetail {
   travelTotal: Vnd;
   notes: string | null;
   terms: string | null;
+  // Nội quy (chỉ hợp đồng khoá học) và mẫu đã chọn (nháp) / đã chụp (sau xác nhận: bản chụp, không đổi theo mẫu).
+  rules: string | null;
+  termsTemplateId: string | null;
+  termsTemplateVersion: number | null;
+  rulesTemplateId: string | null;
+  rulesTemplateVersion: number | null;
   cancelReason: string | null;
   confirmedAt: IsoDateTime | null;
   createdById: string;
@@ -727,6 +791,48 @@ export interface ContractDetail {
   customer: { id: string; fullName: string; phone: string | null; email: string | null };
   lines: GroupedContractLine[];
   appointments: { id: string; code: string; startsAt: IsoDateTime; status: WorkStatus; contractLineId: string | null }[];
+  enrollments: ContractEnrollment[];
+}
+
+// contracts/texts.ts — mẫu điều khoản / nội quy. Sửa body → version + 1; mỗi (tổ chức, loại) tối đa một mẫu mặc định.
+export interface ContractText {
+  id: string;
+  kind: ContractTextKind;
+  // Rỗng = dùng cho cả hai loại hợp đồng.
+  appliesTo: ContractKind[];
+  name: string;
+  body: string;
+  version: number;
+  isDefault: boolean;
+  isActive: boolean;
+  createdAt: IsoDateTime;
+  updatedAt: IsoDateTime;
+  updatedBy: { id: string; fullName: string };
+}
+
+export interface ContractTextListQuery {
+  kind?: ContractTextKind;
+  // Mẫu dùng được cho loại hợp đồng này (gồm cả mẫu áp dụng cho cả hai loại).
+  appliesTo?: ContractKind;
+  includeInactive?: boolean;
+}
+
+export interface ContractTextCreateInput {
+  kind: ContractTextKind;
+  appliesTo: ContractKind[];
+  name: string;
+  // ≤ 20000 ký tự.
+  body: string;
+  isDefault?: boolean;
+}
+
+// Trường không gửi giữ nguyên. Mẫu mặc định phải đang dùng.
+export interface ContractTextUpdateInput {
+  name?: string;
+  body?: string;
+  appliesTo?: ContractKind[];
+  isDefault?: boolean;
+  isActive?: boolean;
 }
 
 // Huỷ dòng làm tổng giảm: máy chủ tự hạ giảm giá / cọc nếu vượt tổng mới và báo lại ở đây.
@@ -988,7 +1094,8 @@ export interface ContractPayments {
     status: ContractStatus;
     eventDate: IsoDateTime | null;
     confirmedAt: IsoDateTime | null;
-    customer: { id: string; fullName: string; phone: string | null };
+    // Không có quyền customers.read: phone = null, phoneHidden = true.
+    customer: { id: string; fullName: string; phone: string | null; phoneHidden: boolean };
   };
   summary: PaymentSummary;
   installments: PaymentInstallment[];
@@ -1052,14 +1159,19 @@ export interface PaymentLedger extends Page<PaymentLedgerEntry> {
   to: IsoDateTime;
   // Tổng chỉ tính phiếu còn hiệu lực; danh sách vẫn có phiếu đã huỷ (voidedAt) để đối soát.
   totals: { received: Vnd; receiptCount: number; refunded: Vnd; refundCount: number; net: Vnd };
+  // true = có tổng vượt ngưỡng số nguyên an toàn → ô đó null, giao diện hiện "—".
+  totalsOverflow: boolean;
 }
 
 // payments/reports.ts — báo cáo doanh số theo kỳ [from, to).
-export type RevenueGroupBy = 'month' | 'contract';
+// kind: theo loại hợp đồng; courseGroup / course: theo nhóm khoá / khoá (mỗi đồng của hợp đồng thuộc đúng một dòng).
+export type RevenueGroupBy = 'month' | 'contract' | 'kind' | 'courseGroup' | 'course';
 
 export interface RevenueQuery {
   from: IsoDateTime;
   to: IsoDateTime;
+  // Lọc theo loại hợp đồng; bỏ trống = cả hai.
+  kind?: ContractKind;
   // Mặc định month.
   groupBy?: RevenueGroupBy;
 }
@@ -1091,8 +1203,11 @@ export interface RevenueMonthRow extends RevenueBucket {
 export interface RevenueContractRow {
   contractId: string;
   code: string;
+  kind: ContractKind;
   status: ContractStatus;
   customer: { id: string; fullName: string };
+  // Khoá của các dòng khoá học còn hiệu lực (hợp đồng dịch vụ: []).
+  courses: { id: string; code: string; name: string; groupId: string | null }[];
   confirmedAt: IsoDateTime | null;
   eventDate: IsoDateTime | null;
   // true = tính vào doanh số của kỳ; false = chỉ có tiền thu/hoàn trong kỳ.
@@ -1106,16 +1221,44 @@ export interface RevenueContractRow {
   depositOutstanding: Vnd | null;
 }
 
+// Dòng theo loại hợp đồng (groupBy=kind).
+export interface RevenueKindRow extends RevenueBucket {
+  kind: ContractKind;
+}
+
+// COURSE = phần của một khoá / nhóm khoá; COURSE_UNASSIGNED = hợp đồng khoá học không còn dòng khoá học nào;
+// SERVICE = hợp đồng dịch vụ.
+export type RevenueSegment = 'COURSE' | 'COURSE_UNASSIGNED' | 'SERVICE';
+
+// Dòng theo nhóm khoá (groupBy=courseGroup). group = null: khoá chưa xếp nhóm, hoặc dòng không phải khoá học.
+export interface RevenueCourseGroupRow extends RevenueBucket {
+  segment: RevenueSegment;
+  group: { id: string; name: string } | null;
+}
+
+// Dòng theo khoá (groupBy=course).
+export interface RevenueCourseRow extends RevenueCourseGroupRow {
+  course: { id: string; code: string; name: string } | null;
+}
+
 interface RevenueReportBase {
   from: IsoDateTime;
   to: IsoDateTime;
+  // Bộ lọc loại hợp đồng đã áp (null = cả hai).
+  kind: ContractKind | null;
   basis: RevenueBasis;
   totals: RevenueBucket;
+  // true = có tổng vượt ngưỡng số nguyên an toàn → ô đó null, giao diện hiện "—".
+  totalsOverflow: boolean;
 }
 
 export type RevenueReport =
   | (RevenueReportBase & { groupBy: 'month'; rows: RevenueMonthRow[] })
-  | (RevenueReportBase & { groupBy: 'contract'; rows: RevenueContractRow[] });
+  | (RevenueReportBase & { groupBy: 'contract'; rows: RevenueContractRow[] })
+  | (RevenueReportBase & { groupBy: 'kind'; rows: RevenueKindRow[] })
+  // allocation: lời giải thích cách chia tiền một hợp đồng cho nhiều khoá (máy chủ soạn, hiện nguyên văn).
+  | (RevenueReportBase & { groupBy: 'courseGroup'; allocation: string; rows: RevenueCourseGroupRow[] })
+  | (RevenueReportBase & { groupBy: 'course'; allocation: string; rows: RevenueCourseRow[] });
 
 // ======================= Hồ sơ thương hiệu (profile) =======================
 

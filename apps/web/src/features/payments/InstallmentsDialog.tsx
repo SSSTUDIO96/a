@@ -149,6 +149,12 @@ export function InstallmentsDialog({ open, orgId, data, onClose, onSaved }: Inst
             Cọc + còn lại vào ngày sự kiện
           </Button>
         )}
+        {/* Hợp đồng không có ngày sự kiện (khoá học): Cọc + 1 đợt sau 30 ngày (bản vẽ C3 mục 2.3: Cọc + 1/2/3). */}
+        {!canSuggestEvent && (
+          <Button size="sm" onClick={() => suggest(1, SUGGEST_INTERVAL_DAYS)}>
+            Cọc + 1 đợt
+          </Button>
+        )}
         <Button size="sm" onClick={() => suggest(2, SUGGEST_INTERVAL_DAYS)}>
           Cọc + 2 đợt
         </Button>

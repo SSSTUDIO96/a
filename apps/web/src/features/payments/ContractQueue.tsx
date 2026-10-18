@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { listContracts } from '../../api/contracts';
 import { userMessage } from '../../api/errors';
-import type { ContractListQuery, ContractSummary, Page } from '../../api/types';
-import { Button, Card, EmptyState, ListGroupHeader, ListRow, ListRowSkeleton, Segmented, StatusTag, TextInput } from '../../ui';
+import type { ContractKind, ContractListQuery, ContractSummary, Page } from '../../api/types';
+import { Button, Card, Chip, EmptyState, ListGroupHeader, ListRow, ListRowSkeleton, Segmented, StatusTag, TextInput } from '../../ui';
 import { money } from './money';
 import { addDays, endOfDayIso, fmtDayMonth, fmtIsoDay, startOfDayIso, todayVn } from './vnTime';
 
@@ -22,10 +22,10 @@ const STATUS_OPTIONS: { value: QueueStatus; label: string; empty: string }[] = [
 const PAGE_SIZE = 50;
 
 interface Group {
-  key: 'week' | 'later' | 'past';
+  key: 'week' | 'later' | 'past' | 'course';
   title: string;
-  range: Pick<ContractListQuery, 'eventFrom' | 'eventTo'>;
-  /** Xếp theo ngày sự kiện: gần nhất trước (nhóm đã qua: vừa qua trước). */
+  range: Pick<ContractListQuery, 'eventFrom' | 'eventTo' | 'kind'>;
+  /** Xếp theo ngày sự kiện: gần nhất trước (nhóm đã qua: vừa qua trước). Khoá học: lập gần nhất trước. */
   order: 1 | -1;
 }
 
@@ -37,6 +37,22 @@ export function queueGroups(today: string): Group[] {
   ];
 }
 
+// Tổ chức đào tạo (bản vẽ C3 mục 2.4): ba nhóm theo ngày sự kiện chỉ lấy hợp đồng DỊCH VỤ (kind=SERVICE); hợp đồng khoá
+// học không có ngày sự kiện nên thành một nhóm riêng (kind=COURSE). Chip "Tất cả / Dịch vụ / Khoá học" lọc theo kind máy chủ.
+export function academyGroups(today: string): Group[] {
+  return [
+    ...queueGroups(today).map((g) => ({ ...g, range: { ...g.range, kind: 'SERVICE' as const } })),
+    { key: 'course', title: 'Hợp đồng khoá học', range: { kind: 'COURSE' }, order: -1 },
+  ];
+}
+
+export type KindChip = 'ALL' | ContractKind;
+const KIND_CHIPS: { value: KindChip; label: string }[] = [
+  { value: 'ALL', label: 'Tất cả' },
+  { value: 'COURSE', label: 'Khoá học' },
+  { value: 'SERVICE', label: 'Dịch vụ makeup' },
+];
+
 type GroupState = { status: 'loading' } | { status: 'error'; error: unknown } | { status: 'ready'; page: Page<ContractSummary> };
 
 export interface ContractQueueProps {
@@ -45,15 +61,22 @@ export interface ContractQueueProps {
   selectedId: string | null;
   /** Báo hợp đồng đầu danh sách (máy tính: mở sẵn khi chưa chọn), null khi danh sách rỗng. */
   onFirst?: (id: string | null) => void;
+  /** Tổ chức đào tạo: chip loại hợp đồng + nhóm "Hợp đồng khoá học". */
+  academy?: boolean;
 }
 
 function sortByEvent(items: ContractSummary[], order: 1 | -1) {
   return [...items].sort((a, b) => order * ((a.eventDate ? Date.parse(a.eventDate) : 0) - (b.eventDate ? Date.parse(b.eventDate) : 0)));
 }
 
-export function ContractQueue({ orgId, orgSlug, selectedId, onFirst }: ContractQueueProps) {
+function sortByCreated(items: ContractSummary[]) {
+  return [...items].sort((a, b) => Date.parse(b.confirmedAt ?? b.createdAt) - Date.parse(a.confirmedAt ?? a.createdAt));
+}
+
+export function ContractQueue({ orgId, orgSlug, selectedId, onFirst, academy = false }: ContractQueueProps) {
   const today = todayVn();
-  const groups = useMemo(() => queueGroups(today), [today]);
+  const groups = useMemo(() => (academy ? academyGroups(today) : queueGroups(today)), [today, academy]);
+  const [kind, setKind] = useState<KindChip>('ALL');
   const [status, setStatus] = useState<QueueStatus>('CONFIRMED');
   const [q, setQ] = useState('');
   const [term, setTerm] = useState('');
@@ -62,6 +85,7 @@ export function ContractQueue({ orgId, orgSlug, selectedId, onFirst }: ContractQ
     week: { status: 'loading' },
     later: { status: 'loading' },
     past: { status: 'loading' },
+    course: { status: 'loading' },
   });
 
   useEffect(() => {
@@ -71,7 +95,7 @@ export function ContractQueue({ orgId, orgSlug, selectedId, onFirst }: ContractQ
 
   useEffect(() => {
     const controller = new AbortController();
-    setStates({ week: { status: 'loading' }, later: { status: 'loading' }, past: { status: 'loading' } });
+    setStates({ week: { status: 'loading' }, later: { status: 'loading' }, past: { status: 'loading' }, course: { status: 'loading' } });
     for (const g of groups) {
       listContracts(orgId, { status, pageSize: PAGE_SIZE, ...(term ? { q: term } : {}), ...g.range }, controller.signal)
         .then((page) => setStates((s) => ({ ...s, [g.key]: { status: 'ready', page } })))
@@ -87,19 +111,32 @@ export function ContractQueue({ orgId, orgSlug, selectedId, onFirst }: ContractQ
     const out: Partial<Record<Group['key'], ContractSummary[]>> = {};
     for (const g of groups) {
       const st = states[g.key];
-      if (st.status === 'ready') out[g.key] = sortByEvent(st.page.items, g.order);
+      if (st.status === 'ready') out[g.key] = g.key === 'course' ? sortByCreated(st.page.items) : sortByEvent(st.page.items, g.order);
     }
     return out;
   }, [groups, states]);
 
-  const firstId = allReady ? (groups.map((g) => sorted[g.key]?.[0]?.id).find(Boolean) ?? null) : undefined;
+  // Nhóm đang hiện theo chip loại (chỉ tổ chức đào tạo).
+  const shownGroups = groups.filter((g) => kind === 'ALL' || (kind === 'COURSE') === (g.key === 'course'));
+  const totalOf = (keys: Group['key'][]) =>
+    keys.reduce((n, k) => {
+      const st = states[k];
+      return st.status === 'ready' ? n + st.page.total : n;
+    }, 0);
+  const counts: Record<KindChip, number> = {
+    ALL: totalOf(groups.map((g) => g.key)),
+    COURSE: totalOf(['course']),
+    SERVICE: totalOf(groups.filter((g) => g.key !== 'course').map((g) => g.key)),
+  };
+
+  const firstId = allReady ? (shownGroups.map((g) => sorted[g.key]?.[0]?.id).find(Boolean) ?? null) : undefined;
   useEffect(() => {
     if (firstId !== undefined) onFirst?.(firstId);
   }, [firstId, onFirst]);
 
   const loading = groups.some((g) => states[g.key].status === 'loading');
   const errors = groups.map((g) => states[g.key]).filter((s): s is { status: 'error'; error: unknown } => s.status === 'error');
-  const nothing = allReady && groups.every((g) => (sorted[g.key]?.length ?? 0) === 0);
+  const nothing = allReady && shownGroups.every((g) => (sorted[g.key]?.length ?? 0) === 0);
   const statusLabel = STATUS_OPTIONS.find((o) => o.value === status)?.empty ?? '';
 
   return (
@@ -119,6 +156,15 @@ export function ContractQueue({ orgId, orgSlug, selectedId, onFirst }: ContractQ
           value={status}
           onChange={setStatus}
         />
+        {academy && (
+          <div className="pm-kind" role="group" aria-label="Loại hợp đồng">
+            {KIND_CHIPS.map((o) => (
+              <Chip key={o.value} selected={kind === o.value} count={allReady ? counts[o.value] : undefined} onClick={() => setKind(o.value)}>
+                {o.label}
+              </Chip>
+            ))}
+          </div>
+        )}
       </div>
       {errors.length > 0 && (
         <EmptyState message={userMessage(errors[0]?.error)} action={<Button onClick={() => setAttempt((n) => n + 1)}>Thử lại</Button>} />
@@ -129,7 +175,7 @@ export function ContractQueue({ orgId, orgSlug, selectedId, onFirst }: ContractQ
       )}
       {!loading &&
         errors.length === 0 &&
-        groups.map((g) => {
+        shownGroups.map((g) => {
           const st = states[g.key];
           const items = sorted[g.key] ?? [];
           if (st.status !== 'ready' || items.length === 0) return null;
@@ -146,9 +192,15 @@ export function ContractQueue({ orgId, orgSlug, selectedId, onFirst }: ContractQ
                   linkProps={{ to: `/${orgSlug}/thu-tien/${c.id}` }}
                   selected={c.id === selectedId}
                   title={c.customer.fullName}
-                  subtitle={c.code}
+                  subtitle={academy ? `${c.code} · ${c.kind === 'COURSE' ? 'Khoá học' : 'Dịch vụ'}` : c.code}
                   amount={money(c.total)}
-                  trailing={c.eventDate ? <StatusTag>Sự kiện {fmtDayMonth(c.eventDate)}</StatusTag> : undefined}
+                  trailing={
+                    c.eventDate ? (
+                      <StatusTag>Sự kiện {fmtDayMonth(c.eventDate)}</StatusTag>
+                    ) : c.kind === 'COURSE' && c.confirmedAt ? (
+                      <StatusTag tone="accent">Ghi danh {fmtDayMonth(c.confirmedAt)}</StatusTag>
+                    ) : undefined
+                  }
                 />
               ))}
               {more > 0 && <p className="pm-queue__more">Còn {more} hợp đồng nữa. Gõ tìm để thu hẹp.</p>}

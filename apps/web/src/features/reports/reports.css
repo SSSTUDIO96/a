@@ -112,3 +112,4 @@
   .rp-ledger td[data-l='Hợp đồng'] { display: block; }
   .rp-ledger td[data-l='Hợp đồng']::before { display: block; }
 }
+.rp-total-row td { border-top: 1px solid var(--line); background: var(--soft); }

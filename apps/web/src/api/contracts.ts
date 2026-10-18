@@ -11,6 +11,10 @@ import type {
   ContractStatusInput,
   ContractStatusResult,
   ContractSummary,
+  ContractText,
+  ContractTextCreateInput,
+  ContractTextListQuery,
+  ContractTextUpdateInput,
   ContractUpdateInput,
   ContractVoidResult,
   Page,
@@ -55,4 +59,19 @@ export function voidContractLine(orgId: string, contractId: string, lineId: stri
 // Huỷ (bắt buộc reason) kéo theo huỷ các lịch đã gắn; xác nhận tạo lịch cho các dòng có thợ dự kiến.
 export function changeContractStatus(orgId: string, contractId: string, input: ContractStatusInput) {
   return api.post<ContractStatusResult>(orgPath(orgId, `/contracts/${idSeg(contractId)}/status`), input);
+}
+
+// ---- Mẫu điều khoản / nội quy (contracts/texts.ts) ----
+// Đọc: contracts.read (mặc định chỉ mẫu đang dùng). Thêm / sửa: contracts.texts. Sửa nội dung → phiên bản + 1; hợp đồng đã
+// xác nhận giữ bản chụp, không đổi theo mẫu.
+export function listContractTexts(orgId: string, query?: ContractTextListQuery, signal?: AbortSignal) {
+  return api.get<ContractText[]>(withQuery(orgPath(orgId, '/contract-texts'), query), signal);
+}
+
+export function createContractText(orgId: string, input: ContractTextCreateInput, idempotencyKey: string) {
+  return api.create<ContractText>(orgPath(orgId, '/contract-texts'), input, idempotencyKey);
+}
+
+export function updateContractText(orgId: string, textId: string, input: ContractTextUpdateInput) {
+  return api.patch<ContractText>(orgPath(orgId, `/contract-texts/${idSeg(textId)}`), input);
 }

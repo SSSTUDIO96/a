@@ -26,6 +26,7 @@ export function PaymentsPage() {
       orgSlug={org.slug}
       contractId={contractId ?? null}
       access={{ write: perms.has('payments.write'), void: perms.has('payments.void'), contractsRead: perms.has('contracts.read') }}
+      academy={perms.state.status === 'ready' && perms.state.org.kind === 'ACADEMY'}
     />
   );
 }

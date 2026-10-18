@@ -1,3 +1,4 @@
+import { Link, useParams } from 'react-router';
 import type { ClassView } from '../../api/courses';
 import { Avatar, Button, IconCalendar, IconClock, StatusTag } from '../../ui';
 import { IconPin, IconUsers } from './icons';
@@ -6,8 +7,8 @@ import { OffButton } from './OffButton';
 import { SeatBar, SeatTag } from './SeatTag';
 
 // Thẻ lớp (bản vẽ C3 mục 2.1): ai, khi nào, ở đâu + thanh đầy + "x đã ghi danh / tối đa y" + nút Ghi danh.
-// Ghi danh = lập hợp đồng khoá học — màn đó CHƯA có trên web, nên nút tắt kèm lý do (không làm giả).
-export const ENROLL_SOON = 'Lập hợp đồng khoá học — sắp có';
+// Ghi danh = mở Lập hợp đồng khoá học, chọn sẵn lớp: /:orgSlug/hop-dong/moi?kind=COURSE&classId=<id> (cần contracts.write).
+export const ENROLL_TIP = 'Lập hợp đồng khoá học, chọn sẵn lớp này';
 export const FULL_REASON = 'Lớp đã đủ số học viên tối đa';
 export const CLOSED_REASON = 'Lớp đã ngừng nhận ghi danh';
 
@@ -22,6 +23,7 @@ export interface ClassCardProps {
 }
 
 export function ClassCard({ cls, title, canEnroll, onEdit, onStudents }: ClassCardProps) {
+  const { orgSlug } = useParams();
   const seat = seatInfo(cls.enrolledCount, cls.capacity);
   const cancelled = cls.status === 'CANCELLED';
   const closed = cls.status === 'CLOSED';
@@ -82,7 +84,14 @@ export function ClassCard({ cls, title, canEnroll, onEdit, onStudents }: ClassCa
             ) : closed ? (
               <OffButton label="Ghi danh" reason={CLOSED_REASON} variant="primary" />
             ) : (
-              <OffButton label="Ghi danh" reason={ENROLL_SOON} variant="primary" />
+              <Link
+                className="ui-btn ui-btn--primary ui-btn--sm"
+                style={{ textDecoration: 'none' }}
+                to={`/${orgSlug ?? ''}/hop-dong/moi?kind=COURSE&classId=${encodeURIComponent(cls.id)}`}
+                title={ENROLL_TIP}
+              >
+                <span className="ui-btn__text">Ghi danh</span>
+              </Link>
             ))}
         </span>
       </div>

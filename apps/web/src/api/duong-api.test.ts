@@ -156,6 +156,17 @@ const cases: Case[] = [
   },
   { name: 'voidContractLine', call: () => contracts.voidContractLine(ORG, 'h1', 'ln1', { reason: 'Khách bỏ' }), method: 'POST', url: `${P}/contracts/h1/lines/ln1/void`, body: { reason: 'Khách bỏ' } },
   { name: 'changeContractStatus', call: () => contracts.changeContractStatus(ORG, 'h1', { to: 'CONFIRMED' }), method: 'POST', url: `${P}/contracts/h1/status`, body: { to: 'CONFIRMED' } },
+  // ---- mẫu điều khoản / nội quy ----
+  { name: 'listContractTexts', call: () => contracts.listContractTexts(ORG, { kind: 'RULES', appliesTo: 'COURSE' }), method: 'GET', url: `${P}/contract-texts?kind=RULES&appliesTo=COURSE` },
+  {
+    name: 'createContractText',
+    call: () => contracts.createContractText(ORG, { kind: 'TERMS', appliesTo: ['COURSE'], name: 'Điều khoản khoá học', body: '1. …', isDefault: true }, KEY),
+    method: 'POST',
+    url: `${P}/contract-texts`,
+    body: { kind: 'TERMS', appliesTo: ['COURSE'], name: 'Điều khoản khoá học', body: '1. …', isDefault: true },
+    idem: true,
+  },
+  { name: 'updateContractText', call: () => contracts.updateContractText(ORG, 't1', { body: 'Bản mới' }), method: 'PATCH', url: `${P}/contract-texts/t1`, body: { body: 'Bản mới' } },
   // ---- staff ----
   { name: 'listStaffTiers', call: () => staff.listStaffTiers(ORG), method: 'GET', url: `${P}/staff-tiers` },
   { name: 'createStaffTier', call: () => staff.createStaffTier(ORG, { name: 'Bậc 1' }, KEY), method: 'POST', url: `${P}/staff-tiers`, body: { name: 'Bậc 1' }, idem: true },
@@ -260,6 +271,44 @@ const cases: Case[] = [
   // Sửa gói: thân chỉ có trường đã đổi.
   { name: 'updatePlan', call: () => platform.updatePlan('p1', { priceMonthly: 399_000 }), method: 'PATCH', url: '/api/v1/platform/plans/p1', body: { priceMonthly: 399_000 } },
 ];
+
+// Hợp đồng khoá học (BAN-VE-C3 mục 1.3): cùng hàm như trên, thân / query có kind, dòng COURSE, mẫu điều khoản / nội quy.
+const courseCases: Case[] = [
+  {
+    name: 'createContract (khoá học)',
+    call: () =>
+      contracts.createContract(
+        ORG,
+        { kind: 'COURSE', customerId: 'k1', termsTemplateId: 't1', rulesTemplateId: 'r1', lines: [{ kind: 'COURSE', courseClassId: 'l1' }, { kind: 'CUSTOM', name: 'Giáo trình', unitPrice: 500_000, quantity: 1 }] },
+        KEY,
+      ),
+    method: 'POST',
+    url: `${P}/contracts`,
+    body: { kind: 'COURSE', customerId: 'k1', termsTemplateId: 't1', rulesTemplateId: 'r1', lines: [{ kind: 'COURSE', courseClassId: 'l1' }, { kind: 'CUSTOM', name: 'Giáo trình', unitPrice: 500_000, quantity: 1 }] },
+    idem: true,
+  },
+  { name: 'listContracts (khoá học)', call: () => contracts.listContracts(ORG, { kind: 'COURSE', status: 'CONFIRMED' }), method: 'GET', url: `${P}/contracts?kind=COURSE&status=CONFIRMED` },
+  {
+    name: 'getRevenueReport (khoá học, theo khoá)',
+    call: () => payments.getRevenueReport(ORG, { from: '2026-11-01T00:00:00Z', to: '2026-12-01T00:00:00Z', kind: 'COURSE', groupBy: 'course' }),
+    method: 'GET',
+    url: `${P}/reports/revenue?from=2026-11-01T00%3A00%3A00Z&to=2026-12-01T00%3A00%3A00Z&kind=COURSE&groupBy=course`,
+  },
+];
+
+describe('hợp đồng khoá học: đúng đường, thân, query', () => {
+  it.each(courseCases.map((c) => [c.name, c] as const))('%s', async (_name, c) => {
+    await c.call();
+    expect(seen).toHaveLength(1);
+    const s = seen[0];
+    expect(s?.method).toBe(c.method);
+    expect(s?.url).toBe(c.url);
+    expect(s?.body).toEqual(c.body);
+    expect(s?.headers.Authorization).toBe('Bearer tok');
+    if (c.idem) expect(s?.headers['Idempotency-Key']).toBe(KEY);
+    else expect(s?.headers['Idempotency-Key']).toBeUndefined();
+  });
+});
 
 describe('mỗi hàm gọi đúng đường API', () => {
   it.each(cases.map((c) => [c.name, c] as const))('%s', async (_name, c) => {

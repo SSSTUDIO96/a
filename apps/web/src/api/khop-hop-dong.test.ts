@@ -9,6 +9,7 @@ import * as auth from './auth';
 import * as catalog from './catalog';
 import { setAccessToken } from './client';
 import * as contracts from './contracts';
+import * as courses from './courses';
 import { errorKind, fieldErrors } from './errors';
 import * as files from './files';
 import { newIdempotencyKey } from './idempotency';
@@ -86,6 +87,21 @@ function migrateDeploy(url: string): void {
     const e = err as { stdout?: Buffer; stderr?: Buffer; message: string };
     throw new Error(`prisma migrate deploy thất bại trên ${DB_ENV}:\n${e.stdout?.toString() ?? ''}${e.stderr?.toString() ?? e.message}`);
   }
+}
+
+// Tổ chức đào tạo cần gói có khoá học / học viên (gói mặc định 'trial' không có). Như apps/api/test/helpers.ts
+// grantUnlimitedPlan: một gói thử không giới hạn + thuê bao ACTIVE — ghi thẳng vào database thử của bài này.
+function grantUnlimitedPlan(url: string, orgId: string): void {
+  if (!/^[0-9a-f-]{36}$/.test(orgId)) throw new Error(`Mã tổ chức lạ: ${orgId}`);
+  const sql = `
+    WITH p AS (
+      INSERT INTO subscription_plans (id, code, name, price_monthly, features, updated_at)
+      VALUES (gen_random_uuid(), 'khop_' || substr(md5(random()::text), 1, 10), 'Gói thử không giới hạn', 0, '{}', now())
+      RETURNING id
+    )
+    INSERT INTO organization_subscriptions (id, organization_id, plan_id, status, starts_at)
+    SELECT gen_random_uuid(), '${orgId}'::uuid, p.id, 'ACTIVE', now() - interval '1 day' FROM p;`;
+  execFileSync(join(API_DIR, 'node_modules', '.bin', 'prisma'), ['db', 'execute', '--url', url, '--stdin'], { cwd: API_DIR, input: sql, stdio: 'pipe' });
 }
 
 // Mọi hàm gọi của các module nghiệp vụ: thêm hàm mới mà bài này chưa gọi → bài "đã gọi đủ" đỏ.
@@ -454,7 +470,8 @@ describe('types.ts khớp đúng dữ liệu máy chủ thật trả về (tên 
     expect(typeof line.id).toBe('string');
     expect(first(line.staff, 'thợ của dòng đã lưu').membershipId).toBe(membershipId);
     expect(line.staffWarnings).toEqual([]);
-    expect(line.travel?.travelBreakdown).toBeNull();
+    // Dòng TRAVEL đã lưu: máy chủ dựng lại công thức từ số liệu đã chụp lúc lưu (migration 20261018240000).
+    expect(line.travel?.travelBreakdown).toMatchObject({ includedKm: 5, includedFrom: 'PACKAGE', roundTrip: true, tier: null });
     expect(contract.total).toBe(q.total);
 
     first((await chk('contracts.listContracts', contracts.listContracts(orgId, { status: 'DRAFT' }))).items, 'hợp đồng');
@@ -607,6 +624,112 @@ describe('types.ts khớp đúng dữ liệu máy chủ thật trả về (tên 
     );
     const cancelled = await chk('contracts.changeContractStatus', contracts.changeContractStatus(orgId, c2.id, { to: 'CANCELLED', reason: 'Khách đổi ý' }), 'changeContractStatus (huỷ)');
     expect(first(cancelled.cancelledAppointments, 'lịch bị huỷ theo hợp đồng')).toMatchObject({ id: a2.id, status: 'CANCELLED' });
+  });
+
+  it('hợp đồng khoá học: mẫu điều khoản / nội quy, dòng COURSE + khoản tự đặt tên, giữ chỗ khi xác nhận, lớp đầy 409, báo cáo theo khoá', async () => {
+    // Tổ chức TEAM: hợp đồng khoá học bị chặn 403.
+    const team = await contracts
+      .quoteContract(orgId, { kind: 'COURSE', customerId: customer.id, lines: [{ kind: 'CUSTOM', name: 'Giáo trình', unitPrice: 1, quantity: 1 }] })
+      .catch((e: unknown) => e);
+    expect(errorKind(team)).toBe('forbidden');
+
+    const academy = await auth.createOrganization({ name: `Học viện khớp ${stamp}`, slug: `hv-${slug}`, kind: 'ACADEMY' }, newIdempotencyKey());
+    const hv = academy.id;
+    grantUnlimitedPlan(khopDatabaseUrl(), hv);
+    const group = await courses.createCourseGroup(hv, { name: 'Makeup chuyên nghiệp' }, newIdempotencyKey());
+    const made = await courses.createCourse(
+      hv,
+      {
+        name: 'Makeup chuyên nghiệp',
+        groupId: group.id,
+        mode: 'MULTI_CLASS',
+        tuitionFee: 18_000_000,
+        depositAmount: 5_000_000,
+        defaultCapacity: 1,
+        firstClass: { name: 'K1', startDate: '2026-11-02', endDate: '2026-12-17', weekdays: [2, 4, 6], startTime: '18:00', endTime: '22:00', capacity: 1 },
+      },
+      newIdempotencyKey(),
+    );
+    const k1 = first(made.classes, 'lớp đầu tiên');
+
+    // Mẫu điều khoản / nội quy: thêm, sửa nội dung (phiên bản tăng), đặt mặc định, danh sách theo loại hợp đồng.
+    const terms = await chk(
+      'contracts.createContractText',
+      contracts.createContractText(hv, { kind: 'TERMS', appliesTo: ['COURSE'], name: 'Điều khoản khoá học', body: '1. Học phí đã đóng không hoàn lại.', isDefault: true }, newIdempotencyKey()),
+    );
+    expect(terms).toMatchObject({ version: 1, isDefault: true, isActive: true });
+    const rules0 = await contracts.createContractText(hv, { kind: 'RULES', appliesTo: [], name: 'Nội quy trung tâm', body: 'Có mặt trước giờ học 10 phút.' }, newIdempotencyKey());
+    const rules = await chk('contracts.updateContractText', contracts.updateContractText(hv, rules0.id, { body: '1. Có mặt trước giờ học 10 phút.\n2. Giữ gìn dụng cụ chung.', isDefault: true }));
+    expect(rules).toMatchObject({ version: 2, isDefault: true });
+    const texts = await chk('contracts.listContractTexts', contracts.listContractTexts(hv, { appliesTo: 'COURSE' }));
+    expect(texts.map((t) => t.id).sort()).toEqual([terms.id, rules.id].sort());
+    expectIso(first(texts, 'mẫu').updatedAt, 'ContractText.updatedAt');
+
+    const student = await schedule.createCustomer(hv, { fullName: 'Tôn Nữ Hoàng Bảo Ngọc Phương Thảo', phone: '0912345678' }, newIdempotencyKey());
+    const body: ContractBody = {
+      kind: 'COURSE',
+      customerId: student.id,
+      ownerMembershipId: first(
+        (await auth.getMe()).organizations.filter((o) => o.id === hv),
+        'tổ chức học viện',
+      ).membershipId,
+      termsTemplateId: terms.id,
+      rulesTemplateId: rules.id,
+      discount: 1_000_000,
+      lines: [
+        { kind: 'COURSE', courseClassId: k1.id },
+        { kind: 'CUSTOM', name: 'Giáo trình', unitPrice: 500_000, quantity: 1 },
+      ],
+    };
+    // Luật trộn dòng: hợp đồng dịch vụ không nhận dòng khoá học.
+    const mixed = await contracts.quoteContract(hv, { ...body, kind: 'SERVICE', termsTemplateId: undefined, rulesTemplateId: undefined }).catch((e: unknown) => e);
+    expect(errorKind(mixed)).toBe('validation');
+
+    const q = await chk('contracts.quoteContract', contracts.quoteContract(hv, body), 'quoteContract (khoá học)');
+    expect(q.kind).toBe('COURSE');
+    expect(first(q.classes, 'lớp trong quote')).toMatchObject({ classId: k1.id, capacity: 1, enrolledCount: 0, seatsLeft: 1, seatState: 'AVAILABLE' });
+    expect(first(q.lines, 'dòng khoá học')).toMatchObject({ kind: 'COURSE', courseClassId: k1.id, unitPrice: 18_000_000, quantity: 1 });
+    expect(q.total).toBe(17_500_000);
+
+    const draft = await chk('contracts.createContract', contracts.createContract(hv, body, newIdempotencyKey()), 'createContract (khoá học)');
+    expect(draft.code.startsWith('HĐKH-')).toBe(true);
+    expect(draft).toMatchObject({ kind: 'COURSE', termsTemplateId: terms.id, rulesTemplateId: rules.id, rulesTemplateVersion: 2, rules: null, enrollments: [] });
+    const confirmed = await chk('contracts.changeContractStatus', contracts.changeContractStatus(hv, draft.id, { to: 'CONFIRMED' }), 'changeContractStatus (khoá học)');
+    const enr = first(confirmed.enrollments, 'ghi danh');
+    expect(enr).toMatchObject({ courseClassId: k1.id, status: 'ACTIVE', cancelledAt: null });
+    expectIso(enr.enrolledAt, 'Enrollment.enrolledAt');
+    expect(confirmed.rules).toBe(rules.body);
+    expect(confirmed.terms).toBe(terms.body);
+    first((await chk('contracts.listContracts', contracts.listContracts(hv, { kind: 'COURSE' }), 'listContracts (khoá học)')).items, 'hợp đồng khoá học');
+
+    // Lớp đã đủ 1/1: hợp đồng thứ hai vào cùng lớp → 409 ngay lúc lưu, details có số chỗ mới.
+    const other = await schedule.createCustomer(hv, { fullName: 'Đỗ Minh Ngọc' }, newIdempotencyKey());
+    const full = await contracts.createContract(hv, { kind: 'COURSE', customerId: other.id, lines: [{ kind: 'COURSE', courseClassId: k1.id }] }, newIdempotencyKey()).catch((e: unknown) => e);
+    expect(errorKind(full)).toBe('conflict');
+    expect((full as { details?: unknown }).details).toMatchObject({ reason: 'CLASS_FULL', classId: k1.id, enrolledCount: 1, capacity: 1, seatsLeft: 0 });
+
+    // Thu tiền dùng nguyên module payments; báo cáo lọc khoá học, nhóm theo khoá / nhóm khoá / loại.
+    await payments.putInstallments(hv, draft.id, {
+      installments: [
+        { name: 'Đặt cọc', dueDate: '2026-10-20T00:00:00+07:00', amount: 5_000_000, isDeposit: true },
+        { name: 'Khai giảng', dueDate: '2026-11-02T00:00:00+07:00', amount: 12_500_000 },
+      ],
+    });
+    await payments.createPayment(hv, draft.id, { method: 'BANK_TRANSFER', amount: 5_000_000 }, newIdempotencyKey());
+    const from = new Date(Date.now() - 86_400_000).toISOString();
+    const to = new Date(Date.now() + 86_400_000).toISOString();
+    const byCourse = await chk('payments.getRevenueReport', payments.getRevenueReport(hv, { from, to, kind: 'COURSE', groupBy: 'course' }), 'getRevenueReport (khoá)');
+    if (byCourse.groupBy !== 'course') throw new Error('Báo cáo phải nhóm theo khoá');
+    expect(byCourse.kind).toBe('COURSE');
+    expect(byCourse.totals).toMatchObject({ contractCount: 1, sales: 17_500_000, depositRequired: 5_000_000, collected: 5_000_000, outstanding: 12_500_000 });
+    expect(first(byCourse.rows, 'dòng khoá')).toMatchObject({ segment: 'COURSE', course: { id: made.course.id }, group: { id: group.id }, sales: 17_500_000 });
+    const byGroup = await chk('payments.getRevenueReport', payments.getRevenueReport(hv, { from, to, kind: 'COURSE', groupBy: 'courseGroup' }), 'getRevenueReport (nhóm khoá)');
+    if (byGroup.groupBy !== 'courseGroup') throw new Error('Báo cáo phải nhóm theo nhóm khoá');
+    expect(first(byGroup.rows, 'dòng nhóm khoá').group?.name).toBe('Makeup chuyên nghiệp');
+    await chk('payments.getRevenueReport', payments.getRevenueReport(hv, { from, to, groupBy: 'kind' }), 'getRevenueReport (loại)');
+    const byContract = await chk('payments.getRevenueReport', payments.getRevenueReport(hv, { from, to, kind: 'COURSE', groupBy: 'contract' }), 'getRevenueReport (hợp đồng khoá học)');
+    if (byContract.groupBy !== 'contract') throw new Error('Báo cáo phải nhóm theo hợp đồng');
+    expect(first(byContract.rows, 'hợp đồng khoá học')).toMatchObject({ kind: 'COURSE', courses: [{ id: made.course.id, groupId: group.id }], paid: 5_000_000, remaining: 12_500_000 });
   });
 
   it('đã gọi đủ mọi hàm gọi của các module nghiệp vụ', () => {

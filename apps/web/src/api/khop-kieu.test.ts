@@ -17,6 +17,7 @@ const S = napKieu(join(HERE, 'types.ts'), join(HERE, '..', '..', 'tsconfig.json'
 const goodSummary = {
   id: '3f1c0a52-0000-4000-8000-000000000001',
   code: 'HD-000001',
+  kind: 'SERVICE',
   status: 'DRAFT',
   eventDate: null,
   subtotal: 1_500_000,

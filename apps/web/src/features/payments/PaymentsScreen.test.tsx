@@ -38,7 +38,7 @@ function progress(over: Partial<ContractPayments> = {}): ContractPayments {
       status: 'CONFIRMED',
       eventDate: '2026-10-24T01:00:00.000Z',
       confirmedAt: '2026-10-12T03:00:00.000Z',
-      customer: { id: 'k-1', fullName: 'Tôn Nữ Hoàng Bảo Ngọc Phương Thảo', phone: '0912345678' },
+      customer: { id: 'k-1', fullName: 'Tôn Nữ Hoàng Bảo Ngọc Phương Thảo', phone: '0912345678', phoneHidden: false },
     },
     summary: SUM,
     installments: [],
@@ -52,6 +52,7 @@ function progress(over: Partial<ContractPayments> = {}): ContractPayments {
 const LIST_ITEM: ContractSummary = {
   id: HD,
   code: 'HD-000142',
+  kind: 'SERVICE',
   status: 'CONFIRMED',
   eventDate: '2026-10-24T01:00:00.000Z',
   subtotal: 5_300_000,
@@ -508,5 +509,70 @@ describe('huỷ phiếu', () => {
     status = 403;
     await act(async () => fireEvent.click(within(dlg).getByRole('button', { name: 'Huỷ phiếu' })));
     expect(await within(dlg).findByText('Bạn không có quyền huỷ phiếu thu')).toBeTruthy();
+  });
+});
+
+describe('tổ chức đào tạo: chip loại hợp đồng (kind máy chủ), hợp đồng khoá học dùng nguyên khối thu tiền', () => {
+  const KH = 'hd-kh-57';
+  const COURSE_ITEM: ContractSummary = {
+    ...LIST_ITEM,
+    id: KH,
+    code: 'HĐKH-2026-0057',
+    kind: 'COURSE',
+    eventDate: null,
+    total: 17_000_000,
+    confirmedAt: '2026-10-18T03:00:00.000Z',
+    customer: { id: 'k-2', fullName: 'Đỗ Minh Ngọc', phone: null },
+  };
+  const courseHandler: Handler = (c) => {
+    const url = decodeURIComponent(c.url);
+    if (c.method === 'GET' && url.includes('/contracts?') && url.includes('kind=COURSE')) return json(200, { items: [COURSE_ITEM], page: 1, pageSize: 50, total: 1 });
+    if (c.method === 'GET' && url.endsWith(`/contracts/${KH}`)) {
+      return json(200, { id: KH, kind: 'COURSE', lines: [{ kind: 'COURSE', name: 'Makeup chuyên nghiệp · K12', voidedAt: null }, { kind: 'CUSTOM', name: 'Giáo trình', voidedAt: null }] });
+    }
+    if (c.method === 'GET' && url.endsWith(`/contracts/${HD}`)) return json(200, { id: HD, kind: 'SERVICE', lines: [] });
+    if (c.method === 'GET' && url.endsWith(`/contracts/${KH}/payments`)) {
+      const p = progress();
+      return json(200, { ...p, contract: { ...p.contract, id: KH, code: 'HĐKH-2026-0057', eventDate: null, customer: { id: 'k-2', fullName: 'Đỗ Minh Ngọc', phone: null, phoneHidden: false } } });
+    }
+    return undefined;
+  };
+
+  function renderAcademy(path: string) {
+    const router = createMemoryRouter(
+      [
+        { path: '/:orgSlug/thu-tien', element: <PaymentsScreen orgId={ORG} orgSlug="hv" contractId={null} access={FULL} academy /> },
+        { path: '/:orgSlug/thu-tien/:id', element: <PaymentsScreen orgId={ORG} orgSlug="hv" contractId={KH} access={FULL} academy /> },
+      ],
+      { initialEntries: [path] },
+    );
+    return render(<RouterProvider router={router} />);
+  }
+
+  it('3 nhóm dịch vụ gửi kind=SERVICE + nhóm "Hợp đồng khoá học" kind=COURSE; chip đếm theo tổng máy chủ và lọc nhóm', async () => {
+    setupServer({ handlers: [courseHandler] });
+    renderAcademy('/hv/thu-tien');
+    const chips = await screen.findByRole('group', { name: 'Loại hợp đồng' });
+    await waitFor(() => expect(within(chips).getAllByRole('button').map((b) => b.textContent)).toEqual(['Tất cả2', 'Khoá học1', 'Dịch vụ makeup1']));
+    const lists = calls.filter((c) => c.url.includes('/contracts?')).map((c) => decodeURIComponent(c.url));
+    expect(lists).toHaveLength(4);
+    expect(lists.filter((u) => u.includes('kind=SERVICE'))).toHaveLength(3);
+    expect(lists.filter((u) => u.includes('kind=COURSE') && !u.includes('eventFrom') && !u.includes('eventTo'))).toHaveLength(1);
+    expect(screen.getByRole('heading', { name: /^Hợp đồng khoá học/ })).toBeTruthy();
+    fireEvent.click(within(chips).getByRole('button', { name: /^Khoá học/ }));
+    expect(screen.queryByRole('heading', { name: /^Sự kiện 7 ngày tới/ })).toBeNull();
+    expect(screen.getByText('HĐKH-2026-0057 · Khoá học')).toBeTruthy();
+    fireEvent.click(within(chips).getByRole('button', { name: /^Dịch vụ makeup/ }));
+    expect(screen.queryByRole('heading', { name: /^Hợp đồng khoá học/ })).toBeNull();
+    expect(screen.getByRole('heading', { name: /^Sự kiện 7 ngày tới/ })).toBeTruthy();
+  });
+
+  it('hợp đồng khoá học: dòng phụ "Khoá · Lớp" (renderSubline), 4 ô số = summary máy chủ', async () => {
+    setupServer({ handlers: [courseHandler] });
+    renderAcademy(`/hv/thu-tien/${KH}`);
+    expect((await screen.findByText('Makeup chuyên nghiệp · K12')).getAttribute('data-o')).toBe('khoa-lop');
+    expect(document.body.textContent).not.toContain('Chưa có ngày sự kiện');
+    expect(tile('total')).toBe('5.300.000 ₫');
+    expect(tile('depositRequired')).toBe('1.000.000 ₫');
   });
 });

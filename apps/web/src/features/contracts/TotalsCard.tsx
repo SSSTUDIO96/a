@@ -19,6 +19,9 @@ export interface TotalsCardProps {
   onDeposit: (v: Vnd | null) => void;
   onNotes: (v: string) => void;
   onNotesBlur?: () => void;
+  // Hợp đồng khoá học: "Cọc phải thu", gợi ý từ cọc mặc định của khoá (bản vẽ C3 mục 2.3).
+  depositLabel?: string;
+  depositTip?: string;
 }
 
 export function TotalsCard(p: TotalsCardProps) {
@@ -56,14 +59,14 @@ export function TotalsCard(p: TotalsCardProps) {
         </div>
         <div className="ct-trow">
           <span className="ct-trow__l">
-            Cọc cần thu
+            {p.depositLabel ?? 'Cọc cần thu'}
             <Tooltip
-              text={`Gợi ý bằng tổng tiền cọc mặc định của các gói trong hợp đồng. Sửa được.${p.suggestedDeposit !== null ? ` Gợi ý: ${formatVnd(p.suggestedDeposit)}.` : ''}`}
+              text={`${p.depositTip ?? 'Gợi ý bằng tổng tiền cọc mặc định của các gói trong hợp đồng. Sửa được.'}${p.suggestedDeposit !== null ? ` Gợi ý: ${formatVnd(p.suggestedDeposit)}.` : ''}`}
             />
           </span>
           <MoneyInput
             id="hd-coc"
-            aria-label="Cọc cần thu"
+            aria-label={p.depositLabel ?? 'Cọc cần thu'}
             value={p.deposit}
             placeholder={p.suggestedDeposit !== null ? `Gợi ý ${formatVnd(p.suggestedDeposit)}` : undefined}
             onChange={p.onDeposit}
