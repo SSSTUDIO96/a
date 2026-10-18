@@ -153,3 +153,10 @@ Mỗi lỗi ghi đủ: triệu chứng · gốc bệnh · số đo · cách ch�
 - **Gốc:** điều phối dùng `git add -A` sau khi thợ W-HDKH báo xong, quên rằng thợ V vẫn đang ghi tệp.
 - **Hậu quả:** commit đó không nhất thiết build được ở phần máy chủ; không được dùng làm commit chấm.
 - **Cách chặn:** khi còn thợ đang chạy, chỉ `git add` đúng danh sách tệp trong báo cáo của thợ đã xong (như commit 2f362c9 của thợ U). `git add -A` chỉ dùng cho bản chụp ghi rõ "WIP — CHƯA nghiệm thu".
+
+## 24. Chốt CHECK của Postgres cho qua NULL — câu SQL điều phối đã duyệt có bẫy
+
+- **Triệu chứng:** chốt `("duration_minutes" IS NULL AND "kind"='SURCHARGE') OR ("duration_minutes" > 0 AND "duration_minutes" <= 1440)` để lọt gói chính (MAIN) và dịch vụ phụ (ADDON) có thời lượng NULL. Bài thử ghi thẳng database của thợ V bắt được: 2/5 lần ghi sai lọt.
+- **Gốc:** với MAIN mà NULL, vế 1 ra FALSE, vế 2 ra NULL (so sánh với NULL), nên FALSE OR NULL = NULL. Postgres coi CHECK ra NULL là **đạt**, không phải trượt.
+- **Cách chặn:** mọi chốt CHECK có cột cho phép NULL phải viết rõ `IS NOT NULL` ở vế còn lại. Bài thử của chốt bắt buộc có ca ghi thẳng NULL vào database cho từng loại không được phép NULL, không chỉ thử qua API.
+- **Bài giảng cho nghề:** người duyệt (điều phối) đã duyệt sai; thợ làm bài thử ghi thẳng database mới bắt được. Đây là lý do bài thử phải đi vòng qua lớp kiểm của máy chủ.
