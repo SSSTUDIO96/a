@@ -445,10 +445,14 @@ describe('mẫu điều khoản / nội quy', () => {
     expect((await defaults()).map((d) => d.id)).toEqual([second.id]);
     await patch(first.id, { isDefault: true }).expect(200);
     expect((await defaults()).map((d) => d.id)).toEqual([first.id]);
-    // Đặt mặc định đồng thời từ hai mẫu: không lỗi trùng, cuối cùng đúng 1 mặc định.
-    const [r1, r2] = await Promise.all([patch(first.id, { isDefault: true }), patch(second.id, { isDefault: true })]);
-    expect([r1.status, r2.status]).toEqual([200, 200]);
-    expect(await defaults()).toHaveLength(1);
+    // Đặt mặc định ĐỒNG THỜI từ hai mẫu, 10 lần: không lỗi trùng, không khoá chéo (deadlock → 500), luôn đúng 1 mặc định.
+    const seen: string[] = [];
+    for (let i = 0; i < 10; i++) {
+      const [r1, r2] = await Promise.all([patch(first.id, { isDefault: true }), patch(second.id, { isDefault: true })]);
+      seen.push(`${r1.status}/${r2.status}:${(await defaults()).length}`);
+    }
+    console.log(`[đặt mặc định đồng thời] ${JSON.stringify(seen.reduce<Record<string, number>>((m, x) => ({ ...m, [x]: (m[x] ?? 0) + 1 }), {}))}`);
+    expect(seen).toEqual(Array(10).fill('200/200:1'));
     // Nội quy mặc định không bị đụng.
     expect(await db.contractText.count({ where: { organizationId: T.orgId, kind: 'RULES', isDefault: true } })).toBe(1);
     const cur = (await defaults())[0]!.id;

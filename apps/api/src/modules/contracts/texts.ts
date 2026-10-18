@@ -255,6 +255,14 @@ export const contractTextRoutes: AnyRoute[] = [
       const o = mustOrg(org);
       const uid = mustUser(userId);
       const row = await deps.db.$transaction(async (tx) => {
+        // THỨ TỰ KHOÁ: khoá tư vấn "mặc định" TRƯỚC, khoá dòng mẫu SAU — giống lệnh thêm mẫu. Ngược lại thì hai lệnh đặt
+        // mặc định cho hai mẫu cùng lúc khoá chéo nhau (mỗi bên giữ dòng mình, chờ dòng bên kia khi bỏ mặc định cũ).
+        // Loại mẫu (kind) không đổi được nên đọc trước khi khoá là an toàn.
+        if (body.isDefault === true) {
+          const head = await tx.contractText.findFirst({ where: { id: params.textId, organizationId: o.id }, select: { kind: true } });
+          if (!head) throw new AppError('NOT_FOUND', 'Không tìm thấy mẫu điều khoản / nội quy');
+          await lockDefaultSlot(tx, o.id, head.kind);
+        }
         const locked = await tx.$queryRaw<{ id: string }[]>`
           SELECT id FROM contract_texts WHERE id = ${params.textId}::uuid AND organization_id = ${o.id}::uuid FOR UPDATE`;
         if (locked.length === 0) throw new AppError('NOT_FOUND', 'Không tìm thấy mẫu điều khoản / nội quy');
@@ -264,10 +272,7 @@ export const contractTextRoutes: AnyRoute[] = [
         }
         const bodyChanged = body.body !== undefined && body.body !== before.body;
         let unset: string[] = [];
-        if (body.isDefault === true) {
-          await lockDefaultSlot(tx, o.id, before.kind);
-          unset = await clearOtherDefaults(tx, o.id, before.kind, before.id);
-        }
+        if (body.isDefault === true) unset = await clearOtherDefaults(tx, o.id, before.kind, before.id);
         // Ngừng dùng một mẫu mặc định → mẫu đó thôi là mặc định (mẫu mặc định phải đang dùng).
         const isDefault = body.isDefault ?? (body.isActive === false ? false : undefined);
         const t = await tx.contractText.update({

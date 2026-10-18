@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { FilePurpose } from '@prisma/client';
 import { defineRoute, mustOrg, mustUser } from '../../http/route';
 import { AppError } from '../../lib/errors';
 import { writeAudit } from '../../lib/audit';
@@ -7,7 +8,8 @@ import { checkContent, newStorageKey, presentFile, PURPOSE_POLICY, readLimitedBo
 
 const OrgParams = z.object({ orgId: z.uuid() });
 const FileParams = OrgParams.extend({ fileId: z.uuid() });
-const Purpose = z.enum(['STAFF_AVATAR', 'CUSTOMER_AVATAR', 'ORG_LOGO', 'ALBUM_IMAGE', 'COURSE_RESOURCE', 'SUBMISSION', 'WELCOME_CARD', 'OTHER']);
+// Mục đích nhận được = đúng các mục đích có chính sách ở PURPOSE_POLICY (một nguồn: thêm mục đích là thêm chính sách).
+const Purpose = z.enum(Object.keys(PURPOSE_POLICY) as [FilePurpose, ...FilePurpose[]]);
 // Tên tệp chỉ để hiển thị; bỏ ký tự điều khiển và dấu gạch đường dẫn.
 const FileName = z
   .string()

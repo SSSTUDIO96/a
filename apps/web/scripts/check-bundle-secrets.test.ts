@@ -1,12 +1,12 @@
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build } from 'vite';
 import { afterAll, describe, expect, it } from 'vitest';
 // @ts-expect-error — tệp .mjs không có khai báo kiểu; chỉ dùng hàm thuần.
-import { readEnvFiles } from './check-bundle-secrets.mjs';
+import { checkBundleDir, readEnvFiles } from './check-bundle-secrets.mjs';
 
 const WEB = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SCRIPT = join(WEB, 'scripts', 'check-bundle-secrets.mjs');
@@ -49,6 +49,27 @@ const DIST_GIA: Record<string, string> = {
   'assets/d-the-thanh-toan.js': `const p="${STRIPE}";`,
   'assets/e-chuoi-ket-noi-cat-doi.js': `const db="postgres"+"ql://makeup:makeup_local@db.internal:5432/x";`,
   'assets/f-jwt-that.js': `const j="${JWT_VALUE}";`,
+};
+
+// Bộ "dist-la" của thợ chấm đợt sửa 1 (biên bản N-J2): 10 dạng khoá lọt khi môi trường build KHÔNG có biến bí mật.
+// Khoá giả ghép lúc chạy như trên. b64/charCodes dựng từ chính khoá Google giả.
+const GOOGLE_2 = j('AIza', 'SyD4kq9Zx8Wm2Lp0Qr7Tu5Vb3Nc1Ej6Hg0Fs');
+const SB_SECRET = j('sb_', 'secret_', 'N7UND0UgjKTVK-Uodkm0Hg_xSvEMPvz');
+const MAPBOX_SECRET = j('sk', '.eyJ1IjoibWFrZXVwIiwiYSI6ImNsdGVzdDAwMDAwMDAwMDAwMDAwMDAwIn0', '.abcdefghijklmnopqrstuv');
+const TWILIO_SID = j('AC', '0123456789abcdef0123456789abcdef');
+const TWILIO_API_KEY = j('SK', 'fedcba9876543210fedcba9876543210');
+const TWILIO_TOKEN = j('0123456789abcdef', '0123456789abcdef');
+const DIST_LA: Record<string, [string, RegExp]> = {
+  'assets/a-mang-join.js': [`const k=["AIza","${GOOGLE_2.slice(4)}"].join('');fetch('https://gen.googleapis.com?key='+k)`, /khoá Google API/],
+  'assets/b-base64.js': [`const k=atob('${Buffer.from(GOOGLE_2).toString('base64')}');`, /khoá Google API .*giải từ atob/],
+  'assets/c-supabase-moi.js': [`const s='${SB_SECRET}';createClient(u,s)`, /khoá bí mật Supabase \(sb_secret_/],
+  'assets/d-mapbox-secret.js': [`mapboxgl.accessToken='${MAPBOX_SECRET}';`, /thẻ bí mật Mapbox/],
+  'assets/e-twilio.js': [`const twilio={sid:'${TWILIO_SID}',token:'${TWILIO_TOKEN}'};`, /Twilio/],
+  'assets/f-fromcharcode.js': [`const k=String.fromCharCode(${[...GOOGLE_2].map((c) => c.charCodeAt(0)).join(',')});`, /khoá Google API .*giải từ String\.fromCharCode/],
+  'assets/g-template.js': ["const k=`AIza${'" + GOOGLE_2.slice(4) + "'}`;", /khoá Google API/],
+  'assets/h-cong-chuoi.js': [`const k='AIza'+'${GOOGLE_2.slice(4)}';`, /khoá Google API/],
+  'assets/i-url-ma-hoa.js': ["const c='postgresql%3A%2F%2Fmakeup%3Amatkhau%40db.supabase.co%3A5432%2Fpostgres';", /chứa "postgresql:\/\/"/],
+  'assets/j-doi-chung-stripe.js': [`const k='${j('sk_', 'live_', '51Hxxxxxxxxxxxxxxxxxxxxxx')}';`, /khoá bí mật Stripe/],
 };
 
 afterAll(() => {
@@ -157,6 +178,67 @@ describe('cửa gác bí mật — vế BẮT', () => {
     expect(r.out).toContain('GIÁ TRỊ của biến GEMINI_API_KEY');
   });
 
+  it('bộ dist-la của thợ chấm đợt sửa 1, môi trường build KHÔNG có bí mật → bắt đủ 10/10 tệp, đúng loại, không in giá trị', () => {
+    const files = Object.fromEntries(Object.entries(DIST_LA).map(([name, [content]]) => [name, content]));
+    const r = runGate(writeBundle(files));
+    expect(r.code).toBe(1);
+    for (const [name, [, kind]] of Object.entries(DIST_LA)) {
+      const lines = r.out.split('\n').filter((l) => l.includes(name.split('/')[1]));
+      expect(lines.length, name).toBeGreaterThan(0);
+      expect(lines.join('\n'), name).toMatch(kind);
+    }
+    expect(r.out).toMatch(/đã quét 10\/10 tệp · [1-9]\d* vi phạm · 10\/10 tệp dính/);
+    for (const v of [GOOGLE_2, SB_SECRET, MAPBOX_SECRET, TWILIO_SID, TWILIO_TOKEN, 'matkhau']) expect(r.out).not.toContain(v);
+  });
+
+  const moreShapes: [string, string][] = [
+    ['SID khoá API Twilio (SK…)', `k="${TWILIO_API_KEY}"`],
+    ['thẻ xác thực Twilio đặt tên authToken', `c={accountSid:x,authToken:"${TWILIO_TOKEN}"}`],
+    ['mảng chuỗi join("") ghép khoá Stripe', `k=["sk_li","ve_","${j('abcdefghij', '0123456789')}"].join("")`],
+    ['mảng chuỗi join() có dấu cách trong ngoặc', `k=[ 'sb_secret_', '${SB_SECRET.slice(10)}' ].join( '' )`],
+    ['atob chuỗi base64 ra chuỗi kết nối có mật khẩu', `k=atob("${Buffer.from('postgres://u:matkhau@h:5432/db').toString('base64')}")`],
+    ['Buffer.from(…, "base64") ra khoá Supabase mới', `k=Buffer.from('${Buffer.from(SB_SECRET).toString('base64')}','base64').toString()`],
+  ];
+  for (const [label, content] of moreShapes) {
+    it(`bắt ${label} → exit 1, in tên tệp`, () => {
+      const r = runGate(writeBundle({ 'index.html': '<html></html>', 'assets/index-abc.js': `console.log(1);${content}` }));
+      expect(r.code).toBe(1);
+      expect(r.out).toContain('index-abc.js');
+      expect(r.out).toMatch(/đã quét 2\/2 tệp · [1-9]\d* vi phạm · 1\/2 tệp dính/);
+    });
+  }
+
+  // Biên bản N-J4 (J-d): tệp không đọc được mà vẫn báo đạt. Không quét được tệp nào thì không cho qua, và phải nói tên tệp.
+  it('một tệp trong thư mục build không đọc được (lỗi khi đọc) → exit 1, in tên tệp, "đã quét 1/2"', () => {
+    const dir = writeBundle({ 'index.html': '<html></html>', 'assets/khoa-doc.js': 'console.log(1)' });
+    const r = checkBundleDir(dir, {}, {
+      readFile: (p: string) => {
+        if (p.endsWith('khoa-doc.js')) throw Object.assign(new Error('EACCES: permission denied'), { code: 'EACCES' });
+        return Buffer.from('<html></html>');
+      },
+    });
+    expect(r.code).toBe(1);
+    expect(r.lines.join('\n')).toMatch(/KHÔNG ĐỌC ĐƯỢC .*khoa-doc\.js/);
+    expect(r.lines.join('\n')).toMatch(/đã quét 1\/2 tệp/);
+  });
+
+  it('liên kết hỏng trong thư mục build → exit 1, in tên tệp (không dừng cả lượt quét với lời chung chung)', () => {
+    const dir = writeBundle({ 'index.html': '<html></html>' });
+    symlinkSync(join(dir, 'khong-co-that.js'), join(dir, 'lien-ket-hong.js'));
+    const r = runGate(dir);
+    expect(r.code).toBe(1);
+    expect(r.out).toMatch(/KHÔNG ĐỌC ĐƯỢC .*lien-ket-hong\.js/);
+    expect(r.out).toMatch(/đã quét 1\/2 tệp/);
+  });
+
+  it.skipIf(spawnSync('mkfifo', ['--version']).status !== 0)('tệp đặc biệt (FIFO) trong thư mục build → exit 1, in tên tệp, không treo', () => {
+    const dir = writeBundle({ 'index.html': '<html></html>' });
+    expect(spawnSync('mkfifo', [join(dir, 'ong-dan.js')]).status).toBe(0);
+    const r = runGate(dir);
+    expect(r.code).toBe(1);
+    expect(r.out).toMatch(/KHÔNG ĐỌC ĐƯỢC .*ong-dan\.js/);
+  });
+
   it('thư mục rỗng hoặc không có → exit 1 (không quét được thì không cho qua)', () => {
     expect(runGate(tempDir()).code).toBe(1);
     expect(runGate(join(tempDir(), 'khong-co')).code).toBe(1);
@@ -180,6 +262,29 @@ describe('cửa gác bí mật — vế GIỮ', () => {
         ].join(';'),
       }),
       { NODE_ENV: 'production', VERCEL: '1', VERCEL_ENV: 'production', CI: '1' },
+    );
+    expect(r.out).toMatch(/đã quét 1\/1 tệp · 0 vi phạm · 0\/1 tệp dính/);
+    expect(r.code).toBe(0);
+  });
+
+  it('dạng công khai / trông giống nhưng không phải khoá (Supabase publishable, Mapbox pk., join/atob/fromCharCode chữ thường, mã băm hex) → 0 vi phạm', () => {
+    const r = runGate(
+      writeBundle({
+        'a.js': [
+          `k="${j('sb_', 'publishable_', 'N7UND0UgjKTVK-Uodkm0Hg_xSvEMPvz')}"`,
+          `mapboxgl.accessToken="${j('pk', '.eyJ1IjoibWFrZXVwIiwiYSI6ImNsdGVzdDAwMDAwMDAwMDAwMDAwMDAwIn0', '.abcdefghijklmnopqrstuv')}"`,
+          'cls=["ui-input","ui-input--right"].join(" ")',
+          'p=["a","b","c"].join("")',
+          `t=atob("${Buffer.from('Xin chào, đây là chữ thường').toString('base64')}")`,
+          'd=atob(s)',
+          's=String.fromCharCode(e)',
+          'z=String.fromCharCode(72,101,108,108,111)',
+          'integrity="sha384-0123456789abcdef0123456789abcdef"',
+          'id="0123456789abcdef0123456789abcdef"',
+          'sk="sk.abc"',
+          'q="%3A%2F%2Fexample.com"',
+        ].join(';'),
+      }),
     );
     expect(r.out).toMatch(/đã quét 1\/1 tệp · 0 vi phạm · 0\/1 tệp dính/);
     expect(r.code).toBe(0);

@@ -6,6 +6,7 @@ import { AppError } from '../../lib/errors';
 import { writeAudit } from '../../lib/audit';
 import { assertCanEditRole, assertCanGrant, assertCanTouchMember, assertKeepsAnOwner } from './guards';
 import { lockOrgAndRecheck, recordNewOrgIdempotency } from '../../http/middleware';
+import { seedDefaultGreetingPhrases } from '../designs/seed';
 
 // Tên trang của web không được dùng làm đường dẫn tổ chức (web dùng /:orgSlug/...).
 // 'trang': trang giới thiệu công khai nằm ở /trang/:slug — tổ chức đặt đường dẫn "trang" sẽ đè đường đó.
@@ -111,6 +112,8 @@ export const orgRoutes = [
         await tx.makeupSubject.createMany({
           data: DEFAULT_MAKEUP_SUBJECTS.map((name, i) => ({ organizationId: created.id, name, sortOrder: i })),
         });
+        // 6 câu chúc mặc định cho thiết kế thẻ (hàm dùng chung với lệnh chạy bù; không chép hai lần).
+        await seedDefaultGreetingPhrases(tx, created.id);
         await tx.travelFeePolicy.create({ data: { organizationId: created.id } });
         const membership = await tx.membership.create({ data: { organizationId: created.id, userId: uid } });
         await tx.membershipRole.create({
