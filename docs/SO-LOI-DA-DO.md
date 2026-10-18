@@ -74,6 +74,13 @@ Mỗi lỗi ghi đủ: triệu chứng · gốc bệnh · số đo · cách ch�
 - **Đo lại:** trên đúng bản đã lưu (bung ra thư mục riêng), web đạt 119 + 28 = 147/147. Hai bài đỏ chỉ do phần thợ khác đang làm dở trong thư mục làm việc. Mã đã lưu không lỗi. Quy trình thì sai.
 - **Cách chặn:** lưu chỉ được chạy khi lệnh bài thử thoát mã 0 (nối bằng `&&`, không lọc kết quả qua `grep` trước đó). Số ghi trong lời lưu phải là số tự đo trên đúng bản sắp lưu.
 
+### 14. Viết tệp migration làm hai lần, thợ khác áp đúng bản dở
+- **Triệu chứng:** thợ hợp đồng báo database thử của mình thiếu các chốt chặn (khoá sổ thu tiền, chặn bậc phí chồng nhau…) dù tệp migration trong kho có đủ.
+- **Gốc bệnh:** điều phối ghi tệp migration hai bước (phần bảng trước, phần chốt chặn viết tay sau). Giữa hai bước, thợ đang chạy bài thử đã tự áp migration — nhận bản chỉ có phần đầu. Công cụ coi như "đã áp", không bao giờ áp lại.
+- **Số đo:** soát 1/1 database thử bị nhận bản thiếu (đã áp = 1, có chốt chặn = 0). Trong lúc thiếu chốt, bài thử đã ghi 2 bậc phí chồng nhau ([0–10) và [5–20) km) — đúng loại dữ liệu chốt chặn phải cấm. Muốn áp lại chốt phải dọn dữ liệu bẩn trước.
+- **Cách chặn:** viết migration xong trọn vào tệp tạm ngoài kho, kiểm xong mới chuyển vào thư mục migrations bằng **một** lệnh. Khi nhiều thợ chạy song song, không bao giờ sửa dần một migration đã nằm trong thư mục.
+- **Bài học cho studio khác:** chốt chặn thiếu dù chỉ vài phút là đủ để dữ liệu sai lọt vào, và chốt sau đó không tự dọn dữ liệu đã lọt.
+
 ---
 
 ## Phần CỦA RIÊNG DỰ ÁN NÀY
@@ -81,3 +88,4 @@ Mỗi lỗi ghi đủ: triệu chứng · gốc bệnh · số đo · cách ch�
 - Lỗi 3: `apps/api/src/scripts/sync-system-roles.ts`, commit `0c55493`.
 - Lỗi 4: `apps/api/test/global-setup.ts`.
 - Lỗi 5: migration `20261018151403_bang_gia_lich`.
+- Lỗi 14: migration `20261018190000_tep_thu_tien_nen_tang`; database thử `makeup_test_contract` đã dọn 2 bậc chồng của tổ chức thử, áp `travel_tiers_no_overlap`, sửa checksum; `prisma migrate status` báo khớp 9/9.
