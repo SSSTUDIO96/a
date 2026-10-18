@@ -42,6 +42,8 @@ import {
   buildBody,
   conflictsForLine,
   confirmBlockedReason,
+  addedLabel,
+  belowPaidText,
   conflictsOf,
   confirmResultText,
   contractAbilities,
@@ -341,6 +343,12 @@ export function ContractEditor({ orgId, slug, tz, has, contractId }: ContractEdi
       scrollToFirstError();
       return;
     }
+    const below = belowPaidText(err);
+    if (below) {
+      setAlert({ text: below });
+      scrollToFirstError();
+      return;
+    }
     const money = moneyFieldOf(err);
     const fields = money ? { ...fieldErrors(err), [money.field]: money.message } : fieldErrors(err);
     const line = errorLineOf(err);
@@ -564,8 +572,7 @@ export function ContractEditor({ orgId, slug, tz, has, contractId }: ContractEdi
           quantity: v.quantity,
           note: v.note,
           view: v,
-          // Máy chủ chưa trả ngày thêm dòng (LineView không có createdAt) → chỉ ghi "Phát sinh", không đoán ngày.
-          addedLabel: v.addedAfterConfirm ? 'Phát sinh' : null,
+          addedLabel: addedLabel(v, tz),
           error: null,
         }));
 
@@ -812,6 +819,7 @@ export function ContractEditor({ orgId, slug, tz, has, contractId }: ContractEdi
                 locked={!draftMode || !ab.canEdit}
                 errors={draftMode ? errors : {}}
                 resetKey={resetKey}
+                addedLabel={!draftMode && view ? addedLabel(view, tz) : null}
                 lineError={draftMode ? lineErrorAt(i) : null}
                 warnings={warnings.get(l.key) ?? []}
                 people={l.staff.map((s) => ({ ...s, displayName: nameOf(s.membershipId), initials: people.get(s.membershipId)?.initials, avatarUrl: people.get(s.membershipId)?.avatarUrl }))}

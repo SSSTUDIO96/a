@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as catalog from './catalog';
 import { setAccessToken } from './client';
 import * as contracts from './contracts';
+import * as courses from './courses';
 import * as files from './files';
 import * as org from './org';
 import * as payments from './payments';
@@ -143,7 +144,7 @@ const cases: Case[] = [
   { name: 'createContract', call: () => contracts.createContract(ORG, contractBody, KEY), method: 'POST', url: `${P}/contracts`, body: contractBody, idem: true },
   { name: 'listContracts', call: () => contracts.listContracts(ORG, { status: 'DRAFT', q: 'HD-0001' }), method: 'GET', url: `${P}/contracts?status=DRAFT&q=HD-0001` },
   { name: 'getContract', call: () => contracts.getContract(ORG, 'h1'), method: 'GET', url: `${P}/contracts/h1` },
-  { name: 'updateContract', call: () => contracts.updateContract(ORG, 'h1', { notes: 'Ghi chú', eventDate: null }), method: 'PATCH', url: `${P}/contracts/h1`, body: { notes: 'Ghi chú', eventDate: null } },
+  { name: 'updateContract', call: () => contracts.updateContract(ORG, 'h1', { expectedUpdatedAt: '2026-10-18T10:00:00.000Z', notes: 'Ghi chú', eventDate: null }), method: 'PATCH', url: `${P}/contracts/h1`, body: { expectedUpdatedAt: '2026-10-18T10:00:00.000Z', notes: 'Ghi chú', eventDate: null } },
   {
     name: 'addContractLine',
     call: () => contracts.addContractLine(ORG, 'h1', { kind: 'SURCHARGE', serviceId: 'sv9', quantity: 1 }, KEY),
@@ -323,5 +324,55 @@ describe('org.ts: vai trò và thêm thành viên', () => {
     expect(seen[0]?.body).toEqual({ email: 'tho@gmail.com', roleKeys: ['artist'] });
     expect(seen[0]?.headers['Content-Type']).toBe('application/json');
     expect(seen[0]?.headers['Idempotency-Key']).toBeUndefined();
+  });
+});
+
+// Khoá & lớp (courses.ts — màn Đào tạo, bản vẽ C3 mục 1.3, 3.2).
+describe('courses.ts: mỗi hàm gọi đúng đường API', () => {
+  const firstClass = { startDate: '2026-10-31', endDate: '2026-11-21', weekdays: [5], startTime: '18:30', endTime: '21:30', capacity: 10 };
+  const courseCases: Case[] = [
+    { name: 'listCourseGroups', call: () => courses.listCourseGroups(ORG), method: 'GET', url: `${P}/course-groups` },
+    { name: 'createCourseGroup', call: () => courses.createCourseGroup(ORG, { name: 'Nâng cao' }, KEY), method: 'POST', url: `${P}/course-groups`, body: { name: 'Nâng cao' }, idem: true },
+    { name: 'updateCourseGroup', call: () => courses.updateCourseGroup(ORG, 'g1', { isActive: false }), method: 'PATCH', url: `${P}/course-groups/g1`, body: { isActive: false } },
+    { name: 'listCourses', call: () => courses.listCourses(ORG, { groupId: 'g1', q: 'nâng', includeArchived: false }), method: 'GET', url: `${P}/courses?groupId=g1&q=n%C3%A2ng&includeArchived=false` },
+    { name: 'getCourse', call: () => courses.getCourse(ORG, 'k1'), method: 'GET', url: `${P}/courses/k1` },
+    {
+      name: 'createCourse',
+      call: () => courses.createCourse(ORG, { name: 'Makeup cá nhân đi tiệc', mode: 'SINGLE_CLASS', tuitionFee: 2_500_000, defaultCapacity: 10, firstClass }, KEY),
+      method: 'POST',
+      url: `${P}/courses`,
+      body: { name: 'Makeup cá nhân đi tiệc', mode: 'SINGLE_CLASS', tuitionFee: 2_500_000, defaultCapacity: 10, firstClass },
+      idem: true,
+    },
+    { name: 'updateCourse', call: () => courses.updateCourse(ORG, 'k1', { mode: 'MULTI_CLASS', firstClassName: 'Nâng cao K1' }), method: 'PATCH', url: `${P}/courses/k1`, body: { mode: 'MULTI_CLASS', firstClassName: 'Nâng cao K1' } },
+    { name: 'archiveCourse', call: () => courses.archiveCourse(ORG, 'k1', 'Ngừng mở'), method: 'POST', url: `${P}/courses/k1/archive`, body: { reason: 'Ngừng mở' } },
+    {
+      name: 'createClass',
+      call: () => courses.createClass(ORG, 'k1', { name: 'Nâng cao K2', ...firstClass, capacity: 12 }, KEY),
+      method: 'POST',
+      url: `${P}/courses/k1/classes`,
+      body: { name: 'Nâng cao K2', ...firstClass, capacity: 12 },
+      idem: true,
+    },
+    { name: 'updateClass', call: () => courses.updateClass(ORG, 'c1', { capacity: 6, startTime: null, endTime: null }), method: 'PATCH', url: `${P}/classes/c1`, body: { capacity: 6, startTime: null, endTime: null } },
+    { name: 'cancelClass', call: () => courses.cancelClass(ORG, 'c1', 'Không đủ học viên'), method: 'POST', url: `${P}/classes/c1/cancel`, body: { reason: 'Không đủ học viên' } },
+    { name: 'listClasses', call: () => courses.listClasses(ORG, { courseId: 'k1', hasSeats: true }), method: 'GET', url: `${P}/classes?courseId=k1&hasSeats=true` },
+    { name: 'listEnrollments', call: () => courses.listEnrollments(ORG, 'c1'), method: 'GET', url: `${P}/classes/c1/enrollments` },
+  ];
+
+  it.each(courseCases.map((c) => [c.name, c] as const))('%s', async (_name, c) => {
+    await c.call();
+    expect(seen).toHaveLength(1);
+    const s = seen[0];
+    expect(s?.method).toBe(c.method);
+    expect(s?.url).toBe(c.url);
+    expect(s?.body).toEqual(c.body);
+    expect(s?.headers.Authorization).toBe('Bearer tok');
+    if (c.idem) expect(s?.headers['Idempotency-Key']).toBe(KEY);
+    else expect(s?.headers['Idempotency-Key']).toBeUndefined();
+  });
+
+  it('đủ mọi hàm xuất ra của courses đều có bài thử', () => {
+    expect(courseCases.map((c) => c.name).sort()).toEqual(Object.keys(courses).sort());
   });
 });

@@ -459,7 +459,8 @@ describe('types.ts khớp đúng dữ liệu máy chủ thật trả về (tên 
 
     first((await chk('contracts.listContracts', contracts.listContracts(orgId, { status: 'DRAFT' }))).items, 'hợp đồng');
     await chk('contracts.getContract', contracts.getContract(orgId, contract.id));
-    await chk('contracts.updateContract', contracts.updateContract(orgId, contract.id, { notes: 'Đến sớm 15 phút' }));
+    // PATCH bắt buộc expectedUpdatedAt = updatedAt của bản đang sửa (biên bản web 2, T2).
+    await chk('contracts.updateContract', contracts.updateContract(orgId, contract.id, { expectedUpdatedAt: (await contracts.getContract(orgId, contract.id)).updatedAt, notes: 'Đến sớm 15 phút' }));
 
     const added = await chk(
       'contracts.addContractLine',
@@ -469,7 +470,7 @@ describe('types.ts khớp đúng dữ liệu máy chủ thật trả về (tên 
     const custom = added.lines.find((l) => l.kind === 'CUSTOM');
     if (!custom) throw new Error('Không thấy dòng CUSTOM vừa thêm');
     // Đặt cọc bằng tổng hiện tại để huỷ dòng làm cọc vượt tổng mới → máy chủ tự hạ cọc và báo trong adjustments.
-    await contracts.updateContract(orgId, contract.id, { depositRequired: added.total });
+    await contracts.updateContract(orgId, contract.id, { expectedUpdatedAt: (await contracts.getContract(orgId, contract.id)).updatedAt, depositRequired: added.total });
     const voided = await chk('contracts.voidContractLine', contracts.voidContractLine(orgId, contract.id, custom.id, { reason: 'Khách tự thuê' }));
     expect(first(voided.adjustments, 'điều chỉnh')).toMatchObject({ field: 'depositRequired', from: added.total, to: voided.total });
     expectIso(voided.lines.find((l) => l.id === custom.id)?.voidedAt, 'voidedAt');

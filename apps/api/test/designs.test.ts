@@ -1,7 +1,7 @@
 // Module MẪU THIẾT KẾ VÀ THẺ (gói M6, bản vẽ C3 mục 1.3–1.4): danh mục mẫu, giá trị ô từ hợp đồng, câu chúc soạn sẵn,
 // thẻ chào mừng / feedback / lời chúc. Khoá học, lớp, hợp đồng khoá học và tệp ảnh tạo thẳng bằng deps.db (đường API khoá học,
 // hợp đồng khoá học và tải tệp DESIGN_PHOTO/DESIGN_CARD do thợ khác làm song song).
-// Cuối tệp: chạy cửa gác cách ly + cửa gác sửa một phần CHỈ trên designRoutes, với mẫu đề xuất cho điều phối.
+// Cửa gác cách ly + sửa một phần cho các đường thẻ: chạy trong cửa gác chung (test/tenant-isolation.test.ts, test/sua-mot-phan.test.ts).
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import request from 'supertest';

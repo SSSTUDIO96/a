@@ -526,6 +526,20 @@ export function draftDiffs(mine: ContractDraft, theirs: ContractDraft, tz: strin
   return out;
 }
 
+// Nhãn dòng thêm sau khi xác nhận: "Phát sinh 20/10/2026" (createdAt của dòng; dòng cũ thiếu ngày → "Phát sinh").
+export function addedLabel(l: { addedAfterConfirm: boolean; createdAt?: string | null }, tz: string): string | null {
+  if (!l.addedAfterConfirm) return null;
+  return l.createdAt ? `Phát sinh ${displayDate(l.createdAt, tz)}` : 'Phát sinh';
+}
+
+// Sửa nháp hạ tổng dưới số đã thu → 409 TOTAL_BELOW_PAID, details { paid, newTotal, total } — báo một dòng, tiền định dạng VN.
+export function belowPaidText(err: unknown): string | null {
+  if (!(err instanceof ApiError) || err.status !== 409) return null;
+  const d = err.details as { reason?: unknown; paid?: unknown; newTotal?: unknown } | undefined;
+  if (d?.reason !== 'TOTAL_BELOW_PAID' || typeof d.paid !== 'number' || typeof d.newTotal !== 'number') return null;
+  return `Hợp đồng đã thu ${formatVnd(d.paid)} — tổng mới ${formatVnd(d.newTotal)} thấp hơn số đã thu. Ghi phiếu hoàn tiền phần chênh trước, hoặc giữ tổng không thấp hơn số đã thu.`;
+}
+
 // ---------------------------------------------------------------------------------------------
 // N8: lời lỗi tiền của máy chủ in số thô "Giảm giá hợp đồng (99000000) lớn hơn tổng các dòng (1950000)" → định dạng
 // tiền Việt và đặt dưới đúng ô (Giảm giá / Cọc cần thu). Chỉ đổi cách hiện số, không đổi nội dung.

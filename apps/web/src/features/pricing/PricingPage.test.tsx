@@ -529,6 +529,28 @@ describe('biên bản web 2: bảng giá', () => {
     expect(screen.queryByRole('button', { name: 'Lưu' })).toBeNull();
   });
 
+  it('T6: giá niêm yết vượt trần máy chủ (900 nghìn tỷ) → lời máy chủ hiện dưới ô Giá niêm yết, hộp vẫn mở, không coi là đã lưu', async () => {
+    const user = userEvent.setup();
+    setupServer(OWNER, (m, p) =>
+      m === 'POST' && p.endsWith('/prices')
+        ? err(400, 'VALIDATION_FAILED', 'Dữ liệu gửi lên không hợp lệ', {
+            formErrors: [],
+            fieldErrors: { listPrice: ['Số tiền quá lớn (tối đa 100.000.000.000 đ)'] },
+            issues: [{ path: 'listPrice', message: 'Số tiền quá lớn (tối đa 100.000.000.000 đ)' }],
+          })
+        : undefined,
+    );
+    renderAt('/chien/bang-gia/goi');
+    const dlg = await openPackage();
+    const list = within(dlg).getByLabelText('Giá niêm yết');
+    await user.clear(list);
+    await user.type(list, '900000000000000');
+    await user.click(within(dlg).getByRole('button', { name: 'Lưu' }));
+    expect(await within(dlg).findByText('Số tiền quá lớn (tối đa 100.000.000.000 đ)')).toBeTruthy();
+    expect(list.getAttribute('aria-invalid')).toBe('true');
+    expect(screen.getByRole('dialog')).toBeTruthy();
+  });
+
   it('N5: phụ phí không hiện "· n phút" ở danh sách và không hỏi thời lượng; tạo phụ phí gửi thời lượng mặc định của máy chủ', async () => {
     const user = userEvent.setup();
     const calls = setupServer(OWNER, (m, p, b) =>

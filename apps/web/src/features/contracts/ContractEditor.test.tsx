@@ -557,6 +557,54 @@ describe('biên bản web 2', () => {
     expect((await screen.findAllByRole('button', { name: 'Huỷ hợp đồng' })).length).toBeGreaterThan(0);
   });
 
+  it('máy chủ mới: quote của hợp đồng đã lưu gửi excludeContractId; dòng hai thợ trùng (sameContract) → đỏ, khoá xác nhận', async () => {
+    api.getContract.mockResolvedValue(detail('DRAFT') as never);
+    const SAME = {
+      membershipId: 'm2',
+      level: 'OVERLAP',
+      overlaps: [],
+      sameDay: [],
+      draftHolds: [],
+      sameContract: [{ lineId: null, lineIndex: 1, lineName: 'Cô dâu', scheduledStart: '2026-10-23T21:30:00.000Z', scheduledEnd: '2026-10-24T00:00:00.000Z' }],
+    };
+    api.quoteContract.mockResolvedValue(quote([SAME]) as never);
+    renderEditor(OWNER);
+    await waitFor(() => expect(api.quoteContract).toHaveBeenCalled());
+    expect(api.quoteContract.mock.calls[0]?.[1]).toMatchObject({ excludeContractId: 'hd-1' });
+    expect(await screen.findByText('Trùng giờ 04:30–07:00')).toBeTruthy();
+    expect(((await confirmButton()) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('hợp đồng mới (chưa lưu): quote KHÔNG gửi excludeContractId', async () => {
+    api.quoteContract.mockResolvedValue(quote([]) as never);
+    api.getContract.mockResolvedValue(detail('DRAFT') as never);
+    renderEditor(OWNER, null, '/studio/hop-dong/moi');
+    await userEvent.click(await screen.findByRole('button', { name: 'Khách mới' }));
+    await userEvent.type(screen.getByLabelText('Họ tên khách'), 'Lê Thu Trang');
+    await userEvent.click((await screen.findAllByRole('button', { name: 'Thêm Mẹ – Trang điểm nhẹ nhàng' }))[0]!);
+    await waitFor(() => expect(api.quoteContract).toHaveBeenCalled());
+    expect(api.quoteContract.mock.calls.at(-1)?.[1]).not.toHaveProperty('excludeContractId');
+  });
+
+  it('dòng thêm sau xác nhận ghi "Phát sinh {ngày}" theo createdAt', async () => {
+    const extra = line({ id: 'l2', kind: 'CUSTOM', name: 'Thêm giờ chờ', packageId: null, staff: [], addedAfterConfirm: true, createdAt: '2026-10-20T03:00:00.000Z', unitPrice: 100_000, lineTotal: 100_000 });
+    api.getContract.mockResolvedValue(detail('CONFIRMED', { lines: [line(), extra] }) as never);
+    renderEditor(OWNER);
+    expect(await screen.findByText('Phát sinh 20/10/2026')).toBeTruthy();
+  });
+
+  it('409 TOTAL_BELOW_PAID khi sửa nháp: một dòng báo, tiền định dạng VN', async () => {
+    api.getContract.mockResolvedValue(detail('DRAFT') as never);
+    api.quoteContract.mockResolvedValue(quote([]) as never);
+    api.updateContract.mockRejectedValue(new ApiError('CONFLICT', 'x', 409, 'r', { reason: 'TOTAL_BELOW_PAID', paid: 1_000_000, newTotal: 600_000, total: 1_950_000 }));
+    renderEditor(OWNER);
+    await userEvent.type(await screen.findByLabelText('Ghi chú hợp đồng'), 'a');
+    await userEvent.click(screen.getByRole('button', { name: 'Lưu nháp' }));
+    expect(
+      await screen.findByText('Hợp đồng đã thu 1.000.000 ₫ — tổng mới 600.000 ₫ thấp hơn số đã thu. Ghi phiếu hoàn tiền phần chênh trước, hoặc giữ tổng không thấp hơn số đã thu.'),
+    ).toBeTruthy();
+  });
+
   it('N1: mã hợp đồng nằm trong một khối không bẻ dòng', async () => {
     api.getContract.mockResolvedValue(detail('CONFIRMED') as never);
     renderEditor(OWNER);

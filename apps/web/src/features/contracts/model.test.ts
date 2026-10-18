@@ -10,9 +10,8 @@ import {
   conflictsOf,
   contractAbilities,
   errorLineOf,
-  localOverlaps,
   matchQuote,
-  mergeWarnings,
+  displayWarnings,
   newPackageLine,
   overlapLineCount,
   serverWarnings,
@@ -164,78 +163,64 @@ describe('thân gửi máy chủ', () => {
   });
 });
 
-describe('cảnh báo thợ 3 mức', () => {
-  const w = (over: Partial<StaffWarning>): StaffWarning => ({ membershipId: 'm1', level: 'SAME_DAY', overlaps: [], sameDay: [], draftHolds: [], ...over });
+describe('cảnh báo thợ: đỏ / giữ chỗ nháp / vàng', () => {
+  const w = (over: Partial<StaffWarning>): StaffWarning => ({ membershipId: 'm1', level: 'SAME_DAY', overlaps: [], sameDay: [], draftHolds: [], sameContract: [], ...over });
+  const hold = (overlaps: boolean) => ({
+    contractId: 'khac',
+    code: 'HĐ-2026-0139',
+    lineId: 'l',
+    lineName: 'Cô dâu',
+    scheduledStart: '2026-10-23T22:00:00Z',
+    scheduledEnd: '2026-10-23T23:00:00Z',
+    overlaps,
+  });
 
   it('rảnh: không có dải', () => {
-    expect(serverWarnings([], null)).toEqual([]);
-    expect(serverWarnings(undefined, null)).toEqual([]);
+    expect(serverWarnings([])).toEqual([]);
+    expect(serverWarnings(undefined)).toEqual([]);
   });
 
   it('vàng SAME_DAY: có lịch trong ngày, đếm số ca', () => {
-    const out = serverWarnings([w({ sameDay: [shift('2026-10-24T03:00:00Z', '2026-10-24T04:00:00Z')] })], null);
+    const out = serverWarnings([w({ sameDay: [shift('2026-10-24T03:00:00Z', '2026-10-24T04:00:00Z')] })]);
     expect(out).toMatchObject([{ level: 'SAME_DAY', count: 1 }]);
   });
 
-  it('đỏ OVERLAP: trùng giờ ca đã có', () => {
-    const out = serverWarnings([w({ level: 'OVERLAP', overlaps: [shift('2026-10-23T22:00:00Z', '2026-10-23T23:30:00Z')] })], null);
+  it('đỏ OVERLAP: trùng giờ ca đã có; giờ hiện theo múi giờ tổ chức', () => {
+    const out = serverWarnings([w({ level: 'OVERLAP', overlaps: [shift('2026-10-23T22:00:00Z', '2026-10-23T23:30:00Z')] })]);
     expect(out[0]?.level).toBe('OVERLAP');
-    const merged = mergeWarnings(out, [], 'Asia/Ho_Chi_Minh');
-    expect(merged[0]?.ranges[0]).toMatchObject({ start: '05:00', end: '06:30' });
+    expect(displayWarnings(out, TZ)[0]?.ranges[0]).toMatchObject({ start: '05:00', end: '06:30' });
   });
 
-  it('T1: giữ chỗ của CHÍNH hợp đồng không tính; giữ chỗ chồng giờ của hợp đồng NHÁP khác → DRAFT_HOLD (không đỏ, không chặn)', () => {
-    const hold = (contractId: string, overlaps: boolean) => ({
-      contractId,
-      code: 'HĐ-2026-0139',
-      lineId: 'l',
-      lineName: 'Cô dâu',
-      scheduledStart: '2026-10-23T22:00:00Z',
-      scheduledEnd: '2026-10-23T23:00:00Z',
-      overlaps,
-    });
-    expect(serverWarnings([w({ level: 'OVERLAP', draftHolds: [hold('toi', true)] })], 'toi')).toEqual([]);
-    // Máy chủ gán level OVERLAP khi chỉ có giữ chỗ nháp — web không tin mức đó (quyết định 15:14: nháp không chiếm giờ).
-    const held = serverWarnings([w({ level: 'OVERLAP', draftHolds: [hold('khac', true), hold('khac', true)] })], 'toi');
+  it('T1: chỉ chồng giờ với giữ chỗ của hợp đồng NHÁP khác → DRAFT_HOLD (không đỏ, không chặn), dù máy chủ ghi level OVERLAP', () => {
+    const held = serverWarnings([w({ level: 'OVERLAP', draftHolds: [hold(true), hold(true)] })]);
     expect(held[0]).toMatchObject({ level: 'DRAFT_HOLD', holdCodes: ['HĐ-2026-0139'] });
-    const map = new Map<string, LineWarning[]>([['k', mergeWarnings(held, [], TZ)]]);
+    const map = new Map<string, LineWarning[]>([['k', displayWarnings(held, TZ)]]);
     expect(overlapLineCount(map)).toBe(0);
     expect(confirmBlockedReason(overlapLineCount(map))).toBeNull();
-    expect(serverWarnings([w({ level: 'SAME_DAY', draftHolds: [hold('khac', false)] })], 'toi')[0]?.level).toBe('SAME_DAY');
+    expect(serverWarnings([w({ level: 'SAME_DAY', draftHolds: [hold(false)] })])[0]?.level).toBe('SAME_DAY');
     // Có cả ca đã chặn giờ trùng → vẫn đỏ.
-    const both = serverWarnings([w({ level: 'OVERLAP', overlaps: [shift('2026-10-23T22:00:00Z', '2026-10-23T23:30:00Z')], draftHolds: [hold('khac', true)] })], 'toi');
+    const both = serverWarnings([w({ level: 'OVERLAP', overlaps: [shift('2026-10-23T22:00:00Z', '2026-10-23T23:30:00Z')], draftHolds: [hold(true)] })]);
     expect(both[0]?.level).toBe('OVERLAP');
   });
 
-  it('T1: trùng giữa hai dòng của cùng hợp đồng thắng giữ chỗ nháp → đỏ', () => {
-    const hold: LineWarning = { membershipId: 'm1', level: 'DRAFT_HOLD', ranges: [], count: 1, holdCodes: ['HĐ-1'] };
-    const merged = mergeWarnings([hold], [{ membershipId: 'm1', otherKey: 'k', otherLabel: 'Dòng Cô dâu của hợp đồng này', start: '04:30', end: '07:00' }], TZ);
-    expect(merged[0]?.level).toBe('OVERLAP');
-  });
-
-  it('một thợ gán cho hai dòng chồng giờ trong cùng hợp đồng → đỏ cả hai dòng, chặn xác nhận', () => {
-    const a = pkgLine({ start: '04:30', end: '07:00', staff: [{ membershipId: 'm1', role: 'PRIMARY' }] });
-    const b = pkgLine({ refId: 'p-me', subjectId: 's-me', start: '05:00', end: '05:45', staff: [{ membershipId: 'm1', role: 'PRIMARY' }] });
-    const name = (id: string | null) => (id === 's-cd' ? 'Cô dâu' : id === 's-me' ? 'Mẹ cô dâu' : null);
-    const local = localOverlaps(draftWith([a, b]), name);
-    expect(local.get(b.key)?.[0]).toMatchObject({ membershipId: 'm1', otherLabel: 'Dòng Cô dâu của hợp đồng này', start: '04:30', end: '07:00' });
-    const map = new Map<string, LineWarning[]>([
-      [a.key, mergeWarnings([], local.get(a.key) ?? [], TZ)],
-      [b.key, mergeWarnings([], local.get(b.key) ?? [], TZ)],
-    ]);
-    expect(overlapLineCount(map)).toBe(2);
+  it('một thợ ở hai dòng chồng giờ (máy chủ báo sameContract) → đỏ, chặn xác nhận, nhãn theo nhân vật của dòng kia', () => {
+    const hit = { lineId: null, lineIndex: 0, lineName: 'Cô dâu – Ngày cưới', scheduledStart: '2026-10-23T21:30:00Z', scheduledEnd: '2026-10-24T00:00:00Z' };
+    const out = serverWarnings([w({ level: 'OVERLAP', draftHolds: [hold(true)], sameContract: [hit] })], (i, n) => (i === 0 ? 'Cô dâu' : n));
+    expect(out[0]?.level).toBe('OVERLAP');
+    const shown = displayWarnings(out, TZ);
+    expect(shown[0]?.ranges[0]).toMatchObject({ start: '04:30', end: '07:00', label: 'Dòng Cô dâu của hợp đồng này' });
+    const map = new Map<string, LineWarning[]>([['a', shown], ['b', []]]);
+    expect(overlapLineCount(map)).toBe(1);
     expect(confirmBlockedReason(2)).toBe('Còn 2 dòng thợ trùng giờ. Đổi thợ hoặc đổi giờ trước khi xác nhận.');
-    // Không chồng giờ → không cảnh báo.
-    const c = pkgLine({ start: '08:00', end: '09:00', staff: [{ membershipId: 'm1', role: 'PRIMARY' }] });
-    expect(localOverlaps(draftWith([a, c]), name).size).toBe(0);
-    expect(confirmBlockedReason(0)).toBeNull();
   });
 
-  it('đỏ thắng vàng khi cùng một thợ', () => {
-    const yellow: LineWarning = { membershipId: 'm1', level: 'SAME_DAY', ranges: [], count: 1 };
-    const merged = mergeWarnings([yellow], [{ membershipId: 'm1', otherKey: 'k', otherLabel: 'Dòng Cô dâu của hợp đồng này', start: '04:30', end: '07:00' }], TZ);
-    expect(merged).toHaveLength(1);
-    expect(merged[0]?.level).toBe('OVERLAP');
+  it('xếp: đỏ trước, rồi giữ chỗ nháp, rồi vàng', () => {
+    const list: LineWarning[] = [
+      { membershipId: 'a', level: 'SAME_DAY', ranges: [], count: 1 },
+      { membershipId: 'b', level: 'DRAFT_HOLD', ranges: [], count: 1 },
+      { membershipId: 'c', level: 'OVERLAP', ranges: [], count: 0 },
+    ];
+    expect(displayWarnings(list, TZ).map((x) => x.level)).toEqual(['OVERLAP', 'DRAFT_HOLD', 'SAME_DAY']);
   });
 });
 

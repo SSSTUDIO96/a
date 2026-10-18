@@ -54,6 +54,8 @@ export interface PackageLineCardProps {
   canPickStaff: boolean;
   pickBlockedReason: string | null;
   resetKey?: number;
+  // Dòng thêm sau khi xác nhận: "Phát sinh {ngày}".
+  addedLabel?: string | null;
   scheduleHref: string | null;
   // Đã xác nhận: nút "Huỷ dòng" (quyền contracts.adjust).
   onVoid: (() => void) | null;
@@ -90,6 +92,7 @@ export function PackageLineCard(p: PackageLineCardProps) {
       <div className="ct-ln__hd">
         <span className="ct-ln__ttl">
           {subjectName && <StatusTag tone="accent">{subjectName}</StatusTag>}
+          {p.addedLabel && <StatusTag tone="warn">{p.addedLabel}</StatusTag>}
           {!locked && pkg && pkg.subjectId === null && (
             <Select
               size="sm"

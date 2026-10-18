@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=1080">
+<title>Thẻ chào mừng shd-04 – Ruy băng tên</title>
+<!-- Makeup Pro · R&D vòng 3 · Mẫu chào mừng sang trọng hiện đại · Dùng cho: hợp đồng khoá học
+     Nguồn ý tưởng: Học từ ảnh 5 (ảnh tròn, ruy băng chứa tên, địa chỉ + số điện thoại)
+     Ô dữ liệu: th (Tên thương hiệu), logo (Logo), anh (Ảnh học viên), ten (Tên học viên), khoa (Tên khoá), lop (Mã lớp), diachi (Địa chỉ), sdt (Số điện thoại)
+     Phông: MP Chữ đậm có chân, MP Chữ có chân, MP Chữ không chân — khai báo ở phong/phong.css (phông viết tay là PHÔNG TẠM, thay một chỗ trong tệp đó).
+     Khổ: mặc định 1080×1350; thêm ?kho=vuong để ra 1080×1080. Thay dữ liệu bằng tham số đường dẫn (xem chung/mau.js).
+     Ảnh người và logo mặc định: vector do R&D tự vẽ. -->
+<link rel="stylesheet" href="phong/phong.css"><link rel="stylesheet" href="chung/mau.css">
+<style>
+#c{background:#F4E6E1;color:#3B1F27}
+.bg1{position:absolute;width:900px;height:900px;border-radius:50%;background:#EFD9D2;left:-260px;top:-300px}
+.bg2{position:absolute;width:620px;height:620px;border-radius:50%;border:1px solid #D9B7AD;right:-200px;bottom:-120px}
+.w{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;text-align:center;padding:72px 70px 60px}
+.lg{width:70px;height:70px}
+.k1{font:500 20px var(--f-sans);letter-spacing:.42em;text-transform:uppercase;color:#7D5A60;margin-top:22px}
+.th{font:italic 600 66px/1.1 var(--f-chan2);color:#6E2337;margin-top:10px;width:100%}
+.cir{width:470px;height:470px;border-radius:50%;overflow:hidden;border:12px solid #fff;margin-top:44px;flex:none}
+.rb{position:relative;margin-top:-58px;background:#6E2337;color:#fff;padding:22px 90px;max-width:900px;clip-path:polygon(0 0,100% 0,calc(100% - 34px) 50%,100% 100%,0 100%,34px 50%)}
+.rb div{font:700 40px/1.2 var(--f-sans);letter-spacing:.12em;text-transform:uppercase;white-space:nowrap}
+.kh{font:italic 500 42px/1.2 var(--f-chan);margin-top:30px;width:100%}
+.ft{display:flex;gap:34px;justify-content:center;font:500 21px var(--f-sans);color:#5E3A42;flex-wrap:wrap}
+.ft span{display:inline-flex;gap:10px;align-items:center}.ft svg{width:22px;height:22px;flex:none}
+.vuong .w{padding:48px 70px 42px}.vuong .cir{width:340px;height:340px;margin-top:26px}.vuong .th{font-size:54px}.vuong .rb{margin-top:-44px}.vuong .kh{margin-top:18px;font-size:36px}
+</style></head><body><div id="c"><div class="bg1"></div><div class="bg2"></div><div class="w">
+<img class="lg" data-f="logo" alt="">
+<div class="k1">Chào mừng đến với</div>
+<div class="th" data-f="th" data-fit="1"></div>
+<div class="cir"><img class="ph" data-f="anh" alt=""></div>
+<div class="rb"><div data-f="ten" data-fitw></div></div>
+<div class="kh" data-fit="2"><span data-f="khoa"></span> · Lớp <span data-f="lop"></span></div>
+<div class="sp"></div>
+<div class="ft"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 21s-7-6.5-7-12a7 7 0 0114 0c0 5.5-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/></svg><span data-f="diachi"></span></span><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 3h4l2 5-2.5 1.5a11 11 0 006 6L16 13l5 2v4a2 2 0 01-2 2A16 16 0 013 5a2 2 0 012-2z"/></svg><span data-f="sdt"></span></span></div>
+</div></div>
+<script>window.MAC_DINH={};</script>
+<script src="chung/qrcode.js"></script><script src="chung/mau.js"></script><script src="chung/html-to-image.js"></script><script src="chung/xuat.js"></script></body></html>

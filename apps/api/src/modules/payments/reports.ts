@@ -456,15 +456,16 @@ export const reportRoutes: AnyRoute[] = [
           facts.filter((f) => f.kind === 'COURSE').map((f) => f.id),
         );
         const level = query.groupBy;
-        const rows = bySegment(facts, shares, level).map((r) => ({
+        // Cờ tràn chỉ xét phần số tiền (course / group = null là "không thuộc khoá/nhóm", không phải tràn số).
+        const presented = bySegment(facts, shares, level).map((r) => ({ r, money: presentBucket(r.bucket) }));
+        const rows = presented.map(({ r, money }) => ({
           segment: r.segment,
           ...(level === 'course' ? { course: r.course } : {}),
           group: r.group,
-          ...presentBucket(r.bucket),
+          ...money,
         }));
-        return {
-          body: { ...common, allocation: COURSE_ALLOCATION, rows, totalsOverflow: hasOverflow(totals) || rows.some(hasOverflow) },
-        };
+        const overflow = hasOverflow(totals) || presented.some(({ money }) => hasOverflow(money));
+        return { body: { ...common, allocation: COURSE_ALLOCATION, rows, totalsOverflow: overflow } };
       }
       const raw = await byContract(deps.db, o.id, from, to, kind);
       const shares = await courseShares(

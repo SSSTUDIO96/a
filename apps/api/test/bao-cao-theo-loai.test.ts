@@ -244,17 +244,19 @@ describe('báo cáo doanh thu theo loại hợp đồng / nhóm khoá / khoá', 
     expect(body.allocation).toMatch(/chia cho các khoá theo thành tiền/);
     // Thứ tự: nhóm (sort) → khoá (sort), chưa xếp nhóm sau cùng, rồi COURSE_UNASSIGNED, SERVICE.
     expect(rows.map((r) => r.course?.id ?? r.segment)).toEqual([K.k1.id, K.k2.id, K.k3.id, K.k4.id, 'COURSE_UNASSIGNED', 'SERVICE']);
-    // C2: 8.999.999 đ chia 3.333.333 : 6.666.667 → K2 2.999.999,67 → 3.000.000 (phần lẻ lớn hơn nhận 1 đ dư); K3 5.999.999.
-    // Cọc 1.234.567 → K2 411.522,2 → 411.522; K3 823.044,8 → 823.045.
-    expect(of(K.k3.id)).toMatchObject({ contractCount: 1, sales: 5_999_999, depositRequired: 823_045, group: { id: G.g2.id } });
+    // C2 (tính tay bằng phân số đúng): 8.999.999 đ chia 3.333.333 : 6.666.667 → K2 2.999.999,367; K3 5.999.999,633 →
+    // phần nguyên 2.999.999 + 5.999.999, dư 1 đ về phần lẻ lớn hơn (K3) → K2 2.999.999, K3 6.000.000.
+    // Cọc 1.234.567 → K2 411.522,29 → 411.522; K3 823.044,71 → 823.045.
+    expect(of(K.k3.id)).toMatchObject({ contractCount: 1, sales: 6_000_000, depositRequired: 823_045, group: { id: G.g2.id } });
     // K2 = phần của C2 (C7 đã huỷ: không doanh số, chỉ có tiền thu/hoàn trong kỳ).
-    expect(of(K.k2.id)).toMatchObject({ contractCount: 1, sales: 3_000_000, depositRequired: 411_522, received: 259_259 + 1_000_000, refunded: 37_037 + 400_000 });
+    expect(of(K.k2.id)).toMatchObject({ contractCount: 1, sales: 2_999_999, depositRequired: 411_522, received: 259_259 + 1_000_000, refunded: 37_037 + 400_000 });
     // K4: chỉ C3 (dòng K4 của C6 đã huỷ — không nhận tiền).
     expect(of(K.k4.id)).toMatchObject({ contractCount: 1, sales: 2_500_000, received: 2_500_000, group: null });
     // K1: C1 (7.333.334 gồm giáo trình) + C6 (7.000.001 sau khi huỷ dòng K4).
     expect(of(K.k1.id)).toMatchObject({ contractCount: 2, sales: 7_333_334 + 7_000_001, received: 1_500_001 + 999_999 });
     expect(rows.find((r) => r.segment === 'COURSE_UNASSIGNED')).toMatchObject({ course: null, contractCount: 1, sales: 1_111_111 });
-    // Dòng thu của C2 cũng chia đúng tỷ lệ: 777.777 → 259.259 + 518.518; hoàn 111.111 → 37.037 + 74.074.
+    // Dòng thu của C2 cũng chia đúng tỷ lệ: 777.777 → 259.258,97 + 518.518,03 → 259.259 + 518.518;
+    // hoàn 111.111 → 37.036,996 + 74.074,004 → 37.037 + 74.074.
     expect(of(K.k3.id)).toMatchObject({ received: 518_518 + 300_003, refunded: 74_074 });
   });
 
@@ -262,8 +264,8 @@ describe('báo cáo doanh thu theo loại hợp đồng / nhóm khoá / khoá', 
     const body = (await report(A, { from, to, groupBy: 'courseGroup', kind: 'COURSE' }).expect(200)).body;
     const rows = body.rows as ({ segment: string; group: { id: string; name: string } | null } & Totals)[];
     expect(rows.map((r) => `${r.segment}:${r.group?.name ?? '-'}`)).toEqual(['COURSE:Trang điểm', 'COURSE:Làm tóc', 'COURSE:-', 'COURSE_UNASSIGNED:-']);
-    expect(rows[0]).toMatchObject({ sales: 7_333_334 + 7_000_001 + 3_000_000, contractCount: 3 });
-    expect(rows[1]).toMatchObject({ sales: 5_999_999, contractCount: 1 });
+    expect(rows[0]).toMatchObject({ sales: 7_333_334 + 7_000_001 + 2_999_999, contractCount: 3 });
+    expect(rows[1]).toMatchObject({ sales: 6_000_000, contractCount: 1 });
     expect(rows.some((r) => 'course' in r)).toBe(false);
   });
 
@@ -283,7 +285,7 @@ describe('báo cáo doanh thu theo loại hợp đồng / nhóm khoá / khoá', 
     console.log(`[chia theo trọng số] 2000 lần ngẫu nhiên: tổng khớp 2000/2000; lệch tỷ lệ lớn nhất ${worst.toFixed(4)} đ`);
     expect(worst).toBeLessThan(1.001);
     expect(splitByWeight(10n, [0n, 0n, 0n])).toEqual([4n, 3n, 3n]);
-    expect(splitByWeight(8_999_999n, [3_333_333n, 6_666_667n])).toEqual([3_000_000n, 5_999_999n]);
+    expect(splitByWeight(8_999_999n, [3_333_333n, 6_666_667n])).toEqual([2_999_999n, 6_000_000n]);
   });
 
   it('kind / groupBy lạ → 400', async () => {

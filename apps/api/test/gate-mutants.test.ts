@@ -7,11 +7,12 @@ import { defineRoute, mustOrg, type AnyRoute } from '../src/http/route';
 import { AppError } from '../src/lib/errors';
 import { buildGateFixture, runIsolationGate, type GateReport } from './gate';
 import { makeApp, makeDeps } from './helpers';
-import { PARTIAL_SAMPLES, REF_SAMPLES, SAMPLES } from './gate-samples';
+import { PARTIAL_SAMPLES, REF_SAMPLES, REF_VARIANTS, SAMPLES } from './gate-samples';
 import { createApp } from '../src/app';
 import express, { type NextFunction, type Request, type Response } from 'express';
 import { authenticate } from '../src/http/middleware';
 import { runPartialPatchGate } from './gate-partial';
+import type { Db } from '../src/lib/prisma';
 
 const deps = makeDeps();
 afterAll(async () => {
@@ -26,8 +27,8 @@ function replace(m: AnyRoute): AnyRoute[] {
 
 async function gateOn(routes: AnyRoute[]): Promise<GateReport> {
   const app = createApp(deps, routes);
-  const fx = await buildGateFixture(makeApp(deps));
-  return runIsolationGate(app, routes, fx, SAMPLES, REF_SAMPLES);
+  const fx = await buildGateFixture(makeApp(deps), deps.db);
+  return runIsolationGate(app, routes, fx, SAMPLES, REF_SAMPLES, REF_VARIANTS);
 }
 
 describe('cửa gác chuyển đỏ với từng kiểu lỗi', () => {
@@ -189,8 +190,8 @@ describe('cửa gác chuyển đỏ với từng kiểu lỗi', () => {
     }
     outer.use('/api/v1', router);
     outer.use(inner);
-    const fx = await buildGateFixture(makeApp(deps));
-    const r = await runIsolationGate(outer as unknown as ReturnType<typeof makeApp>, ALL_ROUTES, fx, SAMPLES, REF_SAMPLES);
+    const fx = await buildGateFixture(makeApp(deps), deps.db);
+    const r = await runIsolationGate(outer as unknown as ReturnType<typeof makeApp>, ALL_ROUTES, fx, SAMPLES, REF_SAMPLES, REF_VARIANTS);
     console.log(`[đột biến 10] unauth vi phạm: ${r.unauth.violations.length}/${r.unauth.total}; platform vi phạm: ${r.platform.violations.length}/${r.platform.total}`);
     expect(r.unauth.violations.some((v) => v.startsWith('GET /platform/stats (chưa đăng nhập) → 401'))).toBe(true);
     expect(r.platform.violations.some((v) => v.includes('(thẻ rác) → 401'))).toBe(true);
@@ -200,7 +201,7 @@ describe('cửa gác chuyển đỏ với từng kiểu lỗi', () => {
   // → vế CHẠY THẬT của cửa gác sửa một phần phải đỏ đúng đường (biên bản máy chủ lát 2, lỗi S1).
   async function partialGateOn(routes: AnyRoute[]) {
     const app = createApp(deps, routes);
-    const fx = await buildGateFixture(makeApp(deps));
+    const fx = await buildGateFixture(makeApp(deps), deps.db);
     return runPartialPatchGate(app, deps.db, routes, fx, PARTIAL_SAMPLES);
   }
 
@@ -240,5 +241,47 @@ describe('cửa gác chuyển đỏ với từng kiểu lỗi', () => {
     // 9 thông số (features đếm 2 lá: phần tử + độ dài) — đúng số đo của thợ chấm.
     expect(Number(/→ (\d+) trường KHÔNG gửi bị đổi/.exec(v ?? '')?.[1] ?? 0)).toBeGreaterThanOrEqual(9);
     expect(v).toContain('maxStaff 2→null');
+  });
+  // Hai đột biến dưới: chứng minh cửa gác KHÔNG MÙ với đường mới (khoá & lớp, thẻ thiết kế) — trước đây tổ chức thử là TEAM
+  // (mọi đường khoá học trả 403) và trường MẢNG mã (photoFileIds) bị bỏ qua.
+  it('Đột biến 13 — sửa lớp tra lớp chỉ theo id, quên lọc tổ chức → phép crossId đỏ ở PATCH /orgs/:orgId/classes/:classId', async () => {
+    const original = ALL_ROUTES.find((r) => r.method === 'patch' && r.path === '/orgs/:orgId/classes/:classId');
+    if (!original) throw new Error('Không có route sửa lớp');
+    const mutant = { ...original, handler: async (ctx: Parameters<typeof original.handler>[0]) => {
+      mustOrg(ctx.org);
+      const params = ctx.params as { classId: string };
+      const body = ctx.body as { note?: string | null };
+      const k = await ctx.deps.db.courseClass.findFirst({ where: { id: params.classId } });
+      if (!k) throw new AppError('NOT_FOUND', 'Không tìm thấy lớp');
+      return { body: await ctx.deps.db.courseClass.update({ where: { id: k.id }, data: { note: body.note ?? k.note } }) };
+    } } as AnyRoute;
+    const r = await gateOn(replace(mutant));
+    const hit = r.crossId.violations.filter((v) => v.startsWith('PATCH /orgs/:orgId/classes/:classId'));
+    console.log(`[đột biến 13] crossId vi phạm: ${r.crossId.violations.length}/${r.crossId.total}: ${hit.join('; ')}`);
+    expect(hit).toEqual(['PATCH /orgs/:orgId/classes/:classId với id của A → 200']);
+  });
+
+  it('Đột biến 14 — tạo thẻ kiểm ảnh mà quên lọc tổ chức (nhận ảnh của tổ chức khác trong photoFileIds) → phép crossRef đỏ', async () => {
+    const original = ALL_ROUTES.find((r) => r.method === 'post' && r.path === '/orgs/:orgId/design-cards');
+    if (!original) throw new Error('Không có route tạo thẻ');
+    // Tái hiện lỗi "checkFiles quên organizationId": bỏ điều kiện tổ chức khỏi MỌI câu tra tệp trong đường này.
+    const mutant = { ...original, handler: async (ctx: Parameters<typeof original.handler>[0]) => {
+      const db = ctx.deps.db.$extends({
+        query: {
+          storedFile: {
+            findMany({ args, query }) {
+              if (args.where) delete (args.where as { organizationId?: unknown }).organizationId;
+              return query(args);
+            },
+          },
+        },
+      }) as unknown as Db;
+      return original.handler({ ...ctx, deps: { ...ctx.deps, db } });
+    } } as AnyRoute;
+    const r = await gateOn(replace(mutant));
+    const hit = r.crossRef.violations.filter((v) => v.startsWith('POST /orgs/:orgId/design-cards [photoFileIds[]'));
+    console.log(`[đột biến 14] crossRef vi phạm: ${r.crossRef.violations.length}/${r.crossRef.total}: ${hit.join('; ')}`);
+    expect(hit.length).toBeGreaterThan(0);
+    expect(hit[0]).toContain('KHÁC phản hồi mã bịa');
   });
 });

@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=1080">
+<title>Mẫu feedback fb-08 – Ảnh nền toàn khung</title>
+<!-- Makeup Pro · R&D vòng 3 · Mẫu feedback · Dùng cho: cả hợp đồng khoá học và dịch vụ (?loai=khoa|dv)
+     Nguồn ý tưởng: Tự sáng tác
+     Ô dữ liệu: a1 (Ảnh 1), logo (Logo), th (Tên thương hiệu), nd (Nội dung lời khen), kh (Tên khách/học viên), dv (Khoá học hoặc dịch vụ)
+     Phông: MP Chữ có chân, MP Chữ không chân — khai báo ở phong/phong.css (phông viết tay là PHÔNG TẠM, thay một chỗ trong tệp đó).
+     Khổ: mặc định 1080×1350; thêm ?kho=vuong để ra 1080×1080. Thay dữ liệu bằng tham số đường dẫn (xem chung/mau.js).
+     Ảnh người và logo mặc định: vector do R&D tự vẽ. -->
+<link rel="stylesheet" href="phong/phong.css"><link rel="stylesheet" href="chung/mau.css">
+<style>
+#c{background:#000;color:#fff}
+.bgp{position:absolute;inset:0}
+.th0{position:absolute;left:60px;top:56px;display:flex;align-items:center;gap:14px}
+.ld{width:58px;height:58px;border-radius:50%;background:#FFFDF9;display:grid;place-items:center}.ld img{width:46px;height:46px}
+.th0 span.t{font:600 18px var(--f-sans);letter-spacing:.26em;text-transform:uppercase;background:rgba(20,16,16,.72);padding:10px 16px;border-radius:8px}
+.pn{position:absolute;left:44px;right:44px;bottom:44px;height:560px;background:rgba(22,17,18,.84);border-radius:24px;padding:48px 56px 42px;display:flex;flex-direction:column}
+.nd{font:italic 500 42px/1.42 var(--f-chan);flex:1 1 0;min-height:0;overflow:hidden}
+.pr{border-top:1px solid rgba(255,255,255,.2);padding-top:22px;margin-top:16px}.pr b{font:700 26px var(--f-sans);letter-spacing:.06em}.pr span{font:500 21px var(--f-sans);color:#CFC4C0;margin-left:12px}
+.vuong .pn{height:470px}.vuong .nd{font-size:36px}
+.nd{display:flex;flex-direction:column;justify-content:center}
+</style></head><body><div id="c"><div class="bgp"><img class="ph" data-f="a1" alt=""></div>
+<div class="th0"><span class="ld"><img data-f="logo" alt=""></span><span class="t" data-f="th"></span></div>
+<div class="pn"><div class="nd" data-f="nd" data-fitc="56"></div><div class="pr"><b data-f="kh"></b><span data-f="dv"></span></div></div></div>
+<script>window.MAC_DINH={"loai": "dv"};</script>
+<script src="chung/qrcode.js"></script><script src="chung/mau.js"></script><script src="chung/html-to-image.js"></script><script src="chung/xuat.js"></script></body></html>
