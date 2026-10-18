@@ -612,6 +612,9 @@ describe('câu chúc soạn sẵn', () => {
   it('seedDefaultGreetingPhrases chép đúng 6 câu mặc định, chạy lại không nhân đôi', async () => {
     const owner = await registerUser(app, 'tk-seed');
     const orgId = await createOrg(app, owner, 'tk-seed');
+    // Tạo tổ chức đã tự chép 6 câu (POST /orgs gọi seedDefaultGreetingPhrases): chạy lại → 0. Xoá đi để thử như tổ chức cũ chạy bù.
+    expect(await deps.db.$transaction((tx) => seedDefaultGreetingPhrases(tx, orgId))).toBe(0);
+    await deps.db.greetingPhrase.deleteMany({ where: { organizationId: orgId } });
     const n1 = await deps.db.$transaction((tx) => seedDefaultGreetingPhrases(tx, orgId));
     const n2 = await deps.db.$transaction((tx) => seedDefaultGreetingPhrases(tx, orgId));
     expect([n1, n2]).toEqual([6, 0]);

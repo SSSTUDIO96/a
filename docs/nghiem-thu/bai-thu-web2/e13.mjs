@@ -1,0 +1,13 @@
+import { open, org, shot, close } from './h.mjs';
+const { page } = await open('owner', 'd');
+await page.goto(org('/bang-gia/di-chuyen'));
+await page.waitForTimeout(1000);
+await page.getByRole('radio', { name: /Studio Hoàn Kiếm/ }).click().catch(e => console.log('radio?', e.message.slice(0,100)));
+await page.waitForTimeout(800);
+console.log(await page.locator('main').evaluate((d) => [...d.querySelectorAll('input[type=radio]')].map((e) => `${e.getAttribute('aria-label') ?? ''}|${e.labels?.[0]?.innerText ?? ''}|${e.checked}`).join('\n')));
+await page.goto(org('/hop-dong/moi'));
+await page.waitForTimeout(1500);
+await shot(page, 'kham-hop-dong-moi-1440');
+console.log(await page.locator('main').innerText());
+console.log(await page.locator('main').evaluate((d) => [...d.querySelectorAll('input,select,textarea,button')].map((e) => `${e.tagName}|${e.getAttribute('aria-label') ?? ''}|${e.labels?.[0]?.innerText ?? ''}|${(e.innerText ?? '').slice(0,40)}`).join('\n')));
+await close();

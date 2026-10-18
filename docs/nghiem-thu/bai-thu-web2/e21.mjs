@@ -1,0 +1,42 @@
+import { open, org, shot, close } from './h.mjs';
+import { khach, ngay, themGoi, dong, tong, docSo } from './hd.mjs';
+const { page } = await open('owner', 'd');
+await page.goto(org('/hop-dong/moi'));
+await page.waitForTimeout(1500);
+const m = page.locator('main');
+await khach(page, { new: false, q: 'Hoa' });
+// tấn công ngày
+const d = m.getByRole('textbox', { name: 'Ngày sự kiện' });
+for (const v of ['29/02/2027', '31/04/2027', '00/01/2027', '29/02/2028', '2027-03-01', '1/3/27']) {
+  await d.fill(v); await m.getByLabel('Ghi chú hợp đồng').click(); await page.waitForTimeout(150);
+  const around = await d.evaluate((el) => el.closest('.ct-rw, .ui-setting, div')?.parentElement?.parentElement?.innerText ?? '');
+  console.log(`NGÀY "${v}" → ô "${await d.inputValue()}" | ${around.replace(/\n/g, ' ⏎ ').slice(0, 140)}`);
+}
+await ngay(page, '22/11/2026');
+const c = await themGoi(page, 'Phù dâu');
+await dong(page, c, { qty: 3, start: '14:00', end: '13:00', loc: 'Nơi khác', address: 'Trung tâm tiệc cưới Riverside, Long Biên', travel: 'Nhập tay', manual: '0' });
+await page.waitForTimeout(1500);
+console.log('GIỜ NGƯỢC:', (await c.innerText()).replace(/\n/g, ' | ').slice(0, 260));
+await shot(page, 'tan-cong-gio-nguoc');
+await dong(page, c, { start: '13:00', end: '14:00', staff: [['Lê Hoàng Diễm My', 'Chính']] });
+const t = await themGoi(page, 'Makeup dự tiệc (rất dài để thử cắt chữ trên thẻ và trong hợp đồng của studio)');
+await dong(page, t, { start: '15:00', end: '16:00' });
+const homeBtn = t.getByRole('radio', { name: 'Tại nhà', exact: true });
+console.log('Gói chỉ studio: nút Tại nhà khoá?', await homeBtn.isDisabled(), await homeBtn.getAttribute('aria-disabled'));
+await tong(page, { discount: '99000000' });
+await page.waitForTimeout(1500);
+console.log('GIẢM QUÁ:', (await m.locator('[aria-label="Tổng hợp đồng"]').innerText()).replace(/\n/g, ' | '));
+await shot(page, 'tan-cong-giam-qua-tong', true);
+await tong(page, { discount: '0', deposit: '999999999' });
+await page.waitForTimeout(1500);
+console.log('CỌC QUÁ:', (await m.locator('[aria-label="Tổng hợp đồng"]').innerText()).replace(/\n/g, ' | '));
+await page.getByRole('button', { name: 'Lưu nháp' }).click();
+await page.waitForTimeout(1500);
+console.log('LƯU với cọc quá:', page.url(), (await m.innerText()).match(/[^\n]*(cọc|Cọc)[^\n]*/g));
+await tong(page, { deposit: '300000' });
+console.log(JSON.stringify(await docSo(page)));
+await page.getByRole('button', { name: 'Lưu nháp' }).click();
+await page.waitForTimeout(2000);
+console.log(page.url());
+await shot(page, 'hd5-luu-1440', true);
+await close();

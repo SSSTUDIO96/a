@@ -108,6 +108,13 @@ Mỗi lỗi ghi đủ: triệu chứng · gốc bệnh · số đo · cách ch�
 - **Cách chặn:** bài thử đua phải đếm riêng từng kết cục (thắng / thua đúng 409 / lỗi khác), và số "lỗi khác" phải bằng 0. Máy chủ: khoá theo thợ theo thứ tự cố định trước khi kiểm, cộng lưới an toàn đổi khoá chết thành 409 "thử lại".
 - **Bài học cho studio khác:** kết quả "lúc được lúc không" không được ghi là "bài thử chập chờn" cho tới khi đào ra gốc. Lần này nó che một lỗi thật mà khách sẽ gặp đúng vào ngày đông lịch nhất.
 
+### 19. Giao chấm một bản chụp việc dở — bản đó không build được
+- **Triệu chứng:** thợ chấm nhận bản 193d6aa để chấm 3 màn đã xong. Bản đó không qua được bước build: thiếu 3 tệp (`staff/PayRatesScreen.tsx`, `staff/staff.css`, `platform/platform.css`) của các thợ khác đang làm dở.
+- **Gốc bệnh:** điều phối lưu "bản chụp hiện trạng" gom cả việc dở của mọi thợ, để máy đám mây có bị thu hồi thì không mất việc. Rồi điều phối lấy luôn mã của bản chụp đó giao đi chấm, không chạy build trước. Bản chụp thì giữ được việc, nhưng không có gì bảo đảm nó chạy được.
+- **Số đo:** typecheck đỏ 1 lỗi, build đỏ, 2 bộ bài thử không nạp được. Thợ chấm phải thay 3 tệp thiếu bằng mô-đun rỗng mới chấm tiếp được.
+- **Cách chặn:** chỉ giao chấm một mã đã qua `pnpm build` và typecheck ngay trên đúng mã đó, chạy trong một bản tách riêng. Ghi lệnh và kết quả vào đầu bài giao chấm. Bản chụp việc dở ghi rõ "CHƯA nghiệm thu" và không bao giờ đem đi chấm.
+- **Bài học cho studio khác:** "lưu cho khỏi mất" và "bản để nghiệm thu" là hai việc khác nhau. Lẫn hai thứ đó thì người chấm mất nửa buổi vào lỗi không phải của người được chấm.
+
 ---
 
 ## Phần CỦA RIÊNG DỰ ÁN NÀY

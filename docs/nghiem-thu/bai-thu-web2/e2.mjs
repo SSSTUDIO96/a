@@ -1,0 +1,13 @@
+import { open, org, shot, close } from './h.mjs';
+const { page } = await open('owner', 'd');
+await page.goto(org('/bang-gia/dich-vu'));
+await page.waitForTimeout(1200);
+await shot(page, 'kham-dich-vu-trong');
+console.log(await page.locator('main').innerText());
+const btns = await page.locator('main button').allInnerTexts(); console.log('BTN', btns);
+await page.getByRole('button', { name: /Thêm/ }).first().click();
+await page.waitForTimeout(500);
+await shot(page, 'kham-dich-vu-hop-moi');
+console.log(await page.getByRole('dialog').innerText());
+console.log(await page.getByRole('dialog').evaluate((d) => [...d.querySelectorAll('input,select,textarea,button')].map((e) => `${e.tagName}:${e.getAttribute('aria-label') ?? ''}:${e.id}:${e.getAttribute('type') ?? ''}:${(e.labels?.[0]?.innerText ?? '')}`).join('\n')));
+await close();

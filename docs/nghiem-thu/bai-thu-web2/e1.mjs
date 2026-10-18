@@ -1,0 +1,10 @@
+import { open, org, shot, overflow, close } from './h.mjs';
+const { page } = await open('owner', 'd');
+console.log('after login', page.url());
+await page.goto(org('/bang-gia'));
+await page.waitForTimeout(1500);
+console.log(page.url());
+await shot(page, 'kham-bang-gia-trong-1440');
+console.log(await page.locator('main').innerText());
+console.log(await page.locator('nav').first().innerText());
+await close();

@@ -1,0 +1,21 @@
+import { open, org, shot, close } from './h.mjs';
+import { api } from './api.mjs';
+const { page } = await open('owner', 'd');
+const list = await api('GET', '/contracts?pageSize=20');
+const id = list.body.items.find((c) => c.code === 'HD-000003').id;
+await page.goto(org('/hop-dong/' + id));
+await page.waitForTimeout(2500);
+const a = page.locator('section.ct-ln[data-dong]').first();
+await a.scrollIntoViewIfNeeded();
+await shot(page, 'loi-giu-cho-nhap-chan-xac-nhan');
+console.log('DÒNG 1:', (await a.innerText()).replace(/\n/g, ' | ').slice(0, 300));
+const xn = page.getByRole('button', { name: 'Xác nhận hợp đồng' });
+console.log('nút xác nhận khoá?', await xn.isDisabled());
+await a.getByRole('button', { name: 'Đổi' }).click();
+await page.waitForTimeout(1200);
+await shot(page, 'loi-giu-cho-nhap-o-chon-tho');
+console.log('Ô CHỌN:', (await page.getByRole('dialog').innerText()).replace(/\n/g, ' | ').slice(0, 400));
+await close();
+// máy chủ có cho xác nhận không?
+const r = await api('POST', `/contracts/${id}/status`, { to: 'CONFIRMED' });
+console.log('MÁY CHỦ xác nhận HD-000003 →', r.status, JSON.stringify(r.body).slice(0, 200));

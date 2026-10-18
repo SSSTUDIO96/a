@@ -1,0 +1,35 @@
+import { open, org, shot, close } from './h.mjs';
+import { khach, ngay, themGoi, dong, tong, docSo } from './hd.mjs';
+const { page } = await open('owner', 'd');
+await page.goto(org('/hop-dong/moi'));
+await page.waitForTimeout(1500);
+await khach(page, { new: true, name: 'Trần Thị Lan', phone: '0987654321' });
+await ngay(page, '21/11/2026');
+const c = await themGoi(page, 'Mẹ cô dâu');
+await dong(page, c, { start: '05:00', end: '06:00', loc: 'Studio', staff: [['Nguyễn Thu Hà', 'Chính']] });
+await page.waitForTimeout(1500);
+await shot(page, 'hd2-tho-trung-gio-1440');
+const m = page.locator('main');
+console.log('THẺ DÒNG:', (await c.innerText()).replace(/\n/g, ' | '));
+const xn = page.getByRole('button', { name: 'Xác nhận hợp đồng' });
+console.log('nút xác nhận khoá?', await xn.isDisabled(), '| aria-disabled', await xn.getAttribute('aria-disabled'), '| title', await xn.getAttribute('title'));
+await xn.hover(); await page.waitForTimeout(500);
+console.log('TOOLTIP:', await page.locator('[role=tooltip]').allInnerTexts());
+// mở ô chọn thợ: xem nhãn đỏ
+await c.getByRole('button', { name: /^(Chọn thợ|Đổi)/ }).first().click();
+await page.waitForTimeout(1200);
+await shot(page, 'hd2-o-chon-tho-do-1440');
+console.log('Ô CHỌN:', (await page.getByRole('dialog').innerText()).replace(/\n/g, ' | '));
+await page.getByRole('dialog').getByRole('button', { name: 'Huỷ' }).click();
+// đổi giờ → vàng
+await dong(page, c, { start: '08:00', end: '09:00' });
+await page.waitForTimeout(1500);
+await shot(page, 'hd2-tho-vang-1440');
+console.log('THẺ DÒNG SAU ĐỔI GIỜ:', (await c.innerText()).replace(/\n/g, ' | '));
+console.log('nút xác nhận khoá?', await xn.isDisabled());
+await tong(page, { deposit: '0' });
+console.log(JSON.stringify(await docSo(page)));
+await xn.click();
+await page.waitForTimeout(2500);
+console.log('SAU XÁC NHẬN:', (await m.innerText()).match(/Hợp đồng HD-\S+|Đã xác nhận[^\n]*/g));
+await close();

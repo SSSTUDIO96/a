@@ -83,3 +83,4 @@
   .kh-edit .ui-row__ctl { justify-content: stretch; }
   .kh-edit .ui-card__body { padding: 8px 14px; }
 }
+.kh-cts, .kh-aps, .kh-info { overflow: hidden; }

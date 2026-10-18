@@ -1,0 +1,15 @@
+import { open, org, shot, close } from './h.mjs';
+const { page } = await open('owner', 'd');
+await page.goto(org('/hop-dong/moi'));
+await page.waitForTimeout(1500);
+const m = page.locator('main');
+await m.getByRole('button', { name: 'Khách mới' }).click();
+await page.waitForTimeout(300);
+console.log(await m.evaluate((d) => [...d.querySelectorAll('input,select,textarea,button')].slice(14, 30).map((e) => `${e.tagName}|${e.getAttribute('aria-label') ?? ''}|${e.labels?.[0]?.innerText ?? ''}|${(e.innerText ?? '').slice(0,40)}`).join('\n')));
+await m.getByRole('button', { name: 'Thêm Cô dâu – Ngày cưới' }).click();
+await page.waitForTimeout(800);
+await shot(page, 'kham-hop-dong-them-goi', true);
+const card = m.locator('.ct-line, [class*=line]').first();
+console.log(await m.innerText());
+console.log(await m.evaluate((d) => [...d.querySelectorAll('input,select,textarea,button,[role=radio]')].slice(14).map((e) => `${e.tagName}|${e.getAttribute('role') ?? ''}|${e.getAttribute('aria-label') ?? ''}|${e.labels?.[0]?.innerText ?? ''}|${(e.innerText ?? '').slice(0,40)}|${e.disabled?'KHOÁ':''}`).join('\n')));
+await close();

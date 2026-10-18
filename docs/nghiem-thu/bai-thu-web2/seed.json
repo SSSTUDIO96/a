@@ -1,0 +1,86 @@
+{
+  "tag": "mve679fq",
+  "password": "ChamWeb2#2026",
+  "users": {
+    "owner": {
+      "email": "owner.mve679fq@cham.vn",
+      "name": "Chiến Chủ Studio",
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3OTIzNDg4MDYsImV4cCI6MTc5MjM0OTcwNiwic3ViIjoiZTM4ZTA2YjktZTk0ZS00MzhhLTg0NWQtZWJhNDgyZTI3NWM2In0.2LU3VUWsKzJ5RuFp1N8uThD4ssou2FkBn7NJ6T41qk8"
+    },
+    "ha": {
+      "email": "ha.mve679fq@cham.vn",
+      "name": "Nguyễn Thu Hà",
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3OTIzNDg4MDYsImV4cCI6MTc5MjM0OTcwNiwic3ViIjoiZGMxY2Y5MmQtNzcyMy00OGM1LTljM2YtOGY5MmM4NDBmMDY2In0.gpoLUH8ghdQ6GD-RVnQcyna2Bonbc152K4DOlK4NRTE",
+      "membershipId": "9e3eeb71-7ef8-4622-bdad-be31eeb1e479"
+    },
+    "linh": {
+      "email": "linh.mve679fq@cham.vn",
+      "name": "Trần Khánh Linh",
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3OTIzNDg4MDcsImV4cCI6MTc5MjM0OTcwNywic3ViIjoiMjViNTc5MmQtNTE1Yi00ZjA2LWI0NWEtNmRkYWEwM2QyNWIyIn0.CHc19pSDOcjleIZ6eTciOKQbHZ3dJCcHhQp5aVImg_E",
+      "membershipId": "16c2f468-fcba-42c6-8e98-a06f689c51ae"
+    },
+    "my": {
+      "email": "my.mve679fq@cham.vn",
+      "name": "Lê Hoàng Diễm My",
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3OTIzNDg4MDcsImV4cCI6MTc5MjM0OTcwNywic3ViIjoiOWYzYWEwZDEtZDg4Yy00ZDgxLTlhZGYtNDQwNjM4NzM3ZTQwIn0.OQ-0dajhaPrfKPf1d5zq03MkRfxtfzzJlwxh2piQYOU",
+      "membershipId": "0a583630-3dad-4cb4-8957-fc9c1f5bff9d"
+    },
+    "tu": {
+      "email": "tu.mve679fq@cham.vn",
+      "name": "Phạm Thanh Tú",
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3OTIzNDg4MDgsImV4cCI6MTc5MjM0OTcwOCwic3ViIjoiYjU1ZjNkMjUtMTA5NS00N2IzLTgwODQtNTIxYWEwMTI5ZGMzIn0.t-FDC2Eghtaf_mG1bqtp7U-kcyAwn0r2llDiOAWykfo",
+      "membershipId": "66875881-8973-4dc7-a908-808effa6dcb7"
+    },
+    "letan": {
+      "email": "letan.mve679fq@cham.vn",
+      "name": "Đỗ Lễ Tân",
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3OTIzNDg4MDgsImV4cCI6MTc5MjM0OTcwOCwic3ViIjoiZjcxNWYyMzUtZjhhZi00YWFhLTk5MDMtNDhkOWNhMTIwNDk3In0.2b-QEvxDLu25GCoeeIrqC5-SSH5DkdJEMVy-rm0iYnQ",
+      "membershipId": "95c963c5-8f1e-4e8d-adc2-3d60f50caee8"
+    },
+    "ketoan": {
+      "email": "ketoan.mve679fq@cham.vn",
+      "name": "Vũ Kế Toán",
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3OTIzNDg4MDksImV4cCI6MTc5MjM0OTcwOSwic3ViIjoiNDRmYzVlNGQtOGU4Yy00NjM3LWExYTQtZGU2ODM4MGE2NDIxIn0.yY7H3rTung4OgfOMw3KpnRKxhKLdO6WKzhZpUUa4aeY",
+      "membershipId": "ed0ec34e-7c9e-4e8b-8e7f-cd577dc04761"
+    }
+  },
+  "org": {
+    "id": "8c3a70e4-d96c-421d-a35d-422249a61f76",
+    "slug": "cham-mve679fq"
+  },
+  "tiers": {
+    "Thợ chính bậc 1": "b367c57b-0729-407c-850d-641143277046",
+    "Thợ chính bậc 2": "f64422ee-592c-42d4-b889-7e830d7ddc9f",
+    "Thợ phụ": "f864b079-d629-4505-96ff-b363184feae2"
+  },
+  "staff": [
+    {
+      "membershipId": "ec1e756b-4ef7-4bc7-bffa-d9be0f7439a9",
+      "name": "Chiến Chủ Studio"
+    },
+    {
+      "membershipId": "9e3eeb71-7ef8-4622-bdad-be31eeb1e479",
+      "name": "Nguyễn Thu Hà"
+    },
+    {
+      "membershipId": "16c2f468-fcba-42c6-8e98-a06f689c51ae",
+      "name": "Trần Khánh Linh"
+    },
+    {
+      "membershipId": "0a583630-3dad-4cb4-8957-fc9c1f5bff9d",
+      "name": "Lê Hoàng Diễm My"
+    },
+    {
+      "membershipId": "66875881-8973-4dc7-a908-808effa6dcb7",
+      "name": "Phạm Thanh Tú"
+    },
+    {
+      "membershipId": "95c963c5-8f1e-4e8d-adc2-3d60f50caee8",
+      "name": "Đỗ Lễ Tân"
+    },
+    {
+      "membershipId": "ed0ec34e-7c9e-4e8b-8e7f-cd577dc04761",
+      "name": "Vũ Kế Toán"
+    }
+  ]
+}

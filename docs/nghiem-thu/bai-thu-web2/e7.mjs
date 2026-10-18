@@ -1,0 +1,12 @@
+import { open, org, shot, close } from './h.mjs';
+import { taoGoi } from './pkg.mjs';
+const { page } = await open('owner', 'd');
+await page.goto(org('/bang-gia/goi'));
+await page.waitForTimeout(1000);
+await page.getByRole('button', { name: 'Thêm gói cho cô dâu' }).click();
+await taoGoi(page, { code: 'G-CD01', name: 'Cô dâu – Ngày cưới', dur: 150, staff: 1, list: 3000000, sale: 2700000, deposit: 1000000, loc: 'SHO', radius: '5', included: ['Makeup cô dâu', 'Làm tóc'], addons: ['Làm nail', 'Lens', 'Kẹp mi'] });
+const dlg = page.getByRole('dialog');
+await shot(page, 'goi-sau-tao-1440');
+console.log(await dlg.innerText());
+console.log(await dlg.evaluate((d) => [...d.querySelectorAll('input')].map((e) => `${e.getAttribute('aria-label') ?? ''}|${(e.labels?.[0]?.innerText ?? '')}|${e.value}`).join('\n')));
+await close();

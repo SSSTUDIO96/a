@@ -66,4 +66,11 @@ Anh Chiến nhắn lúc khoảng 15:13 UTC ngày 18/10/2026: *"Tự làm vào ch
 | 21:30 | Khoá tổ chức nghĩa là gì | Giữ như máy chủ đang làm: **khoá = chặn hẳn** (thành viên không vào được). **Hết hạn quá ân hạn = chỉ đọc.** Đầu bài điều phối giao thợ màn quản trị ghi nhầm "khoá → chỉ đọc"; thợ phát hiện và làm đúng máy chủ | Hai trạng thái khác nhau, hai cách xử lý | Được (anh quyết, việc tồn 8) |
 | 21:31 | Gom việc tồn | Tạo `docs/VIEC-TON.md`: mọi việc đã nêu chưa làm, tách mục "cần anh quyết" | Không để việc rơi giữa các báo cáo | — |
 
+| 22:10 | Xác nhận hợp đồng chưa gán thợ (thợ chấm: lịch trống) | **Cho xác nhận**; mọi dòng có giờ đều sinh lịch, dòng chưa có thợ nằm ở hàng "Chưa có thợ"; web cảnh báo vàng | Studio hay chốt khách trước rồi mới xếp thợ; không được để mất lịch | Được |
+| 22:10 | Giữ chỗ của hợp đồng nháp khác | Chỉ cảnh báo, **không** chặn xác nhận (đúng quyết định 15:14: nháp không chiếm giờ) | Màn và máy chủ phải cùng một luật | Được |
+| 22:10 | Hai người cùng sửa một hợp đồng | Máy chủ kiểm phiên bản, lệch thì báo "vừa được người khác sửa" | Không xoá im lặng phần người kia vừa sửa | Được |
+| 22:10 | Giờ kết thúc trước giờ bắt đầu ở Lịch | Báo lỗi, trừ khi người dùng bật "Kết thúc hôm sau" | Không tự đoán thành ca qua đêm | Được |
+| 22:10 | Lễ tân huỷ hợp đồng đã xác nhận | Cần quyền "Điều chỉnh hợp đồng đã xác nhận" như huỷ dòng | Hai cửa cùng một luật | Được |
+| 22:10 | Trần số tiền ở bảng giá | Cùng trần với phiếu thu | Một luật cho mọi số tiền | Được |
+
 **Cần anh xem lại nhất:** (1) cách anh vào thao tác thực tế (dòng 19:44): chạy trên máy anh hay cho phép đưa lên mạng; (2) phân quyền theo vai trò mẫu (dòng 15:16) — studio anh có thể muốn thợ chính thấy cả lịch của đội.

@@ -1,0 +1,11 @@
+import { open, org, shot, close } from './h.mjs';
+const { page } = await open('owner', 'd');
+await page.goto(org('/bang-gia/goi'));
+await page.waitForTimeout(1000);
+await page.getByRole('button', { name: 'Thêm gói cho cô dâu' }).click();
+await page.waitForTimeout(500);
+await shot(page, 'kham-goi-moi-1440');
+const dlg = page.getByRole('dialog');
+console.log(await dlg.innerText());
+console.log(await dlg.evaluate((d) => [...d.querySelectorAll('input,select,textarea,button')].map((e) => `${e.tagName}:${e.getAttribute('aria-label') ?? ''}:${e.getAttribute('type') ?? ''}:${(e.labels?.[0]?.innerText ?? '')}`).join('\n')));
+await close();

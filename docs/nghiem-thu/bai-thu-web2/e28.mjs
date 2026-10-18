@@ -1,0 +1,17 @@
+import { open, org, shot, close } from './h.mjs';
+const { page } = await open('owner', 'd');
+await page.goto(org('/lich?ngay=2026-11-21'));
+await page.waitForTimeout(2000);
+await page.getByRole('button', { name: /08:00/ }).first().click();
+await page.waitForTimeout(1000);
+let dlg = page.getByRole('dialog');
+await shot(page, 'lich-chi-tiet-ca');
+console.log('XEM CA:', (await dlg.innerText()).replace(/\n/g, ' | '));
+console.log(await dlg.locator('button, a').allInnerTexts());
+await dlg.getByRole('button', { name: /^Sửa/ }).click().catch((e) => console.log('không có nút Sửa'));
+await page.waitForTimeout(800);
+dlg = page.getByRole('dialog');
+console.log('SỬA CA:', (await dlg.innerText()).replace(/\n/g, ' | ').slice(0, 900));
+console.log(await dlg.evaluate((d) => [...d.querySelectorAll('input,select,textarea,button')].map((e) => `${e.tagName}|${e.getAttribute('aria-label') ?? ''}|${e.labels?.[0]?.innerText ?? ''}|${(e.innerText ?? '').slice(0,30)}`).join('\n')));
+await shot(page, 'lich-sua-ca');
+await close();
