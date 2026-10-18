@@ -53,10 +53,8 @@ export function InstallmentsDialog({ open, orgId, data, onClose, onSaved }: Inst
   }, [open]);
 
   const today = todayVn();
-  // Mốc chia đợt (T1): ngày sự kiện, hoặc ngày kết thúc lớp muộn nhất của hợp đồng khoá học. Đang hỏi máy chủ → tắt nút.
-  const anchorState = useSuggestAnchor(orgId, contract, open);
-  const anchor = anchorState.status === 'ready' ? anchorState.anchor : null;
-  const anchorLoading = anchorState.status === 'loading';
+  // Mốc chia đợt (T1): ngày sự kiện, hoặc ngày kết thúc lớp muộn nhất của hợp đồng khoá học (máy chủ trả sẵn).
+  const anchor = useSuggestAnchor(contract);
   const hasDeposit = summary.depositRequired > 0;
   const plans = [1, 2, 3].map((n) => suggestDates(today, anchor, n, hasDeposit));
   const canSuggestEvent = anchor?.kind === 'event' && daysBetween(today, anchor.date) >= 1;
@@ -158,18 +156,18 @@ export function InstallmentsDialog({ open, orgId, data, onClose, onSaved }: Inst
         )}
         {/* Không có ngày sự kiện (khoá học) hoặc ngày sự kiện đã qua: Cọc + 1 đợt (bản vẽ C3 mục 2.3: Cọc + 1/2/3). */}
         {!canSuggestEvent && (
-          <Button size="sm" disabled={anchorLoading || !plans[0]?.ok} onClick={() => suggest(1)}>
+          <Button size="sm" disabled={!plans[0]?.ok} onClick={() => suggest(1)}>
             Cọc + 1 đợt
           </Button>
         )}
-        <Button size="sm" disabled={anchorLoading || !plans[1]?.ok} onClick={() => suggest(2)}>
+        <Button size="sm" disabled={!plans[1]?.ok} onClick={() => suggest(2)}>
           Cọc + 2 đợt
         </Button>
-        <Button size="sm" disabled={anchorLoading || !plans[2]?.ok} onClick={() => suggest(3)}>
+        <Button size="sm" disabled={!plans[2]?.ok} onClick={() => suggest(3)}>
           Cọc + 3 đợt
         </Button>
       </div>
-      {!anchorLoading && (planNote || blockedNotes.length > 0) && (
+      {(planNote || blockedNotes.length > 0) && (
         <div className="pm-plan-note" data-o="moc-chia-dot">
           {planNote && <p>{planNote}</p>}
           {blockedNotes.map((m) => (

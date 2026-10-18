@@ -12,6 +12,7 @@ const base: ContractPayments = {
     status: 'CONFIRMED',
     eventDate: '2026-10-24T01:00:00.000Z',
     confirmedAt: '2026-10-12T03:00:00.000Z',
+    courseEndDate: null,
     customer: { id: 'k1', fullName: 'Phương Thảo', phone: '0912345678', phoneHidden: false },
   },
   summary: { total: 5_300_000, depositRequired: 1_000_000, received: 1_000_000, refunded: 0, paid: 1_000_000, remaining: 4_300_000, overpaid: 0, depositOutstanding: 0 },

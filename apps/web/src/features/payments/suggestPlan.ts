@@ -9,7 +9,8 @@
 //   ghi lý do). Không dồn nhiều đợt vào cùng một ngày, không đẩy đợt nào ra sau mốc.
 // - Mốc đã qua: không còn ngày nào trước mốc → giữ cách cũ (30 ngày một đợt kể từ hôm nay) và ghi rõ là mốc đã qua.
 // - Không có mốc: giữ cách cũ (30 ngày một đợt).
-import { addDays, daysBetween, fmtIsoDay } from './vnTime';
+import type { ContractPayments } from '../../api/types';
+import { addDays, daysBetween, fmtIsoDay, vnDate } from './vnTime';
 
 export const SUGGEST_INTERVAL_DAYS = 30;
 
@@ -17,6 +18,18 @@ export interface SuggestAnchor {
   /** "YYYY-MM-DD" giờ Việt Nam. */
   date: string;
   kind: 'event' | 'course';
+}
+
+/**
+ * Mốc chia đợt lấy thẳng từ phản hồi tiến độ thu tiền (GET /contracts/:id/payments): ngày sự kiện (giờ Việt Nam) nếu có;
+ * không có thì ngày kết thúc lớp muộn nhất mà máy chủ đã tính sẵn (contract.courseEndDate — dòng khoá học chưa huỷ, bỏ lớp
+ * đã huỷ). Không gọi thêm GET /contracts/:id hay GET /classes: người chỉ có quyền thu tiền vẫn có mốc. Không có cả hai → null
+ * (gợi ý 30 ngày một đợt).
+ */
+export function anchorOf(contract: Pick<ContractPayments['contract'], 'eventDate' | 'courseEndDate'>): SuggestAnchor | null {
+  if (contract.eventDate) return { date: vnDate(contract.eventDate), kind: 'event' };
+  if (contract.courseEndDate) return { date: contract.courseEndDate.slice(0, 10), kind: 'course' };
+  return null;
 }
 
 export type SuggestDates =

@@ -38,6 +38,7 @@ function progress(over: Partial<ContractPayments> = {}): ContractPayments {
       status: 'CONFIRMED',
       eventDate: '2026-10-24T01:00:00.000Z',
       confirmedAt: '2026-10-12T03:00:00.000Z',
+      courseEndDate: null,
       customer: { id: 'k-1', fullName: 'Tôn Nữ Hoàng Bảo Ngọc Phương Thảo', phone: '0912345678', phoneHidden: false },
     },
     summary: SUM,
@@ -589,11 +590,11 @@ describe('tổ chức đào tạo: chip loại hợp đồng (kind máy chủ), 
     return undefined;
   };
 
-  function renderAcademy(path: string) {
+  function renderAcademy(path: string, access = FULL) {
     const router = createMemoryRouter(
       [
-        { path: '/:orgSlug/thu-tien', element: <PaymentsScreen orgId={ORG} orgSlug="hv" contractId={null} access={FULL} academy /> },
-        { path: '/:orgSlug/thu-tien/:id', element: <PaymentsScreen orgId={ORG} orgSlug="hv" contractId={KH} access={FULL} academy /> },
+        { path: '/:orgSlug/thu-tien', element: <PaymentsScreen orgId={ORG} orgSlug="hv" contractId={null} access={access} academy /> },
+        { path: '/:orgSlug/thu-tien/:id', element: <PaymentsScreen orgId={ORG} orgSlug="hv" contractId={KH} access={access} academy /> },
       ],
       { initialEntries: [path] },
     );
@@ -618,38 +619,30 @@ describe('tổ chức đào tạo: chip loại hợp đồng (kind máy chủ), 
     expect(screen.getByRole('heading', { name: /^Sự kiện 7 ngày tới/ })).toBeTruthy();
   });
 
-  it('hợp đồng khoá học: Cọc + 2 đợt chia đều tới ngày kết thúc lớp muộn nhất (lớp đã huỷ, dòng đã huỷ không tính)', async () => {
-    const classes = [
-      { id: 'cls-k12', endDate: '2026-11-30', status: 'OPEN' },
-      { id: 'cls-k13', endDate: '2026-11-20', status: 'OPEN' },
-      { id: 'cls-huy', endDate: '2027-03-01', status: 'CANCELLED' },
-      { id: 'cls-dong-huy', endDate: '2027-02-01', status: 'OPEN' },
-      { id: 'cls-khac', endDate: '2027-01-01', status: 'OPEN' },
-    ];
-    const lines = [
-      { kind: 'COURSE', name: 'Makeup chuyên nghiệp · K12', courseClassId: 'cls-k12', voidedAt: null },
-      { kind: 'COURSE', name: 'Makeup cá nhân · K13', courseClassId: 'cls-k13', voidedAt: null },
-      { kind: 'COURSE', name: 'Lớp đã huỷ', courseClassId: 'cls-huy', voidedAt: null },
-      { kind: 'COURSE', name: 'Dòng đã huỷ', courseClassId: 'cls-dong-huy', voidedAt: '2026-10-18T03:00:00.000Z' },
-      { kind: 'CUSTOM', name: 'Giáo trình', courseClassId: null, voidedAt: null },
-    ];
-    setupServer({
-      handlers: [
-        (c) => {
-          const url = decodeURIComponent(c.url);
-          if (c.method === 'GET' && url.endsWith(`/contracts/${KH}`)) return json(200, { id: KH, kind: 'COURSE', lines });
-          if (c.method === 'GET' && url.includes(`/orgs/${ORG}/classes`)) return json(200, { items: classes });
-          if (c.method === 'PUT') return json(200, progress());
-          return undefined;
-        },
-        courseHandler,
-      ],
-    });
+  // T1 (phiếu vướng thợ Y4): mốc lấy từ contract.courseEndDate của chính phản hồi tiến độ (máy chủ đã bỏ lớp đã huỷ, dòng đã
+  // huỷ). Hộp tiến độ KHÔNG gọi thêm GET /contracts/:id hay GET /classes — máy giả ở đây trả lớp kết thúc 01/01/2027 cho hai
+  // đường đó: nếu web còn dùng chúng, mốc sẽ lệch khỏi 30/11.
+  const courseProgress = (courseEndDate: string | null): Handler => (c) => {
+    const url = decodeURIComponent(c.url);
+    if (c.method === 'GET' && url.endsWith(`/contracts/${KH}/payments`)) {
+      const p = progress();
+      return json(200, { ...p, contract: { ...p.contract, id: KH, code: 'HĐKH-2026-0057', eventDate: null, courseEndDate, customer: { id: 'k-2', fullName: 'Đỗ Minh Ngọc', phone: null, phoneHidden: false } } });
+    }
+    if (c.method === 'GET' && url.includes(`/orgs/${ORG}/classes`)) return json(200, { items: [{ id: 'cls-k12', endDate: '2027-01-01', status: 'OPEN' }] });
+    if (c.method === 'PUT') return json(200, progress());
+    return undefined;
+  };
+  const extraCalls = () => calls.filter((c) => decodeURIComponent(c.url).endsWith(`/contracts/${KH}`) || c.url.includes('/classes')).length;
+
+  it('hợp đồng khoá học: Cọc + 2 đợt chia đều tới ngày kết thúc lớp muộn nhất do máy chủ trả (courseEndDate); hộp không gọi thêm hợp đồng / lớp', async () => {
+    setupServer({ handlers: [courseProgress('2026-11-30'), courseHandler] });
     renderAcademy(`/hv/thu-tien/${KH}`);
     fireEvent.click(await screen.findByRole('button', { name: 'Lập tiến độ' }));
+    const before = extraCalls();
     const dlg = screen.getByRole('dialog', { name: 'Tiến độ thanh toán' });
+    // Có mốc ngay khi mở hộp (không chờ lời gọi phụ).
     expect(
-      await within(dlg).findByText(
+      within(dlg).getByText(
         'Các đợt chia đều từ hôm nay tới ngày kết thúc lớp 30/11/2026 (lớp kết thúc muộn nhất trong hợp đồng); không đợt nào hạn sau ngày đó.',
       ),
     ).toBeTruthy();
@@ -657,25 +650,33 @@ describe('tổ chức đào tạo: chip loại hợp đồng (kind máy chủ), 
     await act(async () => fireEvent.click(within(dlg).getByRole('button', { name: 'Lưu tiến độ' })));
     const put = calls.find((c) => c.method === 'PUT')?.body as { installments: { dueDate: string }[] };
     expect(put.installments.map((i) => i.dueDate)).toEqual(['2026-10-19T23:59:59+07:00', '2026-11-09T23:59:59+07:00', '2026-11-30T23:59:59+07:00']);
+    expect(extraCalls()).toBe(before);
+    expect(calls.some((c) => c.url.includes('/classes'))).toBe(false);
   });
 
-  it('hợp đồng khoá học không đọc được lớp (403): giữ 30 ngày một đợt', async () => {
-    setupServer({
-      handlers: [
-        (c) => {
-          const url = decodeURIComponent(c.url);
-          if (c.method === 'GET' && url.endsWith(`/contracts/${KH}`)) return json(200, { id: KH, kind: 'COURSE', lines: [{ kind: 'COURSE', name: 'K12', courseClassId: 'cls-k12', voidedAt: null }] });
-          if (c.method === 'GET' && url.includes(`/orgs/${ORG}/classes`)) return err(403, 'FORBIDDEN', 'Không có quyền');
-          if (c.method === 'PUT') return json(200, progress());
-          return undefined;
-        },
-        courseHandler,
-      ],
-    });
+  it('người chỉ có quyền thu tiền (không contracts.read; GET hợp đồng / GET lớp sẽ 403): vẫn chia tới ngày kết thúc lớp', async () => {
+    const forbid: Handler = (c) => {
+      const url = decodeURIComponent(c.url);
+      if (c.method === 'GET' && (url.endsWith(`/contracts/${KH}`) || url.includes('/classes'))) return err(403, 'FORBIDDEN', 'Không có quyền');
+      return undefined;
+    };
+    setupServer({ handlers: [forbid, courseProgress('2026-11-30'), courseHandler] });
+    renderAcademy(`/hv/thu-tien/${KH}`, { write: true, void: false, contractsRead: false });
+    fireEvent.click(await screen.findByRole('button', { name: 'Lập tiến độ' }));
+    const dlg = screen.getByRole('dialog', { name: 'Tiến độ thanh toán' });
+    fireEvent.click(within(dlg).getByRole('button', { name: 'Cọc + 2 đợt' }));
+    await act(async () => fireEvent.click(within(dlg).getByRole('button', { name: 'Lưu tiến độ' })));
+    const put = calls.find((c) => c.method === 'PUT')?.body as { installments: { dueDate: string }[] };
+    expect(put.installments.map((i) => i.dueDate)).toEqual(['2026-10-19T23:59:59+07:00', '2026-11-09T23:59:59+07:00', '2026-11-30T23:59:59+07:00']);
+    expect(extraCalls()).toBe(0);
+  });
+
+  it('hợp đồng khoá học không có lớp còn hiệu lực (courseEndDate null): giữ 30 ngày một đợt', async () => {
+    setupServer({ handlers: [courseProgress(null), courseHandler] });
     renderAcademy(`/hv/thu-tien/${KH}`);
     fireEvent.click(await screen.findByRole('button', { name: 'Lập tiến độ' }));
     const dlg = screen.getByRole('dialog', { name: 'Tiến độ thanh toán' });
-    await waitFor(() => expect((within(dlg).getByRole('button', { name: 'Cọc + 2 đợt' }) as HTMLButtonElement).disabled).toBe(false));
+    expect((within(dlg).getByRole('button', { name: 'Cọc + 2 đợt' }) as HTMLButtonElement).disabled).toBe(false);
     fireEvent.click(within(dlg).getByRole('button', { name: 'Cọc + 2 đợt' }));
     await act(async () => fireEvent.click(within(dlg).getByRole('button', { name: 'Lưu tiến độ' })));
     const put = calls.find((c) => c.method === 'PUT')?.body as { installments: { dueDate: string }[] };

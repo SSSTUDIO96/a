@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { anchorNote, suggestDates } from './suggestPlan';
+import { anchorNote, anchorOf, suggestDates } from './suggestPlan';
 
 // Biên bản nghiệm thu cuối T1: "Cọc + 2/3 đợt" từng cách nhau cố định 30 ngày → đợt hạn sau ngày cưới / sau khi lớp kết thúc.
 const TODAY = '2026-10-18';
@@ -84,5 +84,23 @@ describe('anchorNote', () => {
     expect(anchorNote(TODAY, CLASS_END)).toContain('ngày kết thúc lớp 30/11/2026 (lớp kết thúc muộn nhất trong hợp đồng)');
     expect(anchorNote(TODAY, { date: '2026-10-01', kind: 'event' })).toBeNull();
     expect(anchorNote(TODAY, null)).toBeNull();
+  });
+});
+
+describe('anchorOf — mốc lấy từ phản hồi tiến độ thu tiền (phiếu vướng T1 của thợ Y4)', () => {
+  it('BẮT: không có ngày sự kiện → ngày kết thúc lớp muộn nhất máy chủ trả (courseEndDate)', () => {
+    expect(anchorOf({ eventDate: null, courseEndDate: '2026-11-30' })).toEqual({ date: '2026-11-30', kind: 'course' });
+  });
+  it('GIỮ: có ngày sự kiện → ngày sự kiện theo giờ Việt Nam, đứng trước ngày kết thúc lớp', () => {
+    // 23/11 17:30 UTC = 24/11 00:30 giờ Việt Nam.
+    expect(anchorOf({ eventDate: '2026-11-23T17:30:00.000Z', courseEndDate: '2026-11-30' })).toEqual({ date: '2026-11-24', kind: 'event' });
+  });
+  it('GIỮ: không có cả hai → null (30 ngày một đợt)', () => {
+    expect(anchorOf({ eventDate: null, courseEndDate: null })).toBeNull();
+    expect(suggestDates(TODAY, anchorOf({ eventDate: null, courseEndDate: null }), 2, true)).toEqual({
+      ok: true,
+      days: ['2026-10-18', '2026-11-17', '2026-12-17'],
+      note: null,
+    });
   });
 });
