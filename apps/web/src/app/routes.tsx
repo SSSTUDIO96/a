@@ -1,12 +1,19 @@
 import type { ReactNode } from 'react';
-import { createBrowserRouter, Outlet, type RouteObject } from 'react-router';
+import { createBrowserRouter, Navigate, Outlet, useParams, type RouteObject } from 'react-router';
 import { CreateOrgPage } from '../features/auth/CreateOrgPage';
 import { LoginPage } from '../features/auth/LoginPage';
 import { RegisterPage } from '../features/auth/RegisterPage';
-import { ContractEditorPage, ContractListPage } from '../features/contracts';
+import { BrandPage } from '../features/brand';
+import { ContractEditorPage, ContractListPage, NEW_CONTRACT_SEGMENT } from '../features/contracts';
+import { CustomersPage } from '../features/customers';
+import { PaymentsPage } from '../features/payments';
+import { PlatformApp } from '../features/platform';
 import { PricingPage } from '../features/pricing';
+import { PublicSitePage } from '../features/public-site';
+import { CashbookPage, RevenuePage } from '../features/reports';
 import { SchedulePage } from '../features/schedule';
-import { AppShell, OrgHome, RequireNavPermission } from '../layout/AppShell';
+import { StaffPage } from '../features/staff';
+import { AppShell, NavSectionHome, OrgHome, RequireNavPermission } from '../layout/AppShell';
 import { NotFoundView } from '../layout/ErrorStates';
 import { GuestOnly, HomeRedirect, RequireAuth } from './guards';
 import { SessionProvider } from './session';
@@ -19,14 +26,21 @@ function Root() {
   );
 }
 
-// Màn chưa dựng: đúng một dòng, không nút giả. Các gói W4–W6 thay bằng màn thật.
+// Màn chưa dựng: đúng một dòng, không nút giả. Thợ màn thay bằng màn thật (cửa vào src/features/<gói>/index.tsx).
 export function Placeholder() {
   return <p>Đang dựng</p>;
 }
 
-// Mỗi đường trong tổ chức gắn với một mục điều hướng (src/layout/nav.ts) để chặn theo quyền.
+// Mỗi đường trong tổ chức gắn với một mục hoặc mục con điều hướng (khoá trong src/layout/nav.ts) để chặn theo quyền.
 function guarded(navKey: string, element: ReactNode) {
   return <RequireNavPermission navKey={navKey}>{element}</RequireNavPermission>;
+}
+
+// /hop-dong/moi cần contracts.write (mục con "Lập hợp đồng"); /hop-dong/:id cần contracts.read. Cùng một phần tử
+// ContractEditorPage ở cùng chỗ → đổi "moi" → id sau lần lưu đầu KHÔNG dựng lại màn (giữ dữ liệu đang nhập).
+function ContractEditorRoute() {
+  const { id } = useParams();
+  return guarded(id === NEW_CONTRACT_SEGMENT ? 'hop-dong-moi' : 'hop-dong-ds', <ContractEditorPage />);
 }
 
 const orgChildren: RouteObject[] = [
@@ -34,15 +48,28 @@ const orgChildren: RouteObject[] = [
   { path: 'lich', element: guarded('lich', <SchedulePage />) },
   { path: 'bang-gia', element: guarded('bang-gia', <PricingPage />) },
   { path: 'bang-gia/:nhom', element: guarded('bang-gia', <PricingPage />) },
-  { path: 'hop-dong', element: guarded('hop-dong', <ContractListPage />) },
-  { path: 'hop-dong/:id', element: guarded('hop-dong', <ContractEditorPage />) },
-  { path: 'khach-hang', element: guarded('khach-hang', <Placeholder />) },
-  { path: 'nhan-su', element: guarded('nhan-su', <Placeholder />) },
-  { path: 'cai-dat', element: guarded('cai-dat', <Placeholder />) },
+  { path: 'hop-dong', element: guarded('hop-dong-ds', <ContractListPage />) },
+  { path: 'hop-dong/:id', element: <ContractEditorRoute /> },
+  { path: 'thu-tien', element: guarded('thu-tien', <PaymentsPage />) },
+  { path: 'thu-tien/:contractId', element: guarded('thu-tien', <PaymentsPage />) },
+  { path: 'khach-hang', element: guarded('khach-hang', <CustomersPage />) },
+  { path: 'khach-hang/:customerId', element: guarded('khach-hang', <CustomersPage />) },
+  { path: 'nhan-su', element: guarded('tho-bac', <StaffPage />) },
+  { path: 'nhan-su/bac/:tierId', element: guarded('tho-bac', <StaffPage />) },
+  { path: 'nhan-su/tien-cong', element: guarded('tien-cong', <StaffPage />) },
+  { path: 'nhan-su/tien-cong/:loai/:id', element: guarded('tien-cong', <StaffPage />) },
+  { path: 'bao-cao', element: <NavSectionHome navKey="bao-cao" /> },
+  { path: 'bao-cao/doanh-thu', element: guarded('doanh-thu', <RevenuePage />) },
+  { path: 'bao-cao/so-thu', element: guarded('so-thu', <CashbookPage />) },
+  { path: 'cai-dat', element: guarded('cai-dat', <Navigate to="thuong-hieu" replace />) },
+  { path: 'cai-dat/thuong-hieu', element: guarded('thuong-hieu', <BrandPage />) },
   { path: '*', element: <NotFoundView /> },
 ];
 
 export const routes: RouteObject[] = [
+  // Trang giới thiệu công khai: không đăng nhập, không khung, không khôi phục phiên (không gửi thẻ đăng nhập — C2 mục 4.3).
+  // Đặt trước :orgSlug ("trang" là đoạn tĩnh nên luôn thắng :orgSlug).
+  { path: 'trang/:slug', element: <PublicSitePage /> },
   {
     element: <Root />,
     children: [
@@ -50,6 +77,8 @@ export const routes: RouteObject[] = [
       { path: 'dang-nhap', element: <GuestOnly><LoginPage /></GuestOnly> },
       { path: 'dang-ky', element: <GuestOnly><RegisterPage /></GuestOnly> },
       { path: 'tao-to-chuc', element: <RequireAuth><CreateOrgPage /></RequireAuth> },
+      // Quản trị nền tảng: trong đăng nhập, ngoài :orgSlug, khung riêng (PlatformShell) do gói quản trị làm — C2 mục 5.
+      { path: 'quan-tri/*', element: <RequireAuth><PlatformApp /></RequireAuth> },
       { path: ':orgSlug', element: <RequireAuth><AppShell /></RequireAuth>, children: orgChildren },
       { path: '*', element: <main className="sh-alone"><NotFoundView message="Không có trang này." backTo="/" /></main> },
     ],

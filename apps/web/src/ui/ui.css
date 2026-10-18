@@ -69,6 +69,13 @@
   border-color: var(--accent-line);
 }
 
+.ui-btn--danger { background: var(--danger); border-color: var(--danger); color: #fff; }
+.ui-btn--danger:hover:not(:disabled), .ui-btn--danger[data-demo='hover'] {
+  background: color-mix(in srgb, var(--danger) 85%, var(--text));
+  border-color: color-mix(in srgb, var(--danger) 85%, var(--text));
+}
+.ui-btn--danger[data-demo='focus'], .ui-btn--danger:focus-visible { outline-color: var(--danger); }
+
 .ui-btn--sm { height: var(--h-ctl-sm); padding: 0 10px; font-size: 13px; }
 .ui-btn--ghost.ui-btn--sm { padding: 0 6px; }
 .ui-btn--icon { width: 34px; padding: 0; }
@@ -520,7 +527,7 @@
   overflow: hidden;
   min-width: 0;
 }
-.ui-dialog--sm { width: min(440px, 100%); }
+.ui-dialog--sm { width: min(var(--dlg-w, 440px), 100%); }
 .ui-dialog:focus { outline: none; }
 .ui-dialog__head {
   display: flex;

@@ -54,3 +54,18 @@ export {
 export { DateInput, parseVnDate, formatVnDate, type DateInputProps } from './DateInput';
 export { TimeInput, parseTime, type TimeInputProps } from './TimeInput';
 export { IconNext, IconWarn, IconFilter, IconCalendar, IconClock } from './icons';
+// Bản vẽ C2 mục 0.1–0.2 (thợ W2b)
+export { ListDetail, type ListDetailProps } from './ListDetail';
+export { ListGroupHeader, type ListGroupHeaderProps } from './ListGroupHeader';
+export { ListRow, ListRowSkeleton, type ListRowProps, type ListRowSkeletonProps } from './ListRow';
+export { StatTile, StatGrid, type StatTileProps, type StatGridProps } from './StatTile';
+export { PersonChip, PersonChipList, type PersonChipProps, type PersonChipListProps } from './PersonChip';
+export {
+  ImageUpload,
+  checkImageFile,
+  IMAGE_TYPES,
+  type ImageUploadProps,
+  type ImageUploadContext,
+} from './ImageUpload';
+export { ConfirmDialog, type ConfirmDialogProps } from './ConfirmDialog';
+export { IconUpload } from './icons';

@@ -19,6 +19,10 @@ export const PURPOSE_POLICY: Record<FilePurpose, { maxBytes: number; types: read
   COURSE_RESOURCE: { maxBytes: 25 * MB, types: IMAGES_AND_PDF },
   SUBMISSION: { maxBytes: 25 * MB, types: IMAGES_AND_PDF },
   OTHER: { maxBytes: 10 * MB, types: IMAGES_AND_PDF },
+  // Mục đích mới của module thiết kế thẻ (enum thêm ở schema.prisma). Đường tải tệp chung CHƯA nhận hai mục đích này
+  // (files/routes.ts Purpose) — chỉ khai chính sách để bảng đủ mục đích; module thiết kế quyết định cách tải.
+  DESIGN_PHOTO: { maxBytes: 15 * MB, types: IMAGES },
+  DESIGN_CARD: { maxBytes: 10 * MB, types: IMAGES },
 };
 
 const MAX_IMAGE_SIDE = 20_000;

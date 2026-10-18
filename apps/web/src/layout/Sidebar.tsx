@@ -1,9 +1,9 @@
 import type { ReactElement } from 'react';
-import { NavLink } from 'react-router';
+import { Link } from 'react-router';
 import type { Me, MyOrganization } from '../api/auth';
 import { ErrorNotice } from '../app/ErrorNotice';
 import { Avatar, Skeleton, WithTooltip } from '../ui';
-import type { NavItem } from './nav';
+import type { NavChild, NavItem, VisibleNavItem } from './nav';
 import { NavIcon } from './navIcons';
 import { OrgSwitcher } from './OrgSwitcher';
 import { useBreakpoint } from './useBreakpoint';
@@ -13,13 +13,14 @@ export interface SidebarProps {
   user: Me;
   org: MyOrganization;
   organizations: MyOrganization[];
-  items: NavItem[];
+  items: VisibleNavItem[];
   active: NavItem | undefined;
+  activeChild: NavChild | undefined;
   loading: boolean;
 }
 
 // Thanh trái — bản vẽ C mục 2.1. Máy tính 240px có chữ và menu con; máy tính bảng 68px chỉ biểu tượng, tên ở tooltip.
-export function Sidebar({ user, org, organizations, items, active, loading }: SidebarProps) {
+export function Sidebar({ user, org, organizations, items, active, activeChild, loading }: SidebarProps) {
   const bp = useBreakpoint();
   const iconOnly = bp === 'tablet';
   const base = `/${org.slug}`;
@@ -49,7 +50,7 @@ export function Sidebar({ user, org, organizations, items, active, loading }: Si
             {roleName ? <small>{roleName}</small> : null}
           </div>
         </div>
-        <OrgSwitcher org={org} organizations={organizations} sectionPath={active?.path ?? ''} />
+        <OrgSwitcher org={org} organizations={organizations} sectionPath={activeChild?.path ?? active?.path ?? ''} />
         <nav className="sh-menu" aria-label="Mục chính">
           {loading ? (
             <div className="sh-menu__skel" role="status" aria-label="Đang tải mục">
@@ -58,26 +59,34 @@ export function Sidebar({ user, org, organizations, items, active, loading }: Si
               <Skeleton height={40} />
             </div>
           ) : (
-            items.map((item) => (
-              <div key={item.key} className="sh-menu__grp">
-                {label(
-                  item.label,
-                  <NavLink to={`${base}/${item.path}`} className={({ isActive }) => (isActive ? 'sh-menu__a on' : 'sh-menu__a')} aria-label={iconOnly ? item.label : undefined}>
-                    <NavIcon name={item.icon} />
-                    <span className="sh-hide-t">{item.label}</span>
-                  </NavLink>,
-                )}
-                {item.children && active?.key === item.key && !iconOnly ? (
-                  <div className="sh-kids">
-                    {item.children.map((c) => (
-                      <NavLink key={c.path} to={`${base}/${c.path}`} className={({ isActive }) => (isActive ? 'sh-kids__a on' : 'sh-kids__a')}>
-                        {c.label}
-                      </NavLink>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-            ))
+            // Mục đang chọn tính theo nav.ts (activeNavItem), không theo đường của liên kết: /thu-tien thuộc "Hợp đồng",
+            // mục chỉ có mục con (Báo cáo) trỏ tới mục con đầu tiên được xem.
+            items.map((item) => {
+              const on = active?.key === item.key;
+              return (
+                <div key={item.key} className="sh-menu__grp">
+                  {label(
+                    item.label,
+                    <Link to={`${base}/${item.href}`} className={on ? 'sh-menu__a on' : 'sh-menu__a'} aria-current={on ? 'page' : undefined} aria-label={iconOnly ? item.label : undefined}>
+                      <NavIcon name={item.icon} />
+                      <span className="sh-hide-t">{item.label}</span>
+                    </Link>,
+                  )}
+                  {item.children.length > 0 && on && !iconOnly ? (
+                    <div className="sh-kids">
+                      {item.children.map((c) => {
+                        const kidOn = activeChild?.key === c.key;
+                        return (
+                          <Link key={c.key} to={`${base}/${c.path}`} className={kidOn ? 'sh-kids__a on' : 'sh-kids__a'} aria-current={kidOn ? 'page' : undefined}>
+                            {c.label}
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })
           )}
         </nav>
         <div className="sh-foot">

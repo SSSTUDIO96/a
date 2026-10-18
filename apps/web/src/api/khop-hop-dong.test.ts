@@ -511,7 +511,8 @@ describe('types.ts khớp đúng dữ liệu máy chủ thật trả về (tên 
     expect(ledger.totals).toMatchObject({ received: half, receiptCount: 1 });
     first(ledger.items, 'phiếu trong sổ thu');
     const byMonth = await chk('payments.getRevenueReport', payments.getRevenueReport(orgId, { from, to }), 'getRevenueReport (tháng)');
-    expect(byMonth.groupBy).toBe('month');
+    // Thu hẹp kiểu theo groupBy (expect không thu hẹp được kiểu hợp).
+    if (byMonth.groupBy !== 'month') throw new Error('Báo cáo phải nhóm theo tháng');
     first(byMonth.rows, 'tháng');
     const byContract = await chk('payments.getRevenueReport', payments.getRevenueReport(orgId, { from, to, groupBy: 'contract' }), 'getRevenueReport (hợp đồng)');
     if (byContract.groupBy !== 'contract') throw new Error('Báo cáo phải nhóm theo hợp đồng');

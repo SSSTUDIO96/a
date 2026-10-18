@@ -8,7 +8,8 @@ import { assertCanEditRole, assertCanGrant, assertCanTouchMember, assertKeepsAnO
 import { lockOrgAndRecheck, recordNewOrgIdempotency } from '../../http/middleware';
 
 // Tên trang của web không được dùng làm đường dẫn tổ chức (web dùng /:orgSlug/...).
-const RESERVED_SLUGS = new Set(['dang-nhap', 'dang-ky', 'tao-to-chuc', 'api', 'admin', 'quan-tri', 'www', 'app', 'static', 'assets']);
+// 'trang': trang giới thiệu công khai nằm ở /trang/:slug — tổ chức đặt đường dẫn "trang" sẽ đè đường đó.
+const RESERVED_SLUGS = new Set(['dang-nhap', 'dang-ky', 'tao-to-chuc', 'api', 'admin', 'quan-tri', 'www', 'app', 'static', 'assets', 'trang']);
 const Slug = z
   .string()
   .trim()

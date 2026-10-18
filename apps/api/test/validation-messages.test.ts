@@ -33,4 +33,19 @@ describe('lỗi kiểm dữ liệu', () => {
     expect(r2.status).toBe(409);
     expect(r2.body.error.message).toMatch(/Đường dẫn tổ chức đã có người dùng/);
   });
+
+  it('đường dẫn "trang" (web dùng /trang/:slug cho trang giới thiệu công khai) bị cấm như tên trang hệ thống → 400, không tạo tổ chức', async () => {
+    const u = await registerUser(app, 'slug-trang');
+    let blocked = 0;
+    for (const slug of ['trang', 'TRANG', ' trang ']) {
+      const r = await request(app).post('/api/v1/orgs').set(bearer(u)).send({ name: 'Trang', slug, kind: 'TEAM' });
+      if (r.status === 400 && /trùng tên trang của hệ thống/.test(JSON.stringify(r.body))) blocked++;
+    }
+    console.log(`[slug "trang"] bị chặn: ${blocked}/3`);
+    expect(blocked).toBe(3);
+    // Đếm theo người gửi: database thử có thể còn tổ chức "trang" do lần chạy đỏ trước khi sửa (dữ liệu cũ không tự biến mất).
+    expect(await deps.db.membership.count({ where: { userId: u.id, organization: { slug: 'trang' } } })).toBe(0);
+    // GIỮ: đường dẫn chứa "trang" nhưng không phải đúng "trang" vẫn dùng được.
+    await request(app).post('/api/v1/orgs').set(bearer(u)).send({ name: 'Trang Make up', slug: `trang-makeup-${Date.now()}`, kind: 'TEAM' }).expect(201);
+  });
 });

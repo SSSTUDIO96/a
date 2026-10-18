@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { configure, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -47,6 +47,8 @@ vi.mock('../../api/staff', () => ({
 vi.mock('../../api/schedule', () => ({ listCustomers: vi.fn() }));
 
 const api = vi.mocked(contractsApi);
+// Quote đợi 300ms rồi mới gọi; khi cả bộ vitest chạy song song, 1 giây chờ mặc định không đủ.
+configure({ asyncUtilTimeout: 5000 });
 const TZ = 'Asia/Ho_Chi_Minh';
 
 const PKG_ME = {

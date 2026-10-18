@@ -221,6 +221,7 @@ export const PARTIAL_SAMPLES: PartialSamples = {
   'PATCH /orgs/:orgId/staff/:membershipId': {
     full: (c) => ({ displayName: 'Thợ đủ', avatarFileId: c.o.ids.avatarFileId, phone: '0987654321', tierId: c.o.ids.tierId, isBookable: false }),
     one: () => ({ displayName: 'Thợ đổi tên' }),
+    derived: { initials: 'chữ viết tắt suy ra từ tên hiển thị' },
     skip: { avatarUrl: 'trường chỉ để báo lỗi "không nhận avatarUrl" — không bao giờ hợp lệ' },
   },
   'PATCH /platform/organizations/:organizationId': {

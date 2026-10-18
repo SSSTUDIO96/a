@@ -50,6 +50,28 @@ const PATHS: Record<NavIconName | 'brand' | 'more' | 'logout' | 'swap' | 'down',
       <path d="M11 6l7 7" />
     </>
   ),
+  'thu-tien': (
+    <>
+      <rect x="2.5" y="6" width="19" height="12" rx="2" />
+      <circle cx="12" cy="12" r="2.5" />
+      <path d="M6 9.5v5M18 9.5v5" />
+    </>
+  ),
+  'bao-cao': <path d="M4 20V10M10 20V4M16 20v-7M21 20H3" />,
+  // Chưa có mục dùng (Đào tạo, Mẫu thiết kế) — đặt sẵn để thêm mục bằng một dòng trong nav.ts.
+  'khoa-hoc': (
+    <>
+      <path d="M2 9l10-5 10 5-10 5z" />
+      <path d="M6 11v5c2 2 10 2 12 0v-5M22 9v6" />
+    </>
+  ),
+  mau: (
+    <>
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <path d="M3 15l5-5 4 4 3-3 6 6" />
+      <circle cx="15.5" cy="8" r="1.5" />
+    </>
+  ),
   'cai-dat': (
     <>
       <circle cx="12" cy="12" r="3" />

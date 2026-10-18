@@ -2,7 +2,8 @@ import type { ComponentPropsWithRef, ReactNode } from 'react';
 import { cx } from './cx';
 import './ui.css';
 
-export type ButtonVariant = 'default' | 'primary' | 'ghost' | 'dashed';
+/** danger: nút đỏ cho thao tác khó lùi (xoá, khoá, huỷ) — bản vẽ C2 mục 0.2 ConfirmDialog. */
+export type ButtonVariant = 'default' | 'primary' | 'ghost' | 'dashed' | 'danger';
 export type ButtonSize = 'md' | 'sm';
 
 export interface ButtonProps extends Omit<ComponentPropsWithRef<'button'>, 'children'> {

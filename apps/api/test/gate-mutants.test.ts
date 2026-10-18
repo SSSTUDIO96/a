@@ -7,8 +7,11 @@ import { defineRoute, mustOrg, type AnyRoute } from '../src/http/route';
 import { AppError } from '../src/lib/errors';
 import { buildGateFixture, runIsolationGate, type GateReport } from './gate';
 import { makeApp, makeDeps } from './helpers';
-import { REF_SAMPLES, SAMPLES } from './gate-samples';
+import { PARTIAL_SAMPLES, REF_SAMPLES, SAMPLES } from './gate-samples';
 import { createApp } from '../src/app';
+import express, { type NextFunction, type Request, type Response } from 'express';
+import { authenticate } from '../src/http/middleware';
+import { runPartialPatchGate } from './gate-partial';
 
 const deps = makeDeps();
 afterAll(async () => {
@@ -167,5 +170,75 @@ describe('cửa gác chuyển đỏ với từng kiểu lỗi', () => {
     const r = await gateOn(replace(mutant));
     console.log(`[đột biến 9] platform vi phạm: ${r.platform.violations.length}/${r.platform.total}`);
     expect(r.platform.violations.some((v) => v.startsWith('GET /platform/stats'))).toBe(true);
+  });
+
+  it('Đột biến 10 — đường quản trị xác thực TRƯỚC (người chưa đăng nhập / thẻ rác nhận 401, đường bịa 404) → phép unauth và platform đỏ', async () => {
+    // Dựng lại đúng hành vi cũ (biên bản máy chủ lát 2, lỗi M2) bằng một lớp chặn đứng trước app thật.
+    const inner = createApp(deps);
+    const outer = express();
+    const router = express.Router();
+    for (const r of ALL_ROUTES.filter((x) => x.path.startsWith('/platform/'))) {
+      router[r.method](r.path, async (req: Request, res: Response, next: NextFunction) => {
+        try {
+          await authenticate(req, deps);
+          next();
+        } catch (err) {
+          res.status(401).json({ error: { code: 'UNAUTHENTICATED', message: (err as Error).message, requestId: String(res.locals.requestId ?? '') } });
+        }
+      });
+    }
+    outer.use('/api/v1', router);
+    outer.use(inner);
+    const fx = await buildGateFixture(makeApp(deps));
+    const r = await runIsolationGate(outer as unknown as ReturnType<typeof makeApp>, ALL_ROUTES, fx, SAMPLES, REF_SAMPLES);
+    console.log(`[đột biến 10] unauth vi phạm: ${r.unauth.violations.length}/${r.unauth.total}; platform vi phạm: ${r.platform.violations.length}/${r.platform.total}`);
+    expect(r.unauth.violations.some((v) => v.startsWith('GET /platform/stats (chưa đăng nhập) → 401'))).toBe(true);
+    expect(r.platform.violations.some((v) => v.includes('(thẻ rác) → 401'))).toBe(true);
+  });
+
+  // Hai đột biến dưới: cài lại .default() vào thân PATCH (dựng thẳng đối tượng route, vượt chốt khởi động của defineRoute)
+  // → vế CHẠY THẬT của cửa gác sửa một phần phải đỏ đúng đường (biên bản máy chủ lát 2, lỗi S1).
+  async function partialGateOn(routes: AnyRoute[]) {
+    const app = createApp(deps, routes);
+    const fx = await buildGateFixture(makeApp(deps));
+    return runPartialPatchGate(app, deps.db, routes, fx, PARTIAL_SAMPLES);
+  }
+
+  it('Đột biến 11 — thân sửa danh mục có .default() (sortOrder 0, isActive true) → partialKeep đỏ', async () => {
+    const original = ALL_ROUTES.find((r) => r.method === 'patch' && r.path === '/orgs/:orgId/service-categories/:categoryId');
+    if (!original) throw new Error('Không có route sửa danh mục');
+    const body = z
+      .object({ name: z.string().trim().min(1).max(120).optional(), sortOrder: z.number().int().min(0).default(0), isActive: z.boolean().default(true) })
+      .partial();
+    const r = await partialGateOn(replace({ ...original, body } as AnyRoute));
+    console.log(`[đột biến 11] partialKeep vi phạm: ${r.partialKeep.violations.length}/${r.partialKeep.total}; partialStatic: ${r.partialStatic.violations.length}`);
+    expect(r.partialKeep.violations.some((v) => v.startsWith('PATCH /orgs/:orgId/service-categories/:categoryId: gửi {name} → 2 trường'))).toBe(true);
+  });
+
+  it('Đột biến 12 — tái hiện S1: thân sửa gói = thân tạo gói .partial() (có .default) → partialKeep đỏ ở PATCH /platform/plans/:planId', async () => {
+    const original = ALL_ROUTES.find((r) => r.method === 'patch' && r.path === '/platform/plans/:planId');
+    if (!original) throw new Error('Không có route sửa gói');
+    const Limit = z.number().int().min(0).nullable();
+    const body = z
+      .object({
+        name: z.string().trim().min(1).max(60),
+        priceMonthly: z.number().int().nonnegative(),
+        maxStaff: Limit.default(null),
+        maxAppointmentsPerMonth: Limit.default(null),
+        maxStorageMb: Limit.default(null),
+        maxStudents: Limit.default(null),
+        maxCourses: Limit.default(null),
+        customDomain: z.boolean().default(false),
+        features: z.array(z.string()).default([]),
+        isActive: z.boolean().default(true),
+        sortOrder: z.number().int().min(0).default(0),
+      })
+      .partial();
+    const r = await partialGateOn(replace({ ...original, body } as AnyRoute));
+    const v = r.partialKeep.violations.find((x) => x.startsWith('PATCH /platform/plans/:planId'));
+    console.log(`[đột biến 12] ${v ?? 'KHÔNG BẮT ĐƯỢC'}`);
+    // 9 thông số (features đếm 2 lá: phần tử + độ dài) — đúng số đo của thợ chấm.
+    expect(Number(/→ (\d+) trường KHÔNG gửi bị đổi/.exec(v ?? '')?.[1] ?? 0)).toBeGreaterThanOrEqual(9);
+    expect(v).toContain('maxStaff 2→null');
   });
 });

@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Link, NavLink, useLocation } from 'react-router';
+import { Link, useLocation } from 'react-router';
 import type { Me, MyOrganization } from '../api/auth';
 import { ErrorNotice } from '../app/ErrorNotice';
 import { Avatar, BottomSheet, Button } from '../ui';
-import type { NavItem } from './nav';
+import { activeBottomKey, bottomNav, type NavChild, type NavItem, type VisibleNavItem } from './nav';
 import { NavIcon } from './navIcons';
 import { useLogout } from './useLogout';
 
@@ -11,19 +11,21 @@ export interface BottomNavProps {
   user: Me;
   org: MyOrganization;
   organizations: MyOrganization[];
-  items: NavItem[];
+  items: VisibleNavItem[];
   active: NavItem | undefined;
+  activeChild: NavChild | undefined;
 }
 
-// Thanh dưới điện thoại — bản vẽ C mục 2.3: các mục chính theo quyền + "Thêm" (mục còn lại, đổi tổ chức, đăng xuất).
-export function BottomNav({ user, org, organizations, items, active }: BottomNavProps) {
+// Thanh dưới điện thoại — bản vẽ C mục 2.3, C3 mục 1.0: các ô theo loại tổ chức (nav.ts BOTTOM_NAV) và quyền + "Thêm"
+// (mục còn lại, đổi tổ chức, đăng xuất).
+export function BottomNav({ user, org, organizations, items, active, activeChild }: BottomNavProps) {
   const [moreOpen, setMoreOpen] = useState(false);
   const location = useLocation();
   const { logout, pending, error } = useLogout();
   const base = `/${org.slug}`;
-  const main = items.filter((i) => i.inBottomNav);
-  const rest = items.filter((i) => !i.inBottomNav);
-  const moreActive = active !== undefined && !active.inBottomNav;
+  const { main, rest } = bottomNav(items, org.kind);
+  const onKey = activeBottomKey(main, active, activeChild);
+  const moreActive = active !== undefined && onKey === undefined;
 
   useEffect(() => setMoreOpen(false), [location.pathname]);
 
@@ -31,10 +33,10 @@ export function BottomNav({ user, org, organizations, items, active }: BottomNav
     <>
       <nav className="sh-bnav" aria-label="Mục chính (điện thoại)" style={{ gridTemplateColumns: `repeat(${main.length + 1}, 1fr)` }}>
         {main.map((i) => (
-          <NavLink key={i.key} to={`${base}/${i.path}`} className={({ isActive }) => (isActive ? 'sh-bnav__a on' : 'sh-bnav__a')}>
+          <Link key={i.key} to={`${base}/${i.href}`} className={onKey === i.key ? 'sh-bnav__a on' : 'sh-bnav__a'} aria-current={onKey === i.key ? 'page' : undefined}>
             <NavIcon name={i.icon} />
             {i.shortLabel}
-          </NavLink>
+          </Link>
         ))}
         <button type="button" className={moreActive ? 'sh-bnav__a on' : 'sh-bnav__a'} aria-haspopup="dialog" onClick={() => setMoreOpen(true)}>
           <NavIcon name="more" />
@@ -47,10 +49,10 @@ export function BottomNav({ user, org, organizations, items, active }: BottomNav
             <ul className="sh-more__list">
               {rest.map((i) => (
                 <li key={i.key}>
-                  <NavLink to={`${base}/${i.path}`} className={({ isActive }) => (isActive ? 'sh-more__a on' : 'sh-more__a')}>
+                  <Link to={`${base}/${i.href}`} className={active?.key === i.key ? 'sh-more__a on' : 'sh-more__a'} aria-current={active?.key === i.key ? 'page' : undefined}>
                     <NavIcon name={i.icon} />
                     {i.label}
-                  </NavLink>
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -59,7 +61,7 @@ export function BottomNav({ user, org, organizations, items, active }: BottomNav
           <ul className="sh-more__list">
             {organizations.map((o) => (
               <li key={o.id}>
-                <Link to={`/${o.slug}/${active?.path ?? ''}`} className={o.id === org.id ? 'sh-more__a on' : 'sh-more__a'} aria-current={o.id === org.id ? 'true' : undefined}>
+                <Link to={`/${o.slug}/${activeChild?.path ?? active?.path ?? ''}`} className={o.id === org.id ? 'sh-more__a on' : 'sh-more__a'} aria-current={o.id === org.id ? 'true' : undefined}>
                   <NavIcon name="swap" />
                   {o.name}
                 </Link>

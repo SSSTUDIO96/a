@@ -99,7 +99,10 @@ function record(c: GateCheck, ok: boolean, what: string) {
 }
 
 // Thứ tự chạy: đường làm đổi trạng thái dùng chung (tạm khoá nhân sự, ẩn bậc, khoá tổ chức) chạy sau cùng.
+// Danh mục và nhân vật ẩn đi (isActive=false) sau khi dịch vụ/gói đã dùng chúng.
 const LAST = [
+  'PATCH /orgs/:orgId/service-categories/:categoryId',
+  'PATCH /orgs/:orgId/makeup-subjects/:subjectId',
   'PATCH /orgs/:orgId/staff-tiers/:tierId',
   'PATCH /orgs/:orgId/members/:membershipId',
   'PATCH /orgs/:orgId',
@@ -128,8 +131,15 @@ export async function runPartialPatchGate(
     .set(bearer(admin))
     .send({ code: `mp_${randomUUID().slice(0, 8)}`, name: 'Gói cửa gác', priceMonthly: 99_000 });
   if (plan.status !== 201) throw new Error(`Cửa gác sửa một phần: tạo gói thất bại ${plan.status}: ${JSON.stringify(plan.body)}`);
+  // Bậc riêng cho đường sửa bậc: bậc của fixture được gán cho thợ (mẫu sửa hồ sơ thợ) nên không ẩn được.
+  const tier = await request(app)
+    .post(`/api/v1/orgs/${fx.b.orgId}/staff-tiers`)
+    .set(bearer(fx.b.owner))
+    .set('idempotency-key', randomUUID())
+    .send({ name: `Bậc một phần ${randomUUID().slice(0, 4)}` });
+  if (tier.status !== 201) throw new Error(`Cửa gác sửa một phần: tạo bậc thất bại ${tier.status}: ${JSON.stringify(tier.body)}`);
   const ctx: PartialCtx = { o: fx.b, admin, planId: plan.body.id as string, platformOrgId: fx.b.orgId };
-  const ids = { ...fx.b.ids, planId: ctx.planId, organizationId: ctx.platformOrgId };
+  const ids = { ...fx.b.ids, tierId: tier.body.id as string, planId: ctx.planId, organizationId: ctx.platformOrgId };
 
   for (const r of patches) {
     const k = key(r);

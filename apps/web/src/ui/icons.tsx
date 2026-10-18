@@ -70,3 +70,7 @@ export function IconClock(props: IconProps) {
     </Svg>
   );
 }
+
+export function IconUpload(props: IconProps) {
+  return <Svg {...props}><path d="M12 16V4M7 9l5-5 5 5M5 20h14" /></Svg>;
+}

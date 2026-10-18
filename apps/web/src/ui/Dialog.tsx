@@ -1,4 +1,4 @@
-import { useId, useRef, type ReactNode, type RefObject } from 'react';
+import { useId, useRef, type CSSProperties, type ReactNode, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import { Button } from './Button';
 import { cx } from './cx';
@@ -26,6 +26,8 @@ export interface DialogProps {
   cancelLabel?: string;
   /** lg: rộng min(980px, 100%) · sm: min(440px, 100%) cho hộp hỏi lý do. */
   size?: 'lg' | 'sm';
+  /** Chỉ với size="sm": rộng khác 440, ví dụ 460 (hộp "Tạm khoá"). Điện thoại vẫn tràn ngang. */
+  width?: number;
   /** Mặc định false: bấm ra ngoài không đóng để khỏi mất dữ liệu đang nhập. */
   closeOnOverlay?: boolean;
   /** Ô nhận tiêu điểm khi mở (mặc định: ô nhập đầu tiên, hoặc phần tử có data-autofocus). */
@@ -51,6 +53,7 @@ export function Dialog({
   primaryDisabled,
   cancelLabel = 'Huỷ',
   size = 'lg',
+  width,
   closeOnOverlay = false,
   initialFocusRef,
   className,
@@ -88,6 +91,7 @@ export function Dialog({
         aria-labelledby={titleId}
         tabIndex={-1}
         className={cx('ui-dialog', size === 'sm' && 'ui-dialog--sm', className)}
+        style={width !== undefined ? ({ '--dlg-w': `${width}px` } as CSSProperties) : undefined}
       >
         <div className="ui-dialog__head">
           <div className="ui-dialog__titles">
