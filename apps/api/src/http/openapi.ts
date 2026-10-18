@@ -22,7 +22,8 @@ export function buildOpenApi(routes: AnyRoute[]) {
       }
     }
     if (r.idempotent) {
-      params.push({ name: 'Idempotency-Key', in: 'header', required: true, schema: { type: 'string', minLength: 8, maxLength: 128 } });
+      // 'new-org' (tạo tổ chức): khoá TUỲ CHỌN — app cũ và bài thử tạo tổ chức không gửi khoá.
+      params.push({ name: 'Idempotency-Key', in: 'header', required: r.idempotent === true, schema: { type: 'string', minLength: 8, maxLength: 128 } });
     }
     const op: Record<string, unknown> = {
       summary: r.summary,
