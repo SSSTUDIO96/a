@@ -163,7 +163,8 @@ describe('Mẫu thiết kế — quyền', () => {
     setupServer(['org.read', 'designs.read'], 'ACADEMY');
     const router = renderAt('/qh/mau-thiet-ke');
     await waitFor(() => expect(router.state.location.pathname).toBe('/qh/mau-thiet-ke/da-tao'));
-    const tabs = screen.getByRole('navigation', { name: 'Mẫu thiết kế' });
+    // Đổi đường dẫn xong chưa chắc thanh mục đã vẽ (máy bận khi chạy cả bộ) → chờ, không getBy ngay (từng đỏ 1/2 lần chạy cả bộ).
+    const tabs = await screen.findByRole('navigation', { name: 'Mẫu thiết kế' });
     expect(within(tabs).getAllByRole('link').map((a) => a.textContent)).toEqual(['Thẻ đã tạo', 'Câu chúc soạn sẵn']);
     expect(await screen.findByText('Thuý Tây')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Tải ảnh' })).toBeTruthy();

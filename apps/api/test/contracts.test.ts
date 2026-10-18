@@ -544,9 +544,10 @@ describe('vòng đời hợp đồng', () => {
     const body = {
       customerId: customerA,
       depositRequired: 3_500_000,
+      // N2 (biên bản nghiệm thu cuối): dòng gói / dịch vụ phải có giờ mới xác nhận được — bài cũ xác nhận dòng không giờ.
       lines: [
-        { kind: 'PACKAGE', packageId: A.bridePkg, quantity: 1, locationType: 'STUDIO' },
-        { kind: 'SERVICE', serviceId: A.party, quantity: 1 },
+        { kind: 'PACKAGE', packageId: A.bridePkg, quantity: 1, locationType: 'STUDIO', scheduledStart: '2027-09-01T01:00:00Z', scheduledEnd: '2027-09-01T03:00:00Z' },
+        { kind: 'SERVICE', serviceId: A.party, quantity: 1, scheduledStart: '2027-09-01T03:00:00Z', scheduledEnd: '2027-09-01T04:00:00Z' },
       ],
     };
     const c = (await create(A.owner, A.orgId, body).expect(201)).body;
@@ -599,6 +600,8 @@ describe('vòng đời hợp đồng', () => {
       subjectId: A.bridesmaid,
       quantity: 1,
       locationType: 'CUSTOMER_HOME',
+      scheduledStart: '2027-09-01T05:00:00Z',
+      scheduledEnd: '2027-09-01T06:00:00Z',
       addons: [{ serviceId: A.hair, quantity: 1 }],
       travel: { mode: 'MANUAL', amount: 70_000 },
     }).expect(201);
@@ -691,9 +694,11 @@ describe('vòng đời hợp đồng', () => {
 });
 
 describe('huỷ hợp đồng kéo theo lịch đã gắn', () => {
+  // N2: dòng dịch vụ không giờ không xác nhận được nữa. Bài này tự gắn lịch vào dòng bằng tay, nên dùng dòng tự nhập
+  // (không lên lịch) để xác nhận KHÔNG sinh thêm lịch nào ngoài lịch bài tự tạo.
   async function confirmedContract() {
     const c = (
-      await create(A.owner, A.orgId, { customerId: customerA, lines: [{ kind: 'SERVICE', serviceId: A.party, quantity: 1 }] }).expect(201)
+      await create(A.owner, A.orgId, { customerId: customerA, lines: [{ kind: 'CUSTOM', name: 'Gói trang điểm', unitPrice: 800_000, quantity: 1 }] }).expect(201)
     ).body;
     await request(app).post(url(A.orgId, `/${c.id}/status`)).set(bearer(A.owner)).send({ to: 'CONFIRMED' }).expect(200);
     return c as { id: string; lines: Line[] };
@@ -960,7 +965,9 @@ describe('thợ phụ trách, cảnh báo trùng giờ, lên lịch khi xác nh�
 
   // Biên bản nghiệm thu web 2, S1 (quyết định điều phối): MỌI dòng có giờ hẹn đều sinh lịch khi xác nhận; dòng chưa có thợ
   // sinh lịch KHÔNG thợ (hàng "Chưa có thợ" của Lịch). Trước đây dòng chưa có thợ không sinh lịch → hợp đồng đã chốt vắng khỏi lịch.
-  it('xác nhận tạo đúng số lịch, đúng thợ, đúng giờ, đúng nơi; dòng có giờ mà chưa có thợ → lịch không thợ; dòng không giờ không thợ → không lịch', async () => {
+  // N2 (biên bản nghiệm thu cuối): bài cũ khẳng định "dòng dịch vụ không giờ không thợ → không lịch, vẫn xác nhận được" — chính
+  // là lỗi N2. Dòng thứ tư nay là phụ phí (loại dòng không lên lịch); dòng dịch vụ không giờ bị chặn ở test/xac-nhan-thieu-gio.test.ts.
+  it('xác nhận tạo đúng số lịch, đúng thợ, đúng giờ, đúng nơi; dòng có giờ mà chưa có thợ → lịch không thợ; dòng không lên lịch (phụ phí) → không lịch', async () => {
     const c = (
       await create(A.owner, A.orgId, {
         customerId: customerA,
@@ -973,7 +980,7 @@ describe('thợ phụ trách, cảnh báo trùng giờ, lên lịch khi xác nh�
             subjectId: A.guest,
           }),
           { kind: 'SERVICE', serviceId: A.party, quantity: 1, scheduledStart: '2027-06-01T06:00:00Z', scheduledEnd: '2027-06-01T07:00:00Z' },
-          { kind: 'SERVICE', serviceId: A.party, quantity: 1 },
+          { kind: 'SURCHARGE', serviceId: A.early, quantity: 1 },
         ],
       }).expect(201)
     ).body;
@@ -1048,10 +1055,15 @@ describe('thợ phụ trách, cảnh báo trùng giờ, lên lịch khi xác nh�
       .expect(201);
     expect(added.body.createdAppointments).toHaveLength(1);
     expect(await deps.db.appointmentStaff.count({ where: { appointmentId: added.body.createdAppointments[0].id } })).toBe(0);
-    // Dòng có giờ bắt đầu mà thiếu giờ kết thúc: không sinh được lịch → xác nhận 400 nêu tên dòng (không lặng lẽ bỏ qua).
+    // Dòng có giờ bắt đầu mà thiếu giờ kết thúc: không sinh được lịch → xác nhận bị chặn nêu tên dòng (không lặng lẽ bỏ qua).
+    // N2: trước là 400 VALIDATION_FAILED riêng; nay cùng một luật "dòng cần lên lịch thiếu giờ" → 409 LINES_MISSING_TIME.
     const half = (await create(A.owner, A.orgId, { customerId: customerA, lines: [staffLine('2027-08-02T01:00:00Z', null, [])] }).expect(201)).body;
     const r = await confirm(half.id);
-    expect([r.status, r.body.error.message]).toEqual([400, 'Dòng "Makeup tiệc" có giờ bắt đầu nhưng chưa có giờ kết thúc — thêm giờ kết thúc trước khi xác nhận']);
+    expect([r.status, r.body.error.message]).toEqual([
+      409,
+      'Dòng "Makeup tiệc — Phù dâu" chưa có giờ kết thúc — nhập giờ cho mọi dòng trước khi xác nhận hợp đồng',
+    ]);
+    expect(r.body.error.details).toMatchObject({ reason: 'LINES_MISSING_TIME', lineIds: [half.lines[0].id] });
   });
 
   // Biên bản web 2, T2: hai thẻ trình duyệt cùng sửa một hợp đồng nháp — thẻ sau từng xoá im lặng giảm giá của thẻ trước.
@@ -1119,14 +1131,16 @@ describe('thợ phụ trách, cảnh báo trùng giờ, lên lịch khi xác nh�
     expect(await deps.db.appointment.count({ where: { contractId: c.id } })).toBe(0);
   });
 
-  it('dòng có thợ mà thiếu giờ (dữ liệu ghi thẳng) → xác nhận 400 nêu tên dòng', async () => {
+  // N2: trước là 400; nay cùng luật "dòng cần lên lịch thiếu giờ" → 409 LINES_MISSING_TIME (một luật, một hình dạng lỗi).
+  it('dòng có thợ mà thiếu giờ (dữ liệu ghi thẳng) → xác nhận 409 nêu tên dòng', async () => {
     const c = (
       await create(A.owner, A.orgId, { customerId: customerA, lines: [{ kind: 'SERVICE', serviceId: A.party, quantity: 1 }] }).expect(201)
     ).body;
     await deps.db.contractLineStaff.create({ data: { organizationId: A.orgId, lineId: c.lines[0].id, membershipId: m1, role: 'PRIMARY' } });
     const r = await confirm(c.id);
-    expect(r.status).toBe(400);
-    expect(r.body.error.message).toMatch(/Dòng "Makeup tiệc" có thợ phụ trách nhưng chưa có giờ làm/);
+    expect(r.status).toBe(409);
+    expect(r.body.error.message).toMatch(/^Dòng "Makeup tiệc" chưa có giờ bắt đầu và giờ kết thúc/);
+    expect(r.body.error.details).toMatchObject({ reason: 'LINES_MISSING_TIME', lineIds: [c.lines[0].id] });
     expect((await deps.db.contract.findUniqueOrThrow({ where: { id: c.id } })).status).toBe('DRAFT');
   });
 
@@ -1330,10 +1344,12 @@ describe('quyền', () => {
   it('sau xác nhận: lễ tân không huỷ dòng / giảm giá dòng phát sinh được (403), quản lý được; ở nháp lễ tân huỷ dòng được', async () => {
     const manager = await registerUser(app, 'hd-quan-ly');
     await addMember(app, A.owner, A.orgId, manager, ['manager']);
+    // N2: dòng dịch vụ phải có giờ mới xác nhận / thêm phát sinh được.
     const lines = [
-      { kind: 'SERVICE', serviceId: A.party, quantity: 1 },
+      { kind: 'SERVICE', serviceId: A.party, quantity: 1, scheduledStart: '2027-10-01T01:00:00Z', scheduledEnd: '2027-10-01T02:00:00Z' },
       { kind: 'CUSTOM', name: 'Phụ kiện', unitPrice: 50_000, quantity: 1 },
     ];
+    const timedParty = { kind: 'SERVICE', serviceId: A.party, quantity: 1, lineDiscount: 100_000, scheduledStart: '2027-10-01T03:00:00Z', scheduledEnd: '2027-10-01T04:00:00Z' };
     const voidAs = (u: TestUser, contractId: string, lineId: string) =>
       request(app).post(url(A.orgId, `/${contractId}/lines/${lineId}/void`)).set(bearer(u)).send({ reason: 'Khách bỏ' });
 
@@ -1354,8 +1370,8 @@ describe('quyền', () => {
     const add = (u: TestUser, b: object) =>
       request(app).post(url(A.orgId, `/${c.id}/lines`)).set(bearer(u)).set('idempotency-key', idem()).send(b);
     await add(receptionist, { kind: 'SURCHARGE', serviceId: A.early, quantity: 1 }).expect(201);
-    expect((await add(receptionist, { kind: 'SERVICE', serviceId: A.party, quantity: 1, lineDiscount: 100_000 })).status).toBe(403);
-    await add(manager, { kind: 'SERVICE', serviceId: A.party, quantity: 1, lineDiscount: 100_000 }).expect(201);
+    expect((await add(receptionist, timedParty)).status).toBe(403);
+    await add(manager, timedParty).expect(201);
 
     const ok = await voidAs(manager, c.id, c.lines[1].id).expect(200);
     expect(ok.body.total).toBe(800_000 + 200_000 + 700_000);
@@ -1409,8 +1425,12 @@ describe('chốt chặn database', () => {
   });
 
   it('hợp đồng đã xác nhận: database chặn sửa/xoá thẳng dòng, chỉ cho đặt cột huỷ', async () => {
+    // N2: dòng dịch vụ phải có giờ mới xác nhận được.
     const c = (
-      await create(A.owner, A.orgId, { customerId: customerA, lines: [{ kind: 'SERVICE', serviceId: A.party, quantity: 1 }] }).expect(201)
+      await create(A.owner, A.orgId, {
+        customerId: customerA,
+        lines: [{ kind: 'SERVICE', serviceId: A.party, quantity: 1, scheduledStart: '2027-10-02T01:00:00Z', scheduledEnd: '2027-10-02T02:00:00Z' }],
+      }).expect(201)
     ).body;
     await request(app).post(url(A.orgId, `/${c.id}/status`)).set(bearer(A.owner)).send({ to: 'CONFIRMED' }).expect(200);
     const lineId = c.lines[0].id as string;
