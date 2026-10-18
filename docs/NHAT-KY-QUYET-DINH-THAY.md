@@ -48,4 +48,12 @@ Anh Chiến nhắn lúc khoảng 15:13 UTC ngày 18/10/2026: *"Tự làm vào ch
 | 19:10 | Lưu bản chụp hiện trạng việc dở của thợ | Lưu, ghi rõ "CHƯA nghiệm thu" ở lời lưu | Máy đám mây có thể bị thu hồi khi lâu không dùng; mất việc của 6 thợ thì đắt hơn | Được: các bản lưu sau đè lên |
 | 19:15 | Nghiệm thu web "đạt có điều kiện" | Giao 2 thợ sửa song song: máy chủ (T3, N2, N3, N4) và web (T2, N1, N5–N9); T1 đếm lại trên mã mới | Lỗi chia được theo tệp, không giẫm nhau | Được |
 
-**Cần anh xem lại nhất:** phân quyền theo vai trò mẫu (dòng 15:16). Studio anh có thể muốn thợ chính thấy cả lịch của đội.
+| 19:40 | Anh nhắn "Cứ làm toàn bộ hết đi khi nào xong báo tôi để tôi vào thao tác thực tế giờ tôi đi ngủ đây" và "Đẩy cho các thợ đi nhé" | Giao song song: W4 Bảng giá, W5 Hợp đồng, W6 Lịch (theo bản vẽ C đã ký); R&D số 2 vẽ 5 màn chưa có bản vẽ (Nhân sự & trả lương, Khách hàng, Thu tiền, Hồ sơ thương hiệu, Quản trị nền tảng) | Chia theo thư mục tính năng, không giẫm tệp | Được |
+| 19:40 | Nối sẵn đường web cho W4–W6 | Điều phối tự sửa `src/app/routes.tsx` một lần, trỏ tới `src/features/{pricing,contracts,schedule}/index.tsx`; thợ chỉ giữ thư mục của mình | Ba thợ cùng cần sửa một tệp định tuyến → giẫm nhau | Được |
+| 19:42 | Trung tâm đào tạo: chọn phương án nào | **C** (R&D đề xuất; cùng họ với lựa chọn "C nhé" của anh). Giữ ảnh A, B | Một họ thiết kế cho cả app | Được: R&D còn giữ A, B |
+| 19:42 | Chọn mẫu chào mừng / Feedback nào | **Không chọn một**: app cho người dùng chọn trong toàn bộ bộ mẫu; mẫu là dữ liệu | Mỗi trung tâm một gu; anh chưa chọn | Được |
+| 19:42 | Thanh dưới điện thoại | Tổ chức có đào tạo: Lịch · Hợp đồng · Thu tiền · Khoá học · Thêm. Tổ chức không đào tạo: giữ như bản vẽ C | Thợ makeup đơn lẻ không cần mục Khoá học | Được |
+| 19:43 | 5 màn chưa có bản vẽ | R&D số 2 bày 3 phương án có ảnh rồi **tự chọn** phương án đề xuất và dựng bản vẽ thông số | Anh giao làm hết khi vắng; ảnh cả 3 vẫn giữ để anh xem lại | Được |
+| 19:44 | "Thao tác thực tế" | Em làm tới mức chạy được đầy đủ trên máy đám mây, có bài thử và ảnh. **Không** tự đưa lên Vercel/Railway và không mua dịch vụ: phát hành nằm trong danh sách phải chờ anh. Sáng mai anh chọn: chạy trên máy anh, hay cho phép đưa lên mạng | Luật 10: phát hành và công khai phải dừng chờ anh | — |
+
+**Cần anh xem lại nhất:** (1) cách anh vào thao tác thực tế (dòng 19:44): chạy trên máy anh hay cho phép đưa lên mạng; (2) phân quyền theo vai trò mẫu (dòng 15:16) — studio anh có thể muốn thợ chính thấy cả lịch của đội.

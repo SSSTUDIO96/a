@@ -3,6 +3,9 @@ import { createBrowserRouter, Outlet, type RouteObject } from 'react-router';
 import { CreateOrgPage } from '../features/auth/CreateOrgPage';
 import { LoginPage } from '../features/auth/LoginPage';
 import { RegisterPage } from '../features/auth/RegisterPage';
+import { ContractEditorPage, ContractListPage } from '../features/contracts';
+import { PricingPage } from '../features/pricing';
+import { SchedulePage } from '../features/schedule';
 import { AppShell, OrgHome, RequireNavPermission } from '../layout/AppShell';
 import { NotFoundView } from '../layout/ErrorStates';
 import { GuestOnly, HomeRedirect, RequireAuth } from './guards';
@@ -28,11 +31,11 @@ function guarded(navKey: string, element: ReactNode) {
 
 const orgChildren: RouteObject[] = [
   { index: true, element: <OrgHome /> },
-  { path: 'lich', element: guarded('lich', <Placeholder />) },
-  { path: 'bang-gia', element: guarded('bang-gia', <Placeholder />) },
-  { path: 'bang-gia/:nhom', element: guarded('bang-gia', <Placeholder />) },
-  { path: 'hop-dong', element: guarded('hop-dong', <Placeholder />) },
-  { path: 'hop-dong/:id', element: guarded('hop-dong', <Placeholder />) },
+  { path: 'lich', element: guarded('lich', <SchedulePage />) },
+  { path: 'bang-gia', element: guarded('bang-gia', <PricingPage />) },
+  { path: 'bang-gia/:nhom', element: guarded('bang-gia', <PricingPage />) },
+  { path: 'hop-dong', element: guarded('hop-dong', <ContractListPage />) },
+  { path: 'hop-dong/:id', element: guarded('hop-dong', <ContractEditorPage />) },
   { path: 'khach-hang', element: guarded('khach-hang', <Placeholder />) },
   { path: 'nhan-su', element: guarded('nhan-su', <Placeholder />) },
   { path: 'cai-dat', element: guarded('cai-dat', <Placeholder />) },
