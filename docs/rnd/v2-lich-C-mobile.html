@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Makeup Pro – Đề xuất lịch C trên điện thoại</title>
+<style>
+:root{
+  --bg:#F6F4F2; --surface:#FFFFFF; --line:#E9E3DE; --line-2:#F2EDE9; --soft:#FBFAF9;
+  --text:#221C19; --muted:#716862; --faint:#A39A94;
+  --accent:#A63D62; --accent-soft:#F7E8EE; --accent-line:#E7B8C9;
+  --ok:#2F7D72; --ok-bg:#E6F3F0;
+  --warn:#8A5A00; --warn-bg:#FFF6E0; --warn-line:#EED6A0;
+  --danger:#B42318; --danger-bg:#FEF0EE; --danger-line:#F3B8B0;
+  --font:"Be Vietnam Pro", Inter, "Segoe UI", Roboto, Arial, sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+input[type=checkbox],input[type=radio]{accent-color:var(--accent);width:16px;height:16px;flex:none}
+svg.i{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+/* ===== Khung theo phương án lịch C ===== */
+.app{display:grid;grid-template-columns:240px minmax(0,1fr);min-height:100vh}
+.sidecol{background:var(--surface);border-right:1px solid var(--line)}
+.side{display:flex;flex-direction:column;position:sticky;top:0;max-height:100vh}
+.side .brand{display:flex;align-items:center;gap:10px;padding:18px 20px;font-weight:700;font-size:17px;color:var(--accent);border-bottom:1px solid var(--line)}
+.side .user{display:flex;gap:10px;align-items:center;padding:14px 20px;border-bottom:1px solid var(--line);font-size:13px}
+.side .user small{display:block;color:var(--muted);font-size:12px}
+.av{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;color:#fff;flex:none;background:#7A6A62}
+.menu{padding:12px;display:flex;flex-direction:column;gap:2px;overflow:auto}
+.menu a{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:8px;color:var(--muted);text-decoration:none;font-weight:500}
+.menu a.on{background:var(--accent);color:#fff}
+.menu .kids{margin:2px 0 6px 22px;border-left:1px solid var(--line);display:flex;flex-direction:column}
+.menu .kids a{padding:8px 14px;border-radius:0 8px 8px 0;font-size:13.5px;font-weight:400}
+.menu .kids a.on{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.body{min-width:0}
+.topbar{display:none}
+.bnav{display:none}
+.main{padding:24px 28px 40px;min-width:0}
+.ph{display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+.ph h1{font-size:24px;font-weight:700}
+.ph .sp{flex:1}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px}
+.ch2{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--line)}
+.ch2 h2{font-size:16px;font-weight:700;flex:1}
+.ch2 small{color:var(--faint);font-weight:400;font-size:13px}
+/* ===== Điều khiển ===== */
+.btn{text-decoration:none;color:inherit;display:inline-flex;align-items:center;justify-content:center;gap:6px;height:36px;padding:0 14px;border:1px solid var(--line);background:var(--surface);border-radius:8px;cursor:pointer;font-weight:500;white-space:nowrap}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:#fff!important}
+.btn.ghost{border-color:transparent;background:none;color:var(--accent);padding:0 8px}
+.btn.sm{height:30px;padding:0 10px;font-size:13px}
+.btn.icon{width:34px;padding:0}
+.btn.dashed{border-style:dashed;color:var(--accent);border-color:var(--accent-line);background:#FFFCFD}
+.ctl{height:36px;border:1px solid var(--line);border-radius:8px;padding:0 10px;background:#fff;width:100%;min-width:0}
+.ctl.money,.ctl.r{text-align:right;font-variant-numeric:tabular-nums}
+.ctl:disabled{background:var(--soft);color:var(--muted)}
+.ctl.sm{height:30px;font-size:13px;padding:0 8px}
+textarea.ctl{height:auto;padding:8px 10px;resize:vertical}
+.unit{position:relative;display:block}
+.unit .ctl{padding-right:46px}
+.unit b{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-weight:500;color:var(--faint);font-size:13px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fff;flex:none}
+.seg button{border:0;border-left:1px solid var(--line);background:none;padding:0 12px;height:34px;color:var(--muted);font-weight:500;white-space:nowrap;cursor:pointer}
+.seg button:first-child{border-left:0}
+.seg button.on{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.seg button:disabled{color:#CFC7C1;background:repeating-linear-gradient(135deg,#FAF8F6 0 5px,#fff 5px 10px);cursor:not-allowed}
+.seg.sm button{height:28px;padding:0 9px;font-size:12.5px}
+.sw{width:38px;height:22px;border-radius:11px;background:#D9D2CD;position:relative;flex:none;display:inline-block}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff}
+.sw.on{background:var(--accent)} .sw.on::after{left:19px}
+.set{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,220px);gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--line-2)}
+.set:first-child{border-top:0}
+.set>label{font-weight:500}
+.set .r{justify-self:end}
+.chip{text-decoration:none;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;border:1px solid var(--line);background:#fff;border-radius:999px;padding:5px 12px;font-weight:500;font-size:13px;color:var(--text);cursor:pointer}
+.chip .k{color:var(--faint)}
+.chip.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.chip.on .k{color:var(--accent)}
+.tag{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:999px;background:var(--line-2);color:var(--muted);white-space:nowrap}
+.tag.nv{background:var(--accent-soft);color:var(--accent)}
+.tag.ok{background:var(--ok-bg);color:var(--ok)}
+.tag.ps{background:var(--warn-bg);color:var(--warn)}
+.tag.huy{background:var(--danger-bg);color:var(--danger)}
+.tag.draft{background:#EFEBE8;color:var(--muted)}
+.loc{display:inline-flex;gap:4px;flex-wrap:wrap}
+.muted{color:var(--muted)} .faint{color:var(--faint)} .small{font-size:12.5px}
+.strike{text-decoration:line-through;color:var(--faint)}
+.tip{position:relative;display:inline-grid;place-items:center;width:16px;height:16px;border-radius:50%;border:1px solid var(--faint);color:var(--muted);font-size:10.5px;font-weight:700;cursor:help;margin-left:6px;vertical-align:1px;flex:none;font-style:normal;text-transform:none;letter-spacing:0}
+.tip:hover::after{content:attr(data-tip);position:absolute;left:-10px;top:calc(100% + 8px);width:240px;background:#2A2220;color:#fff;font-weight:400;font-size:12px;line-height:1.45;padding:8px 10px;border-radius:6px;z-index:60;text-align:left;white-space:normal}
+.req{color:var(--danger);margin-left:2px}
+.kh{display:flex;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--soft)}
+.kh .pn{font-weight:600;overflow-wrap:anywhere}
+.fx{font-size:12px;color:var(--muted)}
+/* Danh sách gọn + nhóm chi tiết (bảng giá v2.1) */
+.gl-h{padding:14px 16px 6px;font-size:12px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.05em;display:flex;align-items:center}
+.gl-r{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:16px;align-items:center;padding:12px 16px;border-top:1px solid var(--line-2);color:var(--text);text-decoration:none}
+.gl-h+.gl-r{border-top:0}
+.gl-r:hover{background:var(--soft)}
+.gl-r.sel{background:var(--accent-soft);box-shadow:inset 3px 0 0 var(--accent)}
+.gl-n{font-weight:600;min-width:0}
+.gl-d{font-size:12.5px;color:var(--faint);white-space:nowrap}
+.gl-p{font-weight:700;text-align:right;min-width:92px}
+.ng{padding:4px 0 10px}
+.ng h3{display:flex;align-items:center;font-size:13px;font-weight:700;color:var(--text);padding:12px 0 4px;border-bottom:1px solid var(--line);margin-bottom:2px}
+.ng .set{grid-template-columns:minmax(0,1fr) minmax(0,180px)}
+.ckl{display:flex;flex-direction:column}
+.ckl label{display:flex;align-items:center;gap:8px;padding:8px 0;font-weight:500}
+.ckl label .p{margin-left:auto;color:var(--muted);font-weight:400}
+.ckl label.off{color:var(--muted)}
+.tier{display:grid;grid-template-columns:minmax(0,1fr) 150px;gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--line-2)}
+.ng h3+.tier{border-top:0}
+.tier-i{display:flex;gap:10px;align-items:center;min-width:0}
+.tier-n{font-weight:600}
+.avs{display:flex;flex:none}
+.av.sm{width:28px;height:28px;font-size:10.5px;border:2px solid #fff}
+.avs .av+.av{margin-left:-8px}
+.stu{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--line-2)}
+.ng h3+.stu{border-top:0}
+.stu input{margin-top:3px}
+/* Tổng tiền dính đáy */
+.sumbar{position:sticky;bottom:0;z-index:15;display:flex;align-items:center;gap:16px;padding:12px 18px;background:#fff;border:1px solid var(--line);border-radius:12px;margin-top:16px}
+.sumbar .t{display:flex;gap:20px;flex:1;flex-wrap:wrap;align-items:baseline}
+.sumbar .t span{color:var(--muted);font-size:13px}
+.sumbar .t b{font-size:18px;color:var(--text);margin-left:6px}
+.sumbar .t .coc b{font-size:15px}
+/* ===== Máy tính bảng ===== */
+@media (max-width:1180px){
+  .app{grid-template-columns:68px minmax(0,1fr)}
+  .side .brand span,.side .user div,.menu a span,.menu .kids{display:none!important}
+  .side .brand,.side .user{justify-content:center;padding:16px 0}
+  .menu a{justify-content:center}
+  .main{padding:20px 20px 32px}
+  .ph h1{font-size:21px}
+}
+/* ===== Điện thoại ===== */
+@media (max-width:640px){
+  .app{grid-template-columns:minmax(0,1fr)}
+  .sidecol{display:none}
+  body{padding-bottom:64px}
+  .topbar{display:flex;align-items:center;gap:10px;height:54px;padding:0 16px;background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20}
+  .topbar .tt{font-weight:700;font-size:16px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .bnav{display:grid;grid-template-columns:repeat(5,1fr);position:fixed;left:0;right:0;bottom:0;height:64px;background:var(--surface);border-top:1px solid var(--line);z-index:30}
+  .bnav a{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:11px;color:var(--muted);text-decoration:none}
+  .bnav a.on{color:var(--accent);font-weight:600}
+  .main{padding:12px 12px 24px}
+  .ph{display:none}
+  .set{grid-template-columns:minmax(0,1fr) minmax(0,160px)}
+  .sumbar{position:fixed;left:0;right:0;bottom:64px;border-radius:0;border-left:0;border-right:0;margin:0;padding:10px 14px;gap:10px}
+  .sumbar .t{gap:2px 12px}
+  .sumbar .t{flex-direction:column}
+  .sumbar .t b{font-size:16px}
+  .sumbar .hide-m{display:none}
+  .has-sum{padding-bottom:84px}
+  .gl-r{grid-template-columns:minmax(0,1fr) auto;gap:2px 12px}
+  .gl-r.sel{background:none;box-shadow:none}
+  .gl-d{grid-column:1;grid-row:2}
+  .gl-p{grid-column:2;grid-row:1 / span 2}
+  .ng .set{grid-template-columns:minmax(0,1fr) minmax(0,150px)}
+  .tier{grid-template-columns:minmax(0,1fr) 130px}
+  .set.stack{grid-template-columns:1fr;gap:6px}
+  .set.stack .r{justify-self:start}
+}
+
+.mode{display:flex;background:#fff;border:1px solid var(--line);border-radius:10px;padding:3px;margin-bottom:10px}
+.mode a{flex:1;text-align:center;padding:7px 0;border-radius:7px;color:var(--muted);font-weight:500;font-size:13px}
+.mode a.on{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.wk{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.wk b{font-size:15px}
+.wk .warn{margin-left:auto;display:inline-flex;align-items:center;gap:4px;background:var(--danger-bg);color:var(--danger);border:1px solid var(--danger-line);border-radius:999px;padding:3px 10px;font-size:12.5px;font-weight:600}
+.wk .warn svg{width:14px;height:14px}
+.lg{display:grid;grid-template-columns:50px repeat(5,minmax(0,1fr))}
+.lh{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0 6px;border-bottom:1px solid var(--line);background:var(--soft)}
+.lh .tn{font-size:11px;color:var(--muted);white-space:nowrap}
+.av.na{background:#fff!important;border:1.5px dashed var(--faint);color:var(--muted)}
+.ld{display:flex;flex-direction:column;align-items:center;justify-content:center;border-bottom:1px solid var(--line-2);padding:6px 0;font-size:12px;line-height:1.2}
+.ld b{font-size:12px;color:var(--muted)}
+.ld span{font-size:15px;font-weight:700}
+.ld i{font-style:normal;font-size:10.5px;color:var(--faint)}
+.ld.we b{color:var(--accent)}
+.ld.sel{background:var(--accent-soft)}
+.lc{border-left:1px solid var(--line-2);border-bottom:1px solid var(--line-2);padding:4px 3px;display:flex;flex-direction:column;gap:3px;min-height:58px;align-items:stretch}
+.lc.sel{background:#FDF6F9}
+.lc.off{background:repeating-linear-gradient(135deg,#F4F1EE 0 5px,#FAF8F6 5px 10px);color:var(--faint);font-size:11px;align-items:center;justify-content:center}
+.lc.cf{outline:2px solid var(--danger);outline-offset:-2px;background:var(--danger-bg)}
+.pt{font-size:11px;font-weight:700;text-align:center;border-radius:4px;padding:2px 0;border-left:3px solid var(--c);background:var(--b);color:var(--c)}
+.pt.x{border:1px solid var(--danger);border-left:3px solid var(--danger);color:var(--danger)}
+.pt.na{background:#fff;border:1px dashed var(--faint);color:var(--muted)}
+.more{font-size:10.5px;color:var(--muted);text-align:center}
+.cd{--c:#A63D62;--b:#FBEDF2} .ah{--c:#9A5B0F;--b:#FDF2E2} .tc{--c:#5B45A0;--b:#F0ECFA}
+.dayh{display:flex;align-items:baseline;gap:8px;margin:14px 2px 8px}
+.ag{display:grid;grid-template-columns:48px minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--line-2);border-left:3px solid var(--c)}
+.ag.x{background:#FFFBFA;border-left-color:var(--danger)}
+.ag .tm{font-weight:700;font-size:13.5px}
+.ag .tm small{display:block;font-weight:400;color:var(--faint);font-size:11.5px}
+.ag .nh{font-size:12.5px;font-weight:600;color:var(--c)}
+.ag .kn{font-weight:600;overflow-wrap:anywhere}
+.all{display:block;text-align:center;padding:11px;color:var(--accent);font-weight:600;text-decoration:none}
+
+</style></head><body><div id="app"></div>
+<script>
+/* ===== Dữ liệu minh hoạ — mỗi ô ứng với một trường trong schema.prisma ===== */
+// MakeupSubject
+const NV=[{id:'cd',ten:'Cô dâu'},{id:'cr',ten:'Chú rể'},{id:'mcd',ten:'Mẹ cô dâu'},{id:'mcr',ten:'Mẹ chú rể'},{id:'pd',ten:'Phù dâu'},{id:'km',ten:'Khách mời'}];
+// LocationType
+const DD={STUDIO:'Tại studio / cửa hàng',CUSTOMER_HOME:'Tại nhà khách',OTHER:'Địa điểm khác'};
+const DDN={STUDIO:'Studio',CUSTOMER_HOME:'Tại nhà',OTHER:'Nơi khác'};
+// StudioLocation
+const STU=[{id:'s1',ten:'Studio Chiến',dc:'25 Hoàng Quốc Việt, Cầu Giấy, Hà Nội',md:true},{id:'s2',ten:'Cửa hàng Long Biên',dc:'90 Nguyễn Văn Cừ, Long Biên, Hà Nội',md:false}];
+// Service (kind MAIN / ADDON / SURCHARGE) + giá hiện hành từ PriceVersion
+const DV=[
+ {id:'mk-cd',kind:'MAIN',ma:'MK-CD',ten:'Makeup cô dâu',phut:90,gia:2000000},
+ {id:'mk-ah',kind:'MAIN',ma:'MK-AH',ten:'Makeup ăn hỏi',phut:75,gia:1300000},
+ {id:'mk-me',kind:'MAIN',ma:'MK-ME',ten:'Makeup mẹ',phut:45,gia:500000},
+ {id:'mk-pd',kind:'MAIN',ma:'MK-PD',ten:'Makeup phù dâu',phut:40,gia:400000},
+ {id:'mk-tc',kind:'MAIN',ma:'MK-TC',ten:'Makeup dự tiệc',phut:45,gia:450000},
+ {id:'toc',kind:'ADDON',ma:'PH-TOC',ten:'Làm tóc',phut:30,gia:300000},
+ {id:'nail',kind:'ADDON',ma:'PH-NAIL',ten:'Làm nail',phut:45,gia:250000},
+ {id:'lens',kind:'ADDON',ma:'PH-LENS',ten:'Lens',phut:0,gia:100000},
+ {id:'mi',kind:'ADDON',ma:'PH-MI',ten:'Kẹp mi',phut:15,gia:80000},
+ {id:'som',kind:'SURCHARGE',ma:'PP-SOM',ten:'Ca sớm trước 5 giờ',phut:0,gia:200000},
+ {id:'them',kind:'SURCHARGE',ma:'PP-NGUOI',ten:'Thêm người',phut:0,gia:150000},
+ {id:'cho',kind:'SURCHARGE',ma:'PP-CHO',ten:'Chờ thêm mỗi giờ',phut:60,gia:100000},
+];
+// ServicePackage + PackageItem (isOptional) + PriceVersion (listPrice, salePrice, effectiveFrom)
+const ALL=['STUDIO','CUSTOMER_HOME','OTHER'];
+const GOI=[
+ {id:'p1',ma:'G-CD01',ten:'Cô dâu – Ngày cưới',nv:'cd',dd:ALL,phut:150,tho:1,coc:1000000,niemyet:3000000,ban:2700000,tu:'01/10/2026',gom:[['mk-cd',1],['toc',1]],tick:['nail','lens','mi'],web:true,dang:true},
+ {id:'p2',ma:'G-CD02',ten:'Cô dâu – Ăn hỏi',nv:'cd',dd:ALL,phut:120,tho:1,coc:500000,niemyet:1800000,ban:null,tu:'01/10/2026',gom:[['mk-ah',1],['toc',1]],tick:['nail','lens','mi'],web:true,dang:true},
+ {id:'p3',ma:'G-ME01',ten:'Mẹ – Trang điểm nhẹ nhàng',nv:'mcd',dd:['STUDIO','CUSTOMER_HOME'],phut:45,tho:1,coc:0,niemyet:600000,ban:null,tu:'01/10/2026',gom:[['mk-me',1]],tick:['toc'],web:false,dang:true},
+ {id:'p4',ma:'G-PD01',ten:'Phù dâu',nv:'pd',dd:['STUDIO'],phut:40,tho:1,coc:0,niemyet:400000,ban:null,tu:'01/10/2026',gom:[['mk-pd',1]],tick:['toc','mi'],web:true,dang:true},
+ {id:'p5',ma:'G-KM01',ten:'Khách dự tiệc',nv:null,dd:['STUDIO'],phut:45,tho:1,coc:0,niemyet:450000,ban:null,tu:'01/10/2026',gom:[['mk-tc',1]],tick:['toc','mi'],web:false,dang:true},
+];
+// TravelFeePolicy
+const CS={mode:'PER_KM',codinh:150000,km:10000,mienphi:3,toithieu:100000,khuhoi:true};
+// Customer
+const KH={ten:'Tôn Nữ Hoàng Bảo Ngọc Phương Thảo',sdt:'0912 345 678',email:'phuongthao.tnhbn@gmail.com',ghichu:'Da nhạy cảm, không dùng keo dán mi.'};
+// Contract
+const HD={ma:'HĐ-2026-0142',ngay:'24/10/2026',thu:'Thứ Bảy',giam:297000,coc:1000000,ghichu:'Nhà gái ở ngõ nhỏ, xe máy vào được, ô tô đỗ đầu ngõ.'};
+// ContractLine: gói theo nhân vật, dịch vụ phụ tick (ADDON, parentLineId), di chuyển (TRAVEL), phụ phí (SURCHARGE), tự đặt tên (CUSTOM)
+const DONG=[
+ {id:'l1',goi:'p1',nv:'cd',dd:'CUSTOMER_HOME',dc:'Số 7, ngõ 128 Nguyễn Văn Cừ, Long Biên, Hà Nội',gio:'04:30 – 07:00',sl:1,them:{nail:1,lens:1},dm:'PER_KM',km:12.35,pp:[['som',1]]},
+ {id:'l2',goi:'p3',nv:'mcd',dd:'STUDIO',st:'s1',gio:'05:00 – 05:45',sl:1,them:{toc:1},pp:[]},
+ {id:'l3',goi:'p4',nv:'pd',dd:'STUDIO',st:'s1',gio:'06:00 – 06:40',sl:2,them:{mi:2},pp:[]},
+];
+const RIENG=[{ten:'Trang điểm lại giữa tiệc',sl:1,dg:300000}];
+// Sau xác nhận: huỷ dòng có lý do (voidedAt, voidReason) + dòng phát sinh (addedAfterConfirm)
+const XN={luc:'20/10/2026 14:05',huy:{'l1-lens':'Khách tự mang lens'},ps:[{kind:'SURCHARGE',ten:'Thêm người',sl:1,dg:150000,ghi:'Thêm 1 khách mời làm cùng phù dâu',luc:'23/10/2026'}]};
+
+/* ===== Tiện ích ===== */
+const vnd=x=>Number(x).toLocaleString('vi-VN').replace(/,/g,'.')+' ₫';
+const kmf=x=>String(x).replace('.',',');
+const dv=id=>DV.find(s=>s.id===id);
+const goi=id=>GOI.find(g=>g.id===id);
+const nvTen=id=>id?NV.find(n=>n.id===id).ten:'Mọi nhân vật';
+const giaGoi=g=>g.ban??g.niemyet;
+const phut=p=>p>=60?(Math.floor(p/60)+' giờ'+(p%60?' '+p%60+' phút':'')):p+' phút';
+const tip=t=>`<i class="tip" tabindex="0" data-tip="${t}">?</i>`;
+function tienDC(d){
+  if(d.dm==='FIXED')return CS.codinh;
+  if(d.dm==='MANUAL')return d.tay||0;
+  const k=Math.max(0,d.km-CS.mienphi)*(CS.khuhoi?2:1);
+  return Math.max(CS.toithieu,Math.round(k*CS.km/1000)*1000);
+}
+function congThucKm(d){
+  return `(${kmf(d.km)} − ${CS.mienphi}) km${CS.khuhoi?' × 2 chiều':''} × ${vnd(CS.km)}`;
+}
+// Bảng tính phẳng (giống kết quả máy chủ trả về từ đường "quote")
+function bangTinh(xn){
+  const out=[];
+  DONG.forEach((d,i)=>{
+    const g=goi(d.goi);const dg=giaGoi(g);
+    out.push({kind:'PACKAGE',d,ten:g.ten,sl:d.sl,dg,tt:d.sl*dg});
+    g.tick.forEach(a=>{if(d.them[a]){const s=dv(a);const sl=d.them[a];const huy=xn&&XN.huy[d.id+'-'+a];out.push({kind:'ADDON',d,ma:a,ten:s.ten,sl,dg:s.gia,tt:sl*s.gia,huy})}});
+    if(d.dd!=='STUDIO')out.push({kind:'TRAVEL',d,ten:'Phí di chuyển',sl:1,dg:tienDC(d),tt:tienDC(d)});
+    d.pp.forEach(([id,sl])=>{const s=dv(id);out.push({kind:'SURCHARGE',d,ten:s.ten,sl,dg:s.gia,tt:sl*s.gia})});
+  });
+  RIENG.forEach(r=>out.push({kind:'CUSTOM',ten:r.ten,sl:r.sl,dg:r.dg,tt:r.sl*r.dg}));
+  if(xn)XN.ps.forEach(p=>out.push({...p,tt:p.sl*p.dg,ps:true}));
+  return out;
+}
+function tong(xn){
+  const r=bangTinh(xn).filter(x=>!x.huy);
+  const sub=r.reduce((s,x)=>s+x.tt,0);
+  return {sub,giam:HD.giam,tong:sub-HD.giam,coc:HD.coc,soDong:r.length};
+}
+const KIND={PACKAGE:'Gói',ADDON:'Dịch vụ phụ',TRAVEL:'Di chuyển',SURCHARGE:'Phụ phí',CUSTOM:'Tự đặt tên',SERVICE:'Dịch vụ lẻ'};
+
+/* Khối điều khiển dùng chung */
+function segDD(g,cur,name){
+  return `<div class="seg sm">${ALL.map(k=>`<button class="${k===cur?'on':''}" ${g.dd.includes(k)?'':'disabled title="Gói này không làm '+DDN[k].toLowerCase()+'"'}>${DDN[k]}</button>`).join('')}</div>`;
+}
+function oDiaDiem(d,khoa,multi){
+  if(d.dd==='STUDIO'){const s=STU.find(x=>x.id===d.st);return `<select class="ctl sm" ${khoa?'disabled':''}>${STU.map(x=>`<option ${x.id===d.st?'selected':''}>${x.ten}</option>`).join('')}</select><div class="fx">${s.dc}</div>`}
+  if(multi)return `<textarea class="ctl sm" rows="2" ${khoa?'disabled':''} placeholder="Địa chỉ">${d.dc}</textarea>`;
+  return `<input class="ctl sm" value="${d.dc}" ${khoa?'disabled':''} placeholder="Địa chỉ">`;
+}
+function segDC(d,khoa){
+  return `<div class="seg sm">${[['FIXED','Cố định'],['PER_KM','Theo km'],['MANUAL','Nhập tay']].map(([k,t])=>`<button class="${d.dm===k?'on':''}" ${khoa&&d.dm!==k?'disabled':''}>${t}</button>`).join('')}</div>`;
+}
+function oKm(d,khoa){
+  if(d.dm==='PER_KM')return `<span class="unit" style="width:110px"><input class="ctl sm r" value="${kmf(d.km)}" ${khoa?'disabled':''}><b>km</b></span>`;
+  if(d.dm==='MANUAL')return `<input class="ctl sm money" style="width:130px" value="${vnd(d.tay||0)}" ${khoa?'disabled':''}>`;
+  return `<span class="muted small">theo cài đặt ${vnd(CS.codinh)}</span>`;
+}
+function theKhach(khoa){return `<div class="kh"><div style="min-width:0;flex:1"><div class="pn">${KH.ten}</div><div class="fx">${KH.sdt} · ${KH.email}</div></div>${khoa?'':'<button class="btn sm">Đổi</button>'}</div>`}
+const TIP_DC='Bắt buộc với dòng tại nhà khách hoặc địa điểm khác. Miễn phí thì chọn Nhập tay và ghi 0 ₫.';
+const TIP_COC='Gợi ý bằng tổng tiền cọc mặc định của các gói trong hợp đồng. Sửa được.';
+const TIP_GIAM='Giảm trên tổng hợp đồng. Tổng = tạm tính − giảm giá.';
+
+/* ===== Bảng giá v2.1: nhóm + danh sách gọn + chi tiết chia nhóm ===== */
+// StaffTier + StaffProfile + StaffPayRate (GET /orgs/:orgId/packages/:packageId/pay-rates)
+const BAC=[
+ {ten:'Thợ chính bậc 1',tien:{p1:700000,p2:450000,p3:150000,p4:120000,p5:130000},tho:[{n:'Nguyễn Thu Hà',vt:'TH',mau:'#A63D62'},{n:'Trần Minh Anh',vt:'MA',mau:'#5B45A0'}]},
+ {ten:'Thợ chính bậc 2',tien:{p1:550000,p2:350000,p3:120000,p4:100000,p5:100000},tho:[{n:'Lê Ngọc Trâm',vt:'NT',mau:'#2F7D72'}]},
+ {ten:'Thợ phụ',tien:{p3:80000,p4:70000},tho:[{n:'Phạm Bảo Vy',vt:'BV',mau:'#9A5B0F'},{n:'Đỗ Khánh Linh',vt:'KL',mau:'#7A6A62'}]},
+];
+const NHOMBG=[['goi','Gói theo nhân vật'],['phu','Dịch vụ phụ & phụ phí'],['dc','Phí di chuyển & studio'],['nv','Nhân vật']];
+const ddNgan=g=>g.dd.length===3?'Mọi nơi':g.dd.map(k=>DDN[k]).join(' · ');
+// Danh sách gọn: tên gói · địa điểm (chữ ngắn) · giá bán. Không ô tick, không cột thừa.
+function dsGoiGon(sel,href){
+  const nhom=[...NV.filter(n=>GOI.some(g=>g.nv===n.id)).map(n=>n.id),null];
+  return nhom.map(n=>`<div class="gl-h">${nvTen(n)}</div>${GOI.filter(g=>g.nv===n).map(g=>`<a class="gl-r ${g.id===sel?'sel':''}" href="${href||'#bang-gia'}"><span class="gl-n">${g.ten}</span><span class="gl-d">${ddNgan(g)}</span><b class="gl-p num">${vnd(giaGoi(g))}</b></a>`).join('')}`).join('');
+}
+// Chi tiết một gói: 5 nhóm có tiêu đề, mỗi dòng = nhãn + điều khiển
+function nhomChiTiet(g){
+  const addons=DV.filter(s=>s.kind==='ADDON');
+  return [
+   ['Thông tin & giá',`
+     <div class="set"><label>Tên gói</label><input class="ctl" value="${g.ten}"></div>
+     <div class="set"><label>Nhân vật${tip('Để Mọi nhân vật nếu gói dùng cho ai cũng được.')}</label><select class="ctl"><option>${nvTen(g.nv)}</option></select></div>
+     <div class="set"><label>Thời lượng</label><span class="unit"><input class="ctl r" value="${g.phut}"><b>phút</b></span></div>
+     <div class="set"><label>Số thợ</label><input class="ctl r" value="${g.tho}"></div>
+     <div class="set"><label>Giá niêm yết</label><input class="ctl money" value="${vnd(g.niemyet)}"></div>
+     <div class="set"><label>Giá bán${tip('Bỏ trống nếu không giảm. Hợp đồng dùng giá bán khi có. Đổi giá = thêm bản giá mới có ngày áp dụng; hợp đồng cũ giữ giá đã chốt.')}</label><input class="ctl money" value="${g.ban?vnd(g.ban):''}" placeholder="Không giảm"></div>
+     <div class="set"><label>Cọc mặc định</label><input class="ctl money" value="${vnd(g.coc)}"></div>`],
+   ['Địa điểm cho phép',`<div class="ckl">${ALL.map(k=>`<label><input type="checkbox" ${g.dd.includes(k)?'checked':''}>${DD[k]}${k!=='STUDIO'?tip('Lập hợp đồng ở đây sẽ bắt buộc có phí di chuyển.'):''}</label>`).join('')}</div>`],
+   ['Đã gồm trong gói',`${g.gom.map(([s,q])=>`<div class="set"><label>${dv(s).ten}</label><span class="unit"><input class="ctl r" value="${q}"><b>lần</b></span></div>`).join('')}<button class="btn ghost sm" style="padding:0;margin-top:6px">${ic('plus')}Thêm dịch vụ</button>`],
+   ['Dịch vụ phụ cho tick'+tip('Khi lập hợp đồng, các dịch vụ được chọn ở đây hiện thành ô tick dưới gói.'),`<div class="ckl">${addons.map(a=>`<label class="${g.tick.includes(a.id)?'':'off'}"><input type="checkbox" ${g.tick.includes(a.id)?'checked':''}>${a.ten}<span class="p num">${vnd(a.gia)}</span></label>`).join('')}</div>`],
+   ['Tiền công thợ theo bậc'+tip('Số tiền trả cho thợ mỗi lần làm gói này, theo bậc lương của thợ. Bỏ trống = chưa đặt.'),`${BAC.map(b=>`<div class="tier"><div class="tier-i"><div class="avs">${b.tho.map(t=>`<span class="av sm" style="background:${t.mau}" title="${t.n}">${t.vt}</span>`).join('')}</div><div style="min-width:0"><div class="tier-n">${b.ten}</div><div class="fx">${b.tho.map(t=>t.n).join(', ')}</div></div></div><input class="ctl money" value="${b.tien[g.id]!=null?vnd(b.tien[g.id]):''}" placeholder="Chưa đặt"></div>`).join('')}`],
+  ];
+}
+function nhomPhu(){
+  const l=k=>DV.filter(s=>s.kind===k).map(s=>`<a class="gl-r" href="#bang-gia"><span class="gl-n">${s.ten}</span><span class="gl-d">${s.phut?phut(s.phut):''}</span><b class="gl-p num">${vnd(s.gia)}</b></a>`).join('');
+  return `<div class="gl-h">Dịch vụ phụ${tip('Khách tick thêm dưới gói khi lập hợp đồng.')}</div>${l('ADDON')}<div class="gl-h">Phụ phí cài sẵn</div>${l('SURCHARGE')}`;
+}
+function nhomDiChuyen(){
+  return [['Cách tính phí di chuyển',`
+      <div class="set stack"><label>Cách tính mặc định${tip('Khi lập hợp đồng vẫn đổi được cách tính cho từng dòng.')}</label><div class="seg sm r"><button>Cố định</button><button class="on">Theo km</button><button>Nhập tay</button></div></div>
+      <div class="set"><label>Mức cố định mỗi lần đi</label><input class="ctl money" value="${vnd(CS.codinh)}"></div>
+      <div class="set"><label>Đơn giá mỗi km</label><input class="ctl money" value="${vnd(CS.km)}"></div>
+      <div class="set"><label>Số km miễn phí${tip('Trừ đi trước khi nhân đơn giá.')}</label><span class="unit"><input class="ctl r" value="${CS.mienphi}"><b>km</b></span></div>
+      <div class="set"><label>Phí tối thiểu${tip('Tính ra thấp hơn mức này thì lấy mức này.')}</label><input class="ctl money" value="${vnd(CS.toithieu)}"></div>
+      <div class="set"><label>Tính cả chiều về</label><span class="sw on r"></span></div>`],
+   ['Studio / cửa hàng'+tip('Điểm xuất phát để đo số km. Chấm tròn = mặc định.'),`${STU.map(s=>`<label class="stu"><input type="radio" name="md" ${s.md?'checked':''}><span style="min-width:0"><span class="tier-n">${s.ten}</span><span class="fx" style="display:block">${s.dc}</span></span></label>`).join('')}<button class="btn ghost sm" style="padding:0;margin-top:6px">${ic('plus')}Thêm studio / cửa hàng</button>`]];
+}
+function nhomNhanVat(){
+  return NV.map(n=>`<div class="gl-r"><span class="gl-n">${n.ten}</span><span class="gl-d">${GOI.filter(g=>g.nv===n.id).length} gói</span><span class="sw on" title="Đang dùng"></span></div>`).join('')+`<div style="padding:10px 16px"><button class="btn ghost sm" style="padding:0">${ic('plus')}Thêm nhân vật</button></div>`;
+}
+const khoiNhom=([t,h])=>`<section class="ng"><h3>${t}</h3>${h}</section>`;
+
+/* ===== Khung điều hướng (giống phương án lịch C) ===== */
+const ICON={
+ home:'<path d="M3 11l9-7 9 7v9a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z"/>',
+ lich:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+ hd:'<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 13h6M10 17h6"/>',
+ gia:'<path d="M20 12l-8 8-9-9V4h7z"/><circle cx="7.5" cy="7.5" r="1.5"/>',
+ khach:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5M16 4.5a3.5 3.5 0 010 7M18 14.8c1.8.7 3 2.5 3.5 5.2"/>',
+ tho:'<path d="M14 3l7 7-9 9H5v-7z"/><path d="M11 6l7 7"/>',
+ bc:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+ more:'<circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/>',
+ plus:'<path d="M12 5v14M5 12h14"/>', x:'<path d="M6 6l12 12M18 6L6 18"/>', lock:'<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/>',
+ car:'<path d="M5 16h14M6 16l1.5-6h9L18 16M7 19a1 1 0 100-2 1 1 0 000 2zM17 19a1 1 0 100-2 1 1 0 000 2z"/>',
+ pin:'<path d="M12 21s-7-6-7-11a7 7 0 0114 0c0 5-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/>',
+ chk:'<path d="M5 12l5 5 9-10"/>', l:'<path d="M15 18l-6-6 6-6"/>', r:'<path d="M9 18l6-6-6-6"/>', down:'<path d="M6 9l6 6 6-6"/>',
+ search:'<circle cx="11" cy="11" r="7"/><path d="M21 21l-5-5"/>', edit:'<path d="M4 20h4L19 9l-4-4L4 16z"/>', clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>', warn:'<path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18h.01"/>',
+};
+const ic=n=>`<svg class="i" viewBox="0 0 24 24">${ICON[n]}</svg>`;
+function khung(nhom,con){
+  const m=(id,icn,t)=>`<a href="#${id==='hop-dong'?'hop-dong':id==='bang-gia'?'bang-gia':''}" class="${nhom===id?'on':''}">${ic(icn)}<span>${t}</span></a>`;
+  const kids=(id,arr)=>nhom===id?`<div class="kids">${arr.map((t,i)=>`<a href="#" class="${i===con?'on':''}">${t}</a>`).join('')}</div>`:'';
+  return `<div class="sidecol"><aside class="side">
+    <div class="brand">${ic('tho')}<span>Makeup Pro</span></div>
+    <div class="user"><span class="av">CH</span><div>Nguyễn Trọng Chiến<small>Chủ studio</small></div></div>
+    <nav class="menu">${m('tong','home','Tổng quan')}${m('lich','lich','Lịch makeup')}
+      ${m('hop-dong','hd','Hợp đồng')}${kids('hop-dong',['Lập hợp đồng','Danh sách hợp đồng'])}
+      ${m('bang-gia','gia','Bảng giá')}${typeof BG_KIDS!=='undefined'&&BG_KIDS?kids('bang-gia',BG_KIDS):''}
+      ${m('khach','khach','Khách hàng')}${m('thom','tho','Thợ makeup')}${m('bc','bc','Báo cáo')}</nav>
+  </aside></div>`;
+}
+function bnav(nhom){
+  const b=(id,icn,t)=>`<a href="#${id}" class="${nhom===id?'on':''}">${ic(icn)}${t}</a>`;
+  return `<nav class="bnav">${b('lich','lich','Lịch')}${b('hop-dong','hd','Hợp đồng')}${b('bang-gia','gia','Bảng giá')}${b('khach','khach','Khách')}${b('them','more','Thêm')}</nav>`;
+}
+function route(){
+  const key=(location.hash||'#bang-gia').slice(1);
+  const man=MAN[key]||MAN['bang-gia'];
+  document.getElementById('app').innerHTML=`<div class="app">${khung(man.nhom,man.con||0)}<div class="body"><div class="topbar">${man.back?`<a href="${man.back}" class="btn icon sm ghost" style="margin-left:-8px" title="Quay lại">${ic('l')}</a>`:''}<span class="tt">${man.tieude}</span>${man.tact||''}</div><main class="main ${man.sum?'has-sum':''}">${man.ve()}</main></div></div>${bnav(man.nhom)}`;
+  document.title='Makeup Pro – '+PA+' – '+man.tieude;
+  if(man.sau)man.sau();
+}
+window.addEventListener('hashchange',route);
+
+const PA='Lịch C trên điện thoại';
+const THO=[{id:'ha',vt:'TH',n:'Thu Hà',mau:'#A63D62'},{id:'ma',vt:'MA',n:'Minh Anh',mau:'#5B45A0'},{id:'tram',vt:'NT',n:'Ngọc Trâm',mau:'#2F7D72'},{id:'vy',vt:'BV',n:'Bảo Vy',mau:'#9A5B0F'},{id:null,vt:'?',n:'Chưa có thợ',mau:''}];
+const CA=[[19,'ha','09:00','10:00','tc','Tiệc','Phan Minh Thư'],[19,'ma','14:00','15:30','cd','Chụp cưới','Đinh Quỳnh Anh'],[19,'tram','10:00','10:45','tc','Kỷ yếu','Lớp 12A3'],[20,'ma','08:00','09:00','tc','Tiệc','Lương Hà My'],[20,'vy','15:00','16:00','tc','Tiệc','Mai Thảo Chi'],[21,'ha','05:00','06:30','ah','Ăn hỏi','Cao Thanh Vân'],[21,'ha','14:00','15:30','cd','Chụp cưới','Lý Hồng Ánh'],[21,'tram','09:00','10:00','tc','Tiệc','Kiều Kim Ngân'],[21,'vy','16:00','16:45','tc','Mẹ cô dâu','Cô Trần Lan'],[22,'ma','06:00','07:30','ah','Ăn hỏi','Tạ Diệu Linh'],[22,'ma','10:00','11:00','tc','Tiệc','Hồ Bảo Anh'],[22,'tram','13:00','14:30','cd','Chụp cưới','La Phương Anh'],[23,'ha','06:00','08:00','cd','Cô dâu','Dương Thu Uyên'],[23,'ma','09:00','10:00','tc','Tiệc','Văn Ngọc Hân'],[23,'tram','05:30','07:00','ah','Ăn hỏi','Lã Hải Yến'],[23,'tram','15:00','16:00','tc','Tiệc','Kha Minh Ngọc'],[23,'vy','07:00','07:45','tc','Mẹ cô dâu','Cô Lê Hoa'],[24,'ha','04:30','06:30','cd','Cô dâu','Tôn Nữ Hoàng Bảo Ngọc Phương Thảo'],[24,'ha','06:00','07:30','ah','Ăn hỏi','Lê Thị Lan'],[24,'ha','10:00','11:00','tc','Tiệc','Đỗ Quỳnh Như'],[24,'ma','05:00','06:30','ah','Ăn hỏi','Vũ Hồng Nhung'],[24,'ma','09:00','10:00','tc','Tiệc','Đặng Thu Trang'],[24,'ma','16:00','17:00','tc','Tiệc','Hoàng Hải Yến'],[24,'tram','07:00','09:00','cd','Gói cưới','Bùi Khánh Linh'],[24,'tram','13:30','15:00','cd','Chụp cưới','Ngô Mai Anh'],[24,'vy','08:00','08:45','tc','Mẹ cô dâu','Cô Phạm Thị Hồng'],[24,'vy','11:00','12:00','tc','Kỷ yếu','Lớp 12A1 – Nguyễn Gia Hân'],[24,null,'15:00','16:00','tc','Tiệc','Trịnh Minh Châu'],[25,'ha','04:30','06:30','cd','Cô dâu','Mạc Khánh Huyền'],[25,'ha','09:30','10:30','tc','Tiệc','Ninh Mỹ Linh'],[25,'ma','05:00','07:00','cd','Cô dâu','Quách Thùy Dương'],[25,'ma','11:00','12:00','tc','Tiệc','Ông Lan Chi'],[25,'tram','04:00','06:00','cd','Cô dâu','Từ Hà Phương'],[25,'tram','08:00','09:30','ah','Ăn hỏi','Thái Thu Thảo'],[25,'vy','06:00','06:45','tc','Mẹ cô dâu','Cô Hà Mai'],[25,'vy','07:00','07:45','tc','Mẹ chú rể','Cô Vũ Bình'],[25,null,'16:00','17:00','tc','Tiệc','Giang Quế Anh']].map(([d,t,bd,kt,l,nh,kh])=>({d,t,bd,kt,l,nh,kh}));
+const NGHI={'ha-22':1,'vy-19':1};
+const NGAY=[['T2',19],['T3',20],['T4',21],['T5',22],['T6',23],['T7',24],['CN',25]];
+const hh=t=>{const[a,b]=t.split(':').map(Number);return a+b/60};
+CA.forEach((a,i)=>CA.forEach((b,j)=>{if(j>i&&a.t&&a.t===b.t&&a.d===b.d&&hh(a.bd)<hh(b.kt)&&hh(b.bd)<hh(a.kt)){a.x=b.x=true}}));
+function veLich(){
+  const SEL=24;
+  let g=`<div class="lg"><div class="lh corner"></div>${THO.map(t=>`<div class="lh"><span class="av sm ${t.id?'':'na'}" style="${t.id?'background:'+t.mau:''}">${t.vt}</span><span class="tn">${t.id?t.n.split(" ").pop():"Chưa có"}</span></div>`).join('')}`;
+  NGAY.forEach(([w,d])=>{
+    const n=CA.filter(c=>c.d===d).length;const cf=CA.some(c=>c.d===d&&c.x);
+    g+=`<div class="ld ${d===SEL?'sel':''} ${w==='T7'||w==='CN'?'we':''}"><b>${w}</b><span>${d}</span><i>${n} ca</i></div>`;
+    THO.forEach(t=>{
+      if(NGHI[t.id+'-'+d]){g+=`<div class="lc off ${d===SEL?'sel':''}">Nghỉ</div>`;return}
+      const ds=CA.filter(c=>c.t===t.id&&c.d===d);const x=ds.some(c=>c.x);
+      g+=`<div class="lc ${x?'cf':''} ${d===SEL?'sel':''}">${ds.slice(0,3).map(c=>`<span class="pt ${c.l} ${c.x?'x':''} ${t.id?'':'na'}">${c.bd}</span>`).join('')}${ds.length>3?`<span class="more">+${ds.length-3}</span>`:''}</div>`;
+    });
+  });
+  g+='</div>';
+  const day=CA.filter(c=>c.d===SEL).sort((a,b)=>hh(a.bd)-hh(b.bd));
+  const tho=id=>THO.find(t=>t.id===id);
+  const ag=day.slice(0,4).map(c=>`<div class="ag ${c.l} ${c.x?'x':''}"><div class="tm">${c.bd}<small>${c.kt}</small></div><div style="min-width:0"><div class="nh">${c.nh}${c.x?' <span class="tag huy">Trùng giờ</span>':''}</div><div class="kn">${c.kh}</div></div><span class="av sm ${c.t?'':'na'}" style="${c.t?'background:'+tho(c.t).mau:''}">${tho(c.t).vt}</span></div>`).join('');
+  return `<div class="mode"><a class="on">Tuần</a><a>Ngày</a><a>Cột thợ</a></div>
+   <div class="wk"><button class="btn icon sm">${ic('l')}</button><b>19 – 25/10/2026</b><button class="btn icon sm">${ic('r')}</button><span class="warn">${ic('warn')}1 trùng</span></div>
+   <div class="card" style="overflow:hidden">${g}</div>
+   <div class="dayh"><b>Thứ Bảy 24/10</b><span class="fx">11 ca · 1 chưa có thợ</span></div>
+   <div class="card">${ag}<a class="all" href="#">Xem cả ngày (11 ca)</a></div>`;
+}
+const MAN={'lich':{nhom:'lich',tieude:'Lịch makeup',tact:`<button class="btn pri sm">${ic('plus')}Lịch</button>`,ve:veLich}};
+location.hash='#lich';
+route();
+
+</script></body></html>
