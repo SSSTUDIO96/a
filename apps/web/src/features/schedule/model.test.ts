@@ -14,6 +14,7 @@ import {
   daysOf,
   DEFAULT_MODE,
   indexByCell,
+  kindText,
   laneShortNames,
   layoutLanes,
   MODE_OPTIONS,
@@ -34,6 +35,7 @@ function appt(p: Partial<Appointment> & { id: string; startsAt: string; endsAt: 
     contract: null,
     contractLineId: null,
     subjectName: null,
+    quantity: null,
     travelBeforeMin: 0,
     travelAfterMin: 0,
     locationType: null,
@@ -307,5 +309,18 @@ describe('N3: tên ngắn ở đầu hàng thợ', () => {
     expect(m.get('b')).toBe('Trần Khánh Linh');
     expect(m.get('c')).toBe('Lê Khánh Linh');
     expect(m.get('d')).toBe('Tú');
+  });
+});
+
+describe('L7: "× n" theo số lượng dòng hợp đồng (kindText dùng chung mọi chế độ lịch)', () => {
+  const base = { id: 'q', startsAt: '2026-10-21T02:00:00Z', endsAt: '2026-10-21T03:00:00Z' };
+  it('BẮT: số lượng 2 → "tên ca × 2"; không có tên ca thì loại sự kiện + "× 3"', () => {
+    expect(kindText(appt({ ...base, title: 'Makeup phù dâu', quantity: 2 }))).toBe('Makeup phù dâu × 2');
+    expect(kindText(appt({ ...base, title: '  ', kind: 'MAKEUP', quantity: 3 }))).toBe('Makeup × 3');
+  });
+  it('GIỮ: số lượng 1 hoặc ca không gắn dòng hợp đồng (null) → không ghi gì thêm', () => {
+    expect(kindText(appt({ ...base, title: 'Makeup cô dâu', quantity: 1 }))).toBe('Makeup cô dâu');
+    expect(kindText(appt({ ...base, title: 'Makeup cô dâu', quantity: null }))).toBe('Makeup cô dâu');
+    expect(kindText(appt({ ...base, title: null, kind: 'PERSONAL_BLOCK', quantity: null }))).toBe('Bận việc riêng');
   });
 });

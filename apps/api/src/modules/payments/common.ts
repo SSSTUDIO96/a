@@ -1,6 +1,7 @@
 import type { Prisma } from '@prisma/client';
 import { allocateToInstallments, PaymentMathError, summarizePayments, vndFromBigInt, type Permission, type Vnd } from '@makeup/shared';
 import { AppError } from '../../lib/errors';
+import { dateToWire } from '../courses/present';
 
 export type Tx = Prisma.TransactionClient;
 
@@ -93,7 +94,7 @@ export async function loadProgress(db: Tx, orgId: string, contractId: string, no
     },
   });
   if (!contract) throw new AppError('NOT_FOUND', 'Không tìm thấy hợp đồng');
-  const [installments, payments] = await Promise.all([
+  const [installments, payments, courseEnd] = await Promise.all([
     db.paymentInstallment.findMany({
       where: { contractId, organizationId: orgId },
       select: { id: true, name: true, dueDate: true, amount: true, isDeposit: true, sortOrder: true },
@@ -103,6 +104,18 @@ export async function loadProgress(db: Tx, orgId: string, contractId: string, no
       where: { contractId, organizationId: orgId },
       select: paymentSelect,
       orderBy: [{ receivedAt: 'desc' }, { code: 'desc' }],
+    }),
+    // Mốc gợi ý tiến độ của hợp đồng khoá học (T1): ngày kết thúc lớp MUỘN NHẤT trong các dòng khoá học chưa huỷ, bỏ lớp
+    // đã huỷ. Trả ngay ở đây để người chỉ có quyền thu tiền (không contracts.read / courses.read) vẫn có mốc. Lọc tổ chức
+    // ở CẢ lớp lẫn dòng hợp đồng (quan hệ lớp ↔ dòng cũng là khoá ngoại kép theo tổ chức). Chỉ dòng COURSE mới có lớp
+    // (CHECK của database: kind = COURSE ⇔ có course_class_id) nên không cần lọc thêm theo loại dòng.
+    db.courseClass.aggregate({
+      _max: { endDate: true },
+      where: {
+        organizationId: orgId,
+        status: { not: 'CANCELLED' },
+        contractLines: { some: { contractId, organizationId: orgId, voidedAt: null } },
+      },
     }),
   ]);
   const summary = paymentMath(() =>
@@ -127,6 +140,8 @@ export async function loadProgress(db: Tx, orgId: string, contractId: string, no
       status: contract.status,
       eventDate: contract.eventDate,
       confirmedAt: contract.confirmedAt,
+      // "YYYY-MM-DD" (ngày lớp, không giờ); null = không có dòng khoá học nào còn hiệu lực ở lớp chưa huỷ.
+      courseEndDate: courseEnd._max.endDate ? dateToWire(courseEnd._max.endDate) : null,
       customer: viewer.permissions.has('customers.read')
         ? { ...contract.customer, phoneHidden: false }
         : { id: contract.customer.id, fullName: contract.customer.fullName, phone: null, phoneHidden: true },

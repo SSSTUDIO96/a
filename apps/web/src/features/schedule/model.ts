@@ -81,9 +81,12 @@ export const KIND_LABELS: Record<Appointment['kind'], string> = {
   OTHER: 'Việc khác',
 };
 
-// Chữ "loại" trên ô ca: tên ca nếu có, không thì loại sự kiện.
-export function kindText(a: Pick<Appointment, 'title' | 'kind'>): string {
-  return a.title?.trim() || KIND_LABELS[a.kind];
+// Chữ "loại" trên ô ca: tên ca nếu có, không thì loại sự kiện; dòng hợp đồng nhiều người (phù dâu 2 người) thêm "× 2".
+// Dùng chung cho mọi chế độ lịch (C lưới tuần qua chipKind, C điện thoại, B ngày, A cột thợ, tooltip, hộp chi tiết).
+// quantity null (ca không gắn dòng hợp đồng) hoặc 1 → không ghi gì.
+export function kindText(a: Pick<Appointment, 'title' | 'kind' | 'quantity'>): string {
+  const base = a.title?.trim() || KIND_LABELS[a.kind];
+  return a.quantity !== null && a.quantity > 1 ? `${base} × ${a.quantity}` : base;
 }
 
 // Ca không chặn lịch (nháp, đã huỷ, khách không đến) vẽ mờ, không báo đỏ (bản vẽ 4.1).

@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Appointment, StaffMember } from '../../api/types';
@@ -40,6 +40,7 @@ function a(id: string, code: string, start: string, end: string, staff: string[]
     contract: null,
     contractLineId: null,
     subjectName: null,
+    quantity: null,
     startsAt: start,
     endsAt: end,
     travelBeforeMin: 0,
@@ -249,6 +250,73 @@ describe('màu ca theo nhân vật', () => {
       'Không chặn lịch',
     ]);
     expect(legend.textContent).not.toMatch(/Ăn hỏi|Tiệc & sự kiện/);
+  });
+});
+
+describe('L7: ca phù dâu 2 người ghi "× 2" ở mọi chế độ lịch', () => {
+  // a4 (Thứ Tư 21/10 = hôm nay): dòng hợp đồng số lượng 2. q1: dòng số lượng 1. free: ca không gắn dòng hợp đồng.
+  const ITEMS: Appointment[] = [
+    a('a4', 'L-0004', '2026-10-21T09:00:00+07:00', '2026-10-21T11:00:00+07:00', ['m-vy'], {
+      title: 'Makeup phù dâu',
+      contract: { id: 'hd-9', code: 'HD-0009', status: 'CONFIRMED' },
+      contractLineId: 'line-1',
+      subjectName: 'Phù dâu',
+      quantity: 2,
+    }),
+    a('q1', 'L-0011', '2026-10-21T06:00:00+07:00', '2026-10-21T07:00:00+07:00', ['m-ha'], {
+      contract: { id: 'hd-9', code: 'HD-0009', status: 'CONFIRMED' },
+      contractLineId: 'line-2',
+      subjectName: 'Cô dâu',
+      quantity: 1,
+    }),
+    a('free', 'L-0012', '2026-10-21T13:00:00+07:00', '2026-10-21T14:00:00+07:00', ['m-anh'], { title: 'Makeup tiệc' }),
+  ];
+  const textOf = (sel: string) => [...document.querySelectorAll(sel)].map((el) => el.textContent ?? '');
+
+  it('BẮT: lưới C (ô ca + tooltip), B, A và hộp chi tiết đều có "× 2" cho a4; ca số lượng 1 / không gắn dòng không có "×"', async () => {
+    setupServer({ items: ITEMS });
+    renderScreen(OWNER);
+    await screen.findByTestId('che-do-C');
+    const chip = document.querySelector('[data-appt="a4"]') as HTMLElement;
+    expect(chip.querySelector('.ws-chip__kind')?.textContent).toBe('Phù dâu × 2');
+    expect(document.querySelector('[data-appt="q1"] .ws-chip__kind')?.textContent).toBe('Cô dâu');
+    expect(document.querySelector('[data-appt="free"] .ws-chip__kind')?.textContent).toBe('Tiệc');
+    expect(document.body.textContent).toContain('Makeup phù dâu × 2'); // tooltip đầy đủ (apptTip)
+
+    fireEvent.click(modeButton('Ngày'));
+    await screen.findByTestId('che-do-B');
+    const b = textOf('.ws-item__sv');
+    expect(b.filter((t) => t.includes('× 2'))).toHaveLength(1);
+    expect(b.some((t) => t.startsWith('Makeup phù dâu × 2'))).toBe(true);
+    expect(b.filter((t) => t.includes('×'))).toHaveLength(1);
+
+    fireEvent.click(modeButton('Cột thợ'));
+    await screen.findByTestId('che-do-A');
+    const a4 = document.querySelector('[data-appt="a4"]') as HTMLElement;
+    expect(a4.textContent).toContain('Makeup phù dâu × 2');
+    expect(a4.getAttribute('title')).toContain('Makeup phù dâu × 2');
+    expect(document.querySelector('[data-appt="q1"]')?.textContent).not.toContain('×');
+    expect(document.querySelector('[data-appt="free"]')?.textContent).not.toContain('×');
+
+    fireEvent.click(a4);
+    const dlg = await screen.findByRole('dialog');
+    expect(dlg.textContent).toContain('L-0004 · Makeup phù dâu × 2');
+  });
+
+  it('BẮT: lưới C trên điện thoại (WeekGridCMobile) cũng ghi "× 2"', async () => {
+    vi.stubGlobal('matchMedia', (q: string) => ({
+      matches: q === '(max-width: 640px)',
+      media: q,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    }));
+    setupServer({ items: ITEMS });
+    renderScreen(OWNER);
+    await waitFor(() => expect(document.querySelectorAll('.ws-ag__kind').length).toBeGreaterThan(0));
+    expect(document.querySelector('[data-mode]')?.getAttribute('data-mode')).toBe('C');
+    const kinds = textOf('.ws-ag__kind');
+    expect(kinds.filter((t) => t.includes('Makeup phù dâu × 2')).length).toBeGreaterThan(0);
+    expect(kinds.filter((t) => t.includes('×')).every((t) => t.includes('Makeup phù dâu × 2'))).toBe(true);
   });
 });
 

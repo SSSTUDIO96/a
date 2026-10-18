@@ -49,7 +49,7 @@ export function apptClasses(a: Appointment, conflict: boolean, swatch: Swatch): 
 
 // Chữ loại trên ô lưới C (ô hẹp, bản mẫu ghi "Tiệc", "Ăn hỏi"): bỏ chữ "Makeup" đứng đầu tên ca — app chỉ có ca makeup.
 // Tên ca đầy đủ vẫn nằm trong tooltip và hộp chi tiết.
-export function chipKind(a: Pick<Appointment, 'title' | 'kind'>): string {
+export function chipKind(a: Pick<Appointment, 'title' | 'kind' | 'quantity'>): string {
   const t = kindText(a).replace(/^makeup\s+/iu, '');
   return t.charAt(0).toLocaleUpperCase('vi') + t.slice(1);
 }

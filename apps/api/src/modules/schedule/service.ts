@@ -55,8 +55,10 @@ export interface TxCtx {
 export const appointmentInclude = {
   customer: { select: { id: true, fullName: true, phone: true } },
   contract: { select: { id: true, code: true, status: true } },
-  // Nhân vật makeup của ca = bản chụp tên nhân vật trên dòng hợp đồng gắn với ca (giống hợp đồng hiển thị).
-  contractLine: { select: { subjectName: true } },
+  // Nhân vật makeup của ca = bản chụp tên nhân vật trên dòng hợp đồng gắn với ca (giống hợp đồng hiển thị); số lượng
+  // của dòng (phù dâu 2 người → 2) để màn Lịch ghi "× 2". Quan hệ đi theo khoá ngoại kép (contract_line_id,
+  // organization_id) nên chỉ đọc được dòng của CHÍNH tổ chức của ca.
+  contractLine: { select: { subjectName: true, quantity: true } },
   staff: {
     select: {
       membershipId: true,
@@ -119,6 +121,8 @@ export function presentAppointment(a: AppointmentRow, avatarOf: AvatarOf, histor
     contractLineId: a.contractLineId,
     // Ca không gắn dòng hợp đồng → null (không đoán theo tên ca).
     subjectName: a.contractLine?.subjectName ?? null,
+    // Số lượng của dòng hợp đồng gắn với ca (≥ 1); ca không gắn dòng → null.
+    quantity: a.contractLine?.quantity ?? null,
     startsAt: a.startsAt.toISOString(),
     endsAt: a.endsAt.toISOString(),
     travelBeforeMin: a.travelBeforeMin,

@@ -371,6 +371,8 @@ export interface Appointment {
   contractLineId: string | null;
   // Nhân vật trên dòng hợp đồng gắn với ca; ca không gắn dòng hoặc dòng không có nhân vật → null.
   subjectName: string | null;
+  // Số lượng của dòng hợp đồng gắn với ca (phù dâu 2 người → 2; luôn ≥ 1); ca không gắn dòng hợp đồng → null.
+  quantity: number | null;
   startsAt: IsoDateTime;
   endsAt: IsoDateTime;
   travelBeforeMin: number;
@@ -1100,6 +1102,9 @@ export interface ContractPayments {
     status: ContractStatus;
     eventDate: IsoDateTime | null;
     confirmedAt: IsoDateTime | null;
+    // "YYYY-MM-DD": ngày kết thúc lớp MUỘN NHẤT của các dòng khoá học chưa huỷ (bỏ lớp đã huỷ); null nếu không có.
+    // Mốc gợi ý tiến độ của hợp đồng khoá học — có sẵn ở đây nên người chỉ có quyền thu tiền cũng dùng được.
+    courseEndDate: string | null;
     // Không có quyền customers.read: phone = null, phoneHidden = true.
     customer: { id: string; fullName: string; phone: string | null; phoneHidden: boolean };
   };
