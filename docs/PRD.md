@@ -1,119 +1,112 @@
 # Bản mô tả sản phẩm (PRD) — Makeup Pro
 
-Ngày viết: 18/10/2026. Người viết: AI (thợ tài liệu). Nguồn: mã trong kho, `docs/PROJECT_AUDIT.md`, `docs/NHAT-KY-QUYET-DINH-THAY.md`, lệnh giao việc của điều phối.
+Cập nhật: 18/10/2026. Người viết: AI (thợ tài liệu). **Đã đối chiếu với commit `634d6a3`** (17:00 UTC; mã giống hệt `bc9633a`, hai commit sau chỉ thêm sổ ghi). Nguồn: mã trong kho, `docs/BAN-GIAO-PHIEN.md`, `docs/SO-Y-MUON.md`, `docs/NHAT-KY-QUYET-DINH-THAY.md`, `docs/rnd/BAN-VE-C.md`.
 
-> **Lưu ý trước khi đọc:** bản yêu cầu gốc của anh Chiến (bản nói "13 module + app iPhone") **không nằm trong kho**. Danh sách module ở mục 3 được dựng lại từ những gì có trong kho và lệnh giao việc. Tên và số module cần anh Chiến hoặc điều phối đối chiếu với bản yêu cầu gốc rồi sửa cho khớp.
+> **Lưu ý:** bản yêu cầu gốc của anh Chiến (bản nói "13 module + app iPhone") **không nằm trong kho**. Danh sách module ở mục 3 dựng lại từ kho và từ lời anh trong `docs/SO-Y-MUON.md`. Cần đối chiếu với bản gốc.
 
 ---
 
 ## Phần CỦA NGHỀ — studio nào cũng dùng được
 
-### 1. PRD là gì, viết để làm gì
-PRD là tờ giấy trả lời bốn câu: **làm cái gì, cho ai, làm theo thứ tự nào, và cái gì chưa làm.** Không có tờ này, thợ sẽ tự đoán, và mỗi thợ đoán một kiểu. Có tờ này, khi ai đó đòi thêm tính năng giữa chừng, anh chỉ cần hỏi: "nó nằm ở lát nào?"
+### 1. PRD dùng để làm gì
+PRD trả lời bốn câu: **làm cái gì, cho ai, làm theo thứ tự nào, cái gì chưa làm.** Khi có người đòi thêm tính năng giữa chừng, chỉ cần hỏi: "nó nằm ở lát nào?"
 
-### 2. Cách chia việc theo "lát"
-Một **lát** là một phần sản phẩm làm trọn từ đầu đến cuối: dữ liệu, máy chủ, giao diện, bài thử, tài liệu. Xong lát nào thì dùng thật được lát đó. Không làm kiểu "xong hết phần máy chủ của 13 module rồi mới làm giao diện", vì như thế phải đợi rất lâu mới có cái để dùng thử.
+### 2. Chia việc theo "lát"
+Một **lát** là một phần sản phẩm làm trọn từ đầu đến cuối: dữ liệu, máy chủ, giao diện, bài thử, tài liệu. Xong lát nào thì dùng thật được lát đó.
 
 | Luật chia lát | Vì sao |
 |---|---|
-| Mỗi lát phải có người dùng thật dùng được ngay | Biết sớm cái nào sai trước khi xây thêm lên trên |
-| Lát sau chỉ dựa vào dữ liệu của lát trước, không dựa vào lời hứa | Tránh "chờ module kia xong mới chạy được" |
-| Lát đầu chọn phần nhiều người dùng nhất mỗi ngày | Lịch và bảng giá là việc studio mở ra hằng ngày |
+| Mỗi lát phải có người dùng thật dùng được ngay | Biết sớm cái nào sai trước khi xây thêm |
+| Lát sau dựa vào dữ liệu của lát trước, không dựa vào lời hứa | Tránh "chờ module kia xong mới chạy được" |
+| Lát đầu chọn phần dùng nhiều nhất mỗi ngày | Lịch và bảng giá là việc studio mở ra hằng ngày |
 | Mỗi lát có danh sách "KHÔNG làm" viết rõ | Chặn việc phình ra giữa chừng |
+| Phần nào của bản yêu cầu chưa xếp mốc thì ghi "chưa xếp", không im lặng | Anh Chiến từng phải tự nhắc chuyện trang quản trị nền tảng (`docs/SO-Y-MUON.md`) |
 
-### 3. Ba loại khách của một SaaS ngành làm đẹp
-SaaS là phần mềm thuê theo tháng, chạy trên mạng, nhiều đơn vị dùng chung một hệ thống nhưng dữ liệu tách riêng.
-
+### 3. Ba loại khách của một phần mềm thuê theo tháng ngành làm đẹp
 | Loại | Đặc điểm | Cần gì nhất |
 |---|---|---|
-| Thợ cá nhân | Một người, tự nhận lịch, tự báo giá | Bảng giá gọn, lịch không bị trùng, ghi cọc |
-| Đội / studio | Chủ + thợ chính + thợ phụ + lễ tân | Phân lịch cho thợ, phân quyền ai xem được gì |
-| Trung tâm đào tạo | Giảng viên, trợ giảng, học viên | Lịch buổi học, quản lý học viên, cổng cho học viên |
+| Thợ cá nhân | Một người, tự nhận lịch, tự báo giá | Bảng giá gọn, lịch không trùng, ghi cọc |
+| Đội / studio | Chủ + thợ chính + thợ phụ + lễ tân | Phân lịch cho thợ, phân quyền, trả công theo bậc |
+| Trung tâm đào tạo | Giảng viên, trợ giảng, học viên | Khoá học, hợp đồng khoá học, thu tiền theo đợt, cổng học viên |
 
-Một người có thể thuộc **nhiều đơn vị** cùng lúc (thợ làm cho vài studio, giảng viên dạy vài trung tâm). Phần mềm phải cho một tài khoản đi vào nhiều đơn vị, mỗi đơn vị một bộ quyền riêng.
+Một người có thể thuộc **nhiều đơn vị** cùng lúc. Phần mềm phải cho một tài khoản vào nhiều đơn vị, mỗi đơn vị một bộ quyền riêng.
 
 ---
 
 ## Phần CỦA RIÊNG DỰ ÁN NÀY
 
 ### 1. Sản phẩm là gì
-**Makeup Pro** là phần mềm quản lý cho ngành makeup Việt Nam, nhiều tổ chức dùng chung (gọi là "nhiều tổ chức" — mỗi studio là một tổ chức, dữ liệu tách nhau). Anh Chiến dùng cho studio ảnh cưới của mình, sau đó **bán quy trình và tài liệu** cho studio khác.
+**Makeup Pro** là phần mềm quản lý cho ngành makeup Việt Nam. Nhiều tổ chức dùng chung một hệ thống, dữ liệu tách nhau. Anh Chiến dùng cho studio ảnh cưới của mình, sau đó **bán quy trình và tài liệu** cho studio khác.
 
 ### 2. Cho ai — đã có trong dữ liệu
-Ba loại tổ chức đã có sẵn trong cấu trúc dữ liệu (`apps/api/prisma/schema.prisma:20-24`): `INDIVIDUAL` (thợ cá nhân), `TEAM` (đội/studio), `ACADEMY` (trung tâm đào tạo). Một tài khoản tham gia nhiều tổ chức qua bảng `memberships`.
+Ba loại tổ chức: `INDIVIDUAL` (thợ cá nhân), `TEAM` (đội/studio), `ACADEMY` (trung tâm đào tạo) (`apps/api/prisma/schema.prisma:20-24`). Một tài khoản tham gia nhiều tổ chức qua bảng `memberships`.
 
-Vai trò mẫu được chép vào mỗi tổ chức lúc tạo (`packages/shared/src/permissions.ts:45-74`):
+Vai trò mẫu chép vào mỗi tổ chức lúc tạo (`packages/shared/src/permissions.ts:56-95`):
 
 | Vai trò | Được làm gì (tóm tắt) |
 |---|---|
 | Chủ tài khoản, Quản trị | Mọi quyền. Chỉ chủ mới trao được vai trò chủ |
-| Quản lý | Thêm/sửa nhân sự, bảng giá, đổi giá, khách hàng, lập và sửa hợp đồng, xem và sửa lịch cả tổ chức |
-| Thợ makeup, Thợ phụ | Xem bảng giá, xem lịch mình được phân |
-| Lễ tân | Khách hàng, lập và sửa hợp đồng, xem và sửa lịch cả tổ chức |
-| Kế toán | Chỉ xem: nhật ký, bảng giá, khách, hợp đồng, lịch |
+| Quản lý | Nhân sự (trừ cho rời), bảng giá, đổi giá, khách, hợp đồng kể cả **điều chỉnh hợp đồng đã xác nhận**, lịch cả tổ chức, hồ sơ thợ, thu tiền, báo cáo, tệp. **Không** xem/đặt tiền công |
+| Lễ tân | Khách, lập/sửa hợp đồng nháp, lịch cả tổ chức, ghi phiếu thu, tệp. **Không** điều chỉnh hợp đồng đã xác nhận, không huỷ phiếu thu |
+| Kế toán | Xem nhật ký, bảng giá, khách, hợp đồng, lịch, hồ sơ thợ; **chỉ xem** tiền công; ghi và huỷ phiếu thu; báo cáo |
+| Thợ makeup, Thợ phụ | Xem bảng giá, lịch mình được phân, hồ sơ thợ (không thấy số điện thoại thợ khác), xem tệp |
 | Giảng viên | Xem bảng giá, lịch mình |
 | Trợ giảng | Xem lịch mình |
 
-Bảng trên đúng với mã đã lưu ở commit `f7b0805`. Lúc viết, mã đang sửa (chưa lưu) thêm quyền xem hồ sơ thợ và tiền công theo gói (`staff.*`, `payroll.*`) cho một số vai trò.
-
-Phân quyền mẫu này do trợ lý tự chọn lúc 15:16 ngày 18/10/2026 khi anh Chiến vắng mặt. **Anh Chiến cần xem lại**, nhất là: thợ chính có cần thấy lịch của cả đội không.
+Phân quyền mẫu do trợ lý chọn khi anh Chiến vắng (15:16 và G2, G3, G5 lúc 17:05 theo `docs/NHAT-KY-QUYET-DINH-THAY.md`). **Anh cần xem lại**, nhất là: thợ chính có cần thấy lịch cả đội không.
 
 ### 3. Các module
-Trạng thái thật xem ở `docs/PROGRESS.md`. Bảng dưới chỉ mô tả phạm vi.
+Trạng thái thật ở `docs/PROGRESS.md`.
 
-| # | Module | Phạm vi | Bằng chứng trong kho |
+| # | Module | Phạm vi | Nguồn yêu cầu |
 |---|---|---|---|
-| 1 | Tổ chức, nhân sự, vai trò, đăng nhập | Đăng ký, đăng nhập, tạo tổ chức, mời nhân sự, vai trò tuỳ chỉnh | `apps/api/src/modules/auth`, `modules/orgs` |
-| 2 | Nhật ký thay đổi | Ghi ai làm gì lúc nào, không sửa không xoá được | bảng `audit_logs` |
-| 3 | Bảng giá | Nhóm dịch vụ, dịch vụ chính / dịch vụ phụ (tóc, nail, lens…) / phụ phí cài sẵn, gói combo theo **nhân vật makeup** (cô dâu, mẹ, phù dâu…) và địa điểm cho phép, lịch sử giá, studio/cửa hàng, cách tính phí di chuyển | bảng `services`, `service_packages`, `price_versions`, `makeup_subjects`, `studio_locations`, `travel_fee_policies` |
-| 4 | Khách hàng | Hồ sơ khách, số điện thoại | bảng `customers` |
-| 5 | Hợp đồng | Một hợp đồng nhiều dòng: nhiều gói, dịch vụ phụ, phụ phí phát sinh, phí di chuyển; giá chốt lúc thêm dòng; sau khi xác nhận chỉ thêm dòng hoặc huỷ dòng có lý do | bảng `contracts`, `contract_lines`; anh Chiến yêu cầu ngày 18/10/2026 (`docs/SO-Y-MUON.md`) |
-| 6 | Lịch makeup | Đặt lịch, phân thợ, chặn trùng giờ, thời gian di chuyển, trạng thái thực hiện; ba chế độ xem A/B/C, mặc định C | bảng `appointments`, `appointment_staff`; `docs/NHAT-KY-QUYET-DINH-THAY.md` dòng 15:24 |
-| 7 | Tài chính | Thu cọc, thanh toán, sổ giao dịch; trạng thái thanh toán suy ra từ sổ | ghi chú trên `WorkStatus` trong `schema.prisma` |
-| 8 | Website giới thiệu | Trang công khai của studio, đọc dịch vụ được đánh dấu công khai | cột `is_public` trên dịch vụ và gói |
-| 9 | Đào tạo | Khoá học, buổi học, giảng viên, học viên | loại lịch `COURSE_SESSION`, vai trò giảng viên |
-| 10 | Cổng học viên | Học viên đăng nhập xem lịch học, tài liệu | lệnh giao việc |
-| 11 | File | Lưu ảnh, tài liệu (ảnh layout makeup, bản hợp đồng…) | lệnh giao việc |
-| 12 | Thông báo | Nhắc lịch, báo thay đổi | lệnh giao việc |
-| 13 | Thuê bao | Studio trả tiền thuê phần mềm theo gói | lệnh giao việc |
-| — | App iPhone | Thợ xem lịch, nhận phân công trên điện thoại | lệnh giao việc |
+| 1 | Tổ chức, nhân sự, vai trò, đăng nhập | Đăng ký, đăng nhập (app: thẻ trong thân; web: cookie), tạo tổ chức, thêm nhân sự, vai trò tuỳ chỉnh | Bản yêu cầu |
+| 2 | Nhật ký thay đổi | Ai làm gì lúc nào; không sửa, không xoá được | Bản yêu cầu |
+| 3 | Bảng giá | Nhóm dịch vụ; dịch vụ chính / dịch vụ phụ (tóc, nail, lens…) / phụ phí; gói theo **nhân vật makeup**, địa điểm cho phép, bán kính miễn phí; lịch sử giá; studio/cửa hàng; phí di chuyển 4 cách (cố định, theo km, nhập tay, theo bậc khoảng cách) | Anh Chiến, 18/10/2026 |
+| 4 | Khách hàng | Hồ sơ khách, tìm theo tên/số điện thoại | Bản yêu cầu |
+| 5 | Hợp đồng | Nhiều dòng: nhiều gói, dịch vụ phụ, phụ phí phát sinh, phí di chuyển; **thợ phụ trách** từng dòng với cảnh báo rảnh / có lịch trong ngày / trùng giờ; xác nhận thì tự lên lịch; sau xác nhận chỉ thêm dòng hoặc huỷ dòng có lý do | Anh Chiến, 18/10/2026 |
+| 6 | Lịch makeup | Phân thợ, chặn trùng giờ gồm thời gian di chuyển, trạng thái thực hiện; 3 chế độ xem A/B/C, mặc định C | Bản yêu cầu + anh Chiến |
+| 7 | Nhân sự & tiền công | Bậc lương, hồ sơ thợ (ảnh, tên hiển thị, có nhận lịch không), tiền công theo gói/dịch vụ theo bậc | Anh Chiến, 18/10/2026 |
+| 8 | Thu tiền | Tiến độ thanh toán theo đợt, phiếu thu/phiếu hoàn chỉ ghi thêm, báo cáo doanh thu (cọc, còn lại, thực thu) | Anh Chiến (phần đào tạo), 18/10/2026 |
+| 9 | Lưu trữ tệp | Ảnh đại diện thợ/khách, logo, album, tài liệu khoá học, bài nộp, thiệp chào mừng | Bản yêu cầu |
+| 10 | Website giới thiệu | Trang công khai của studio, đọc dịch vụ và hồ sơ thương hiệu đã xuất bản | Bản yêu cầu |
+| 11 | Đào tạo + cổng học viên | Khoá học theo nhóm của trung tâm; hợp đồng loại "khoá học"; nội quy; **20 mẫu thiệp chào mừng** có tên học viên, khoá, ảnh, thương hiệu | Anh Chiến, 18/10/2026 (mốc 7–9) |
+| 12 | Thông báo | Nhắc lịch, báo thay đổi | Bản yêu cầu |
+| 13 | Thuê bao + trang quản trị nền tảng | Gói thuê, hạn mức, trang quản trị cho chủ nền tảng "giống SS Pro", **không** dùng mật khẩu chung | Anh Chiến, 18/10/2026 (mốc 6) |
+| — | App iPhone | Thợ xem lịch, nhận phân công | Bản yêu cầu |
 
-Bảng trên có 13 dòng module + app iPhone. **Chưa chắc 13 dòng này trùng 13 module của bản yêu cầu gốc**: module hợp đồng là anh Chiến nhắn thêm giữa chừng ngày 18/10/2026, có thể bản yêu cầu gốc còn một module khác (ví dụ báo cáo, lương thưởng) mà kho không ghi. Cần đối chiếu.
+**Chưa chắc 13 dòng này trùng 13 module của bản gốc.** Hợp đồng, tiền công, thu tiền, quản trị nền tảng, đào tạo là anh nhắn thêm trong ngày.
 
-### 4. Lộ trình theo lát
-| Lát | Nội dung | Ai chọn, khi nào | Trạng thái |
+### 4. Lộ trình
+| Mốc | Nội dung | Ai chọn, khi nào | Trạng thái (chi tiết: `docs/PROGRESS.md`) |
 |---|---|---|---|
-| Nền móng | Module 1 + 2, cấu trúc dữ liệu Bảng giá + Hợp đồng + Lịch | — | Xong phần làm, đang nghiệm thu độc lập |
-| **Lát 1** | **Bảng giá + Lịch makeup** (anh Chiến chọn ngày 18/10/2026). Cùng ngày anh nhắn thêm: nhân vật makeup, dịch vụ phụ, địa điểm, phí di chuyển và **tạo hợp đồng** → gộp vào lát 1. Khách hàng ở mức đủ để lập hợp đồng và đặt lịch | **Anh Chiến chọn ngày 18/10/2026** | Đang dựng |
-| Lát 2 trở đi | Chưa chốt | Chờ anh Chiến | — |
-
-Đề xuất thứ tự cho các lát sau (chỉ là đề xuất, **chưa ai chốt**), xếp theo cái nào cần dữ liệu của cái nào:
-1. Tài chính — cần hợp đồng đã có giá chốt (lát 1 tạo ra).
-2. Website giới thiệu — cần bảng giá có cờ công khai (lát 1 tạo ra).
-3. Đào tạo + cổng học viên — dùng lại lịch (loại `COURSE_SESSION` đã có sẵn).
-4. File, thông báo — phục vụ các module trên.
-5. Thuê bao — cần khi bắt đầu bán cho studio khác.
-6. App iPhone — sau khi lịch ổn định trên web.
+| 0 | Khảo sát | — | Xong |
+| 1 | Bộ tài liệu | — | Đang cập nhật (lỗi N4) |
+| 2 | Nền móng | — | Đạt có điều kiện (T3 đã sửa, N4 đang làm) |
+| 3 | R&D giao diện | — | Vòng 1–2 xong, chọn C; vòng 3 (mẫu chào mừng) đang chạy |
+| **4 — Lát 1** | **Bảng giá + Lịch makeup** (anh chọn), cùng ngày gộp thêm hợp đồng, thợ phụ trách, bậc lương | **Anh Chiến chọn ngày 18/10/2026** | Máy chủ đạt có điều kiện; web đang dựng (W0–W3 có mã, W4–W7 chưa) |
+| 5 | Nghiệm thu lát 1 | — | Máy chủ đã chấm; web chưa |
+| 6 | Trang quản trị nền tảng | Anh Chiến nhắn 18/10/2026 | Máy chủ có 8 đường (chưa có bài thử trong kho); giao diện chưa có, R&D chưa vẽ |
+| 7–9 | Đào tạo: R&D → máy chủ → giao diện | Anh Chiến nhắn 18/10/2026 | R&D mẫu chào mừng đang chạy |
+| Chưa xếp | Thông báo, website giới thiệu (giao diện), app iPhone | — | Chưa xếp mốc |
 
 ### 5. Lát 1 làm gì
 | Phần | Có trong lát 1 |
 |---|---|
-| Bảng giá | Nhóm dịch vụ; dịch vụ chính / dịch vụ phụ / phụ phí (mã, tên, thời lượng); gói combo (gồm dịch vụ nào, nhân vật áp dụng, địa điểm cho phép, số thợ, tiền cọc mặc định, điều khoản); đổi giá bằng cách thêm bản giá mới có ngày hiệu lực; danh sách studio/cửa hàng; cách tính phí di chuyển mặc định (cố định / theo km / nhập tay) |
-| Hợp đồng | Chọn khách, thêm nhiều gói, tick dịch vụ phụ, thêm phụ phí (được ghi đè giá, bắt buộc ghi chú), phí di chuyển (tại nhà hoặc địa điểm khác **bắt buộc** có dòng phí, miễn phí thì nhập 0 đ; theo km thì làm tròn lên bội 1.000 đ). Giá chốt vào dòng hợp đồng lúc thêm. Sau khi xác nhận: chỉ thêm dòng phát sinh hoặc huỷ dòng có lý do |
-| Lịch makeup | Lịch sinh từ hợp đồng hoặc tạo riêng; phân thợ chính/thợ phụ; phút di chuyển trước/sau; chặn trùng giờ thợ; đổi trạng thái (nháp → chờ xác nhận → đã xác nhận → đang làm → hoàn thành / huỷ / khách không đến) có lưu lịch sử; ba chế độ xem A (cột theo thợ), B (danh sách theo ngày), C (lưới tuần thợ × ngày), mở ra luôn là C. Lịch không giữ tiền |
-| Chống gửi trùng | Bấm "Lưu" hai lần không tạo hai lịch |
-
-Các luật nghiệp vụ trên lấy từ `docs/NHAT-KY-QUYET-DINH-THAY.md` (15:20–15:40) và `docs/SO-Y-MUON.md`.
+| Bảng giá | Như module 3. Đổi giá = thêm bản giá có ngày hiệu lực |
+| Hợp đồng | Như module 5. Tại nhà / địa điểm khác **bắt buộc** có dòng phí di chuyển (miễn phí nhập 0 đ); theo km làm tròn lên bội 1.000 đ; phụ phí được ghi đè giá kèm ghi chú; huỷ hợp đồng thì huỷ lịch chưa làm, lịch đang làm thì chặn huỷ |
+| Lịch | Lịch sinh từ hợp đồng hoặc tạo riêng; thợ chính/phụ; phút di chuyển; chặn trùng; bảng chuyển trạng thái có lịch sử; lịch không giữ tiền |
+| Nhân sự | Bậc lương, hồ sơ thợ, thợ tắt "nhận lịch" thì không được xếp, tiền công theo bậc |
+| Chống gửi trùng | 12 đường tạo bắt buộc khoá chống gửi trùng (`docs/API_SPEC.md`) |
 
 ### 6. KHÔNG làm ở bản đầu (lát 1)
 | Không làm | Lý do / nguồn |
 |---|---|
-| Trạng thái thanh toán trên lịch | Quyết định 15:14 ngày 18/10/2026: thanh toán thuộc module tài chính, suy ra từ sổ giao dịch, không lưu ở bảng lịch |
-| Thu tiền online, cổng thanh toán | Chưa có cổng thanh toán; thuộc module tài chính |
-| Website giới thiệu, đào tạo, cổng học viên, file, thông báo, thuê bao | Ngoài lát 1 |
-| App iPhone | Ngoài lát 1; chưa có tài khoản Apple Developer |
-| Tính khoảng cách tự động theo bản đồ | Chưa có khoá Google Maps. Cột toạ độ đã có sẵn; số km và phút di chuyển nhập tay |
-| Nhớ chế độ xem lịch người dùng chọn lần trước | Quyết định 15:40: mỗi lần mở lịch đều về chế độ C |
-| Chặn trùng lịch của một thợ **giữa hai tổ chức khác nhau** | Chặn trùng tính theo tư cách thành viên trong từng tổ chức (xem `docs/DATABASE_SCHEMA.md`). Thợ làm cho hai studio có thể bị đặt trùng giờ ở hai nơi. Cần anh Chiến quyết có làm ở lát sau không |
+| Trạng thái thanh toán trên lịch | Quyết định 15:14: suy ra từ sổ thu tiền |
+| Thu tiền online qua cổng thanh toán | Chưa có cổng thanh toán. Bảng phiếu thu đã có, chưa có đường API |
+| Tính km tự động theo bản đồ | Chưa có khoá Google Maps; số km nhập tay |
+| Nhớ chế độ xem lịch lần trước | Quyết định 15:40: luôn mở chế độ C |
+| Chặn trùng lịch của một thợ **giữa hai tổ chức** | Chặn trùng tính trong từng tổ chức (`docs/DATABASE_SCHEMA.md` mục 3.5). Chờ anh quyết |
+| Hợp đồng nháp giữ chỗ thợ | Thợ dự kiến ở hợp đồng nháp chỉ hiện cảnh báo "đang được giữ ở hợp đồng nháp khác", không chặn |
 
-Những thứ sau **chưa có và chưa ai quyết** có làm ở bản đầu hay không: quên mật khẩu / đặt lại mật khẩu, xác thực hai lớp, xuất/xoá dữ liệu cá nhân theo yêu cầu khách. Xem `docs/SECURITY.md`.
+Chưa có và **chưa ai quyết** làm trước khi bán hay không: quên mật khẩu, xác thực hai lớp, xuất/xoá dữ liệu cá nhân. Xem `docs/SECURITY.md`.

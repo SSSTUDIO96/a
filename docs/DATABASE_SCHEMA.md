@@ -1,10 +1,8 @@
 # Cấu trúc dữ liệu — Makeup Pro
 
-Ngày viết: 18/10/2026. Nguồn: `apps/api/prisma/schema.prisma` và 3 migration trong `apps/api/prisma/migrations/`.
+Cập nhật: 18/10/2026. **Đã đối chiếu với commit `634d6a3`** (17:00 UTC; mã giống hệt `bc9633a`, hai commit sau chỉ thêm sổ ghi). Nguồn: `apps/api/prisma/schema.prisma` (35 `model`) và 9 migration trong `apps/api/prisma/migrations/`.
 
-> Tài liệu này mô tả cấu trúc **sau khi** áp cả 3 migration: `20261018150452_nen_mong`, `20261018151403_bang_gia_lich`, `20261018152236_hop_dong_nhan_vat` (migration thứ ba thêm hợp đồng, nhân vật makeup, địa điểm, phí di chuyển; lưu vào kho ở commit `af43d6e`). Đã thử áp cả 3 migration lên một database trống trên máy đám mây ngày 18/10/2026: chạy hết, ra 23 bảng.
->
-> **Đang thay đổi lúc viết:** có migration thứ tư `20261018153348_nhan_su_bac_luong` (bảng `staff_tiers`, `staff_profiles`, `staff_pay_rates` — hồ sơ thợ, bậc, tiền công theo gói) **chưa lưu vào kho**, chưa đưa vào tài liệu này. Dòng `schema.prisma:…` dẫn theo commit `f7b0805`.
+Đã thử áp cả 9 migration lên một database trống (PostgreSQL 16 trên máy đám mây, ≈17:05 UTC). Đếm bằng truy vấn database: **35 bảng**, 33 CHECK, 2 EXCLUDE, 11 trigger, 3 chỉ mục duy nhất có điều kiện, 4 chỗ xoá dây chuyền.
 
 ---
 
@@ -13,64 +11,76 @@ Ngày viết: 18/10/2026. Nguồn: `apps/api/prisma/schema.prisma` và 3 migrati
 ### 1. Vài từ phải biết
 | Từ | Nghĩa bằng lời thường |
 |---|---|
-| Bảng | Một quyển sổ, mỗi dòng là một bản ghi (một khách, một lịch…) |
-| Khoá chính | Số căn cước của một dòng, không trùng |
-| Khoá ngoại | Dòng này "trỏ" sang dòng ở sổ khác. Database không cho trỏ tới dòng không có thật |
-| Khoá ngoại kép | Trỏ bằng **hai** cột cùng lúc: mã bản ghi + mã tổ chức. Hai bên phải cùng tổ chức thì mới khớp |
-| CHECK | Luật viết thẳng vào database, ví dụ "tiền không âm". Dòng sai luật bị từ chối, dù mã máy chủ có lỗi |
-| Trigger | Đoạn lệnh database tự chạy khi có người sửa/xoá, ở đây dùng để **cấm** sửa/xoá |
-| EXCLUDE | Luật "hai dòng không được chồng nhau", ở đây dùng để chặn trùng lịch |
-| Xoá dây chuyền (cascade) | Xoá dòng cha thì database tự xoá các dòng con |
+| Bảng | Một quyển sổ, mỗi dòng là một bản ghi |
+| Khoá ngoại | Dòng này "trỏ" sang dòng ở sổ khác; database không cho trỏ tới dòng không có thật |
+| Khoá ngoại kép | Trỏ bằng **hai** cột: mã bản ghi + mã tổ chức. Hai bên phải cùng tổ chức mới khớp |
+| CHECK | Luật viết thẳng vào database, ví dụ "tiền không âm" |
+| Trigger | Lệnh database tự chạy khi có người sửa/xoá; ở đây dùng để **cấm** hoặc **tự tính** |
+| EXCLUDE | Luật "hai dòng không được chồng nhau" |
+| Kiểm lúc lưu (trì hoãn) | Database đợi đến cuối giao dịch mới kiểm, để máy chủ ghi dòng trước rồi cập nhật tổng sau |
+| Xoá dây chuyền | Xoá dòng cha thì database tự xoá dòng con |
 
 ### 2. Luật dữ liệu cho phần mềm nhiều tổ chức
 | # | Luật | Vì sao |
 |---|---|---|
-| 1 | Mọi bảng nghiệp vụ có cột mã tổ chức | Lọc theo tổ chức ở mọi câu hỏi |
-| 2 | Liên kết giữa hai bảng nghiệp vụ dùng khoá ngoại kép | Database tự chặn gắn dữ liệu tổ chức A vào tổ chức B, kể cả khi mã máy chủ quên kiểm |
-| 3 | Tiền lưu số nguyên đồng | Số thực cộng trừ nhiều lần lệch vài đồng |
-| 4 | Sổ lịch sử (giá, nhật ký) chỉ ghi thêm | Sửa được sổ lịch sử thì sổ mất giá trị làm bằng chứng |
-| 5 | Giá được **chốt** vào đơn lúc chốt với khách | Đổi bảng giá hôm nay không được làm đổi đơn đã ký hôm qua |
-| 6 | Trùng lịch chặn ở database | Hai lễ tân bấm lưu cùng một giây vẫn chỉ một lịch lọt |
-| 7 | Không xoá dây chuyền sổ sách | Xoá nhầm một khách không được kéo theo hợp đồng, lịch của khách đó |
-| 8 | Thời gian lưu theo UTC kèm múi giờ | Không lệch giờ khi máy chủ đặt ở nước khác |
+| 1 | Mọi bảng nghiệp vụ có mã tổ chức | Lọc theo tổ chức ở mọi câu hỏi |
+| 2 | Liên kết giữa hai bảng nghiệp vụ dùng khoá ngoại kép | Database tự chặn gắn chéo tổ chức |
+| 3 | Tiền lưu số nguyên đồng | Số thực lệch vài đồng sau nhiều lần cộng trừ |
+| 4 | Sổ lịch sử và sổ tiền chỉ ghi thêm | Sửa được thì sổ mất giá trị bằng chứng |
+| 5 | Giá chốt vào đơn lúc chốt với khách | Đổi bảng giá không làm đổi đơn đã ký |
+| 6 | Số do database tự tính được thì để database tính | Mã máy chủ quên tính lại là lọt lỗi |
+| 7 | Trùng lịch chặn ở database | Hai người bấm lưu cùng giây vẫn chỉ một lịch lọt |
+| 8 | Không xoá dây chuyền sổ sách | Xoá nhầm một khách không kéo theo hợp đồng của khách |
 
 ---
 
 ## Phần CỦA RIÊNG DỰ ÁN NÀY
 
-### 1. Danh sách 23 bảng
-Ngoài 23 bảng dưới đây còn bảng `_prisma_migrations` do Prisma tự quản, ghi migration nào đã áp.
+### 1. Danh sách 35 bảng
+Ngoài ra có `_prisma_migrations` do Prisma tự quản.
 
 | Nhóm | Bảng | Giữ gì |
 |---|---|---|
-| Tài khoản | `users` | Tài khoản đăng nhập: email (luôn chữ thường), mật khẩu đã băm, họ tên |
-| | `refresh_tokens` | Phiên đăng nhập dài hạn: chỉ giữ bản băm của thẻ, "họ" thẻ, hạn, thời điểm thu hồi |
-| Tổ chức | `organizations` | Studio / thợ cá nhân / trung tâm: tên, slug (dùng làm tên miền con), loại, múi giờ, tiền tệ |
-| | `memberships` | Một người thuộc một tổ chức: trạng thái hoạt động / tạm khoá / đã rời |
-| | `roles` | Vai trò của từng tổ chức, cột `permissions` là mảng khoá quyền |
+| Tài khoản | `users` | Tài khoản: email (luôn chữ thường), mật khẩu đã băm, họ tên |
+| | `refresh_tokens` | Thẻ dài hạn: chỉ giữ bản băm, "họ" thẻ, hạn, lúc và **lý do** thu hồi (xoay vòng / đăng xuất / phát hiện dùng lại) |
+| Tổ chức | `organizations` | Studio / thợ cá nhân / trung tâm: tên, slug, loại, múi giờ, tiền tệ |
+| | `memberships` | Một người thuộc một tổ chức: hoạt động / tạm khoá / đã rời |
+| | `roles` | Vai trò của từng tổ chức; cột `permissions` là mảng khoá quyền |
 | | `membership_roles` | Ai giữ vai trò nào |
-| | `audit_logs` | Nhật ký thay đổi: ai, làm gì, trên bản ghi nào, mã số yêu cầu |
+| | `audit_logs` | Nhật ký: ai, làm gì, bản ghi nào, mã số yêu cầu |
+| | `organization_profiles` | Hồ sơ thương hiệu cho website (tên thương hiệu, giới thiệu, mạng xã hội, giờ làm, chính sách, logo/ảnh); chỉ hiện khi đã xuất bản |
 | Bảng giá | `service_categories` | Nhóm dịch vụ |
-| | `services` | Dịch vụ lẻ: mã, tên, thời lượng, loại (chính / dịch vụ phụ / phụ phí), công khai trên website hay không |
-| | `service_packages` | Gói combo: thời lượng, số thợ, tiền cọc mặc định, nhân vật áp dụng, địa điểm cho phép |
-| | `package_items` | Gói gồm những dịch vụ nào, bao nhiêu lần, có tuỳ chọn không |
-| | `price_versions` | Lịch sử giá của dịch vụ hoặc gói: giá niêm yết, giá khuyến mại, ngày hiệu lực |
-| | `makeup_subjects` | Nhân vật makeup: cô dâu, mẹ cô dâu, phù dâu… mỗi tổ chức tự đặt |
-| | `studio_locations` | Studio / cửa hàng của tổ chức, điểm xuất phát tính km; tối đa một nơi mặc định |
-| | `travel_fee_policies` | Cách tính phí di chuyển mặc định: cố định / theo km / nhập tay |
-| Khách & hợp đồng | `customers` | Khách hàng: họ tên, số điện thoại, email |
-| | `contracts` | Hợp đồng: **nơi duy nhất giữ tiền** của một đơn makeup (tạm tính, giảm giá, tổng, cọc) |
-| | `contract_lines` | Từng dòng hợp đồng: gói / dịch vụ / dịch vụ phụ / phụ phí / di chuyển / dòng tự nhập; giá đã chốt |
-| Lịch | `appointments` | Lịch: giờ bắt đầu–kết thúc, phút di chuyển trước/sau, địa chỉ, trạng thái thực hiện, trỏ về hợp đồng |
-| | `appointment_staff` | Thợ nào làm lịch nào (chính / phụ), khoảng bận của thợ |
-| | `appointment_status_history` | Lịch sử đổi trạng thái của lịch |
-| Hệ thống | `org_counters` | Bộ đếm theo tổ chức để sinh mã tuần tự (ví dụ LH-000001) |
+| | `services` | Dịch vụ: loại chính / phụ / phụ phí, mã, tên, thời lượng, công khai hay không |
+| | `service_packages` | Gói: thời lượng, số thợ, cọc mặc định, nhân vật, địa điểm cho phép, bán kính miễn phí |
+| | `package_items` | Gói gồm dịch vụ nào |
+| | `price_versions` | Lịch sử giá của dịch vụ hoặc gói |
+| | `makeup_subjects` | Nhân vật makeup (cô dâu, mẹ cô dâu, phù dâu…) |
+| | `studio_locations` | Studio/cửa hàng, điểm xuất phát tính km; tối đa một nơi mặc định |
+| | `travel_fee_policies` | Cách tính phí di chuyển mặc định: cố định / theo km / nhập tay / theo bậc |
+| | `travel_fee_tiers` | Bậc phí theo khoảng cách một chiều (ví dụ 10–20 km: 200.000 ₫) |
+| Nhân sự | `staff_tiers` | Bậc lương do tổ chức đặt |
+| | `staff_profiles` | Hồ sơ thợ (1–1 với thành viên): tên hiển thị, ảnh, số điện thoại, bậc, có nhận lịch không |
+| | `staff_pay_rates` | Tiền công cho một gói hoặc một dịch vụ, theo từng bậc |
+| Khách & hợp đồng | `customers` | Khách: họ tên, số điện thoại, email |
+| | `contracts` | Hợp đồng: **nơi duy nhất giữ tiền** của một đơn (tạm tính, giảm giá, tổng, cọc) |
+| | `contract_lines` | Dòng hợp đồng: gói / dịch vụ / dịch vụ phụ / phụ phí / di chuyển / tự nhập; giá chốt |
+| | `contract_line_staff` | Thợ dự kiến của từng dòng (tối đa một thợ chính) |
+| Lịch | `appointments` | Lịch: giờ, phút di chuyển, địa chỉ, trạng thái thực hiện, trỏ về hợp đồng/dòng |
+| | `appointment_staff` | Thợ trên lịch (chính/phụ) và khoảng bận do database tự tính |
+| | `appointment_status_history` | Lịch sử đổi trạng thái lịch |
+| Thu tiền | `payment_installments` | Tiến độ thanh toán: các đợt dự kiến (cọc, đợt 1…) |
+| | `payments` | Phiếu thu / phiếu hoàn, chỉ ghi thêm |
+| Tệp | `stored_files` | Thông tin tệp (khoá lưu trữ, loại, cỡ, mục đích); tệp nằm ở kho lưu trữ, không nằm trong database |
+| Nền tảng | `platform_admins` | Người quản trị toàn nền tảng |
+| | `subscription_plans` | Gói thuê bao và hạn mức |
+| | `organization_subscriptions` | Lịch sử thuê bao của từng tổ chức; hết hạn không xoá dữ liệu |
+| Hệ thống | `org_counters` | Bộ đếm sinh mã tuần tự (LH-000001, HD-000001) |
 | | `idempotency_keys` | Khoá chống gửi trùng và kết quả lần đầu |
 
 ### 2. Sơ đồ quan hệ
-Đọc ký hiệu: `||` = đúng một, `o|` = không hoặc một, `o{` = không hoặc nhiều.
+Ký hiệu: `||` đúng một, `o|` không hoặc một, `o{` không hoặc nhiều. Mọi bảng nghiệp vụ còn có khoá ngoại tới `organizations`; sơ đồ 2b–2e không vẽ các đường đó cho đỡ rối.
 
-**2a. Tài khoản, tổ chức, hệ thống**
+**2a. Tài khoản, tổ chức, nền tảng, hệ thống (13 bảng)**
 ```mermaid
 erDiagram
   users ||--o{ refresh_tokens : "phiên đăng nhập"
@@ -81,37 +91,38 @@ erDiagram
   roles ||--o{ membership_roles : "được gán"
   organizations |o--o{ audit_logs : "nhật ký"
   users |o--o{ audit_logs : "người làm"
+  organizations ||--o| organization_profiles : "hồ sơ thương hiệu"
   organizations ||--o{ org_counters : "bộ đếm mã"
   organizations ||--o{ idempotency_keys : "chống gửi trùng"
+  users ||--o{ idempotency_keys : "người gửi"
+  users ||--o| platform_admins : "quản trị nền tảng"
+  subscription_plans ||--o{ organization_subscriptions : "gói"
+  organizations ||--o{ organization_subscriptions : "thuê bao"
 
   users {
     uuid id PK
-    text email UK "luôn chữ thường"
-    text password_hash
-    enum status "ACTIVE | DISABLED"
+    text email UK
+    enum status
   }
   refresh_tokens {
     uuid id PK
-    uuid user_id FK
-    uuid family_id "họ thẻ"
+    uuid family_id
     text token_hash UK
-    timestamptz revoked_at
+    enum revoke_reason
   }
   organizations {
     uuid id PK
     text slug UK
-    enum kind "INDIVIDUAL | TEAM | ACADEMY"
-    enum status "ACTIVE | SUSPENDED"
+    enum kind
   }
   memberships {
     uuid id PK
     uuid organization_id FK
     uuid user_id FK
-    enum status "ACTIVE | SUSPENDED | REMOVED"
+    enum status
   }
   roles {
     uuid id PK
-    uuid organization_id FK
     text key
     bool is_system
     textArray permissions
@@ -119,31 +130,43 @@ erDiagram
   membership_roles {
     uuid membership_id PK
     uuid role_id PK
-    uuid organization_id FK
   }
   audit_logs {
     uuid id PK
-    uuid organization_id FK
-    uuid actor_user_id FK
     text action
     jsonb data
     text request_id
   }
+  organization_profiles {
+    uuid organization_id PK
+    text brand_name
+    bool is_published
+  }
   org_counters {
     uuid organization_id PK
     text key PK
-    int value
   }
   idempotency_keys {
     uuid organization_id PK
     uuid user_id PK
     text key PK
-    text request_hash
-    int response_status
+  }
+  platform_admins {
+    uuid user_id PK
+  }
+  subscription_plans {
+    uuid id PK
+    text code UK
+    bigint price_monthly
+  }
+  organization_subscriptions {
+    uuid id PK
+    enum status
+    timestamptz ends_at
   }
 ```
 
-**2b. Bảng giá, nhân vật, địa điểm** — mọi bảng ở đây đều có `organization_id` trỏ về `organizations`; không vẽ các đường đó cho đỡ rối.
+**2b. Bảng giá (9 bảng)**
 ```mermaid
 erDiagram
   service_categories |o--o{ services : "nhóm"
@@ -152,36 +175,28 @@ erDiagram
   services |o--o{ price_versions : "lịch sử giá"
   service_packages |o--o{ price_versions : "lịch sử giá"
   makeup_subjects |o--o{ service_packages : "áp dụng cho"
-  organizations ||--o| travel_fee_policies : "phí di chuyển mặc định"
-  organizations ||--o{ studio_locations : "có studio"
+  travel_fee_policies ||--o{ travel_fee_tiers : "bậc khoảng cách"
 
   services {
     uuid id PK
-    uuid category_id FK
     enum kind "MAIN | ADDON | SURCHARGE"
-    text code
     int duration_minutes
     bool is_public
   }
   service_packages {
     uuid id PK
-    uuid subject_id FK
     int staff_count
-    bigint deposit_amount "đồng"
-    enumArray location_types
+    bigint deposit_amount
+    decimal included_km
   }
   package_items {
     uuid package_id PK
     uuid service_id PK
-    int quantity
-    bool is_optional
   }
   price_versions {
     uuid id PK
-    uuid service_id FK
-    uuid package_id FK
-    bigint list_price "đồng"
-    bigint sale_price "đồng"
+    bigint list_price
+    bigint sale_price
     timestamptz effective_from
   }
   makeup_subjects {
@@ -190,190 +205,239 @@ erDiagram
   }
   studio_locations {
     uuid id PK
-    text address
     bool is_default
   }
   travel_fee_policies {
     uuid organization_id PK
-    enum default_mode "FIXED | PER_KM | MANUAL"
-    bigint per_km_amount "đồng"
-    decimal free_km
+    enum default_mode "FIXED | PER_KM | MANUAL | TIERED"
+  }
+  travel_fee_tiers {
+    uuid id PK
+    decimal from_km
+    decimal to_km
+    bigint amount
+  }
+  service_categories {
+    uuid id PK
+    text name
+  }
+```
+`studio_locations` không trỏ bảng nào trong nhóm này; nó chỉ trỏ về `organizations` và được `contract_lines` trỏ tới.
+
+**2c. Nhân sự & tiền công (3 bảng + liên kết)**
+```mermaid
+erDiagram
+  memberships ||--o| staff_profiles : "hồ sơ thợ"
+  staff_tiers |o--o{ staff_profiles : "bậc"
+  staff_tiers ||--o{ staff_pay_rates : "mức công theo bậc"
+  service_packages |o--o{ staff_pay_rates : "cho gói"
+  services |o--o{ staff_pay_rates : "cho dịch vụ"
+  users ||--o{ staff_pay_rates : "người đặt mức"
+
+  staff_tiers {
+    uuid id PK
+    text name
+  }
+  staff_profiles {
+    uuid membership_id PK
+    uuid tier_id FK
+    bool is_bookable
+  }
+  staff_pay_rates {
+    uuid id PK
+    bigint amount
   }
 ```
 
-**2c. Khách, hợp đồng, lịch** — mọi bảng đều có `organization_id`.
+**2d. Khách, hợp đồng, lịch, thu tiền (9 bảng)**
 ```mermaid
 erDiagram
   customers ||--o{ contracts : "ký"
   contracts ||--o{ contract_lines : "gồm dòng"
-  contract_lines |o--o{ contract_lines : "dịch vụ phụ gắn vào dòng gói"
-  services |o--o{ contract_lines : "dịch vụ"
-  service_packages |o--o{ contract_lines : "gói"
-  makeup_subjects |o--o{ contract_lines : "nhân vật"
-  studio_locations |o--o{ contract_lines : "tại studio"
+  contract_lines |o--o{ contract_lines : "dịch vụ phụ, phí đi lại gắn vào dòng cha"
+  price_versions |o--o{ contract_lines : "giá đã chốt"
+  contract_lines ||--o{ contract_line_staff : "thợ dự kiến"
+  memberships ||--o{ contract_line_staff : "được dự kiến"
   customers |o--o{ appointments : "đặt"
   contracts |o--o{ appointments : "sinh lịch"
   contract_lines |o--o{ appointments : "sinh lịch"
   appointments ||--o{ appointment_staff : "phân thợ"
   memberships ||--o{ appointment_staff : "được phân"
   appointments ||--o{ appointment_status_history : "đổi trạng thái"
+  contracts ||--o{ payment_installments : "tiến độ thanh toán"
+  contracts ||--o{ payments : "phiếu thu"
 
   contracts {
     uuid id PK
     text code
-    uuid customer_id FK
     enum status "DRAFT | CONFIRMED | COMPLETED | CANCELLED"
-    bigint subtotal "đồng"
-    bigint discount "đồng"
-    bigint total "đồng"
-    bigint deposit_required "đồng"
+    bigint subtotal
+    bigint discount
+    bigint total
+    bigint deposit_required
   }
   contract_lines {
     uuid id PK
-    uuid contract_id FK
-    uuid parent_line_id FK
     enum kind "PACKAGE | SERVICE | ADDON | SURCHARGE | TRAVEL | CUSTOM"
-    uuid price_version_id "không có khoá ngoại"
-    bigint unit_price "đồng, giá chốt"
-    bigint line_total "đồng"
+    bigint unit_price
+    bigint line_total
     timestamptz voided_at
+  }
+  contract_line_staff {
+    uuid line_id PK
+    uuid membership_id PK
+    enum role
   }
   appointments {
     uuid id PK
-    text code
-    enum kind "MAKEUP | COURSE_SESSION | INTERNAL | PERSONAL_BLOCK | OTHER"
     timestamptz starts_at
     timestamptz ends_at
     int travel_before_min
     int travel_after_min
-    enum status "trạng thái thực hiện"
-    uuid contract_id FK
-    uuid contract_line_id FK
+    enum status
   }
   appointment_staff {
     uuid appointment_id PK
     uuid membership_id PK
-    enum role "PRIMARY | ASSIST"
     timestamptz block_start
     timestamptz block_end
     bool is_blocking
   }
   appointment_status_history {
     uuid id PK
-    uuid appointment_id FK
-    enum from_status
     enum to_status
-    uuid changed_by_id
+  }
+  payment_installments {
+    uuid id PK
+    bigint amount
+    bool is_deposit
+  }
+  payments {
+    uuid id PK
+    enum kind "RECEIPT | REFUND"
+    bigint amount
+    timestamptz voided_at
   }
   customers {
     uuid id PK
-    text full_name
     text phone
   }
 ```
 
+**2e. Tệp (1 bảng)**
+```mermaid
+erDiagram
+  stored_files |o--o{ organization_profiles : "logo, ảnh đại diện, ảnh bìa"
+  users ||--o{ stored_files : "người tải lên"
+  stored_files {
+    uuid id PK
+    enum purpose
+    text storage_key UK
+    bigint size_bytes
+    enum status "UPLOADING | READY | DELETED"
+  }
+```
+Ngoài ra `users` còn là "người tạo" của `price_versions`, `contracts`, `contract_lines`, `appointments`, `appointment_status_history`, `payments` (khoá ngoại thường).
+
 ### 3. Giải thích các quan hệ quan trọng
 
-**3.1. Khoá ngoại kép chặn gắn dữ liệu chéo tổ chức ngay trong database.**
-Mỗi bảng nghiệp vụ có thêm chỉ mục duy nhất `(id, organization_id)` (ví dụ `schema.prisma:123` cho `roles`). Bảng con trỏ sang bằng **cả hai cột**. Ví dụ `membership_roles` trỏ sang `memberships` bằng (membership_id, organization_id) và sang `roles` bằng (role_id, organization_id) (`schema.prisma:152-153`). Muốn gán vai trò của tổ chức B cho người ở tổ chức A thì mã tổ chức hai bên không khớp → database từ chối.
-Bằng chứng: bài thử `apps/api/test/escalation.test.ts`, ca "không gán được vai trò của tổ chức khác, kể cả ghi thẳng vào database" — ghi thẳng vào database, bỏ qua API, vẫn bị từ chối.
-Cùng kiểu này áp cho: dịch vụ ↔ nhóm, gói ↔ dịch vụ, giá ↔ dịch vụ/gói, gói ↔ nhân vật, hợp đồng ↔ khách, dòng hợp đồng ↔ hợp đồng/dịch vụ/gói/nhân vật/studio/dòng cha, lịch ↔ khách/hợp đồng/dòng hợp đồng, thợ trên lịch ↔ lịch/thành viên.
-Bài thử hiện chỉ chứng minh cho `membership_roles`. Các bảng bảng giá, hợp đồng, lịch **chưa có bài thử** ghi chéo tổ chức.
+**3.1. Khoá ngoại kép chặn gắn chéo tổ chức ngay trong database.** Mỗi bảng nghiệp vụ có chỉ mục duy nhất `(id, organization_id)` (ví dụ `schema.prisma:150` cho `roles`); bảng con trỏ sang bằng cả hai cột (ví dụ `membership_roles`, `schema.prisma:181-182`). Gán vai trò của tổ chức B cho người ở tổ chức A → database từ chối. Bằng chứng: `apps/api/test/escalation.test.ts`, ca "không gán được vai trò của tổ chức khác, kể cả ghi thẳng vào database". Cùng kiểu cho mọi liên kết bảng giá, hợp đồng, lịch, nhân sự, thu tiền, hồ sơ thương hiệu ↔ ảnh. Thêm một khoá kép đặc biệt: lịch trỏ dòng hợp đồng bằng (dòng, hợp đồng), nên dòng phải thuộc **chính** hợp đồng của lịch (`schema.prisma:424`; CHECK `appointments_line_needs_contract`).
 
-**3.2. Tiền là số nguyên đồng (BigInt).**
-Các cột tiền: `service_packages.deposit_amount`; `price_versions.list_price`, `sale_price`; `contracts.subtotal`, `discount`, `total`, `deposit_required`; `contract_lines.unit_price`, `line_discount`, `line_total`, `per_km_amount`; `travel_fee_policies.fixed_amount`, `per_km_amount`, `minimum_amount`. Số km (`free_km`, `distance_km`) là số thập phân 2 chữ số, không phải tiền. Khi trả ra JSON, máy chủ đổi sang số; vượt ngưỡng an toàn thì ném lỗi chứ không làm tròn (`packages/shared/src/money.ts:12-17`).
+**3.2. Tiền là số nguyên đồng (BigInt)** ở mọi cột tiền: cọc gói, giá, tiền hợp đồng và dòng, phí di chuyển, bậc phí, tiền công, đợt thanh toán, phiếu thu, giá gói thuê bao. Số km là số thập phân 2 chữ số, không phải tiền.
 
-**3.3. Lịch sử giá chỉ ghi thêm.**
-Đổi giá = thêm một dòng `price_versions` mới có ngày hiệu lực. Trigger `price_versions_append_only` cấm sửa và xoá dòng cũ (migration `20261018151403_bang_gia_lich`, dòng 333-339). Giá hiện hành = dòng có ngày hiệu lực mới nhất mà không muộn hơn thời điểm hỏi; trùng ngày thì lấy dòng tạo sau. Công thức này chỉ viết một lần trong `apps/api/src/modules/catalog/prices.ts` (tệp đang được thợ bảng giá sửa).
+**3.3. Lịch sử giá chỉ ghi thêm.** Trigger `price_versions_append_only` (migration `20261018151403_bang_gia_lich:333-339`). Giá hiện hành = bản có ngày hiệu lực mới nhất không muộn hơn lúc hỏi; công thức duy nhất ở `apps/api/src/modules/catalog/prices.ts:54` và `:73`.
 
-**3.4. Giá chốt vào đơn — đã chuyển từ "dòng lịch" sang "dòng hợp đồng".**
-- Migration 2 (`bang_gia_lich`): giá chốt nằm ở bảng `appointment_items` (dòng của lịch), tổng tiền nằm trên `appointments`.
-- Migration 3 (`hop_dong_nhan_vat`, quyết định 15:20–15:21 trong `docs/NHAT-KY-QUYET-DINH-THAY.md`): **xoá** `appointment_items` và các cột tiền trên `appointments`. Giá chốt giờ nằm ở `contract_lines` (`unit_price` + `price_version_id` + tên), tiền nằm ở `contracts`. Lịch không giữ tiền; lịch trỏ về hợp đồng và dòng hợp đồng (`schema.prisma:549-550`, chú thích trên `Appointment`).
-- Luật ghi trong chú thích `schema.prisma` (ngay trên `model ContractLine`): sau khi hợp đồng xác nhận thì không sửa/xoá dòng cũ, chỉ thêm dòng phát sinh hoặc huỷ dòng có lý do. **Database chỉ chặn được phần "huỷ phải có lý do"** (CHECK `contract_lines_void_reason`). Phần "không sửa/xoá dòng cũ" và "tổng hợp đồng = tổng các dòng chưa huỷ" do mã máy chủ giữ, database không kiểm.
+**3.4. Giá chốt vào dòng hợp đồng.** Lúc thêm dòng, đơn giá và bản giá (`price_version_id`, nay có khoá ngoại kép) được ghi vào `contract_lines`. Lịch không giữ tiền. Từ migration 2 sang 3, giá chốt chuyển từ "dòng lịch" sang "dòng hợp đồng" (quyết định 15:20). Sau khi hợp đồng **xác nhận**, database khoá:
+- Dòng: không xoá; chỉ được đặt "đã huỷ + lý do", một lần (`20261018160000_chot_chan_database:99-119`).
+- Hợp đồng: không về nháp; hợp đồng đã xong/đã huỷ không đổi gì; khách, ngày, điều khoản không đổi; giảm giá và cọc chỉ được hạ (`20261018170000_khoa_tien_hop_dong:6-31`).
+- Tổng: tạm tính phải bằng tổng các dòng chưa huỷ, kiểm lúc lưu (`20261018170000_khoa_tien_hop_dong:35-59`).
+- Thợ dự kiến: không sửa nữa, đổi thợ ở màn Lịch; trừ dòng phát sinh sau xác nhận (`20261018180000_tho_du_kien_hop_dong:30-44`).
 
-**3.5. Chặn trùng lịch theo khoảng bận, gồm cả thời gian di chuyển.**
-- Mỗi thợ trên một lịch có một dòng `appointment_staff` với **khoảng bận** = giờ bắt đầu − phút di chuyển trước → giờ kết thúc + phút di chuyển sau (`schema.prisma:401`; công thức `computeBlock` trong `packages/shared/src/schedule.ts`).
-- Ràng buộc `appointment_staff_no_overlap` (migration 2, dòng 359-361): với cùng một `membership_id`, hai khoảng bận đang chiếm giờ (`is_blocking = true`) không được chồng nhau. Khoảng là nửa mở `[)`: lịch kết thúc 10:00 và lịch bắt đầu 10:00 không tính là trùng.
-- `is_blocking = false` khi lịch ở trạng thái nháp, đã huỷ, khách không đến (`schema.prisma:404-405`; quyết định 15:14).
-- Cần extension `btree_gist` (migration 2, dòng 358).
+**3.5. Chặn trùng lịch theo khoảng bận, gồm thời gian di chuyển.**
+- Khoảng bận = giờ bắt đầu − phút đi trước → giờ kết thúc + phút đi sau. **Database tự tính** khi phân thợ và tự tính lại khi lịch đổi giờ, phút di chuyển hay trạng thái (`20261018160000_chot_chan_database:53-88`). Số khoảng bận máy chủ gửi lên bị bỏ qua.
+- Trạng thái chiếm giờ: mọi trạng thái trừ nháp, đã huỷ, khách không đến (hàm `appointment_is_blocking`, dòng 56-58; bài thử so khớp với `isBlockingStatus` của mã dùng chung).
+- EXCLUDE `appointment_staff_no_overlap` (`20261018151403_bang_gia_lich:359-361`): cùng một tư cách thành viên, hai khoảng đang chiếm giờ không chồng nhau. Khoảng nửa mở: 10:00 kết thúc và 10:00 bắt đầu không tính là trùng.
+- Trùng → máy chủ trả 409 "Trùng lịch" (`apps/api/src/http/middleware.ts:155-156`).
+- **Còn hở:** chặn theo tư cách thành viên trong **một** tổ chức. Thợ làm cho hai studio có hai tư cách → hai studio vẫn đặt trùng giờ được cùng một người.
+- Thợ dự kiến ở hợp đồng **nháp** không chiếm giờ; chỉ hiện cảnh báo.
 
-Ba điều chủ studio cần biết:
-1. `block_start`, `block_end`, `is_blocking` là **bản sao** do máy chủ tính rồi ghi vào. Database không tự tính lại khi giờ lịch hay trạng thái đổi. Nếu mã máy chủ quên cập nhật, ràng buộc sẽ so trên số cũ.
-2. Chặn trùng tính theo **tư cách thành viên trong một tổ chức**. Một thợ làm cho hai studio có hai tư cách thành viên → hai studio có thể đặt trùng giờ cùng một thợ.
-3. Khi database từ chối vì trùng, PostgreSQL báo mã `23P01`; Prisma 6.19 không gán mã riêng cho lỗi này. Bộ bắt lỗi trung tâm nhận ra mã này (`apps/api/src/http/middleware.ts:105-117`) và trả **409 "Trùng lịch"** (`middleware.ts:87-88`, commit `af80a10`). Bài thử: `apps/api/test/exclusion-error.test.ts`. Các vi phạm CHECK (mã `23514`) và trigger chỉ ghi thêm (mã `P0001`) **vẫn** rơi vào 500 — đã thử trực tiếp trên database thử ngày 18/10/2026; mã máy chủ phải kiểm dữ liệu trước để không chạm tới các chốt này.
+**3.6. Trạng thái thực hiện tách khỏi thanh toán.** `WorkStatus` (`schema.prisma:377-386`) chỉ có các bước làm việc. Tiền đã thu nằm ở `payments`, đợt phải thu ở `payment_installments`. Chưa có đường API cho hai bảng này.
 
-**3.6. Trạng thái thực hiện tách khỏi thanh toán.**
-`WorkStatus` (`schema.prisma:341-350`) chỉ có các bước làm việc: nháp, chờ xác nhận, đã xác nhận, đang làm, hoàn thành, đã huỷ, khách không đến. Không có "đã cọc", "đã trả đủ". Trạng thái thanh toán sẽ suy ra từ sổ giao dịch của module tài chính (chưa có).
+**3.7. Sổ chỉ ghi thêm** (trigger cấm sửa/xoá): `audit_logs` (`20261018150452_nen_mong:179-186`), `price_versions`, `appointment_status_history` (`20261018160000_chot_chan_database:90-97`), `payments` — chỉ được huỷ phiếu một lần có lý do (`20261018190000_tep_thu_tien_nen_tang:206-220`).
 
-**3.7. Nhật ký chỉ ghi thêm.**
-Trigger `audit_logs_no_update` cấm sửa và xoá `audit_logs` (migration `20261018150452_nen_mong`, dòng 179-186). Bằng chứng: `escalation.test.ts`, ca "nhật ký không sửa, không xoá được".
-
-**3.8. Không xoá dây chuyền sổ sách.**
-Mọi khoá ngoại đều đặt "cấm xoá cha khi còn con" (RESTRICT), **trừ 4 chỗ** xoá theo con trực tiếp:
+**3.8. Không xoá dây chuyền.** Mọi khoá ngoại là "cấm xoá cha khi còn con", **trừ 4 chỗ**:
 
 | Xoá dòng này | Database tự xoá theo |
 |---|---|
 | `memberships` | `membership_roles` của thành viên đó |
 | `service_packages` | `package_items` của gói đó |
-| `appointments` | `appointment_staff` của lịch đó |
-| `appointments` | `appointment_status_history` của lịch đó |
+| `travel_fee_policies` | `travel_fee_tiers` của tổ chức đó |
+| `contract_lines` | `contract_line_staff` của dòng đó (dòng của hợp đồng đã xác nhận thì không xoá được) |
 
-Bằng chứng: `escalation.test.ts`, ca "không xoá được tổ chức còn dữ liệu (không có xoá dây chuyền)".
-Lưu ý: xoá một lịch sẽ xoá luôn lịch sử trạng thái của lịch đó. `appointment_status_history` **không** có trigger chỉ ghi thêm như `price_versions` và `audit_logs`.
+Lịch có lịch sử trạng thái thì không xoá được (trước migration 5, xoá lịch kéo theo lịch sử; nay đã chặn). Bằng chứng: `escalation.test.ts` ca "không xoá được tổ chức còn dữ liệu"; `db-guards.test.ts` ca "lịch sử trạng thái không sửa, không xoá được; lịch có lịch sử không xoá được".
 
-### 4. Toàn bộ CHECK, trigger, ràng buộc viết tay
-Đã đếm trên database thử sau khi áp cả 3 migration: 21 CHECK, 1 EXCLUDE, 2 trigger, 1 chỉ mục duy nhất có điều kiện. Các CHECK về tiền trên `appointments` và `appointment_items` của migration 2 đã mất theo cột/bảng bị xoá ở migration 3.
+### 4. Toàn bộ chốt chặn viết tay
+**CHECK (33):**
 
-| Tên | Bảng | Luật | Tệp migration : dòng |
+| Bảng | Tên | Luật | Migration : dòng |
 |---|---|---|---|
-| `users_email_lowercase` | users | Email phải viết thường | `20261018150452_nen_mong:172` |
-| `organizations_slug_format` | organizations | Slug 3–48 ký tự, chữ thường, số, gạch ngang, không bắt đầu/kết thúc bằng gạch | `nen_mong:175-176` |
-| trigger `audit_logs_no_update` | audit_logs | Cấm sửa, cấm xoá | `nen_mong:179-186` |
-| `services_duration_positive` | services | Thời lượng 1–1440 phút | `20261018151403_bang_gia_lich:320` |
-| `packages_duration_positive` | service_packages | Thời lượng 1–1440 phút | `bang_gia_lich:321` |
-| `packages_staff_count_positive` | service_packages | Số thợ ≥ 1 | `bang_gia_lich:322` |
-| `packages_deposit_non_negative` | service_packages | Cọc ≥ 0 | `bang_gia_lich:323` |
-| `package_items_quantity_positive` | package_items | Số lượng ≥ 1 | `bang_gia_lich:324` |
-| `price_versions_one_owner` | price_versions | Thuộc đúng một: dịch vụ **hoặc** gói | `bang_gia_lich:327-328` |
-| `price_versions_amounts` | price_versions | Giá niêm yết ≥ 0; giá khuyến mại ≥ 0 và ≤ giá niêm yết | `bang_gia_lich:329-330` |
-| trigger `price_versions_append_only` | price_versions | Cấm sửa, cấm xoá | `bang_gia_lich:333-339` |
-| `appointments_time_order` | appointments | Kết thúc sau bắt đầu | `bang_gia_lich:342` |
-| `appointments_travel_range` | appointments | Phút di chuyển trước/sau 0–600 | `bang_gia_lich:343-344` |
-| `appointment_staff_block_order` | appointment_staff | Khoảng bận: kết thúc sau bắt đầu | `bang_gia_lich:354` |
-| `appointment_staff_no_overlap` (EXCLUDE) | appointment_staff | Một thành viên không có hai khoảng bận chồng nhau khi đang chiếm giờ | `bang_gia_lich:358-361` |
-| `travel_policy_amounts` | travel_fee_policies | Các mức tiền và số km miễn phí ≥ 0 | `20261018152236_hop_dong_nhan_vat:234-235` |
-| `contracts_money` | contracts | Tiền ≥ 0; tổng = tạm tính − giảm giá; cọc ≤ tổng | `hop_dong_nhan_vat:237-239` |
-| `contracts_cancel_reason` | contracts | Huỷ phải có lý do | `hop_dong_nhan_vat:240-241` |
-| `contract_lines_money` | contract_lines | Số lượng ≥ 1; đơn giá, giảm giá ≥ 0; thành tiền = đơn giá × số lượng − giảm giá, ≥ 0 | `hop_dong_nhan_vat:243-245` |
-| `contract_lines_one_ref` | contract_lines | Không trỏ cùng lúc vào dịch vụ và gói | `hop_dong_nhan_vat:246-247` |
-| `contract_lines_kind_ref` | contract_lines | Dòng gói phải có gói; dòng dịch vụ/phụ/phụ phí không có gói; dòng di chuyển/tự nhập không có dịch vụ, không có gói | `hop_dong_nhan_vat:248-252` |
-| `contract_lines_travel_fields` | contract_lines | Chỉ dòng di chuyển mới có cách tính, số km, đơn giá km | `hop_dong_nhan_vat:253-254` |
-| `contract_lines_void_reason` | contract_lines | Huỷ dòng phải có lý do | `hop_dong_nhan_vat:255-256` |
-| `contract_lines_schedule_order` | contract_lines | Giờ kết thúc dự kiến sau giờ bắt đầu | `hop_dong_nhan_vat:257-258` |
-| `studio_locations_one_default` (chỉ mục) | studio_locations | Mỗi tổ chức tối đa một studio mặc định | `hop_dong_nhan_vat:261` |
+| users | `users_email_lowercase` | Email viết thường | `nen_mong:172` |
+| organizations | `organizations_slug_format` | Slug 3–48 ký tự, chữ thường, số, gạch ngang | `nen_mong:175-176` |
+| services | `services_duration_positive` | Thời lượng 1–1440 phút | `bang_gia_lich:320` |
+| service_packages | `packages_duration_positive`, `packages_staff_count_positive`, `packages_deposit_non_negative` | Thời lượng 1–1440; số thợ ≥ 1; cọc ≥ 0 | `bang_gia_lich:321-323` |
+| service_packages | `packages_included_km` | Bán kính miễn phí ≥ 0 | `tep_thu_tien_nen_tang:200` |
+| package_items | `package_items_quantity_positive` | Số lượng ≥ 1 | `bang_gia_lich:324` |
+| price_versions | `price_versions_one_owner`, `price_versions_amounts` | Đúng một chủ (dịch vụ hoặc gói); giá ≥ 0; giá khuyến mại ≤ niêm yết | `bang_gia_lich:327-330` |
+| appointments | `appointments_time_order`, `appointments_travel_range` | Kết thúc sau bắt đầu; phút di chuyển 0–600 | `bang_gia_lich:342-344` |
+| appointments | `appointments_line_needs_contract` | Có dòng hợp đồng thì phải có hợp đồng | `chot_chan_database:50-51` |
+| appointment_staff | `appointment_staff_block_order` | Khoảng bận: kết thúc sau bắt đầu | `bang_gia_lich:354` |
+| travel_fee_policies | `travel_policy_amounts` | Các mức tiền, km miễn phí ≥ 0 | `hop_dong_nhan_vat:234-235` |
+| travel_fee_tiers | `travel_tiers_numbers` | Từ km ≥ 0; đến km > từ km; tiền ≥ 0 | `tep_thu_tien_nen_tang:228-229` |
+| contracts | `contracts_money`, `contracts_cancel_reason` | Tiền ≥ 0; tổng = tạm tính − giảm giá; cọc ≤ tổng; huỷ phải có lý do | `hop_dong_nhan_vat:237-241` |
+| contract_lines | `contract_lines_money`, `_one_ref`, `_kind_ref`, `_travel_fields`, `_void_reason`, `_schedule_order` | Thành tiền = đơn giá × số lượng − giảm giá ≥ 0; loại dòng khớp thứ được trỏ; chỉ dòng di chuyển có số km; huỷ phải có lý do; giờ hợp lệ | `hop_dong_nhan_vat:243-258` |
+| staff_pay_rates | `staff_pay_rates_one_owner`, `staff_pay_rates_amount` | Đúng một chủ (gói hoặc dịch vụ); tiền ≥ 0 | `nhan_su_bac_luong:93-95` |
+| refresh_tokens | `refresh_tokens_reason_when_revoked` | Đã thu hồi thì phải có lý do | `nhan_su_bac_luong:99-100` |
+| stored_files | `stored_files_size` | Cỡ ≥ 0 | `tep_thu_tien_nen_tang:199` |
+| payment_installments | `installments_amount` | Tiền > 0 | `tep_thu_tien_nen_tang:202` |
+| payments | `payments_amount`, `payments_void_reason` | Tiền > 0; huỷ phải có lý do | `tep_thu_tien_nen_tang:203-204` |
+| subscription_plans | `plans_numbers` | Giá, hạn mức hợp lệ | `tep_thu_tien_nen_tang:222` |
+| organization_subscriptions | `subscriptions_period` | Kết thúc sau bắt đầu | `tep_thu_tien_nen_tang:225` |
 
-**Những luật CHƯA có ở database** (chỉ trông vào mã máy chủ, hoặc chưa ai giữ):
+**EXCLUDE (2):** `appointment_staff_no_overlap` (`bang_gia_lich:358-361`); `travel_tiers_no_overlap` — các bậc phí cùng tổ chức không chồng khoảng km (`tep_thu_tien_nen_tang:230-231`). Cả hai cần extension `btree_gist`.
+
+**Trigger (11):**
+
+| Bảng | Trigger | Việc | Migration : dòng |
+|---|---|---|---|
+| audit_logs | `audit_logs_no_update` | Cấm sửa, xoá | `nen_mong:179-186` |
+| price_versions | `price_versions_append_only` | Cấm sửa, xoá | `bang_gia_lich:333-339` |
+| appointment_staff | `appointment_staff_block` | Tự tính khoảng bận, trạng thái chiếm giờ | `chot_chan_database:60-76` |
+| appointments | `appointments_staff_block_sync` | Lịch đổi giờ/trạng thái → tính lại khoảng bận | `chot_chan_database:78-88` |
+| appointment_status_history | `appointment_status_history_append_only` | Cấm sửa, xoá | `chot_chan_database:90-97` |
+| contract_lines | `contract_lines_locked` | Hợp đồng đã xác nhận: dòng chỉ được huỷ | `chot_chan_database:99-119` |
+| contracts | `contracts_locked` | Khoá hợp đồng đã xác nhận | `khoa_tien_hop_dong:6-31` |
+| contracts, contract_lines | `contracts_totals_check`, `contract_lines_totals_check` | Tổng khớp các dòng, kiểm lúc lưu | `khoa_tien_hop_dong:35-59` |
+| contract_line_staff | `contract_line_staff_locked` | Khoá thợ dự kiến sau xác nhận | `tho_du_kien_hop_dong:30-44` |
+| payments | `payments_locked` | Chỉ ghi thêm, huỷ một lần | `tep_thu_tien_nen_tang:206-220` |
+
+**Chỉ mục duy nhất có điều kiện (3):** `studio_locations_one_default` (một studio mặc định, `hop_dong_nhan_vat:261`); `contract_line_staff_one_primary` (một thợ chính mỗi dòng, `tho_du_kien_hop_dong:26`); điều kiện `WHERE is_blocking` của EXCLUDE chặn trùng.
+
+**Luật CHƯA có ở database:**
+
 | Luật | Hiện trạng |
 |---|---|
-| Số điện thoại khách đúng dạng 0xxxxxxxxx | Chỉ có chú thích `schema.prisma` ở `Customer.phone`; database không kiểm |
-| `contract_lines.price_version_id` trỏ tới bản giá có thật, cùng tổ chức | Không có khoá ngoại |
-| `created_by_id`, `changed_by_id` trỏ tới người có thật | Không có khoá ngoại |
-| `idempotency_keys.user_id` trỏ tới người có thật | Không có khoá ngoại; khoá cũ không bao giờ bị dọn |
-| Lịch trỏ tới dòng hợp đồng thuộc **đúng** hợp đồng của lịch đó | Không kiểm |
-| Tổng hợp đồng = tổng các dòng chưa huỷ | Mã máy chủ giữ |
-| Dòng hợp đồng đã xác nhận không bị sửa | Mã máy chủ giữ, không có trigger |
+| Số điện thoại khách đúng dạng 0xxxxxxxxx | Chỉ máy chủ chuẩn hoá |
+| Tổng phiếu thu không vượt tổng hợp đồng; tổng các đợt bằng tổng hợp đồng | Không kiểm (chưa có đường API thu tiền) |
+| `platform_admins.created_by_id`, `organization_subscriptions.created_by_id` trỏ tới người có thật | Không có khoá ngoại |
+| Dọn khoá chống gửi trùng cũ, tệp ở trạng thái "đang tải" bị bỏ dở | Chưa có |
+| Chặn trùng lịch của một người giữa hai tổ chức | Chưa có (mục 3.5) |
 | Toạ độ trong khoảng hợp lệ | Không kiểm |
 
-### 5. Bảng DỰ KIẾN cho các module sau
-> Toàn bộ mục này là **DỰ KIẾN**. Chưa thiết kế chi tiết, chưa có migration, chưa có mã. Tên bảng chỉ để hình dung.
+### 5. Bảng DỰ KIẾN cho module sau
+> **DỰ KIẾN** — chưa thiết kế, chưa có migration.
 
-| Module | Bảng dự kiến | Ghi chú thiết kế dự kiến |
-|---|---|---|
-| Tài chính | sổ giao dịch (thu cọc, thu đủ, hoàn tiền), phương thức thanh toán | Sổ chỉ ghi thêm như `price_versions`; trạng thái thanh toán của hợp đồng suy ra từ sổ; tiền BigInt |
-| Website giới thiệu | cài đặt website, trang, bài viết | Chỉ đọc dịch vụ/gói có `is_active` và `is_public` |
-| Đào tạo | khoá học, lớp, học viên ghi danh, điểm danh | Buổi học dùng lại `appointments` với loại `COURSE_SESSION` |
-| File | danh mục file (đường dẫn trong kho lưu trữ, cỡ, loại, bản ghi sở hữu) | File nằm ở Supabase Storage, database chỉ giữ thông tin file |
-| Thông báo | thông báo, cài đặt nhận thông báo, mã thiết bị nhận push | — |
-| Thuê bao | gói thuê, thuê bao của tổ chức, hoá đơn thuê bao | Bảng hệ thống, không thuộc tổ chức nào làm chủ |
-
-Mọi bảng dự kiến vẫn theo luật ở Phần CỦA NGHỀ: có `organization_id`, khoá ngoại kép, tiền BigInt, sổ chỉ ghi thêm.
+| Module | Bảng dự kiến |
+|---|---|
+| Đào tạo | Khoá học, nhóm khoá, lớp, học viên ghi danh, điểm danh, nội quy, mẫu thiệp chào mừng (R&D vòng 3 đang vẽ) |
+| Thông báo | Thông báo, cài đặt nhận, mã thiết bị nhận push |
+| Tiền công đã trả | Bảng chi trả chụp lại số tiền lúc trả (ghi chú trên `StaffPayRate` trong `schema.prisma`) |

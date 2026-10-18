@@ -4,13 +4,13 @@ import { lockOrgAndRecheck } from '../../http/middleware';
 import { defineRoute, mustOrg, mustUser } from '../../http/route';
 import { AppError } from '../../lib/errors';
 import { writeAudit } from '../../lib/audit';
+import { fileRef, resolveAvatarUrls } from '../files/service';
 import { assertCanTouchMember } from '../orgs/guards';
 import { Phone } from '../schedule/customers';
 import { presentStaff, staffMemberSelect } from './common';
 
 const OrgParams = z.object({ orgId: z.uuid() });
 const StaffParams = OrgParams.extend({ membershipId: z.uuid() });
-const AvatarUrl = z.url({ protocol: /^https$/, error: 'Ảnh đại diện phải là đường dẫn https hợp lệ' }).max(2000);
 
 export const profileRoutes = [
   defineRoute({
@@ -39,7 +39,12 @@ export const profileRoutes = [
         ];
       }
       const rows = await deps.db.membership.findMany({ where, select: staffMemberSelect, orderBy: { createdAt: 'asc' } });
-      return { body: { items: rows.map((m) => presentStaff(m, { showPhone })) } };
+      const avatarOf = await resolveAvatarUrls(
+        deps.db,
+        o.id,
+        rows.map((m) => m.staffProfile?.avatarUrl),
+      );
+      return { body: { items: rows.map((m) => presentStaff(m, { showPhone, avatarOf })) } };
     },
   }),
 
@@ -49,12 +54,15 @@ export const profileRoutes = [
     scope: 'org',
     permission: 'staff.write',
     tag: 'Nhân sự',
-    summary: 'Sửa hồ sơ thợ: tên hiển thị, ảnh, số điện thoại, bậc lương (null = bỏ bậc), có nhận lịch không',
+    summary: 'Sửa hồ sơ thợ: tên hiển thị, ảnh đại diện (avatarFileId của tệp STAFF_AVATAR đã tải), số điện thoại, bậc lương (null = bỏ bậc), có nhận lịch không',
     params: StaffParams,
     body: z
       .object({
         displayName: z.string().trim().min(1).max(80).nullable().optional(),
-        avatarUrl: AvatarUrl.nullable().optional(),
+        // Ảnh đại diện = tệp đã tải lên (POST /files, purpose STAFF_AVATAR). null = bỏ ảnh.
+        avatarFileId: z.uuid().nullable().optional(),
+        // Không còn nhận đường dẫn ảnh nhập tay (URL công khai vĩnh viễn) — báo rõ thay vì lặng lẽ bỏ qua.
+        avatarUrl: z.never({ error: 'Không nhận avatarUrl: tải ảnh lên (POST /files) rồi gửi avatarFileId' }).optional(),
         phone: Phone.nullable().optional(),
         tierId: z.uuid().nullable().optional(),
         isBookable: z.boolean().optional(),
@@ -95,10 +103,27 @@ export const profileRoutes = [
             }
           }
         }
+        const { avatarFileId, avatarUrl: _ignored, ...fields } = body;
+        if (avatarFileId) {
+          const file = await tx.storedFile.findFirst({
+            where: { id: avatarFileId, organizationId: o.id, purpose: 'STAFF_AVATAR', status: 'READY' },
+            select: { id: true },
+          });
+          // Tệp của tổ chức khác và mã bịa nhận cùng một lời báo.
+          if (!file) {
+            throw new AppError('VALIDATION_FAILED', 'Ảnh đại diện không hợp lệ: cần tệp ảnh đại diện thợ đã tải xong của tổ chức', {
+              avatarFileId,
+            });
+          }
+        }
+        const data = {
+          ...fields,
+          ...(avatarFileId === undefined ? {} : { avatarUrl: avatarFileId === null ? null : fileRef(avatarFileId) }),
+        };
         await tx.staffProfile.upsert({
           where: { membershipId: target.id },
-          create: { membershipId: target.id, organizationId: o.id, ...body },
-          update: body,
+          create: { membershipId: target.id, organizationId: o.id, ...data },
+          update: data,
         });
         const before = target.staffProfile;
         await writeAudit(tx, {
@@ -123,7 +148,8 @@ export const profileRoutes = [
         });
         return tx.membership.findUniqueOrThrow({ where: { id: target.id }, select: staffMemberSelect });
       });
-      return { body: presentStaff(member, { showPhone: o.permissions.has('staff.write') }) };
+      const avatarOf = await resolveAvatarUrls(deps.db, o.id, [member.staffProfile?.avatarUrl]);
+      return { body: presentStaff(member, { showPhone: o.permissions.has('staff.write'), avatarOf }) };
     },
   }),
 ];

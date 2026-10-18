@@ -1,8 +1,6 @@
 # Kiến trúc — Makeup Pro
 
-Ngày viết: 18/10/2026. Mã đổi thì phải sửa tài liệu này cùng lần.
-
-> **Mốc dẫn chứng:** mọi `tệp:dòng` trong tài liệu này đúng với commit `f7b0805` (15:29 UTC ngày 18/10/2026). Lúc viết, các thợ khác đang sửa nhiều tệp lõi (chưa lưu vào kho, kể cả sửa theo biên bản nghiệm thu mốc 2); khi các sửa đó được lưu, số dòng có thể lệch và điều phối cần dò lại.
+Cập nhật: 18/10/2026. **Đã đối chiếu với commit `634d6a3`** (17:00 UTC; mã giống hệt `bc9633a`, hai commit sau chỉ thêm sổ ghi). Mọi `tệp:dòng` đúng với commit đó. Mã đổi thì sửa tài liệu này cùng lần.
 
 ---
 
@@ -11,25 +9,27 @@ Ngày viết: 18/10/2026. Mã đổi thì phải sửa tài liệu này cùng l�
 ### 1. Vài từ phải biết
 | Từ | Nghĩa bằng lời thường |
 |---|---|
-| API | "Quầy giao dịch" của máy chủ. Web, app điện thoại đều phải đến quầy này mới lấy hoặc ghi được dữ liệu. |
-| Database | Kho sổ sách. Ở đây dùng PostgreSQL. |
-| Tổ chức | Một studio / một thợ cá nhân / một trung tâm đào tạo. Dữ liệu của mỗi tổ chức phải tách nhau. |
-| Thẻ đăng nhập (token) | Chuỗi ký tự máy chủ đưa sau khi đăng nhập. Mỗi lần gọi API phải trình thẻ. |
-| Monorepo | Một kho mã chứa nhiều phần (máy chủ, web, mã dùng chung) để sửa một chỗ là các phần cùng thấy. |
-| Migration | Một tệp ghi "đổi cấu trúc database thế nào". Xếp theo thứ tự, lùi lại và kiểm tra được. |
+| API | "Quầy giao dịch" của máy chủ. Web, app điện thoại đều phải qua quầy này mới đọc/ghi được dữ liệu |
+| Database | Kho sổ sách. Ở đây là PostgreSQL |
+| Tổ chức | Một studio / một thợ cá nhân / một trung tâm. Dữ liệu mỗi tổ chức tách nhau |
+| Thẻ đăng nhập (token) | Chuỗi ký tự máy chủ đưa sau khi đăng nhập; mỗi lần gọi API phải trình thẻ |
+| Cookie httpOnly | Ngăn chứa do máy chủ đặt vào trình duyệt; mã chạy trên trang web **không đọc được**, nên mã độc chèn vào trang không lấy trộm được |
+| Monorepo | Một kho mã chứa nhiều phần (máy chủ, web, mã dùng chung) |
+| Migration | Tệp ghi "đổi cấu trúc database thế nào", xếp theo thứ tự |
 
 ### 2. Luật kiến trúc cho phần mềm nhiều tổ chức
 | # | Luật | Vì sao |
 |---|---|---|
-| 1 | Chỉ có một cửa vào dữ liệu: API. Web và app không nói chuyện thẳng với database. | Kiểm quyền ở một chỗ. Thêm cửa thứ hai là thêm chỗ quên kiểm. |
-| 2 | Quyền tra lại từ database ở **mỗi** yêu cầu, không tin số liệu máy khách gửi lên. | Người bị cho nghỉ phải mất quyền ngay, không đợi thẻ hết hạn. |
-| 3 | Đường API nào thuộc tổ chức thì bắt buộc khai quyền, khai thiếu thì máy chủ **không khởi động**. | Quên khai quyền là lỗi chết người, phải chặn từ lúc lắp ráp. |
-| 4 | Database tự chặn những sai lầm nặng nhất (gắn dữ liệu chéo tổ chức, trùng lịch, sửa sổ lịch sử), không chỉ trông vào mã máy chủ. | Mã có lúc sai. Chốt ở database là lớp thứ hai. |
-| 5 | Mỗi thay đổi ghi nhật ký trong cùng một giao dịch với thay đổi đó. | Thay đổi thất bại thì không có nhật ký "ma"; thay đổi thành công thì chắc chắn có nhật ký. |
-| 6 | Mỗi quyết định kiến trúc ghi kèm **ngày** và **lý do**. | Sau này biết cái gì là cố ý, cái gì là tạm. |
+| 1 | Một cửa vào dữ liệu: API. Web và app không nói chuyện thẳng với database | Kiểm quyền một chỗ |
+| 2 | Quyền tra lại từ database ở **mỗi** yêu cầu, và tra lại **lần nữa** sau khi khoá tổ chức với thao tác đổi người/vai trò | Người bị hạ quyền giữa chừng không ra lệnh tiếp được |
+| 3 | Đường API thuộc tổ chức bắt buộc khai quyền; khai thiếu thì máy chủ **không khởi động** | Quên kiểm quyền bị chặn từ lúc lắp ráp |
+| 4 | Database tự chặn sai lầm nặng (gắn chéo tổ chức, trùng lịch, sửa sổ tiền, sửa sổ lịch sử) | Mã có lúc sai; database là lớp thứ hai |
+| 5 | Nhật ký ghi trong cùng giao dịch với thay đổi | Không có nhật ký "ma", không mất nhật ký |
+| 6 | Web gọi API **cùng tên miền** | Cookie an toàn nhất khi cùng tên miền; không phải mở cửa cho trang lạ |
+| 7 | Mỗi quyết định ghi kèm ngày và lý do | Biết cái gì là cố ý, cái gì là tạm |
 
 ### 3. Một yêu cầu đi qua máy chủ thế nào (mẫu chung)
-Mã số yêu cầu → ghi log → xác thực thẻ → tra quyền trong tổ chức từ database → kiểm dữ liệu gửi lên → xử lý → ghi nhật ký. Thứ tự này có chủ đích: **kiểm quyền trước, kiểm dữ liệu sau**, để người ngoài không dò được cấu trúc dữ liệu qua thông báo lỗi.
+Mã số yêu cầu → ghi log → xác thực thẻ → tra quyền trong tổ chức từ database → (giữ chỗ chống gửi trùng) → kiểm dữ liệu → xử lý trong giao dịch → ghi nhật ký → đổi lỗi thành lời người đọc được. **Kiểm quyền trước, kiểm dữ liệu sau**, để người ngoài không dò được cấu trúc dữ liệu qua lời báo lỗi.
 
 ---
 
@@ -39,102 +39,120 @@ Mã số yêu cầu → ghi log → xác thực thẻ → tra quyền trong tổ
 ```mermaid
 flowchart LR
   subgraph May_khach["Máy khách"]
-    W["Web quản trị<br/>(chưa có)"]
+    W["Web quản trị<br/>apps/web (đang dựng)"]
     S["Website giới thiệu<br/>(chưa có)"]
     P["Cổng học viên<br/>(chưa có)"]
     I["App iPhone<br/>(chưa có)"]
+  end
+  subgraph Vercel["Vercel (dự kiến)"]
+    V["Trang web tĩnh<br/>+ chuyển tiếp /api"]
   end
   subgraph Railway["Railway (dự kiến)"]
     A["API Express 5<br/>apps/api"]
   end
   subgraph Supabase["Supabase (dự kiến)"]
     D[("PostgreSQL")]
-    F[("Storage — lưu file<br/>(chưa dùng)")]
+    F[("Storage — tệp<br/>(đang dựng)")]
   end
-  W -- "HTTPS + Bearer" --> A
-  S -- "HTTPS, chỉ đọc dữ liệu công khai" --> A
-  P -- "HTTPS + Bearer" --> A
-  I -- "HTTPS + Bearer" --> A
+  W -- "cùng tên miền, cookie + Bearer" --> V
+  V -- "/api/* chuyển tiếp" --> A
+  I -- "HTTPS + Bearer, thẻ dài hạn trong thân" --> A
+  S -. "chỉ đọc dữ liệu đã xuất bản" .-> A
+  P -. "HTTPS + Bearer" .-> A
   A -- "Prisma" --> D
-  A -. "dự kiến" .-> F
+  A -. "đang dựng" .-> F
 ```
-Hiện chỉ có **API + PostgreSQL**. Bốn máy khách đều chưa có mã. Web quản trị đang ở bước R&D giao diện (`docs/rnd/`). Vercel dự kiến chứa web; Railway chứa API; Supabase chứa database — chưa tạo môi trường nào (xem `docs/DEPLOYMENT.md`).
+Đã có mã: **API + PostgreSQL + web quản trị** (móng, gọi API, bộ component, khung điều hướng; chưa có màn nghiệp vụ). Website giới thiệu, cổng học viên, app iPhone chưa có mã. Chưa tạo Supabase, Railway, Vercel (`docs/DEPLOYMENT.md`).
 
-### 2. Cấu trúc kho (đúng như hiện có)
+### 2. Cấu trúc kho
 ```
-/                         gói gốc "makeup-pro", pnpm workspace, Node >= 22
-├── package.json          lệnh chung: typecheck, test, build (chạy cho mọi gói)
-├── pnpm-workspace.yaml   khai apps/* và packages/*
-├── tsconfig.base.json    TypeScript chế độ nghiêm (strict, noUncheckedIndexedAccess)
+/                         gói "makeup-pro", pnpm workspace, Node >= 22
 ├── apps/
-│   └── api/              @makeup/api — máy chủ API
-│       ├── prisma/
-│       │   ├── schema.prisma          cấu trúc dữ liệu
-│       │   └── migrations/            lịch sử đổi cấu trúc (3 thư mục lúc viết)
-│       ├── src/
-│       │   ├── server.ts              khởi động, tắt êm khi nhận SIGTERM
-│       │   ├── app.ts                 lắp ráp: middleware, bảng đường API, chống gửi trùng
-│       │   ├── env.ts                 đọc và kiểm biến môi trường
-│       │   ├── http/                  route.ts (khai đường), middleware.ts (cửa gác), openapi.ts
-│       │   ├── lib/                   prisma, logger, tokens, password, audit, errors
-│       │   ├── modules/
-│       │   │   ├── auth/              đăng ký, đăng nhập, thẻ
-│       │   │   ├── orgs/              tổ chức, nhân sự, vai trò, nhật ký
-│       │   │   ├── catalog/           bảng giá — ĐANG DỰNG
-│       │   │   ├── contracts/         hợp đồng — ĐANG DỰNG
-│       │   │   └── schedule/          khách hàng + lịch — ĐANG DỰNG
-│       │   └── scripts/               sync-system-roles (đồng bộ vai trò mẫu, bổ sung dữ liệu mẫu)
-│       ├── test/                      bài thử chạy trên database thật
-│       ├── tsup.config.ts             đóng gói bản chạy thật
-│       └── vitest.config.ts           cấu hình bài thử
-├── packages/
-│   └── shared/           @makeup/shared — mã dùng chung máy chủ và giao diện
-│       └── src/          permissions.ts (danh mục quyền), money.ts (tiền VND),
-│                         schedule.ts (trạng thái lịch), contract.ts (tính tiền hợp đồng, phí di chuyển) — hai tệp sau đang dựng
-└── docs/                 tài liệu
+│   ├── api/              @makeup/api — máy chủ
+│   │   ├── prisma/       schema.prisma + 9 migration
+│   │   ├── src/
+│   │   │   ├── app.ts                 lắp ráp: middleware, bảng đường, chống gửi trùng, cookie
+│   │   │   ├── server.ts, env.ts
+│   │   │   ├── http/                  route.ts (khai đường), middleware.ts (cửa gác, bắt lỗi), openapi.ts
+│   │   │   ├── lib/                   prisma, logger, tokens, password, audit, errors, quota (hạn mức gói), storage (kho tệp: ổ đĩa hoặc S3)
+│   │   │   ├── modules/
+│   │   │   │   ├── auth/              đăng ký, đăng nhập, thẻ; transport.ts (thân hay cookie)
+│   │   │   │   ├── orgs/              tổ chức, nhân sự, vai trò, nhật ký
+│   │   │   │   ├── catalog/           bảng giá, nhân vật, studio, phí di chuyển
+│   │   │   │   ├── schedule/          khách hàng, lịch
+│   │   │   │   ├── contracts/         hợp đồng
+│   │   │   │   ├── staff/             bậc lương, hồ sơ thợ, mức rảnh, tiền công
+│   │   │   │   ├── files/             tải tệp, xem tệp (đường đọc có hạn), xoá mềm
+│   │   │   │   ├── platform/          quản trị nền tảng: tổ chức thuê, gói, thống kê
+│   │   │   │   ├── payments/, profile/   khung rỗng trong kho — đang viết
+│   │   │   └── scripts/               đồng bộ vai trò mẫu (có bản build chạy thật), cấp quyền quản trị nền tảng, tạo gói mẫu
+│   │   └── test/                      bài thử chạy trên database thật, cửa gác cách ly
+│   └── web/              @makeup/web — web quản trị (Vite 7 + React 19 + React Router 7)
+│       ├── src/api/      gọi API: thẻ trong bộ nhớ, refresh xếp hàng, khoá chống gửi trùng
+│       ├── src/ui/       bộ component (W2)
+│       ├── src/layout/   khung điều hướng (W3)
+│       ├── src/features/auth/   đăng nhập, đăng ký, tạo tổ chức
+│       ├── scripts/      cửa gác bí mật trong bản build; ghi/kiểm vercel.json
+│       ├── e2e/          Playwright
+│       └── vercel.json   chuyển /api sang Railway
+├── packages/shared/      @makeup/shared — danh mục quyền, tiền VND, bảng chuyển trạng thái lịch, công thức tiền hợp đồng và phí di chuyển
+└── docs/
 ```
-Chưa có: `apps/web`, website giới thiệu, cổng học viên, app iPhone.
+Bộ công nghệ: Node 22, TypeScript 5.9, Express 5.3, Prisma 6.19.3, PostgreSQL (thử trên 16), Zod 4, pino, helmet, express-rate-limit, bcryptjs, jsonwebtoken; web: Vite 7, React 19.2, React Router 7; thử: Vitest 3, supertest, Testing Library, Playwright.
 
-Bộ công nghệ: Node 22, TypeScript 5.9, Express 5.3, Prisma 6.19.3, PostgreSQL (thử trên 16.15), Zod 4 (kiểm dữ liệu), pino (log), helmet, express-rate-limit, bcryptjs, jsonwebtoken, Vitest 3 + supertest (bài thử), tsup (đóng gói).
-
-### 3. Đường đi của một yêu cầu — dẫn chứng trong mã
-| Bước | Làm gì | Ở đâu |
+### 3. Đường đi của một yêu cầu — dẫn chứng
+| Bước | Làm gì | Ở đâu (`apps/api/src/`) |
 |---|---|---|
-| 1. Mã số yêu cầu | Nhận `x-request-id` nếu hợp lệ (8–64 ký tự chữ/số/gạch), không thì tự sinh; trả lại trong header | `apps/api/src/http/middleware.ts:10-16`, gắn ở `app.ts:24` |
-| 2. Ghi log | Log JSON kèm mã số yêu cầu; che header `authorization`, `cookie`, mật khẩu, thẻ | `app.ts:25`, `lib/logger.ts:4-19` |
-| 3. Lớp bảo vệ chung | helmet (header an toàn), CORS theo danh sách, giới hạn thân yêu cầu 100KB | `app.ts:26-29` |
-| 4. Giới hạn tốc độ | Riêng các đường đăng ký/đăng nhập/đổi thẻ: mặc định 10 lần/phút | `app.ts:31-37`, `app.ts:50` |
-| 5. Xác thực | Kiểm thẻ (chỉ nhận thuật toán HS256), rồi tra database xem tài khoản còn hoạt động | `middleware.ts:18-29`, `lib/tokens.ts:13-24`, gọi ở `app.ts:52` |
-| 6. Tra quyền tổ chức | Tìm tư cách thành viên theo cặp (tổ chức, người dùng) **trong database**; tổ chức không tồn tại và "không phải thành viên" trả cùng lỗi 404; gom quyền từ các vai trò, bỏ qua khoá quyền lạ; thiếu quyền → 403 | `middleware.ts:34-75`, gọi ở `app.ts:53-56` |
-| 7. Chống gửi trùng | Đường có cờ `idempotent`: bắt header `Idempotency-Key`, giữ chỗ trước khi xử lý | `app.ts:68`, `app.ts:84-132` |
-| 8. Kiểm dữ liệu | Kiểm thân, tham số đường, tham số truy vấn bằng Zod | `app.ts:62-64` |
-| 9. Xử lý | Hàm xử lý của từng đường, thường trong một giao dịch database | `modules/*/routes.ts` |
-| 10. Nhật ký | `writeAudit` nhận chính giao dịch đó, nên nhật ký và thay đổi cùng thành công hoặc cùng thất bại | `lib/audit.ts:13-16` |
-| 11. Lỗi | Mọi lỗi đổi thành dạng `{error:{code,message,details,requestId}}` | `middleware.ts:77-99` |
+| 1. Mã số yêu cầu | Nhận `x-request-id` hợp lệ hoặc tự sinh; trả lại trong header | `http/middleware.ts:10-16`, `app.ts:32` |
+| 2. Ghi log | Log JSON kèm mã số; che header đăng nhập, cookie, mật khẩu, thẻ | `app.ts:33`, `lib/logger.ts:4-19` |
+| 3. Lớp chung | helmet, CORS theo danh sách (mặc định rỗng), thân ≤ 100KB, chặn ký tự `\u0000` | `app.ts:34-47` |
+| 4. Giới hạn tốc độ | Đăng ký/đăng nhập/đổi thẻ: mặc định 10 lần/phút/IP; IP thật chỉ lấy qua đúng số tầng proxy khai ở `TRUST_PROXY_HOPS` | `app.ts:31`, `app.ts:49-55`, `app.ts:68` |
+| 5. Xác thực | Kiểm thẻ HS256, tra database xem tài khoản còn hoạt động | `http/middleware.ts:18-29`, `app.ts:70` |
+| 6a. Quản trị nền tảng | Đường `/platform/...`: không có tên trong `platform_admins` → 404 như "không có đường" | `app.ts:71-74` |
+| 6b. Tra quyền tổ chức | Tư cách thành viên theo cặp (tổ chức, người); không phải thành viên = 404; thiếu quyền = 403 | `http/middleware.ts:35-77`, `app.ts:75-83` |
+| 7. Chống gửi trùng | Đường có cờ `idempotent`: bắt `Idempotency-Key`, so đường dẫn thật + nội dung | `app.ts:95`, `app.ts:121-178` |
+| 8. Kiểm dữ liệu | Thân, tham số đường, tham số truy vấn bằng Zod, lời báo tiếng Việt | `app.ts:24`, `app.ts:84-94` |
+| 9. Xử lý | Trong giao dịch; thao tác đổi người/vai trò khoá dòng tổ chức rồi tra quyền lại | `http/middleware.ts:174-181`; ví dụ `modules/orgs/routes.ts:212` |
+| 10. Nhật ký | `writeAudit` dùng chính giao dịch đó | `lib/audit.ts:14` |
+| 11. Cookie | Kết quả có lệnh cookie → đặt cookie httpOnly, SameSite=Strict, Secure khi chạy thật | `app.ts:96-105` |
+| 12. Lỗi | Mọi lỗi về dạng `{error:{code,message,details,requestId}}`; lỗi database đã biết đổi sang 400/409 | `http/middleware.ts:79-107`, `153-169` |
 
-Luật lắp ráp chặn khai sai (`apps/api/src/http/route.ts:62-83`): đường thuộc tổ chức mà không khai quyền, hoặc không nằm dưới `/orgs/:orgId`, thì ném lỗi ngay khi nạp mã → máy chủ không chạy.
+Luật lắp ráp (`http/route.ts:73-109`): đường thuộc tổ chức phải khai quyền và nằm dưới `/orgs/:orgId`; đường `/platform/...` phải khai phạm vi "platform" và không khai quyền tổ chức; đường có `:orgId` mà không khai phạm vi tổ chức → máy chủ không chạy.
 
-### 4. Các quyết định kiến trúc
-Tất cả ngày 18/10/2026. Giờ theo UTC lấy từ `docs/NHAT-KY-QUYET-DINH-THAY.md` khi có.
+### 4. Web gọi API
+| Việc | Cách làm | Ở đâu (`apps/web/`) |
+|---|---|---|
+| Địa chỉ | Luôn gọi đường tương đối `/api/v1/...`; không có địa chỉ máy chủ trong mã web | `README.md` |
+| Lúc phát triển | Vite chuyển `/api` sang `http://localhost:4000` | `vite.config.ts:6`, `:13-14` |
+| Trên Vercel | `vercel.json` chuyển `/api/(.*)` sang máy chủ Railway; build dừng nếu địa chỉ chưa đặt | `vercel.json`, `scripts/vercel-config.mjs` |
+| Thẻ truy cập | Chỉ nằm trong biến bộ nhớ; không dùng localStorage | `src/api/client.ts:9` |
+| Thẻ dài hạn | Cookie `mp_refresh` do máy chủ đặt khi có header `X-Client: web` | `src/api/client.ts:40`, `apps/api/src/modules/auth/transport.ts:11-37` |
+| localStorage | Chỉ giữ id tổ chức đang chọn | `src/app/session.tsx:13`, `:21` |
+
+### 5. Quyết định kiến trúc
+Tất cả ngày 18/10/2026; giờ UTC theo `docs/NHAT-KY-QUYET-DINH-THAY.md` khi có.
 
 | # | Quyết định | Lý do | Cái giá / khi nào xem lại |
 |---|---|---|---|
-| 1 | Xây mới ở kho `SSSTUDIO96/a`, không sửa `ssaas` | Khảo sát: `ssaas` lưu tiền bằng số thực, một tài khoản gắn cứng một studio, không có migration (`docs/PROJECT_AUDIT.md`) | Phải viết lại đăng nhập/phân quyền; giữ được bộ công nghệ quen |
-| 2 | Prisma 6.19.3, chưa lên 7 (15:02) | API bản 6 đã biết và dùng ổn ở Studio Pro; bản 7 đổi cách kết nối, rủi ro chưa đo | Nâng cấp có chủ đích sau, kèm chạy lại toàn bộ bài thử |
-| 3 | Quyền lưu dạng **mảng khoá** trong cột `roles.permissions`, không làm bảng `role_permissions` riêng | Đọc quyền của một người chỉ cần một lần tra (thành viên → vai trò → mảng quyền); danh mục quyền đã nằm trong mã nên không cần bảng danh mục trong database | Database **không tự chặn** khoá lạ. Bù lại: máy chủ từ chối khoá lạ khi tạo/sửa vai trò (`modules/orgs/routes.ts:446-452`) và bỏ qua khoá lạ khi tra quyền (`middleware.ts:62-64`) |
-| 4 | **Danh mục quyền là mã nguồn** (`packages/shared/src/permissions.ts:3-23`) | Quyền gắn chặt với đường API trong mã; giao diện và máy chủ đọc cùng một danh mục | Thêm quyền = sửa mã + triển khai + chạy `db:sync-roles` cho tổ chức cũ (xem `docs/SO-LOI-DA-DO.md`, lỗi 3) |
-| 5 | Vai trò mẫu **chép** vào từng tổ chức lúc tạo; vai trò hệ thống không sửa được qua API (15:17) | Mỗi tổ chức tự quản vai trò tuỳ chỉnh của mình; vai trò mẫu giữ đúng chuẩn | Lệnh `db:sync-roles` (`apps/api/src/scripts/sync-system-roles.ts`) ghi đè vai trò hệ thống theo mẫu |
-| 6 | Thẻ truy cập JWT 15 phút + refresh token 30 ngày, xoay vòng mỗi lần dùng, dùng lại thẻ cũ thì thu hồi cả họ thẻ | Thẻ ngắn hạn giảm thiệt hại khi lộ; phát hiện thẻ bị đánh cắp | Đăng xuất chỉ thu hồi refresh token; thẻ truy cập đang cầm còn dùng được tối đa 15 phút |
-| 7 | **Refresh token gửi trong thân yêu cầu** (JSON), không phải cookie | Hợp với app iPhone (cất trong Keychain) và bài thử | **Phải chuyển sang cookie httpOnly** (Secure, SameSite) khi làm web quản trị, vì để thẻ trong bộ nhớ trình duyệt thì mã độc trên trang đọc được. Hiện CORS đang `credentials: false` (`app.ts:28`) |
-| 8 | **RLS chưa bật.** RLS (Row Level Security) là luật lọc theo tổ chức đặt ngay trong PostgreSQL | API là cửa duy nhất vào database, dùng một tài khoản database; cách ly đã làm ở hai lớp: cửa gác API (`middleware.ts:34-75`) + khoá ngoại kép ở database. Bật RLS với Prisma cần đặt biến phiên trong mỗi giao dịch, phức tạp hơn khi đi qua pooler của Supabase | Cân nhắc bật khi: (a) có đường vào database không qua API (web/app gọi thẳng Supabase, công cụ báo cáo, Supabase Storage có luật theo tổ chức); hoặc (b) làm module tài chính; hoặc (c) sau bất kỳ sự cố lộ dữ liệu nào |
-| 9 | Mọi bảng nghiệp vụ có `organization_id`, mọi liên kết giữa hai bảng nghiệp vụ dùng **khoá ngoại kép** (id, organization_id) | Database tự chặn gắn dữ liệu của tổ chức A vào tổ chức B | Mỗi bảng phải có thêm chỉ mục duy nhất (id, organization_id) |
-| 10 | Tiền là `BigInt` đơn vị đồng | Không lệch đồng nào khi cộng trừ | Khi trả JSON phải đổi sang số, vượt ngưỡng thì ném lỗi (`packages/shared/src/money.ts:12-17`) |
-| 11 | Chặn trùng lịch bằng ràng buộc EXCLUDE trong database | Hai người bấm lưu cùng giây cũng chỉ một lịch lọt | Cần extension `btree_gist`, phải bật trước trên Supabase |
-| 12 | Lịch nháp không chiếm giờ thợ; từ "chờ xác nhận" trở lên mới chiếm (15:14) | Nháp chưa hứa với khách | Đổi bằng một dòng điều kiện |
-| 13 | Trạng thái thực hiện tách khỏi thanh toán (15:14) | Thanh toán sẽ suy ra từ sổ giao dịch của module tài chính | Lát 1 chưa xem được "đã cọc chưa" trên lịch |
-| 14 | Bắt buộc `Idempotency-Key` cho các đường POST tạo lịch (15:15) | Bấm "Lưu" hai lần / mạng gửi lại không tạo hai bản ghi | Máy khách phải sinh khoá mới cho mỗi lần bấm |
-| 15 | Tài liệu OpenAPI sinh thẳng từ bảng đường API (`http/openapi.ts:4-40`) | Không có bản viết tay để lệch khỏi mã | Chưa mô tả dạng dữ liệu trả về |
-| 16 | Database thử chỉ chạy `migrate deploy`, không xoá trắng (15:09) | Prisma chặn AI chạy lệnh xoá trắng; không lách bằng lời đồng ý giả | Database thử tích dữ liệu dần; mỗi bài thử tự tạo dữ liệu mã ngẫu nhiên |
-| 17 | Không xoá dây chuyền dữ liệu nghiệp vụ (`schema.prisma:3`) | Xoá nhầm một tổ chức/khách không được kéo theo cả sổ sách | Muốn xoá phải xoá từng phần có chủ đích; chỉ vài bảng "con trực tiếp" có xoá theo (liệt kê trong `docs/DATABASE_SCHEMA.md`) |
-| 18 | **Tiền chỉ nằm ở hợp đồng**; lịch chỉ giữ giờ, thợ, địa điểm (15:20–15:21) | Một công thức tiền duy nhất; lịch giữ tiền song song với hợp đồng sẽ lệch nhau | Bỏ bảng `appointment_items` và các cột tiền của lịch bằng migration mới, không sửa migration cũ |
-| 19 | Công thức tính tiền hợp đồng và phí di chuyển đặt ở `packages/shared` | Máy chủ và giao diện tính cùng một cách; số trên màn khớp số máy chủ lưu | Đang dựng |
+| 1 | Xây mới ở kho `SSSTUDIO96/a`, không sửa `ssaas` | `ssaas` lưu tiền số thực, một tài khoản gắn một studio, không migration (`docs/PROJECT_AUDIT.md`) | Viết lại đăng nhập/phân quyền |
+| 2 | Prisma 6.19.3, chưa lên 7 (15:02) | API bản 6 đã biết và dùng ổn ở Studio Pro; bản 7 đổi cách kết nối, rủi ro chưa đo | Nâng cấp có chủ đích sau, chạy lại toàn bộ bài thử |
+| 3 | Quyền lưu **mảng khoá** trong `roles.permissions`, không có bảng `role_permissions` | Một lần tra là đủ; danh mục quyền nằm trong mã | Database không tự chặn khoá lạ → máy chủ từ chối khi ghi (`modules/orgs/routes.ts:459`) và bỏ qua khi tra (`http/middleware.ts:62-66`) |
+| 4 | **Danh mục quyền là mã nguồn** (`packages/shared/src/permissions.ts:3-34`) | Quyền gắn với đường API trong mã; web và máy chủ đọc cùng danh mục | Thêm quyền = sửa mã + triển khai + chạy `db:sync-roles:prod` |
+| 5 | Vai trò mẫu chép vào từng tổ chức; vai trò hệ thống không sửa qua API (15:17) | Mỗi tổ chức tự quản vai trò tuỳ chỉnh | Lệnh đồng bộ ghi đè vai trò hệ thống theo mẫu |
+| 6 | Thẻ truy cập 15 phút + thẻ dài hạn 30 ngày xoay vòng; chỉ thẻ bị thu hồi **do xoay vòng** mà dùng lại mới tính là bị đánh cắp | Phát hiện trộm thẻ, không báo nhầm khi dùng lại thẻ đã đăng xuất | Đăng xuất không huỷ được thẻ truy cập đang cầm (tối đa 15 phút) |
+| 7 | **Web: thẻ dài hạn chỉ trong cookie httpOnly**, SameSite=Strict, chỉ đường `/api/v1/auth`; web phải gửi `X-Client: web`. App điện thoại vẫn nhận trong thân (16:20) | Mã độc trên trang không lấy được thẻ dài hạn; header bắt buộc chặn trang lạ giả yêu cầu | Đổi thẻ thành công chưa ghi nhật ký |
+| 8 | **Web gọi `/api` cùng tên miền**, Vercel chuyển sang Railway (16:20) | Cookie cùng trang; không mở CORS cho trình duyệt | Thêm một chặng chuyển tiếp; phải ghi địa chỉ Railway vào `vercel.json` |
+| 9 | **RLS chưa bật.** RLS là luật lọc theo tổ chức đặt ngay trong PostgreSQL | API là cửa duy nhất, một tài khoản database; cách ly ở cửa gác API + khoá ngoại kép. Bật RLS với Prisma cần đặt biến phiên mỗi giao dịch, phức tạp qua pooler | Xem lại khi: có đường vào database không qua API (Supabase Storage có luật theo tổ chức, công cụ báo cáo); làm báo cáo doanh thu; hoặc sau bất kỳ sự cố lộ dữ liệu |
+| 10 | Mọi liên kết giữa hai bảng nghiệp vụ dùng **khoá ngoại kép** (id, organization_id) | Database tự chặn gắn chéo tổ chức | Mỗi bảng thêm chỉ mục duy nhất (id, organization_id) |
+| 11 | Tiền là `BigInt` đồng | Không lệch đồng nào | Trả JSON phải đổi sang số, vượt ngưỡng thì ném lỗi |
+| 12 | Chặn trùng lịch bằng EXCLUDE; **khoảng bận do database tự tính** từ giờ lịch, phút di chuyển, trạng thái | Đường sửa nào quên tính lại cũng không lọt trùng (migration `20261018160000_chot_chan_database:53-88`) | Cần extension `btree_gist` |
+| 13 | **Tiền chỉ nằm ở hợp đồng**; lịch giữ giờ, thợ, nơi (15:20) | Một công thức tiền duy nhất | Lịch không tự biết giá |
+| 14 | **Khoá hợp đồng ở database**: dòng đã xác nhận không sửa/xoá; hợp đồng đã xác nhận không về nháp, giảm giá và cọc chỉ hạ; tổng phải khớp các dòng lúc lưu | Biên bản lát 1, lỗi N3 (migration `20261018170000_khoa_tien_hop_dong`) | Mọi đường ghi phải cập nhật tổng trong cùng giao dịch |
+| 15 | Phiếu thu **chỉ ghi thêm**, ghi sai thì huỷ có lý do | Sổ tiền làm bằng chứng | Migration `20261018190000_tep_thu_tien_nen_tang:206-220` |
+| 16 | Quản trị nền tảng bằng bảng `platform_admins` + tài khoản riêng, **không** mật khẩu dùng chung | Lỗi cũ của Studio Pro (`docs/PROJECT_AUDIT.md`, mục 6) | Máy chủ có 8 đường `/platform/...`; chưa có giao diện, R&D chưa vẽ |
+| 17 | Bắt `Idempotency-Key` cho 12 đường tạo; so **đường dẫn thật** kèm id (15:15, sửa T1) | Bấm "Lưu" hai lần không tạo hai bản ghi; cùng khoá gửi vào hai hợp đồng khác nhau không báo thành công giả | Máy chủ chết sau khi ghi và trước khi lưu kết quả thì gửi lại có thể tạo bản thứ hai (`app.ts:155-156`) |
+| 18 | Lỗi database đã biết đổi thành lời người đọc: trùng lịch, trigger → 409; CHECK, khoá ngoại → 400 | Không để lọt 500 | Lời của trigger trả thẳng cho người dùng (`http/middleware.ts:157-158`) |
+| 19 | `TRUST_PROXY_HOPS` mặc định 0 (biên bản mốc 2, L7) | Không tin IP do máy khách tự khai, chống lách giới hạn tốc độ | Railway phải đặt 1 |
+| 20 | Lệnh đồng bộ vai trò được đóng gói vào bản build (`tsup.config.ts:5`) | Chạy được trên máy thật không cần công cụ phát triển | `db:sync-roles:prod` |
+| 21 | Database thử chỉ chạy `migrate deploy`, không xoá trắng (15:09) | Prisma chặn AI xoá trắng database | Database thử tích dữ liệu dần |
+| 22 | Không xoá dây chuyền sổ sách (`schema.prisma:3`) | Xoá nhầm không kéo theo cả sổ | Chỉ 4 chỗ xoá theo con trực tiếp (`docs/DATABASE_SCHEMA.md`) |

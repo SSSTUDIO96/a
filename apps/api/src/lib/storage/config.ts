@@ -29,7 +29,8 @@ function required<T>(value: T | undefined, name: string): T {
 }
 
 export function createStorageFromEnv(source: NodeJS.ProcessEnv): StorageDriver {
-  const parsed = StorageEnv.safeParse(source);
+  // Dòng "BIEN=" để trống (chép từ .env.example) coi như chưa khai.
+  const parsed = StorageEnv.safeParse(Object.fromEntries(Object.entries(source).filter(([, v]) => v !== '')));
   if (!parsed.success) {
     throw new Error(`Cấu hình kho tệp không hợp lệ — ${parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ')}`);
   }

@@ -1,127 +1,130 @@
 # An ninh — Makeup Pro
 
-Ngày viết: 18/10/2026. Mọi số đo trong tệp này lấy từ lần chạy bài thử trên máy đám mây ngày 18/10/2026 (database thử, không phải máy thật).
+Cập nhật: 18/10/2026. **Đã đối chiếu với commit `634d6a3`** (17:00 UTC; mã giống hệt `bc9633a`, hai commit sau chỉ thêm sổ ghi). Số đo lấy từ các lần chạy bài thử trên máy đám mây ngày 18/10/2026 (database thử, không phải máy thật); mỗi số ghi rõ lần chạy nào.
 
-> **Mốc dẫn chứng:** mọi `tệp:dòng` trong tài liệu này đúng với commit `f7b0805` (15:29 UTC ngày 18/10/2026). Lúc viết, các thợ khác đang sửa nhiều tệp lõi (chưa lưu vào kho, kể cả sửa theo biên bản nghiệm thu mốc 2); khi các sửa đó được lưu, số dòng có thể lệch và điều phối cần dò lại.
-
-> Bài thử qua hết **không** có nghĩa là an toàn. Nó chỉ chứng minh những gì bài thử có kiểm. Mục 4 liệt kê những gì chưa ai kiểm.
+> Bài thử qua hết **không** có nghĩa là an toàn. Nó chỉ chứng minh những gì bài thử có kiểm. Mục 5 liệt kê những gì chưa ai kiểm.
 
 ---
 
 ## Phần CỦA NGHỀ — studio nào cũng dùng được
 
-### 1. Mô hình đe doạ — ai có thể làm hại, làm hại kiểu gì
+### 1. Mô hình đe doạ
 | # | Kẻ gây hại | Muốn làm gì | Lớp chặn cần có |
 |---|---|---|---|
-| 1 | Studio khác dùng chung phần mềm | Xem/sửa khách, giá, lịch của studio mình | Cách ly tổ chức ở cả máy chủ và database |
-| 2 | Nhân viên trong studio | Tự nâng quyền, xem giá vốn/doanh thu không được phép | Phân quyền, luật "không trao quyền mình không có" |
+| 1 | Studio khác dùng chung phần mềm | Xem/sửa khách, giá, hợp đồng, tiền của mình — kể cả nhét mã bản ghi của mình vào yêu cầu của họ | Cách ly tổ chức ở cửa vào, trong thân yêu cầu, và trong database |
+| 2 | Nhân viên trong studio | Tự nâng quyền, hạ quyền cấp trên, tự nâng bậc lương, giảm giá hợp đồng đã chốt | Phân quyền, luật thứ bậc, quyền điều chỉnh riêng |
 | 3 | Nhân viên đã nghỉ | Vẫn vào xem lịch, lấy danh sách khách | Mất quyền ngay ở yêu cầu kế tiếp |
-| 4 | Kẻ trộm thẻ đăng nhập | Dùng thẻ của người khác | Thẻ ngắn hạn, phát hiện thẻ bị dùng lại |
-| 5 | Kẻ đoán mật khẩu | Thử hàng nghìn mật khẩu | Giới hạn tốc độ, mật khẩu đủ dài |
-| 6 | Kẻ lấy được bản sao database | Đọc mật khẩu, thẻ | Chỉ lưu bản băm (không đảo ngược được) |
-| 7 | Người muốn che dấu | Sửa giá cũ, xoá nhật ký | Sổ chỉ ghi thêm, chặn ở database |
-| 8 | Mã chính mình viết sai | Quên kiểm quyền ở một đường mới | Cửa gác tự động, khai thiếu quyền thì không khởi động |
+| 4 | Kẻ trộm thẻ | Dùng thẻ của người khác; mã độc trên trang web đọc thẻ | Thẻ ngắn hạn, phát hiện dùng lại, thẻ dài hạn của web nằm trong cookie httpOnly |
+| 5 | Trang web lạ | Giả yêu cầu từ trình duyệt của người đang đăng nhập | Cookie SameSite=Strict + header bắt buộc |
+| 6 | Kẻ đoán mật khẩu | Thử hàng nghìn lần, tự đổi IP trong header | Giới hạn tốc độ, chỉ tin đúng số tầng proxy |
+| 7 | Kẻ lấy được bản sao database | Đọc mật khẩu, thẻ | Chỉ lưu bản băm |
+| 8 | Người muốn che dấu | Sửa giá cũ, sửa hợp đồng đã ký, xoá phiếu thu, xoá nhật ký | Sổ chỉ ghi thêm, khoá ở database |
+| 9 | Người tải tệp độc | Tải tệp giả đuôi ảnh | Kiểm chữ ký đầu tệp, giới hạn dung lượng |
+| 10 | Mã chính mình viết sai | Quên kiểm quyền ở đường mới; lộ bí mật vào bản web | Cửa gác tự động; quét bí mật trong bản build |
 
 ### 2. Luật đo cửa gác
-- Cửa gác phải **in ra tử số / mẫu số** (ví dụ "10/10 đường"), không chỉ in "đạt".
-- Mẫu số phải lấy tự động từ danh sách đường thật. Thêm đường mới là tự vào diện kiểm.
-- Phải có vế **GIỮ** (người có quyền vẫn đi qua). Cửa chặn tất cả mọi người cũng "đạt" vế BẮT.
-- **Cửa gác chưa từng chuyển đỏ thì chưa được tin.** Phải cố ý phá mã và thấy nó báo đỏ.
+- In **tử số / mẫu số**, không chỉ in "đạt". Mẫu số lấy tự động từ danh sách đường thật.
+- Có vế **GIỮ**: người có quyền vẫn qua.
+- Gặp đường chưa có dữ liệu mẫu thì **dừng và báo đỏ**, không bỏ qua.
+- **Cửa gác chưa từng chuyển đỏ trước lỗi cài sẵn thì chưa được tin.** "Phá thử 2 lần đều đỏ" vẫn có thể mù với kiểu lỗi chưa nghĩ tới (`docs/SO-LOI-DA-DO.md` mục 7).
 
 ---
 
 ## Phần CỦA RIÊNG DỰ ÁN NÀY
 
-### 1. Các lớp chặn đã có và bài thử chứng minh
-Đường dẫn mã tính từ `apps/api/src/`. Bài thử nằm ở `apps/api/test/` (trừ dòng ghi `shared`).
+### 1. Các lớp chặn và bài thử chứng minh
+Mã ở `apps/api/src/`, bài thử ở `apps/api/test/` (trừ khi ghi khác).
 
-| # | Lớp chặn | Mã | Bài thử (tệp → tên ca) |
+| # | Lớp chặn | Mã | Bài thử (tệp → ca) |
 |---|---|---|---|
-| 1 | Người tổ chức khác gọi vào → 404, không lộ tổ chức có tồn tại | `http/middleware.ts:44-56` | `tenant-isolation.test.ts` → "BẮT: người của tổ chức B gọi vào tổ chức A → 404, không lộ tổ chức có tồn tại" |
-| 2 | Thành viên thiếu quyền → 403 | `http/middleware.ts:60-68` | `tenant-isolation.test.ts` → "BẮT: thành viên A không có quyền → 403 ở mọi đường" |
-| 3 | Không có thẻ → 401 | `http/middleware.ts:18-22` | `tenant-isolation.test.ts` → "BẮT: không có thẻ đăng nhập → 401 ở mọi đường cần đăng nhập" |
-| 4 | Thẻ giả, ký bằng khoá khác → 401; chỉ nhận HS256 | `lib/tokens.ts:13-24` | `tenant-isolation.test.ts` → "BẮT: thẻ giả ký bằng khoá khác → 401" |
-| 5 | Khai đường thuộc tổ chức mà thiếu quyền / sai địa chỉ → máy chủ không khởi động | `http/route.ts:67-81` | `guards.test.ts` → 3 ca "đường thuộc tổ chức mà không khai quyền → ném lỗi", "đường thuộc tổ chức không nằm dưới /orgs/:orgId → ném lỗi", "đường công khai mà khai quyền → ném lỗi" |
-| 6 | Không trao được quyền mình không có | `modules/orgs/guards.ts:11-23` | `escalation.test.ts` → "quản lý không tự nâng mình lên quản trị", "quản lý không trao vai trò quản trị cho người khác"; vế GIỮ: "quản lý vẫn đổi được vai trò trong phạm vi quyền mình (vế GIỮ)" |
-| 7 | Chỉ chủ trao được vai trò chủ, đụng được vào chủ | `modules/orgs/guards.ts:14-16`, `27-31` | `escalation.test.ts` → "quản trị không trao được vai trò chủ", "quản trị (không phải chủ) không đụng được vào chủ" |
-| 8 | Tổ chức luôn còn ít nhất một chủ; khoá dòng tổ chức để hai thao tác đồng thời xếp hàng | `modules/orgs/guards.ts:34-38`, `modules/orgs/routes.ts:31-35` | `escalation.test.ts` → "chủ cuối cùng không tự rời hay tự hạ quyền được" (phần đồng thời **chưa có** bài thử) |
-| 9 | Khoá quyền lạ bị từ chối | `modules/orgs/routes.ts:446-452`; bỏ qua khi tra: `http/middleware.ts:62-64` | `escalation.test.ts` → "vai trò tuỳ chỉnh có quyền lạ bị từ chối"; `shared/permissions.test.ts` → "khoá lạ không được coi là quyền" |
-| 10 | Vai trò hệ thống không bị chiếm mã, không sửa được | `modules/orgs/routes.ts:349-351`, `391` | `escalation.test.ts` → "không lấy được mã vai trò hệ thống làm vai trò tuỳ chỉnh", "vai trò hệ thống không sửa được" |
-| 11 | Nhân sự bị tạm khoá mất quyền ngay | `http/middleware.ts:54-56` (tra lại mỗi yêu cầu) | `escalation.test.ts` → "nhân sự bị tạm khoá mất quyền ngay ở yêu cầu kế tiếp" |
-| 12 | Tài khoản bị khoá: thẻ đang cầm hết tác dụng ngay | `http/middleware.ts:24-27`, `modules/auth/service.ts:56-59` | `auth.test.ts` → "tài khoản bị khoá thì thẻ đang cầm cũng hết tác dụng ngay" |
-| 13 | Mật khẩu ≥ 10 ký tự, băm bcrypt 12 vòng | `modules/auth/routes.ts:13`, `lib/password.ts:3-7` | `auth.test.ts` → "mật khẩu ngắn bị từ chối với lỗi rõ ràng" |
-| 14 | Đăng nhập không lộ email nào đã đăng ký (cùng lời, cùng thời gian băm) | `lib/password.ts:13-14`, `modules/auth/routes.ts:56-60` | `auth.test.ts` → "sai mật khẩu và email không tồn tại trả cùng một lời" |
-| 15 | Giới hạn tốc độ đăng nhập | `app.ts:31-37` | `auth.test.ts` → "quá số lần đăng nhập trong một phút → 429" |
-| 16 | Refresh token xoay vòng; dùng lại thẻ cũ → thu hồi cả họ, ghi nhật ký | `modules/auth/service.ts:29-52` | `auth.test.ts` → "đổi thẻ: thẻ cũ hết dùng được, thẻ mới dùng được", "dùng lại thẻ cũ = bị đánh cắp → thu hồi cả họ thẻ, kể cả thẻ mới nhất" |
-| 17 | Hai yêu cầu đổi cùng một thẻ đồng thời chỉ một cái thắng | `modules/auth/service.ts:60-67` | `auth.test.ts` → "hai yêu cầu đổi cùng một thẻ đồng thời: đúng một cái thành công" |
-| 18 | Đăng xuất thu hồi phiên | `modules/auth/service.ts:77-84` | `auth.test.ts` → "đăng xuất thu hồi phiên" |
-| 19 | Database chỉ giữ bản băm của refresh token | `lib/tokens.ts:26-34` | Không có bài thử riêng |
-| 20 | Email luôn chữ thường (API + database) | `modules/auth/routes.ts:8-12`; migration `nen_mong:172` | `auth.test.ts` → "email trùng khác chữ hoa/thường bị từ chối"; `escalation.test.ts` → "email viết hoa bị database từ chối" |
-| 21 | Database chặn gán vai trò khác tổ chức (khoá ngoại kép) | `prisma/schema.prisma:152-153` | `escalation.test.ts` → "không gán được vai trò của tổ chức khác, kể cả ghi thẳng vào database" |
-| 22 | Nhật ký chỉ ghi thêm; mọi thay đổi đều ghi | trigger ở migration `nen_mong:179-186`; `lib/audit.ts:13-16` | `escalation.test.ts` → "nhật ký không sửa, không xoá được", "mọi thay đổi trên đều để lại nhật ký" |
-| 23 | Không xoá dây chuyền | `prisma/schema.prisma:3` | `escalation.test.ts` → "không xoá được tổ chức còn dữ liệu (không có xoá dây chuyền)" |
-| 24 | `/auth/me` không trả mật khẩu | `modules/auth/routes.ts:103-117` | `auth.test.ts` → "đăng nhập đúng rồi xem /me" |
-| 25 | Vai trò mẫu của tổ chức cũ được bổ sung quyền mới | `scripts/sync-system-roles.ts` | `system-roles.test.ts` → "tổ chức tạo trước khi thêm quyền mới được bổ sung quyền; chạy lại không đổi gì" (in "khớp mẫu 9/9 vai trò") |
-| 26 | Log che header đăng nhập, cookie, mật khẩu, thẻ | `lib/logger.ts:7-17` | Không có bài thử |
-| 27 | Thiếu biến môi trường / khoá ký thẻ < 32 ký tự → không khởi động | `env.ts:4-24` | Không có bài thử |
-| 28 | Header an toàn (helmet), CORS theo danh sách, thân ≤ 100KB | `app.ts:26-29` | Không có bài thử |
-| 29 | Database từ chối trùng lịch → máy chủ nhận ra và trả 409, không để lọt 500 | `http/middleware.ts:87-88`, `105-117` | `exclusion-error.test.ts` → "BẮT: ghi qua Prisma create bị database từ chối → nhận ra được", "BẮT: ghi qua câu lệnh SQL thô bị từ chối → nhận ra được", "GIỮ: lỗi trùng khoá thường (P2002) không bị nhận nhầm là trùng lịch" |
-| 30 | Lịch sử giá chỉ ghi thêm, các CHECK tiền của hợp đồng | migration `bang_gia_lich`, `hop_dong_nhan_vat` | **Chưa có bài thử tự động.** Ngày 18/10/2026 đã thử tay trên database thử: sai công thức tiền, sửa lịch sử giá đều bị database từ chối |
+| 1 | Cách ly tổ chức: người ngoài 404, thiếu quyền 403, không thẻ 401, nhét mã của tổ chức khác vào đường/thân/tham số lọc | `http/middleware.ts:35-77` + lọc theo tổ chức trong từng hàm | `tenant-isolation.test.ts` (mục 2) |
+| 2 | Khai đường sai → máy chủ không khởi động | `http/route.ts:73-109` | `guards.test.ts` → 4 ca, gồm "đường dưới /platform/ phải khai scope "platform"…" |
+| 3 | Thẻ giả / sai thuật toán → 401 | `lib/tokens.ts:13-24` | `tenant-isolation.test.ts` (phép unauth) |
+| 4 | Không trao quyền mình không có | `modules/orgs/guards.ts:20-29` | `escalation.test.ts` → "quản lý không tự nâng mình lên quản trị", "quản lý không trao vai trò quản trị cho người khác" |
+| 5 | **Luật thứ bậc**: không đụng người giữ quyền mình không có | `modules/orgs/guards.ts:31-41` | `nghiem-thu-moc2.test.ts` → "quản lý không hạ được quản trị xuống thợ", "quản lý không tạm khoá được quản trị", "vai trò "Nhân sự" không cho quản trị rời tổ chức được" |
+| 6 | Sửa vai trò phải có đủ quyền cũ lẫn mới | `modules/orgs/guards.ts:43-48` | `nghiem-thu-moc2.test.ts` → ""Nhân sự" không bỏ được quyền xem nhật ký khỏi "Kế toán trưởng"" |
+| 7 | Khoá tổ chức rồi **tra quyền lại** trong giao dịch | `http/middleware.ts:174-181` | `nghiem-thu-moc2.test.ts` → "người bị hạ quyền giữa chừng không trao quyền được nữa (đua 15 lượt)" |
+| 8 | Luôn còn ít nhất một chủ đang hoạt động (tài khoản bị khoá không tính) | `modules/orgs/guards.ts:49-54` | `escalation.test.ts` → "chủ cuối cùng không tự rời hay tự hạ quyền được"; `nghiem-thu-moc2.test.ts` → "chủ có tài khoản bị khoá không được tính là chủ đang hoạt động" |
+| 9 | Tạm khoá nhân sự / khoá tài khoản mất quyền ngay | `http/middleware.ts:24-27`, `:54-57` | `escalation.test.ts` → "nhân sự bị tạm khoá mất quyền ngay ở yêu cầu kế tiếp"; `auth.test.ts` → "tài khoản bị khoá thì thẻ đang cầm cũng hết tác dụng ngay" |
+| 10 | Thứ bậc khi sửa hồ sơ thợ; đổi bậc lương cần quyền tiền công (lỗi T2) | `modules/staff/profiles.ts` | `staff.test.ts` → nhóm "T2: thứ bậc khi sửa hồ sơ thợ, đổi bậc lương cần payroll.write" |
+| 11 | Số điện thoại thợ chỉ hiện cho người có quyền sửa nhân sự (G5) | `modules/staff/common.ts:32` | `staff.test.ts` → nhóm "G5: số điện thoại thợ chỉ hiện cho người có staff.write"; `schedule.test.ts` → nhóm "G5" |
+| 12 | Giảm tiền hợp đồng đã xác nhận cần quyền `contracts.adjust` (G2) | `modules/contracts/routes.ts:86-93` | `contracts.test.ts` → nhóm "quyền" |
+| 13 | Mật khẩu 10 ký tự – 72 byte, băm bcrypt 12 vòng | `modules/auth/routes.ts:14-18`, `lib/password.ts` | `auth.test.ts` → "mật khẩu ngắn bị từ chối…"; `nghiem-thu-moc2.test.ts` → "L9: mật khẩu quá 72 byte bị từ chối khi đăng ký" |
+| 14 | Đăng nhập không lộ email nào có thật (cùng lời, cùng thời gian băm) | `lib/password.ts:13-14`, `modules/auth/routes.ts:60-61` | `auth.test.ts` → "sai mật khẩu và email không tồn tại trả cùng một lời" |
+| 15 | Giới hạn tốc độ; IP thật chỉ lấy qua `TRUST_PROXY_HOPS` tầng proxy (mặc định 0) | `app.ts:31`, `:49-55`, `env.ts:13-15` | `auth.test.ts` → "quá số lần đăng nhập trong một phút → 429" |
+| 16 | Thẻ dài hạn xoay vòng; chỉ thẻ thu hồi **do xoay vòng** mà dùng lại mới thu hồi cả họ | `modules/auth/service.ts:31-79` | `auth.test.ts` → "dùng lại thẻ cũ = bị đánh cắp → thu hồi cả họ thẻ…"; `nghiem-thu-moc2.test.ts` → "L10: dùng lại thẻ đã đăng xuất không bị ghi là "phát hiện đánh cắp"" |
+| 17 | Đổi thẻ đồng thời chỉ một cái thắng | `modules/auth/service.ts:65-71` | `auth.test.ts` → "hai yêu cầu đổi cùng một thẻ đồng thời: đúng một cái thành công" |
+| 18 | **Web: thẻ dài hạn chỉ trong cookie httpOnly, SameSite=Strict, đường `/api/v1/auth`; cookie chỉ được đọc khi có `X-Client: web`** | `modules/auth/transport.ts:11-49`, `app.ts:96-105` | `auth-cookie.test.ts` → 3 ca: thân không có refreshToken; thiếu header thì cookie bị bỏ qua; GIỮ: app vẫn nhận trong thân |
+| 19 | Web giữ thẻ truy cập trong bộ nhớ, không localStorage | `apps/web/src/api/client.ts:9` | `apps/web/src/api/client.test.ts` (16 ca) |
+| 20 | Nhật ký đăng nhập đúng/sai, đăng xuất, phát hiện dùng lại thẻ | `modules/auth/routes.ts:61-89`, `modules/auth/service.ts:44-52`, `:89-97` | `nghiem-thu-moc2.test.ts` → "L11: đăng nhập đúng và sai đều có nhật ký" |
+| 21 | Thân ≤ 100KB, ký tự `\u0000` → 400 chứ không 500 | `app.ts:37-47`, `http/middleware.ts:109-121` | `nghiem-thu-moc2.test.ts` → hai ca "L6" |
+| 22 | Lỗi database đã biết → 400/409, không 500 | `http/middleware.ts:153-169` | `db-guards.test.ts` → "vi phạm CHECK trả 400 chứ không 500"; `exclusion-error.test.ts` → 3 ca |
+| 23 | Chống gửi trùng so đường dẫn thật (T1) | `app.ts:121-178` | `idempotency.test.ts` → 3 ca |
+| 24 | Khoá ngoại kép chặn gắn chéo tổ chức trong database | migration, xem `docs/DATABASE_SCHEMA.md` 3.1 | `escalation.test.ts` → "không gán được vai trò của tổ chức khác, kể cả ghi thẳng vào database" |
+| 25 | Sổ chỉ ghi thêm; khoá hợp đồng đã xác nhận; khoảng bận do database tính | migration 5, 7, 8 | `db-guards.test.ts` → 8 ca, ví dụ "dòng hợp đồng đã xác nhận: sửa giá / xoá bị chặn (409)…", "N3 — hợp đồng đã xác nhận: không về nháp, không tăng giảm giá, tổng tiền phải khớp các dòng"; `escalation.test.ts` → "nhật ký không sửa, không xoá được" |
+| 26 | Không xoá dây chuyền | `prisma/schema.prisma:3` | `escalation.test.ts` → "không xoá được tổ chức còn dữ liệu (không có xoá dây chuyền)" |
+| 27 | Đường quản trị nền tảng: người không có tên trong `platform_admins` nhận 404 | `app.ts:71-74` | **Chưa có bài thử trong kho ở `bc9633a`** (tệp `platform.test.ts` đang viết, chưa lưu) |
+| 28 | Tải tệp: kiểm chữ ký đầu tệp, giới hạn dung lượng theo mục đích; đường đọc có hạn 10 phút | `modules/files/routes.ts` | **Chưa có bài thử trong kho ở `bc9633a`** (`files.test.ts` đang viết) |
+| 29 | Cửa gác bí mật cho bản web: quét `dist/` tìm tên/giá trị biến bí mật máy chủ, `postgresql://`, biến `VITE_*` lạ; có vi phạm thì build dừng | `apps/web/scripts/check-bundle-secrets.mjs` | `apps/web/scripts/check-bundle-secrets.test.ts` → 8 ca, gồm vế GIỮ "bản build thật của web sạch → exit 0" |
+| 30 | Log che header đăng nhập, cookie, mật khẩu, thẻ | `lib/logger.ts:7-17` | Không có bài thử |
 
-### 2. Cửa gác cách ly tổ chức (`apps/api/test/tenant-isolation.test.ts`)
+### 2. Cửa gác cách ly tổ chức (`apps/api/test/tenant-isolation.test.ts` + `test/gate.ts`)
+**Nó làm gì.** Lấy toàn bộ đường từ bảng đường của máy chủ. Dựng hai tổ chức A, B có đủ mọi loại tài nguyên. Chạy 9 phép:
 
-> Mục này mô tả bản cửa gác **đã lưu trong kho** (commit `f7b0805`). Lúc viết (≈15:35 UTC ngày 18/10/2026), thợ khác đang viết lại cửa gác thành `test/gate.ts` + `tenant-isolation.test.ts` mới để phủ cả đường bảng giá và lịch; bản mới chưa lưu vào kho. Số dòng dẫn chứng bên dưới là của bản đã lưu. Điều phối cập nhật mục này sau khi bản mới được nghiệm thu.
-
-**Nó làm gì.** Lấy **toàn bộ** đường API từ bảng đường của app (`tenant-isolation.test.ts:17-18`), nên đường mới thêm vào là tự vào diện kiểm. Dựng hai tổ chức A và B, thêm vào A một thành viên có vai trò rỗng (không quyền nào). Rồi gọi từng đường thuộc tổ chức A bằng bốn kiểu người:
-
-| Kiểu người | Phải bị | Dòng in ra | Lần chạy 18/10/2026 15:18 UTC |
-|---|---|---|---|
-| Chủ tổ chức B (người ngoài) | 404 | `[cửa gác] người ngoài bị chặn: N/10 đường` | 10/10 |
-| Thành viên A không có quyền | 403 | `[cửa gác] thiếu quyền bị chặn: N/10 đường` | 10/10 |
-| Không có thẻ | 401 | `[cửa gác] chưa đăng nhập bị chặn: N/12 đường` (10 đường tổ chức + 2 đường cần đăng nhập) | 12/12 |
-| Chủ tổ chức A (vế GIỮ) | không bị 401/403/404-tổ chức | `[cửa gác] chủ đi qua: N/10 đường` | 10/10 |
-
-Thêm hai ca: mẫu số phải khác 0 (có đường để kiểm), và thẻ giả bị 401.
-
-**Đã thử phá hai lần — cửa gác chuyển đỏ cả hai lần.**
-Điều phối phá lần đầu (ghi ở `docs/SO-LOI-DA-DO.md`, mục 2). Thợ tài liệu làm lại ngày 18/10/2026 trên **bản sao** của kho trong thư mục nháp (không sửa kho), kết quả:
-
-| Lần phá | Sửa gì trong bản sao | Kết quả in ra |
+| Phép | Kiểm gì | Lần chạy ≈16:45 UTC (bản trên máy, trước khi có đường tệp) |
 |---|---|---|
-| 1. Bỏ kiểm quyền | `http/middleware.ts:66` đổi thành `if (false && !permissions.has(required))` | **thiếu quyền bị chặn 0/10**; các dòng khác giữ 10/10, 12/12, 10/10 → 1 ca đỏ |
-| 2. Tra thành viên không theo tổ chức | `http/middleware.ts:44-45` đổi thành tìm tư cách thành viên chỉ theo người dùng (`findFirst({ where: { userId } })`) | **người ngoài bị chặn 0/10**; thiếu quyền cũng 0/10 → 2 ca đỏ |
+| scope | Mọi đường có `:orgId` phải khai phạm vi tổ chức | 60/60 |
+| outsider | Người của B gọi vào đường của A → 404 | 60/60 |
+| noPerms | Thành viên A không quyền → 403 | 60/60 |
+| unauth | Không đăng nhập → 401 | 62/62 |
+| crossId | Chủ B, trên đường của B, nhét mã tài nguyên của A vào đường → 404, dữ liệu A không đổi | 30/30 |
+| leak | Mọi đường xem của B không chứa giá trị nào của A | 25/25 |
+| refBase | Thân/tham số mẫu (toàn mã của B) phải chạy được | 20/20 |
+| crossRef | Thay **từng** trường mã trong thân/tham số lọc bằng mã của A và bằng mã bịa → hai phản hồi phải giống hệt (không lộ "A có bản ghi này") | **45/49 — ĐỎ**: 4 trường `staff[].membershipId` của hợp đồng chưa có mẫu tham chiếu chéo |
+| keep | Chủ A dùng thật: xem 200, thân rỗng 400, xoá 2xx | 60/60 |
 
-Vì sao lần 2 kéo luôn dòng "thiếu quyền" về 0/10: ở ca trước, người của tổ chức B lọt cửa và gọi được cả đường "cho nhân sự rời tổ chức" của tổ chức A, nên thành viên thiếu quyền đã bị cho rời; đến ca sau người này nhận 404 thay vì 403. Đây đúng là thiệt hại sẽ xảy ra trên máy thật nếu lỗi này lọt: **studio khác xoá được nhân sự của mình.**
+**Ở commit `bc9633a` cửa gác không chạy được**: ba đường tệp đã lưu vào kho nhưng chưa có dữ liệu mẫu cho `:fileId`, cửa gác dừng với lời "Cửa gác chưa có giá trị cho :fileId…" (lần chạy 16:54 UTC trên bản sao đúng commit). Nghĩa là **sự cách ly của mọi đường chưa được đo lại kể từ khi thêm đường tệp.** Cửa gác dừng chứ không bỏ qua là đúng luật; việc còn thiếu là dữ liệu mẫu.
 
-**Giới hạn của cửa gác (nó KHÔNG kiểm):**
-- Chỉ kiểm cửa vào tổ chức qua `:orgId`. Trường hợp đứng trong tổ chức A nhưng đưa mã bản ghi của tổ chức B (ví dụ `membershipId` của B) thì do từng hàm xử lý tự lọc theo tổ chức (ví dụ `modules/orgs/routes.ts:247-250`). **Chưa có bài thử tự động** cho kiểu này.
-- Gửi thân rỗng `{}`. Vế GIỮ chỉ chứng minh chủ **qua được cửa**, không chứng minh thao tác thành công (nhiều đường trả 400 vì thiếu dữ liệu).
-- Ca GIỮ chạy cuối và gọi cả đường "cho rời"; đổi thứ tự các ca có thể làm kết quả sai.
+**Bằng chứng cửa gác không mù** (`apps/api/test/gate-mutants.test.ts`): cài 8 kiểu lỗi vào bảng đường, cửa gác phải đỏ đúng phép. Lần chạy ≈16:45 UTC bắt cả 8, ví dụ:
 
-### 3. Phát hiện khi đọc mã (cần quyết, chưa sửa)
-| # | Phát hiện | Ở đâu | Hậu quả |
+| Đột biến | Phép đỏ | Số vi phạm in ra |
+|---|---|---|
+| 1. Tra vai trò chỉ theo id, quên lọc tổ chức | crossId | 1/30 |
+| 2. Đường dưới `/orgs/:orgId` khai phạm vi "auth" | máy chủ từ chối khởi động | — |
+| 3. Xử lý luôn trả 404 | keep | 1/60 |
+| 4. Danh sách quên lọc tổ chức | leak | 1/25 |
+| 5. Ném lỗi 500 khi thân rỗng | keep | — |
+| 6. Xem trước hợp đồng tra khách chỉ theo id | crossRef | 10/49 |
+| 7. Lọc hợp đồng theo khách mà quên điều kiện tổ chức | crossRef | 5/49 |
+| 8. Báo "thuộc tổ chức khác" khác với "không tồn tại" | crossRef | 5/49 |
+
+Ở `bc9633a`, 7 bài đột biến cũng đỏ vì cùng lý do thiếu mẫu `:fileId`, không phải vì cửa gác mù.
+
+**Lịch sử:** bản cửa gác đầu (4 phép, 10 đường) được phá thử 2 lần đều đỏ, nhưng thợ chấm độc lập vẫn tìm ra 3 kiểu lỗi nó không thấy (mã tổ chức khác trong thân và tham số lọc — lỗi T3). Từ đó có phép crossId, leak, refBase, crossRef và bài đột biến 6–8.
+
+**Cửa gác chưa kiểm:** đường `/platform/...` và `/public/...` (không thuộc tổ chức); nội dung tệp tải lên.
+
+### 3. Rủi ro đã biết, chưa sửa
+| # | Rủi ro | Ở đâu | Trạng thái |
 |---|---|---|---|
-| 1 | Đăng ký báo "Email này đã được đăng ký", trong khi đăng nhập cố ý không lộ email | `modules/auth/routes.ts:26` | Kẻ xấu dò được email nào là khách của hệ thống (bị giới hạn 10 lần/phút/IP) |
-| 2 | Thêm nhân sự bằng email: người được thêm **không cần đồng ý**; người có quyền mời dò được email nào đã đăng ký | `modules/orgs/routes.ts:198-201` | Một người có thể bị gắn vào tổ chức lạ; tổ chức đó thấy họ tên, email |
-| 3 | Vi phạm CHECK (sai công thức tiền…) và trigger chỉ ghi thêm thành lỗi 500 (trùng khoá và trùng lịch đã được đổi sang 409) | `http/middleware.ts:85-93` | Không lộ dữ liệu, nhưng người dùng không biết vì sao bị từ chối; log đầy "lỗi không lường trước" |
-| 4 | Đăng nhập, đăng nhập sai, đăng xuất **không** ghi nhật ký | `modules/auth/routes.ts:47-94` | Không truy được ai đăng nhập lúc nào khi có sự cố |
-| 5 | Đếm giới hạn tốc độ lưu trong bộ nhớ máy chủ | `app.ts:31-37` | Chạy nhiều máy chủ hoặc khởi động lại thì bộ đếm tách/mất |
-| 6 | Đổi refresh token gồm nhiều bước không chung một giao dịch | `modules/auth/service.ts:61-73` | Máy chủ sập giữa chừng thì người dùng phải đăng nhập lại (không lộ gì) |
-| 7 | Khoá chống gửi trùng không bao giờ bị dọn | bảng `idempotency_keys` | Bảng lớn dần theo thời gian |
+| 1 | Đăng ký báo "Email này đã được đăng ký" → dò được email có thật | `modules/auth/routes.ts:31` | Chủ chấp nhận rủi ro (biên bản mốc 2, L8), giới hạn 10 lần/phút/IP |
+| 2 | Đổi thẻ thành công không ghi nhật ký | `modules/auth/routes.ts:94-104` | Còn lại từ L11 |
+| 3 | Đăng xuất không huỷ được thẻ truy cập đang cầm | thiết kế | Tối đa 15 phút |
+| 4 | Bộ đếm giới hạn tốc độ nằm trong bộ nhớ từng máy chủ | `app.ts:49-55` | Nhiều máy chủ thì bộ đếm tách |
+| 5 | Lời của trigger database trả thẳng cho người dùng (có thể lộ số tổng tiền nội bộ) | `http/middleware.ts:157-158` | Chấp nhận được trong một tổ chức; cần xem lại khi có đường công khai |
+| 6 | Máy chủ chết sau khi ghi và trước khi lưu kết quả chống gửi trùng → gửi lại tạo bản thứ hai | `app.ts:155-156` | Đã ghi trong mã |
+| 7 | Cấu hình kho tệp đọc riêng ngoài `env.ts`: chạy thật mà thiếu cấu hình thì máy chủ **vẫn khởi động**, chỉ lỗi khi có người tải tệp đầu tiên | `lib/storage/config.ts:9-10`, `:61-66` | Trái luật "thiếu biến thì không khởi động" |
+| 8 | Thêm nhân sự bằng email không cần người được thêm đồng ý | `modules/orgs/routes.ts` (đường POST members) | Chưa quyết |
 
 ### 4. Những gì CHƯA có
 | Chưa có | Khi nào cần |
 |---|---|
-| Refresh token trong cookie httpOnly (Secure, SameSite) + chống CSRF | **Trước khi** web quản trị dùng thật. Hiện thẻ gửi trong thân JSON, CORS `credentials: false` (`app.ts:28`) |
-| RLS (luật lọc theo tổ chức đặt trong PostgreSQL) | Xem `docs/ARCHITECTURE.md`, quyết định 8 |
-| Xác thực hai lớp (2FA) | Ít nhất cho chủ tài khoản, trước khi bán cho studio khác |
+| RLS (luật lọc theo tổ chức trong PostgreSQL) | Xem `docs/ARCHITECTURE.md` quyết định 9 |
+| Xác thực hai lớp | Ít nhất cho chủ tài khoản và quản trị nền tảng, trước khi bán |
 | Quên mật khẩu, đổi mật khẩu, xác minh email | Trước khi có người dùng ngoài nhóm thử |
-| Xuất / xoá dữ liệu cá nhân theo yêu cầu khách | Cần người hiểu luật Việt Nam về bảo vệ dữ liệu cá nhân xác nhận phạm vi. Lưu ý: nhật ký chặn xoá ở database, phải thiết kế cách ẩn danh hoá |
-| Quét bí mật trong bản đóng gói web | Khi có web (chưa có web) |
-| Quét bí mật trong kho mã, quét thư viện có lỗ hổng (`pnpm audit`) | Chưa chạy lần nào |
-| Thu hồi thẻ truy cập ngay khi đăng xuất | Hiện còn dùng được tối đa 15 phút sau đăng xuất |
-| Bài thử ghi chéo tổ chức cho bảng giá, hợp đồng, lịch | Khi hai module đó xong |
-| Kiểm thử xâm nhập độc lập | Trước khi bán |
+| Xuất / xoá dữ liệu cá nhân theo yêu cầu | Cần người hiểu luật Việt Nam về dữ liệu cá nhân xác nhận phạm vi; nhật ký và sổ tiền chặn xoá ở database, phải thiết kế ẩn danh hoá |
+| Quét thư viện có lỗ hổng (`pnpm audit`) và quét bí mật trong lịch sử git | Chưa thấy trong kho |
+| Kiểm thử xâm nhập độc lập trên máy thật | Trước khi bán |
 | Sao lưu và diễn tập khôi phục | Trước khi có dữ liệu thật |
-| Giám sát, cảnh báo khi có lỗi 500 hoặc phát hiện thẻ bị dùng lại | Khi lên máy thật |
-| Giới hạn số tổ chức một người được tạo | Trước khi mở đăng ký công khai |
+| Giám sát, cảnh báo khi có lỗi 500 hay phát hiện dùng lại thẻ | Khi lên máy thật |
+| Bài thử cho quản trị nền tảng, tệp, thu tiền, hồ sơ thương hiệu | Đang viết, chưa lưu kho |

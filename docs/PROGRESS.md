@@ -1,18 +1,19 @@
 # Tiến độ — Makeup Pro
 
-Cập nhật: 18/10/2026, khoảng 15:40 UTC (22:40 giờ Việt Nam). Người cập nhật: AI (thợ tài liệu). Điều phối sửa tệp này mỗi khi một mốc đổi trạng thái.
+Cập nhật: 18/10/2026, ≈17:05 UTC (00:05 ngày 19/10 giờ Việt Nam). **Đã đối chiếu với commit `634d6a3`.** Nguồn: kho, `docs/BAN-GIAO-PHIEN.md`, biên bản nghiệm thu trong `docs/nghiem-thu/`. Điều phối sửa tệp này mỗi khi một mốc đổi trạng thái.
 
 ---
 
 ## Phần CỦA NGHỀ — studio nào cũng dùng được
 
-### Cách ghi tiến độ cho trung thực
+### Ghi tiến độ cho trung thực
 | Luật | Vì sao |
 |---|---|
-| Chỉ dùng 4 trạng thái: **chưa bắt đầu / đang dựng / xong phần làm, chờ nghiệm thu / xong** | "Gần xong", "90%" không đo được |
-| "Xong" chỉ khi có **người khác** nghiệm thu (không phải người làm tự chấm) | Người làm luôn thấy việc mình ổn |
-| Mỗi dòng "xong" chỉ ra được bằng chứng: tệp, bài thử, commit | Không có bằng chứng thì coi như chưa |
-| Cấu hình thiếu ghi rõ **ai phải cấp** | Việc kẹt vì thiếu khoá thường bị quên đến phút cuối |
+| Chỉ dùng: **chưa bắt đầu / đang dựng / xong phần làm, chờ nghiệm thu / đạt có điều kiện / xong** | "Gần xong", "90%" không đo được |
+| "Xong" chỉ khi **người khác** nghiệm thu | Người làm luôn thấy việc mình ổn |
+| Mỗi dòng chỉ ra được bằng chứng: tệp, bài thử, biên bản, commit | Không có bằng chứng thì coi như chưa |
+| Bản lưu "WIP" là bản chụp việc dở, **không** phải đã xong | Lịch sử kho có nhiều bản WIP để không mất việc |
+| Cấu hình thiếu ghi rõ ai phải cấp | Việc kẹt vì thiếu khoá hay bị quên đến phút cuối |
 
 ---
 
@@ -22,53 +23,54 @@ Cập nhật: 18/10/2026, khoảng 15:40 UTC (22:40 giờ Việt Nam). Người 
 | Mốc | Nội dung | Trạng thái | Bằng chứng |
 |---|---|---|---|
 | 0 | Khảo sát kho cũ, quyết định xây mới | **Xong** | `docs/PROJECT_AUDIT.md` |
-| 1 | Bộ tài liệu (PRD, kiến trúc, dữ liệu, API, an ninh, triển khai, kiểm thử, tiến độ) | **Đang viết** | 8 tệp trong `docs/`; các mục bảng giá / hợp đồng / lịch chờ điều phối cập nhật |
-| 2 | Nền móng: monorepo, đăng nhập, tổ chức, phân quyền, nhật ký, cấu trúc dữ liệu | **Xong phần làm, đang nghiệm thu độc lập** | Commit `608f3dc`, `7572db8`, `a83d187`, `0c55493`, `af43d6e`, `af80a10`; bài thử ở `docs/TEST_PLAN.md` mục 3 |
-| 3 | R&D giao diện | **Đang chạy** | Vòng 1 xong: 3 phương án, ảnh 3 khổ (`docs/rnd/BAO-CAO-RND-01.md`, commit `462c1f0`). Lịch: anh Chiến chọn hiện cả 3 chế độ, mặc định C. Bảng giá: chưa chọn, đang vòng 2 (Bảng giá v2 + Lập hợp đồng) |
-| 4 | Lát 1: Bảng giá + Hợp đồng + Lịch makeup | **Đang dựng** | Mã và bài thử đang viết, chưa lưu vào kho (`modules/catalog`, `modules/contracts`, `modules/schedule`) |
-| 5 | Nghiệm thu lát 1 | **Chưa bắt đầu** | — |
+| 1 | Bộ tài liệu | **Đang cập nhật** (lỗi N4) | 8 tệp trong `docs/` |
+| 2 | Nền móng | **Đạt có điều kiện** (thợ chấm độc lập). Điều kiện T3 đã sửa; N4 đang làm; chờ chấm lại | `docs/nghiem-thu/BIEN-BAN-NGHIEM-THU-MOC-2.md`, `BIEN-BAN-NGHIEM-THU-LAT-1.md` phần 1 |
+| 3 | R&D giao diện | Vòng 1–2 **xong**, anh chọn phương án C; bản vẽ thông số C đã ký. Vòng 3 (mẫu chào mừng, mẫu Feedback, đào tạo) **đang chạy** | `docs/rnd/BAN-VE-C.md`, `docs/rnd/BAO-CAO-RND-02.md`, `docs/rnd/v3-*` |
+| 4 | Lát 1 — máy chủ (bảng giá, khách + lịch, hợp đồng, nhân sự & tiền công) | **Đạt có điều kiện**; T1, T2, T3, N1–N3, G1–G5 đã sửa; chờ chấm lại | `BIEN-BAN-NGHIEM-THU-LAT-1.md` phần 2 |
+| 4 | Lát 1 — web | **Đang dựng.** W0, W1, W2, W3 có mã (bản WIP, chưa nghiệm thu); W4 Bảng giá, W5 Hợp đồng, W6 Lịch, W7 kiểm thử 3 khổ **chưa bắt đầu** | `apps/web/`, `docs/BAN-GIAO-PHIEN.md` |
+| 5 | Nghiệm thu lát 1 (cả web) | **Chưa bắt đầu** | — |
+| 6 | Trang quản trị nền tảng | Máy chủ **đang dựng** (8 đường trong kho, bài thử chưa lưu); giao diện chưa bắt đầu | `apps/api/src/modules/platform/` |
+| 7–9 | Đào tạo: R&D → máy chủ → giao diện | R&D **đang chạy** | `docs/SO-Y-MUON.md` |
 
-### 2. Module theo bản yêu cầu
-Danh sách module dựng lại từ kho (xem lưu ý ở `docs/PRD.md` mục 3: chưa đối chiếu được với bản yêu cầu gốc).
-
-| # | Module | Dữ liệu (database) | Máy chủ (API) | Giao diện | Trạng thái chung |
+### 2. Module
+| # | Module | Dữ liệu | Máy chủ | Giao diện | Trạng thái chung |
 |---|---|---|---|---|---|
-| 1 | Tổ chức, nhân sự, vai trò, đăng nhập | Có | Có, 16 đường | Chưa | Xong phần máy chủ, đang nghiệm thu |
-| 2 | Nhật ký thay đổi | Có | Có (xem nhật ký) | Chưa | Xong phần máy chủ, đang nghiệm thu. Đăng nhập/đăng xuất chưa ghi nhật ký |
-| 3 | Bảng giá (gồm nhân vật, dịch vụ phụ, phụ phí, địa điểm, phí di chuyển) | Có | Đang viết | R&D vòng 2 | **Đang dựng** |
-| 4 | Khách hàng | Có | Đang viết | Chưa | **Đang dựng** |
-| 5 | Hợp đồng | Có | Đang viết | R&D vòng 2 | **Đang dựng** |
-| 6 | Lịch makeup | Có | Đang viết | Đã chọn hướng (3 chế độ, mặc định C), chưa có mã | **Đang dựng** |
-| — | Hồ sơ thợ, bậc thợ, tiền công theo gói | Migration thứ tư đang viết | Đang viết (`modules/staff`) | Chưa | **Đang dựng**, chưa lưu vào kho; chưa có trong PRD — điều phối xác nhận thuộc module nào |
-| 7 | Tài chính | Chưa | Chưa | Chưa | Chưa bắt đầu |
-| 8 | Website giới thiệu | Chỉ có cờ "công khai" trên dịch vụ/gói | Chưa | Chưa | Chưa bắt đầu |
-| 9 | Đào tạo | Chỉ có loại lịch "buổi học" và vai trò giảng viên | Chưa | Chưa | Chưa bắt đầu |
-| 10 | Cổng học viên | Chưa | Chưa | Chưa | Chưa bắt đầu |
-| 11 | File | Chưa | Chưa | Chưa | Chưa bắt đầu |
-| 12 | Thông báo | Chưa | Chưa | Chưa | Chưa bắt đầu |
-| 13 | Thuê bao | Chưa | Chưa | Chưa | Chưa bắt đầu |
-| — | App iPhone | — | Dùng chung API | Chưa | Chưa bắt đầu |
-| — | Web quản trị (khung chung) | — | — | Đã chọn khung điều hướng (thanh bên trái trên máy tính/máy tính bảng, thanh dưới trên điện thoại), chưa có mã | Chưa bắt đầu phần mã |
+| 1 | Tổ chức, nhân sự, vai trò, đăng nhập | Có | 16 đường | Đăng nhập/đăng ký/tạo tổ chức + khung (WIP) | Máy chủ đạt có điều kiện; web đang dựng |
+| 2 | Nhật ký thay đổi | Có | Có (xem nhật ký) | Chưa | Máy chủ đạt có điều kiện; đổi thẻ chưa ghi nhật ký |
+| 3 | Bảng giá | Có | 23 đường | W4 chưa bắt đầu | Máy chủ đạt có điều kiện |
+| 4 | Khách hàng | Có | 4 đường | Chưa | Máy chủ đạt có điều kiện |
+| 5 | Hợp đồng (gồm thợ phụ trách, cảnh báo trùng giờ) | Có | 8 đường | W5 chưa bắt đầu | Máy chủ đạt có điều kiện; phần thợ phụ trách **chưa nghiệm thu** |
+| 6 | Lịch makeup | Có | 5 đường | W6 chưa bắt đầu | Máy chủ đạt có điều kiện |
+| 7 | Nhân sự & tiền công | Có | 6 + 4 đường | Chưa | Máy chủ đạt có điều kiện; mức rảnh của thợ **chưa nghiệm thu** |
+| 8 | Thu tiền + báo cáo doanh thu | Có (đợt thanh toán, phiếu thu) | 0 đường trong kho; 6 đường đang viết | Chưa | **Đang dựng** |
+| 9 | Lưu trữ tệp | Có | 3 đường trong kho, bài thử đang viết; cửa gác chưa có mẫu | Chưa | **Đang dựng** |
+| 10 | Website giới thiệu | Có (hồ sơ thương hiệu) | 0 đường trong kho; 5 đường đang viết | Chưa | **Đang dựng** |
+| 11 | Đào tạo + cổng học viên | Chưa (chỉ có loại lịch "buổi học", vai trò giảng viên) | Chưa | R&D vòng 3 | Chưa bắt đầu phần mã |
+| 12 | Thông báo | Chưa | Chưa | Chưa | Chưa bắt đầu, chưa xếp mốc |
+| 13 | Thuê bao + quản trị nền tảng | Có (gói, thuê bao, quản trị) | 8 đường | Chưa | Đang dựng (mốc 6) |
+| — | App iPhone | — | Dùng chung API | Chưa | Chưa bắt đầu, chưa xếp mốc |
+
+Số đường lấy từ bảng đường ở commit `634d6a3` (77 đường); chi tiết `docs/API_SPEC.md`.
 
 ### 3. Cấu hình còn thiếu
 | Thiếu | Cần cho | Ai cấp | Trạng thái |
 |---|---|---|---|
-| Supabase riêng cho Makeup Pro | Database thật, lưu file | Anh Chiến | Chưa có |
-| Railway riêng cho Makeup Pro | Chạy API thật | Anh Chiến | Chưa có |
-| Vercel | Chạy web quản trị, website giới thiệu | Anh Chiến | Chưa có (cũng chưa có web) |
-| Tên miền | Web, tên miền con theo từng studio | Anh Chiến | Chưa có |
-| Khoá Google Maps | Tính km tự động cho phí di chuyển | Anh Chiến | Chưa có; lát 1 nhập km tay |
-| Cổng thanh toán | Module tài chính, thuê bao | Anh Chiến | Chưa có |
+| Supabase riêng | Database thật, kho tệp | Anh Chiến | Chưa có |
+| Railway riêng | Chạy API thật | Anh Chiến | Chưa có |
+| Vercel | Chạy web | Anh Chiến | Chưa có; `vercel.json` đang trỏ địa chỉ giả `.invalid` cho tới khi có Railway |
+| Tên miền | Web + API cùng tên miền | Anh Chiến | Chưa có |
+| Khoá Google Maps | Tính km tự động | Anh Chiến | Chưa có; nhập km tay |
+| Cổng thanh toán | Thu tiền online, thuê bao | Anh Chiến | Chưa có |
 | Tài khoản Apple Developer | App iPhone | Anh Chiến | Chưa có |
-| Quyền đẩy mã lên GitHub | Lưu mã lên kho `SSSTUDIO96/a` trên GitHub | Anh Chiến (cài Claude GitHub App) | Chưa có. Anh đã cho phép, nhưng GitHub vẫn chặn vì chưa cài app (`docs/SO-Y-MUON.md`). Mã hiện chỉ lưu trong kho trên máy đám mây |
-| Hồ sơ làm việc của anh Chiến (`H:\Code\HO-SO-LAM-VIEC-CHIEN.md`) | Luật làm việc chung | Anh Chiến | Phiên đám mây không mở được ổ H:; đề xuất chép vào kho (`docs/SO-Y-MUON.md`) |
+| Quyền đẩy mã lên GitHub | Lưu kho `SSSTUDIO96/a` | Anh Chiến | **Đã có**: anh cài Claude GitHub App cho kho `a`, đã đẩy nhánh `claude/nen-mong-makeup` (17:10 theo `docs/NHAT-KY-QUYET-DINH-THAY.md`) |
+| Hồ sơ làm việc trên ổ H:, thư mục phông "auto ss" trên máy anh | Luật làm việc chung; phông viết tay cho mẫu chào mừng | Anh Chiến | Phiên đám mây không đọc được ổ H: |
 
 ### 4. Cần anh Chiến quyết
 | Việc | Nguồn |
 |---|---|
-| Phân quyền vai trò mẫu: thợ chính có cần thấy lịch cả đội không | `docs/NHAT-KY-QUYET-DINH-THAY.md` dòng 15:16 |
-| Chọn phương án giao diện Bảng giá (sau R&D vòng 2) | `docs/NHAT-KY-QUYET-DINH-THAY.md` dòng 15:24 |
-| Có chặn trùng lịch của một thợ giữa hai tổ chức khác nhau không | `docs/DATABASE_SCHEMA.md` mục 3.5 |
-| Thứ tự các lát sau lát 1 | `docs/PRD.md` mục 4 |
-| Có làm quên mật khẩu, 2FA, xuất/xoá dữ liệu cá nhân trước khi bán cho studio khác không | `docs/SECURITY.md` mục 4 |
+| Phân quyền vai trò mẫu: thợ chính có cần thấy lịch cả đội không | `docs/NHAT-KY-QUYET-DINH-THAY.md` 15:16 |
+| Chấp nhận hay sửa: đăng ký báo "email đã được đăng ký" (L8) | `docs/SECURITY.md` mục 3 |
+| Có chặn trùng lịch của một thợ giữa hai tổ chức không | `docs/DATABASE_SCHEMA.md` mục 3.5 |
+| 6 trường mới R&D đề xuất | `docs/rnd/BAN-VE-C.md` mục 8 |
+| Có làm quên mật khẩu, 2FA, xuất/xoá dữ liệu cá nhân trước khi bán | `docs/SECURITY.md` mục 4 |
 | Đối chiếu danh sách 13 module với bản yêu cầu gốc | `docs/PRD.md` mục 3 |

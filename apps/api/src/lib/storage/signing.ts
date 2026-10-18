@@ -18,8 +18,9 @@ export function verifyToken(secret: string, token: string, now: Date = new Date(
   const parts = token.split('.');
   if (parts.length !== 2 || !parts[0] || !parts[1]) return { ok: false, reason: 'MALFORMED' };
   const [payload, sig] = parts as [string, string];
-  const given = Buffer.from(sig, 'base64url');
-  const expected = mac(secret, payload);
+  // So chuỗi chữ ký ở dạng mã hoá chuẩn: base64url có bit thừa ở ký tự cuối, giải mã rồi so sẽ nhận cả bản bị sửa bit thừa.
+  const given = Buffer.from(sig, 'utf8');
+  const expected = Buffer.from(mac(secret, payload).toString('base64url'), 'utf8');
   if (given.length !== expected.length || !timingSafeEqual(given, expected)) return { ok: false, reason: 'BAD_SIGNATURE' };
   const decoded = Buffer.from(payload, 'base64url').toString('utf8');
   const sep = decoded.lastIndexOf('|');

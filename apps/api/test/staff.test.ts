@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { deflateSync } from 'node:zlib';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import request from 'supertest';
 import { addMember, bearer, createOrg, makeApp, makeDeps, registerUser, type App, type TestUser } from './helpers';
@@ -39,6 +40,49 @@ async function makeTier(orgId: string, owner: TestUser, name: string, sortOrder?
   if (res.status !== 201) throw new Error(`Tạo bậc thất bại ${res.status}: ${JSON.stringify(res.body)}`);
   return res.body.id as string;
 }
+
+// Ảnh PNG thật nhỏ (1×1) tự dựng trong bài thử, đủ chữ ký đầu tệp + IHDR + IDAT + IEND.
+function tinyPng(): Buffer {
+  const crcTable = Array.from({ length: 256 }, (_, n) => {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+    return c >>> 0;
+  });
+  const crc = (b: Buffer) => {
+    let c = 0xffffffff;
+    for (const x of b) c = (crcTable[(c ^ x) & 0xff] ?? 0) ^ (c >>> 8);
+    return (c ^ 0xffffffff) >>> 0;
+  };
+  const chunk = (type: string, data: Buffer) => {
+    const len = Buffer.alloc(4);
+    len.writeUInt32BE(data.length);
+    const body = Buffer.concat([Buffer.from(type, 'latin1'), data]);
+    const sum = Buffer.alloc(4);
+    sum.writeUInt32BE(crc(body));
+    return Buffer.concat([len, body, sum]);
+  };
+  const ihdr = Buffer.from([0, 0, 0, 1, 0, 0, 0, 1, 8, 6, 0, 0, 0]);
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    chunk('IHDR', ihdr),
+    chunk('IDAT', deflateSync(Buffer.from([0, 255, 0, 0, 255]))),
+    chunk('IEND', Buffer.alloc(0)),
+  ]);
+}
+
+async function uploadAvatar(orgId: string, owner: TestUser, purpose = 'STAFF_AVATAR') {
+  const res = await request(app)
+    .post(`/api/v1/orgs/${orgId}/files`)
+    .query({ purpose, name: 'anh.png' })
+    .set(bearer(owner))
+    .set('Idempotency-Key', randomUUID())
+    .set('Content-Type', 'application/octet-stream')
+    .send(tinyPng());
+  if (res.status !== 201) throw new Error(`Tải ảnh thất bại ${res.status}: ${JSON.stringify(res.body)}`);
+  return res.body.id as string;
+}
+
+const SIGNED = expect.stringMatching(/\/api\/v1\/files\/raw\/[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/);
 
 function patchStaff(orgId: string, user: TestUser, membershipId: string, body: Record<string, unknown>) {
   return request(app).patch(`/api/v1/orgs/${orgId}/staff/${membershipId}`).set(bearer(user)).send(body);
@@ -132,15 +176,16 @@ describe('hồ sơ thợ', () => {
     });
   });
 
-  it('sửa hồ sơ: chuẩn hoá số, ảnh https, gán bậc, bỏ bậc; ghi nhật ký trước → sau', async () => {
+  it('sửa hồ sơ: chuẩn hoá số, ảnh đại diện từ tệp đã tải (URL ký có hạn), gán bậc, bỏ bậc; ghi nhật ký trước → sau', async () => {
     const org = await createOrg(app, ownerA, 'ho-so');
     const tho = await registerUser(app, 'tho-ho-so');
     const m = await addMember(app, ownerA, org, tho, ['artist']);
     const tier = await makeTier(org, ownerA, 'Bậc 1');
+    const avatar = await uploadAvatar(org, ownerA);
     const res = await patchStaff(org, ownerA, m, {
       displayName: 'Hoa Makeup',
       phone: '+84 912 345 678',
-      avatarUrl: 'https://cdn.example.vn/a.jpg',
+      avatarFileId: avatar,
       tierId: tier,
     });
     expect(res.status).toBe(200);
@@ -148,7 +193,7 @@ describe('hồ sơ thợ', () => {
       displayName: 'Hoa Makeup',
       initials: 'HM',
       phone: '0912345678',
-      avatarUrl: 'https://cdn.example.vn/a.jpg',
+      avatarUrl: SIGNED,
       tier: { id: tier, name: 'Bậc 1' },
       hasProfile: true,
     });
@@ -173,6 +218,7 @@ describe('hồ sơ thợ', () => {
   });
 
   it('dữ liệu sai → 400: ảnh http, số điện thoại sai, thân rỗng', async () => {
+    expect((await patchStaff(orgA, ownerA, mArtist, { avatarUrl: 'https://x.vn/a.jpg' })).status).toBe(400);
     expect((await patchStaff(orgA, ownerA, mArtist, { avatarUrl: 'http://x.vn/a.jpg' })).status).toBe(400);
     expect((await patchStaff(orgA, ownerA, mArtist, { avatarUrl: 'không phải url' })).status).toBe(400);
     expect((await patchStaff(orgA, ownerA, mArtist, { phone: '123' })).status).toBe(400);
@@ -208,7 +254,7 @@ describe('tiền công theo bậc của một gói', () => {
     tierPhu = await makeTier(orgA, ownerA, 'Thợ phụ', 2);
     tierChinh = await makeTier(orgA, ownerA, 'Thợ chính', 1);
     tierTrong = await makeTier(orgA, ownerA, 'Bậc chưa có ai', 3);
-    await patchStaff(orgA, ownerA, mArtist, { tierId: tierChinh, displayName: 'Lan Anh', avatarUrl: 'https://cdn.example.vn/lan.jpg' }).expect(200);
+    await patchStaff(orgA, ownerA, mArtist, { tierId: tierChinh, displayName: 'Lan Anh', avatarFileId: await uploadAvatar(orgA, ownerA) }).expect(200);
     await patchStaff(orgA, ownerA, mOwnerA, { tierId: tierChinh, displayName: 'Bảo Ngọc' }).expect(200);
     await patchStaff(orgA, ownerA, mArtist2, { tierId: tierPhu }).expect(200);
     pkg = await makePackage(orgA);
@@ -223,7 +269,7 @@ describe('tiền công theo bậc của một gói', () => {
     expect(chinh.amount).toBeNull();
     expect(chinh.staff).toEqual([
       { membershipId: mOwnerA, displayName: 'Bảo Ngọc', avatarUrl: null, initials: 'BN' },
-      { membershipId: mArtist, displayName: 'Lan Anh', avatarUrl: 'https://cdn.example.vn/lan.jpg', initials: 'LA' },
+      { membershipId: mArtist, displayName: 'Lan Anh', avatarUrl: SIGNED, initials: 'LA' },
     ]);
     expect(phu.staff.map((s: { membershipId: string }) => s.membershipId)).toEqual([mArtist2]);
     expect(trong.staff).toEqual([]);
@@ -640,5 +686,37 @@ describe('mức rảnh của thợ (trùng giờ / cùng ngày / rảnh)', () =>
     const tho = await registerUser(app, 'tho-xem-ranh');
     await addMember(app, owner, org, tho, ['artist']);
     expect((await availability(tho, org, { startsAt: vn(D, '10:30'), endsAt: vn(D, '11:30') })).status).toBe(200);
+  });
+});
+
+describe('ảnh đại diện thợ từ kho tệp', () => {
+  it('BẮT: tệp không phải STAFF_AVATAR, tệp đã xoá, tệp của tổ chức khác, mã bịa → 400 cùng một lời báo', async () => {
+    const album = await uploadAvatar(orgA, ownerA, 'ALBUM_IMAGE');
+    const deleted = await uploadAvatar(orgA, ownerA);
+    await request(app).delete(`/api/v1/orgs/${orgA}/files/${deleted}`).set(bearer(ownerA)).expect(204);
+    const ofB = await uploadAvatar(orgB, ownerB);
+    const messages = new Set<string>();
+    for (const id of [album, deleted, ofB, randomUUID()]) {
+      const res = await patchStaff(orgA, ownerA, mArtist2, { avatarFileId: id });
+      expect(res.status).toBe(400);
+      messages.add(res.body.error.message);
+    }
+    expect(messages.size).toBe(1);
+  });
+
+  it('GIỮ: gắn ảnh → danh sách thợ trả URL ký có hạn, đọc được ảnh; xoá tệp → avatarUrl null; bỏ ảnh bằng null', async () => {
+    const avatar = await uploadAvatar(orgA, ownerA);
+    await patchStaff(orgA, ownerA, mArtist2, { avatarFileId: avatar }).expect(200);
+    const list = await request(app).get(`/api/v1/orgs/${orgA}/staff`).set(bearer(artistA)).expect(200);
+    const row = list.body.items.find((s: { membershipId: string }) => s.membershipId === mArtist2);
+    expect(row.avatarUrl).toEqual(SIGNED);
+    const stored = await deps.db.staffProfile.findUniqueOrThrow({ where: { membershipId: mArtist2 } });
+    expect(stored.avatarUrl).toBe(`file:${avatar}`);
+    await request(app).delete(`/api/v1/orgs/${orgA}/files/${avatar}`).set(bearer(ownerA)).expect(204);
+    const after = await request(app).get(`/api/v1/orgs/${orgA}/staff`).set(bearer(ownerA)).expect(200);
+    expect(after.body.items.find((s: { membershipId: string }) => s.membershipId === mArtist2).avatarUrl).toBeNull();
+    const cleared = await patchStaff(orgA, ownerA, mArtist2, { avatarFileId: null });
+    expect(cleared.status).toBe(200);
+    expect(cleared.body.avatarUrl).toBeNull();
   });
 });

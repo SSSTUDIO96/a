@@ -1,10 +1,8 @@
 # Triển khai — Makeup Pro
 
-Ngày viết: 18/10/2026.
+Cập nhật: 18/10/2026. **Đã đối chiếu với commit `634d6a3`** (17:00 UTC; mã giống hệt `bc9633a`, hai commit sau chỉ thêm sổ ghi).
 
-> **Mốc dẫn chứng:** mọi `tệp:dòng` trong tài liệu này đúng với commit `f7b0805` (15:29 UTC ngày 18/10/2026). Lúc viết, các thợ khác đang sửa nhiều tệp lõi (chưa lưu vào kho, kể cả sửa theo biên bản nghiệm thu mốc 2); khi các sửa đó được lưu, số dòng có thể lệch và điều phối cần dò lại.
-
-> **Chưa có môi trường thật nào.** Chưa tạo Supabase, Railway, Vercel cho Makeup Pro. Mọi bước dưới đây mới chạy trên máy đám mây (PostgreSQL 16.15 cài trong máy), **chưa chạy trên Supabase/Railway/Vercel**. Cột "Đã thử" ghi rõ từng bước.
+> **Chưa có môi trường thật nào.** Chưa tạo Supabase, Railway, Vercel cho Makeup Pro. Mọi bước dưới đây mới chạy trên máy đám mây (PostgreSQL 16 cài trong máy). Cột "Đã thử" ghi rõ từng bước.
 
 ---
 
@@ -13,78 +11,93 @@ Ngày viết: 18/10/2026.
 ### 1. Vài từ phải biết
 | Từ | Nghĩa bằng lời thường |
 |---|---|
-| Biến môi trường | Các thông số đặt cho máy chủ lúc chạy (địa chỉ database, khoá bí mật…). Không ghi vào mã, không đưa lên kho |
-| Supabase | Dịch vụ thuê PostgreSQL + kho lưu file |
-| Railway | Dịch vụ thuê máy chạy API |
-| Vercel | Dịch vụ thuê chỗ chạy trang web |
-| Pooler | "Tổng đài" đứng trước database, gom nhiều kết nối nhỏ thành ít kết nối. Lệnh đổi cấu trúc database không đi qua tổng đài được, phải gọi thẳng |
-| Extension | Phần mở rộng của PostgreSQL. Ở đây cần `btree_gist` để chặn trùng lịch |
+| Biến môi trường | Thông số đặt cho máy chủ lúc chạy (địa chỉ database, khoá bí mật…). Không ghi vào mã, không đưa lên kho |
+| Supabase / Railway / Vercel | Thuê database + kho tệp / thuê máy chạy API / thuê chỗ chạy trang web |
+| Pooler | "Tổng đài" đứng trước database, gom nhiều kết nối. Lệnh đổi cấu trúc database phải gọi thẳng, không qua tổng đài |
+| Extension | Phần mở rộng của PostgreSQL; ở đây cần `btree_gist` để chặn trùng lịch và chặn bậc phí chồng nhau |
+| Chuyển tiếp (rewrite) | Vercel nhận yêu cầu `/api/...` rồi chuyển sang máy chủ Railway; trình duyệt chỉ thấy một tên miền |
+| Proxy | Máy đứng giữa người dùng và máy chủ; mỗi tầng proxy thêm một địa chỉ IP vào header |
 
 ### 2. Luật triển khai
 | # | Luật | Vì sao |
 |---|---|---|
-| 1 | Bí mật chỉ nằm ở trang cài đặt của dịch vụ (Railway/Supabase), không nằm trong kho, không gửi qua chat | Kho bị lộ không kéo theo lộ database |
-| 2 | Thiếu biến bắt buộc thì máy chủ phải **từ chối chạy**, không tự lấy giá trị mặc định | Chạy với khoá rỗng còn nguy hiểm hơn không chạy |
-| 3 | Đổi cấu trúc database bằng lệnh áp migration (`migrate deploy`), không bao giờ dùng lệnh xoá trắng trên máy thật | Mất dữ liệu khách |
-| 4 | Thứ tự: database sẵn sàng → áp migration → bật máy chủ mới | Máy chủ mới chạy trên database cũ sẽ lỗi |
-| 5 | "Xong" = bản build chạy thật trả lời được, không phải "bài thử qua" | Xem `docs/SO-LOI-DA-DO.md` lỗi 1 |
-| 6 | Máy thật và máy thử dùng **database khác nhau** | Bài thử tạo dữ liệu rác |
+| 1 | Bí mật chỉ nằm ở trang cài đặt của dịch vụ, không nằm trong kho, không gửi qua chat | Kho lộ không kéo theo lộ database |
+| 2 | Thiếu biến bắt buộc thì máy chủ **từ chối chạy** | Chạy với khoá rỗng nguy hiểm hơn không chạy |
+| 3 | Đổi cấu trúc database bằng `migrate deploy`, không bao giờ xoá trắng trên máy thật | Mất dữ liệu khách |
+| 4 | Thứ tự: database sẵn sàng → áp migration → đồng bộ vai trò → bật máy chủ mới | Máy chủ mới trên database cũ sẽ lỗi |
+| 5 | "Xong" = bản build chạy thật trả lời được, không phải "bài thử qua" | `docs/SO-LOI-DA-DO.md` mục 1 |
+| 6 | Máy thật và máy thử dùng database khác nhau | Bài thử tạo dữ liệu rác |
+| 7 | Bản web phải qua cửa gác bí mật trước khi đưa lên | Mọi thứ trong bản web ai mở trang cũng đọc được |
 
 ---
 
 ## Phần CỦA RIÊNG DỰ ÁN NÀY
 
-### 1. Biến môi trường
-Đọc và kiểm ở `apps/api/src/env.ts:4-14`. Thiếu biến bắt buộc → máy chủ báo "Cấu hình môi trường không hợp lệ" và không chạy (`env.ts:18-24`). Không ghi giá trị bí mật ở đây.
+### 1. Biến môi trường của máy chủ API
+Kiểm ở `apps/api/src/env.ts:4-17`; thiếu biến bắt buộc → "Cấu hình môi trường không hợp lệ" và không chạy (`env.ts:21-28`). Tệp mẫu: `apps/api/.env.example` (chỉ có chỗ trống, không có giá trị thật).
 
 | Tên | Bắt buộc | Mặc định | Ý nghĩa |
 |---|---|---|---|
-| `NODE_ENV` | có | — | `development`, `test` hoặc `production` |
-| `PORT` | không | 4000 | Cổng máy chủ nghe. Railway tự đặt biến này |
-| `DATABASE_URL` | có | — | Chuỗi kết nối database mà **máy chủ dùng khi chạy**. Trên Supabase: chuỗi đi qua pooler |
-| `DIRECT_URL` | có cho lệnh migration | — | Chuỗi kết nối **thẳng** tới database, không qua pooler. Chỉ lệnh Prisma (`migrate deploy`) đọc, khai ở `apps/api/prisma/schema.prisma:12`. Máy chủ khi chạy không đọc biến này (đã thử: chạy được khi thiếu) |
-| `JWT_ACCESS_SECRET` | có | — | Khoá ký thẻ đăng nhập, ít nhất 32 ký tự. Lộ khoá này = ai cũng giả được thẻ của mọi người |
-| `ACCESS_TOKEN_TTL_SECONDS` | không | 900 | Thẻ truy cập sống bao nhiêu giây |
-| `REFRESH_TOKEN_TTL_DAYS` | không | 30 | Phiên đăng nhập dài hạn sống bao nhiêu ngày |
-| `CORS_ORIGINS` | không | rỗng | Danh sách tên miền web được gọi API, cách nhau dấu phẩy. **Rỗng = không trang web nào gọi được** |
+| `NODE_ENV` | có | — | `production` trên máy thật (cookie mới có cờ Secure, `app.ts:99`) |
+| `PORT` | không | 4000 | Railway tự đặt |
+| `DATABASE_URL` | có | — | Chuỗi kết nối máy chủ dùng khi chạy. Supabase: qua pooler, cổng 6543, thêm `?pgbouncer=true` (theo `.env.example`) |
+| `DIRECT_URL` | có cho lệnh migration | — | Chuỗi kết nối **thẳng** (cổng 5432). Chỉ lệnh Prisma đọc (`prisma/schema.prisma:12`) |
+| `JWT_ACCESS_SECRET` | có | — | Khoá ký thẻ, ≥ 32 ký tự, mỗi môi trường một khoá. Lộ = ai cũng giả được thẻ |
+| `ACCESS_TOKEN_TTL_SECONDS` | không | 900 | Thẻ truy cập sống bao lâu |
+| `REFRESH_TOKEN_TTL_DAYS` | không | 30 | Thẻ dài hạn (và cookie `mp_refresh`) sống bao lâu |
+| `CORS_ORIGINS` | không | rỗng | Tên miền trình duyệt được gọi thẳng API. Web đi qua Vercel cùng tên miền nên **để rỗng được** |
 | `AUTH_RATE_LIMIT_PER_MINUTE` | không | 10 | Số lần đăng ký/đăng nhập/đổi thẻ mỗi phút mỗi IP |
-| `LOG_LEVEL` | không | `info` | Mức chi tiết của log |
-| `TRUST_PROXY_HOPS` | không | 0 | **Đang thêm, chưa lưu vào kho.** Số tầng proxy đứng trước máy chủ (Railway: 1). 0 = không tin header IP do máy khách gửi, chống lách giới hạn tốc độ |
-| `TEST_DATABASE_URL` | chỉ cho bài thử | database `makeup_test` trên máy | Database dành cho bài thử; tên phải chứa `makeup_test` (`apps/api/test/global-setup.ts:7-9`) |
+| `TRUST_PROXY_HOPS` | không | 0 | Số tầng proxy đứng trước máy chủ. 0 = không tin IP do máy khách khai. `.env.example` ghi Railway đặt 1 (xem mục 4 về tầng Vercel) |
+| `LOG_LEVEL` | không | `info` | Mức chi tiết log |
 
-Kho có `.gitignore` chặn `.env` (dòng 3–4). Tệp mẫu `apps/api/.env.example` đang được thêm (chưa lưu vào kho lúc viết).
+**Kho tệp** — đọc riêng ở `apps/api/src/lib/storage/config.ts:11-24`, **không** qua `env.ts`:
+
+| Tên | Khi nào cần | Ý nghĩa |
+|---|---|---|
+| `STORAGE_DRIVER` | bắt buộc khi `production` | `s3` (kho tương thích S3, ví dụ Supabase Storage) hoặc `local` (ổ đĩa máy) |
+| `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_FORCE_PATH_STYLE` | khi `s3` | Địa chỉ và khoá của kho tệp |
+| `STORAGE_LOCAL_DIR`, `STORAGE_SIGNING_SECRET` (≥ 32 ký tự), `STORAGE_PUBLIC_BASE_URL` | khi `local` ở `production` | Thư mục, khoá ký đường đọc có hạn, địa chỉ gốc |
+
+Lưu ý: thiếu cấu hình kho tệp thì máy chủ **vẫn khởi động**, chỉ báo lỗi khi có người tải tệp lần đầu (`lib/storage/config.ts:61-66`). Ổ đĩa của Railway mất khi khởi động lại, nên máy thật nên dùng `s3`.
+
+**Biến của web khi build trên Vercel:** `API_ORIGIN` = `https://<máy chủ Railway>` (chỉ tên miền, không đường dẫn, không `/` cuối). Web không có biến `VITE_*` nào; cửa gác bí mật chặn biến `VITE_*` lạ (`apps/web/scripts/check-bundle-secrets.mjs`).
 
 ### 2. Thứ tự triển khai lần đầu
 | Bước | Việc | Lệnh / nơi làm | Đã thử |
 |---|---|---|---|
-| 1 | Tạo project Supabase riêng cho Makeup Pro (không dùng chung với Studio Pro) | Trang quản trị Supabase | Chưa |
-| 2 | Lấy hai chuỗi kết nối: qua pooler → `DATABASE_URL`; kết nối thẳng → `DIRECT_URL` | Supabase → Connect | Chưa |
-| 3 | **Bật extension `btree_gist`** | Supabase → Database → Extensions | Chưa. Migration 2 có lệnh `CREATE EXTENSION IF NOT EXISTS btree_gist` (`20261018151403_bang_gia_lich/migration.sql:358`), nhưng tài khoản không đủ quyền thì lệnh này hỏng (`docs/SO-LOI-DA-DO.md` lỗi 5), nên bật trước bằng tay |
-| 4 | Áp migration | `pnpm --filter @makeup/api db:deploy` (chạy `prisma migrate deploy`), cần `DATABASE_URL` và `DIRECT_URL` | Đã thử trên PostgreSQL 16.15 trong máy đám mây: áp đủ 3 migration lên database trống. **Chưa thử trên Supabase** |
-| 5 | Đồng bộ vai trò mẫu cho tổ chức cũ | `pnpm --filter @makeup/api db:sync-roles` | Đã thử qua bài thử `system-roles.test.ts`. Lần đầu triển khai chưa có tổ chức nào nên không đổi gì |
-| 6 | Tạo service Railway, đặt biến môi trường ở mục 1 | Trang quản trị Railway | Chưa |
-| 7 | Lệnh build | `pnpm install --frozen-lockfile && pnpm --filter @makeup/api build` (chạy `prisma generate` rồi đóng gói ra `apps/api/dist/server.js`) | Build đã chạy trên máy đám mây (`docs/SO-LOI-DA-DO.md` lỗi 1). **Chưa chạy trên Railway** |
-| 8 | Lệnh chạy | `pnpm --filter @makeup/api start` (= `node dist/server.js`) | Như trên |
-| 9 | Kiểm tra sau khi chạy | `GET /health` → `{"ok":true}`; `GET /api/v1/openapi.json` có 16 đường trở lên; đăng ký một tài khoản thử | Chưa |
-| 10 | Web trên Vercel | — | **Chưa có web** |
+| 1 | Tạo project Supabase riêng (không dùng chung Studio Pro) | Trang quản trị Supabase | Chưa |
+| 2 | Lấy chuỗi qua pooler → `DATABASE_URL`; chuỗi thẳng → `DIRECT_URL` | Supabase → Connect | Chưa |
+| 3 | **Bật extension `btree_gist`** bằng tài khoản quản trị database | Supabase → Database → Extensions | Chưa trên Supabase. Trên máy thử: `create extension btree_gist` (`docs/BAN-GIAO-PHIEN.md`). Migration có `CREATE EXTENSION IF NOT EXISTS` (`20261018151403_bang_gia_lich/migration.sql:358`) nhưng tài khoản thiếu quyền thì hỏng (`docs/SO-LOI-DA-DO.md` mục 5) |
+| 4 | Áp migration | `pnpm --filter @makeup/api db:deploy` (cần `DATABASE_URL`, `DIRECT_URL`) | Đủ 9 migration trên PostgreSQL 16 máy đám mây. **Chưa trên Supabase** |
+| 5 | Tạo kho tệp (bucket) và khoá truy cập | Supabase → Storage | Chưa |
+| 6 | Tạo service Railway: Root là gốc kho; đặt biến mục 1 | Railway | Chưa |
+| 7 | Build | `pnpm install --frozen-lockfile && pnpm --filter @makeup/api build` — `prisma` nay nằm ở thư viện chạy thật, `pnpm install` tự `prisma generate`; build ra `dist/server.js` và `dist/scripts/run-sync-system-roles.js` (`apps/api/tsup.config.ts:5`) | Build đã chạy trên máy đám mây. Chưa trên Railway |
+| 8 | Đồng bộ vai trò mẫu | `pnpm --filter @makeup/api db:sync-roles:prod` (chạy bản build, không cần công cụ phát triển) | Qua bài thử `system-roles.test.ts`. Chưa trên máy thật |
+| 9 | Chạy | `pnpm --filter @makeup/api start` (= `node dist/server.js`); tắt êm khi nhận SIGTERM | Chưa trên Railway |
+| 10 | Kiểm tra | `GET /health` → `{"ok":true}`; `GET /api/v1/openapi.json` đủ số đường; đăng ký thử | Chưa |
+| 11 | Ghi địa chỉ Railway vào web | Trên máy: `cd apps/web && API_ORIGIN=https://<railway> node scripts/vercel-config.mjs --write`, rồi lưu `vercel.json` vào kho | Chưa. Bản trong kho trỏ `https://API_ORIGIN-chua-dat.invalid` nên **không thể** đưa lên khi chưa làm bước này |
+| 12 | Tạo project Vercel | Root Directory = `apps/web`; đặt biến `API_ORIGIN`. `pnpm build` = kiểm kiểu → build → cửa gác bí mật → đối chiếu `vercel.json` với `API_ORIGIN`; lệch thì dừng | Chưa |
+| 13 | Kiểm tra web | Mở trang, đăng ký, tải lại (phiên khôi phục bằng cookie), đăng xuất | E2E luồng này chạy được trên máy đám mây (`apps/web/e2e/luong-phien.spec.ts`). Chưa trên Vercel |
+
+**Quản trị nền tảng:** cấp quyền bằng `pnpm --filter @makeup/api platform:grant-admin` và tạo gói mẫu bằng `platform:seed-plans`. Hai lệnh này chạy mã nguồn bằng `tsx` (thư viện chỉ dùng khi phát triển) và **không** nằm trong bản build (`apps/api/package.json`, `tsup.config.ts:5`) — trên máy thật chỉ chạy được nếu có cài thư viện phát triển.
 
 ### 3. Mỗi lần triển khai về sau
-1. Áp migration mới (`db:deploy`) **trước** khi bật bản máy chủ mới.
-2. Bật bản máy chủ mới. Máy chủ tắt êm khi nhận tín hiệu dừng (`apps/api/src/server.ts:15-22`).
-3. Nếu danh mục quyền có thay đổi: chạy `db:sync-roles`.
-4. Gọi `/health` và thử một thao tác thật.
+1. `db:deploy` **trước** khi bật bản máy chủ mới.
+2. `db:sync-roles:prod` nếu danh mục quyền đổi (an toàn khi chạy lại: không đổi gì nếu đã khớp).
+3. Bật bản máy chủ mới; gọi `/health`.
+4. Web: Vercel tự build khi có commit mới.
 
-### 4. Những điểm CHƯA kiểm thử trên môi trường thật
+### 4. CHƯA kiểm thử trên môi trường thật
 | Điểm | Vì sao phải để ý |
 |---|---|
-| Prisma đi qua pooler của Supabase | Pooler kiểu "transaction" thường cần thêm tham số tắt prepared statement vào `DATABASE_URL` (theo tài liệu Prisma/Supabase). Chưa thử |
-| Ràng buộc chặn trùng lịch trên Supabase | Cần `btree_gist`; Supabase cài extension vào schema riêng. Chưa thử |
-| `prisma migrate deploy` và `db:sync-roles` trên Railway | `prisma` và `tsx` nằm ở nhóm thư viện chỉ dùng khi phát triển (`apps/api/package.json`, `devDependencies`). Nếu Railway chỉ cài thư viện chạy thật thì hai lệnh này không chạy được. `db:sync-roles` chạy thẳng mã nguồn bằng `tsx`, không nằm trong bản build (`tsup.config.ts` chỉ đóng gói `src/server.ts`) |
-| Giới hạn tốc độ sau proxy của Railway | Ở commit `f7b0805` máy chủ tin cứng 1 lớp proxy (`app.ts:23`); bản đang sửa đổi sang biến `TRUST_PROXY_HOPS`. Số lớp proxy thật của Railway chưa đo |
-| Chạy nhiều bản máy chủ cùng lúc | Bộ đếm giới hạn tốc độ nằm trong bộ nhớ từng máy |
+| Prisma qua pooler Supabase (`?pgbouncer=true`) | Chưa chạy lần nào |
+| Ràng buộc EXCLUDE trên Supabase | Supabase đặt extension ở schema riêng; chưa thử |
+| **Số tầng proxy thật** | App gọi thẳng Railway (1 tầng). Web đi Vercel → Railway, có thể là 2 tầng. Đặt `TRUST_PROXY_HOPS=1` thì mọi người dùng web có thể bị đếm chung theo IP của Vercel cho giới hạn đăng nhập; đặt 2 thì app gọi thẳng có thể tự khai IP. Phải đo trên máy thật rồi mới chọn |
+| Cookie qua chuyển tiếp của Vercel | Cookie đặt cho đường `/api/v1/auth`, SameSite=Strict; chưa thử qua Vercel thật |
+| Nhiều bản máy chủ cùng lúc | Bộ đếm giới hạn tốc độ nằm trong bộ nhớ từng máy |
+| Kho tệp `s3` | Chưa thử với Supabase Storage thật |
 | Sao lưu database | Chưa cấu hình, chưa diễn tập khôi phục |
-| Tên miền, HTTPS, tên miền con theo slug tổ chức | Chưa có tên miền |
-| Lưu file trên Supabase Storage | Chưa dùng |
+| Tên miền, HTTPS | Chưa có tên miền |
 
 ### 5. Cấu hình còn thiếu (người cấp: anh Chiến)
-Supabase riêng, Railway riêng, Vercel, tên miền, khoá Google Maps, cổng thanh toán, tài khoản Apple Developer. Danh sách đầy đủ và trạng thái: `docs/PROGRESS.md`.
+Supabase riêng, Railway riêng, Vercel, tên miền, khoá Google Maps, cổng thanh toán, tài khoản Apple Developer. Trạng thái: `docs/PROGRESS.md` mục 3.

@@ -1,0 +1,32 @@
+/* =====================================================================
+   PHÔNG CHO BỘ MẪU THẺ — Makeup Pro R&D vòng 3
+   PHÔNG VIẾT TAY HIỆN LÀ PHÔNG TẠM (Google Fonts, giấy phép SIL OFL 1.1).
+   Sẽ thay bằng phông trong kho SS-Album của anh Chiến
+   (H:\build_2_5_2d\src\dist\qt_studio_full\SS-Album\_internal\font_nguon).
+
+   CÁCH THAY: chép tệp phông vào thư mục này rồi CHỈ sửa dòng src của
+   khối "MP Viết tay N" tương ứng. Không sửa tên font-family — mọi mẫu
+   gọi phông qua tên này (biến --f-tay-1..4 ở cuối tệp).
+   Nếu phông mới to/nhỏ hơn, chỉnh --tay-co-N (hệ số cỡ chữ, mặc định 1).
+   ===================================================================== */
+@font-face{font-family:'MP Viết tay 1';src:url(ImperialScript-Regular.ttf) format('truetype');font-display:block}  /* tạm: Imperial Script */
+@font-face{font-family:'MP Viết tay 2';src:url(Italianno-Regular.ttf) format('truetype');font-display:block}      /* tạm: Italianno */
+@font-face{font-family:'MP Viết tay 3';src:url(Birthstone-Regular.ttf) format('truetype');font-display:block}     /* tạm: Birthstone */
+@font-face{font-family:'MP Viết tay 4';src:url(Charm-Regular.ttf) format('truetype');font-display:block}          /* tạm: Charm */
+
+/* Phông chữ in (giữ nguyên, không phải phông viết tay) */
+@font-face{font-family:'MP Chữ có chân';src:url(CormorantGaramond-VF.ttf) format('truetype');font-weight:300 700;font-display:block}
+@font-face{font-family:'MP Chữ có chân';src:url(CormorantGaramond-Italic-VF.ttf) format('truetype');font-weight:300 700;font-style:italic;font-display:block}
+@font-face{font-family:'MP Chữ đậm có chân';src:url(PlayfairDisplay-VF.ttf) format('truetype');font-weight:400 900;font-display:block}
+@font-face{font-family:'MP Chữ đậm có chân';src:url(PlayfairDisplay-Italic-VF.ttf) format('truetype');font-weight:400 900;font-style:italic;font-display:block}
+@font-face{font-family:'MP Chữ không chân';src:url(Montserrat-VF.ttf) format('truetype');font-weight:100 900;font-display:block}
+
+:root{
+  --f-tay-1:'MP Viết tay 1',cursive; --tay-co-1:1;
+  --f-tay-2:'MP Viết tay 2',cursive; --tay-co-2:1.25;
+  --f-tay-3:'MP Viết tay 3',cursive; --tay-co-3:1.1;
+  --f-tay-4:'MP Viết tay 4',cursive; --tay-co-4:.9;
+  --f-chan:'MP Chữ có chân',serif;
+  --f-chan2:'MP Chữ đậm có chân',serif;
+  --f-sans:'MP Chữ không chân',sans-serif;
+}

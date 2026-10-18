@@ -29,7 +29,11 @@ export type StaffMemberRow = Prisma.MembershipGetPayload<{ select: typeof staffM
 
 // Thành viên chưa có hồ sơ thợ vẫn hiện: tên lấy từ tài khoản, chưa có bậc, mặc định nhận lịch (khớp mặc định database).
 // Số điện thoại thợ chỉ trả cho người có quyền sửa hồ sơ thợ (staff.write); người khác nhận null.
-export function presentStaff(m: StaffMemberRow, view: { showPhone: boolean }) {
+// avatarOf: đổi giá trị đã lưu thành URL ký có hạn (modules/files resolveAvatarUrls).
+export function presentStaff(
+  m: StaffMemberRow,
+  view: { showPhone: boolean; avatarOf: (raw: string | null | undefined) => string | null },
+) {
   const p = m.staffProfile;
   const displayName = p?.displayName ?? m.user.fullName;
   return {
@@ -38,7 +42,7 @@ export function presentStaff(m: StaffMemberRow, view: { showPhone: boolean }) {
     fullName: m.user.fullName,
     displayName,
     initials: initialsOf(displayName),
-    avatarUrl: p?.avatarUrl ?? null,
+    avatarUrl: view.avatarOf(p?.avatarUrl),
     phone: view.showPhone ? (p?.phone ?? null) : null,
     tier: p?.tier ?? null,
     isBookable: p?.isBookable ?? true,

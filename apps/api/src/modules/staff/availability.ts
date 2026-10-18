@@ -3,6 +3,7 @@ import type { Prisma } from '@prisma/client';
 import { MAX_APPOINTMENT_MS } from '@makeup/shared';
 import { defineRoute, mustOrg } from '../../http/route';
 import { IsoTime } from '../schedule/appointments';
+import { resolveAvatarUrls } from '../files/service';
 import { initialsOf } from './common';
 
 // Cảnh báo khi chọn thợ: trùng giờ (OVERLAP), có lịch khác trong cùng ngày (SAME_DAY), hay rảnh (FREE).
@@ -147,6 +148,11 @@ export async function staffAvailabilityTx(
     }),
   ]);
 
+  const avatarOf = await resolveAvatarUrls(
+    tx,
+    orgId,
+    members.map((m) => m.staffProfile?.avatarUrl),
+  );
   const result = new Map<string, StaffAvailability>();
   for (const m of members) {
     const p = m.staffProfile;
@@ -154,7 +160,7 @@ export async function staffAvailabilityTx(
     result.set(m.id, {
       membershipId: m.id,
       displayName,
-      avatarUrl: p?.avatarUrl ?? null,
+      avatarUrl: avatarOf(p?.avatarUrl),
       initials: initialsOf(displayName),
       tier: p?.tier ?? null,
       isBookable: p?.isBookable ?? true,
