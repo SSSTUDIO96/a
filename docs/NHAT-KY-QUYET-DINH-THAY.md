@@ -20,7 +20,9 @@ Anh Chiến nhắn lúc khoảng 15:13 UTC ngày 18/10/2026: *"Tự làm vào ch
 | 15:22 | Khứ hồi | Chỉ nhân đôi số km (cách tính theo km). Phí cố định không nhân đôi. | Phí cố định thường đã là trọn gói đi về | Được |
 | 15:23 | Dịch vụ phụ trong hợp đồng | Được tick mọi dịch vụ phụ đang bán của tổ chức. Danh sách tick của gói chỉ là gợi ý hiện sẵn. | Khách hay xin thêm món ngoài gói | Được |
 | 15:23 | Phụ phí cài sẵn | Cho ghi đè giá khi lập hợp đồng, bắt buộc ghi chú | "Phụ phí phát sinh" mỗi khách một khác | Được |
-| 15:24 | Màn lịch | Chọn phương án B của R&D. Kiểu cột theo thợ (A) làm chế độ phụ trên máy tính. | B không phải vuốt ngang trên điện thoại; ca trùng gom lên đầu màn | Được: cả 3 bản mẫu và 18 ảnh vẫn giữ trong `docs/rnd/` |
+| 15:24 | Màn lịch | ~~Chọn phương án B của R&D. Kiểu cột theo thợ (A) làm chế độ phụ trên máy tính.~~ **ANH ĐÃ BÁC** ngày 18/10/2026: *"Cho phép hiển thị cả 3 chế độ và mặc định hiển thị là chế độ C"*. Đã sửa: lịch có đủ 3 chế độ A/B/C, mở ra luôn là C. | (lý do cũ: B không phải vuốt ngang trên điện thoại) | Đã lùi |
+| 15:40 | Khung điều hướng | Thanh bên trái trên máy tính và máy tính bảng (giống C và Studio Pro), thanh dưới trên điện thoại | Mặc định là C, khung của C quen với người dùng Studio Pro | Được |
+| 15:40 | Nhớ chế độ xem người dùng chọn lần trước | **Không** nhớ: mỗi lần mở lịch đều về C | Anh nói "mặc định hiển thị là chế độ C"; tự nhớ là thêm việc chưa ai yêu cầu | Được: thêm sau nếu anh muốn |
 | 15:24 | Màn bảng giá | Chưa chọn. Giao R&D vòng 2 (Bảng giá v2 + Lập hợp đồng). | Yêu cầu mới làm ba bản vòng 1 lỗi thời; bản A tự thêm ô không ai yêu cầu | — |
 
 **Cần anh xem lại nhất:** phân quyền theo vai trò mẫu (dòng 15:16). Studio anh có thể muốn thợ chính thấy cả lịch của đội.
