@@ -58,9 +58,12 @@ export const LineInputSchema = z.discriminatedUnion('kind', [
     { message: 'Ghi đè giá phụ phí phải kèm ghi chú lý do', path: ['note'] },
   ),
   strict({ kind: z.literal('CUSTOM'), name: z.string().trim().min(1).max(200), unitPrice: Money, quantity: Quantity, note: Note.optional() }),
+  // Dòng khoá học: tên, học phí, số lượng 1 do máy chủ chép từ khoá/lớp lúc thêm (BAN-VE-C3 mục 1.1).
+  strict({ kind: z.literal('COURSE'), courseClassId: z.uuid(), note: Note.optional() }),
 ]);
 
 export type LineInput = z.infer<typeof LineInputSchema>;
+export type CourseLineInput = Extract<LineInput, { kind: 'COURSE' }>;
 export type PlacedLineInput = Extract<LineInput, { kind: 'PACKAGE' | 'SERVICE' }>;
 export type TravelInput = z.infer<typeof TravelInputSchema>;
 
@@ -71,21 +74,47 @@ const NewCustomer = strict({
   phone: z.string().trim().min(1).max(30).optional(),
 });
 
-export const ContractBodySchema = strict({
+export const CONTRACT_KINDS = ['SERVICE', 'COURSE'] as const;
+export type ContractKindKey = (typeof CONTRACT_KINDS)[number];
+
+const contractBodyShape = {
+  // Loại hợp đồng đặt lúc tạo, không đổi được sau (PATCH không nhận; database có trigger contracts_kind_locked).
+  kind: z.enum(CONTRACT_KINDS).default('SERVICE'),
   customerId: z.uuid().optional(),
   newCustomer: NewCustomer.optional(),
+  // Người phụ trách (tư vấn, nhắc đóng tiền) — thành viên đang hoạt động của tổ chức.
+  ownerMembershipId: z.uuid().optional(),
   eventDate: DateTime.optional(),
   notes: Text.optional(),
   terms: Text.optional(),
+  // Mẫu điều khoản / nội quy chọn cho hợp đồng; nội dung được CHỤP vào hợp đồng lúc xác nhận.
+  // Không chọn: lúc xác nhận lấy mẫu mặc định (điều khoản chỉ khi không tự nhập terms).
+  termsTemplateId: z.uuid().optional(),
+  rulesTemplateId: z.uuid().optional(),
   discount: Money.default(0),
   depositRequired: Money.optional(),
   lines: Lines,
-}).refine((b) => (b.customerId === undefined) !== (b.newCustomer === undefined), {
-  message: 'Chọn đúng một trong hai: customerId (khách có sẵn) hoặc newCustomer (khách mới)',
-  path: ['customerId'],
-});
+};
+
+type BodyLike = { customerId?: string; newCustomer?: unknown; terms?: string | null; termsTemplateId?: string | null };
+const oneCustomer = [
+  (b: BodyLike) => (b.customerId === undefined) !== (b.newCustomer === undefined),
+  { message: 'Chọn đúng một trong hai: customerId (khách có sẵn) hoặc newCustomer (khách mới)', path: ['customerId'] },
+] as const;
+const termsOrTemplate = [
+  (b: BodyLike) => !(typeof b.terms === 'string' && typeof b.termsTemplateId === 'string'),
+  { message: 'Chọn mẫu điều khoản (termsTemplateId) hoặc tự nhập điều khoản (terms), không gửi cả hai', path: ['termsTemplateId'] },
+] as const;
+
+export const ContractBodySchema = strict(contractBodyShape).refine(...oneCustomer).refine(...termsOrTemplate);
 
 export type ContractBody = z.infer<typeof ContractBodySchema>;
+
+// Xem trước: như thân tạo, thêm excludeContractId = hợp đồng đang sửa (giữ chỗ nháp và lịch của CHÍNH hợp đồng đó
+// không tính là cảnh báo thợ).
+export const QuoteBodySchema = strict({ ...contractBodyShape, excludeContractId: z.uuid().optional() })
+  .refine(...oneCustomer)
+  .refine(...termsOrTemplate);
 
 export const ContractPatchSchema = strict({
   lines: Lines.optional(),
@@ -94,7 +123,12 @@ export const ContractPatchSchema = strict({
   eventDate: DateTime.nullable().optional(),
   notes: Text.nullable().optional(),
   terms: Text.nullable().optional(),
-}).refine((b) => Object.values(b).some((v) => v !== undefined), 'Không có gì để sửa');
+  // null = bỏ mẫu đã chọn. Chọn mẫu thì bỏ điều khoản tự nhập (và ngược lại) — thao tác sau thắng.
+  termsTemplateId: z.uuid().nullable().optional(),
+  rulesTemplateId: z.uuid().nullable().optional(),
+})
+  .refine((b) => Object.values(b).some((v) => v !== undefined), 'Không có gì để sửa')
+  .refine(...termsOrTemplate);
 
 export const VoidBodySchema = strict({ reason: z.string().trim().min(1, 'Phải nêu lý do huỷ dòng').max(1000) });
 
@@ -115,4 +149,5 @@ export const ListQuery = z.object({
   q: z.string().trim().max(100).optional(),
   eventFrom: DateTime.optional(),
   eventTo: DateTime.optional(),
+  kind: z.enum(CONTRACT_KINDS).optional(),
 });

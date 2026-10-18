@@ -338,6 +338,10 @@ export type CustomerUpdateInput = Partial<CustomerCreateInput>;
 export interface AppointmentStaff {
   membershipId: string;
   fullName: string;
+  // Tên hiển thị hồ sơ thợ (không có hồ sơ thì là họ tên).
+  displayName: string;
+  // URL ảnh ký hạn 10 phút — tải lại lịch để lấy URL mới, không giữ lâu.
+  avatarUrl: string | null;
   role: StaffRole;
   blockStart: IsoDateTime;
   blockEnd: IsoDateTime;
@@ -353,6 +357,8 @@ export interface Appointment {
   customer: { id: string; fullName: string; phone: string | null } | null;
   contract: { id: string; code: string; status: ContractStatus } | null;
   contractLineId: string | null;
+  // Nhân vật trên dòng hợp đồng gắn với ca; ca không gắn dòng hoặc dòng không có nhân vật → null.
+  subjectName: string | null;
   startsAt: IsoDateTime;
   endsAt: IsoDateTime;
   travelBeforeMin: number;
