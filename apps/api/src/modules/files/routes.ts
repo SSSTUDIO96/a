@@ -38,8 +38,9 @@ export const fileRoutes = [
       const storage = getStorage();
       // Ghi tệp trước, ghi database sau: database lỗi thì xoá tệp vừa ghi rồi báo lỗi (không để bản ghi trỏ vào tệp không có).
       await storage.put(storageKey, data, checked.mimeType);
+      let file;
       try {
-        const file = await deps.db.$transaction(async (tx) => {
+        file = await deps.db.$transaction(async (tx) => {
           const created = await tx.storedFile.create({
             data: {
               organizationId: o.id,
@@ -66,11 +67,11 @@ export const fileRoutes = [
           });
           return created;
         });
-        return { status: 201, body: await presentFile(file) };
       } catch (err) {
         await storage.delete(storageKey);
         throw err;
       }
+      return { status: 201, body: await presentFile(file) };
     },
   }),
 
