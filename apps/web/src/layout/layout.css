@@ -224,7 +224,7 @@
 .sh-bnav { display: none; }
 
 /* Ngăn "Thêm" */
-.sh-more { display: flex; flex-direction: column; gap: 4px; }
+.sh-more { display: flex; flex-direction: column; gap: 4px; padding: 6px 14px 14px; }
 .sh-more__list { list-style: none; }
 .sh-more__cap {
   padding: 10px 4px 4px;
