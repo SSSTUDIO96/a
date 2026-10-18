@@ -231,6 +231,10 @@ async function planPlaced(ctx: Ctx, input: PlacedLineInput, line: number): Promi
     }
   }
   if (input.studioLocationId && loc !== 'STUDIO') throw bad('Chỉ chọn studio khi địa điểm là STUDIO', line);
+  // Có địa chỉ/toạ độ mà không chọn loại địa điểm thì không biết có tính phí di chuyển không — bắt chọn, không đoán.
+  if (!loc && (input.address !== undefined || input.latitude !== undefined || input.longitude !== undefined)) {
+    throw bad(`Chọn địa điểm cho dòng có địa chỉ "${main.name}" (STUDIO, CUSTOMER_HOME hoặc OTHER)`, line);
+  }
   if (input.travel && loc !== 'CUSTOMER_HOME' && loc !== 'OTHER') {
     throw bad(
       loc === 'STUDIO'

@@ -383,6 +383,16 @@ describe('luật kiểm khi lập hợp đồng', () => {
       /./,
     ],
     ['không có dòng nào', () => [], /./],
+    [
+      'có địa chỉ mà bỏ trống loại địa điểm',
+      () => [{ kind: 'SERVICE', serviceId: A.party, quantity: 1, address: '12 Nguyễn Trãi, nhà khách' }],
+      /Chọn địa điểm cho dòng có địa chỉ/,
+    ],
+    [
+      'có toạ độ mà bỏ trống loại địa điểm',
+      () => [{ kind: 'PACKAGE', packageId: A.bridePkg, quantity: 1, latitude: 10.77, longitude: 106.7 }],
+      /Chọn địa điểm cho dòng có địa chỉ/,
+    ],
   ];
 
   for (const [name, lines, msg] of cases) {
@@ -738,6 +748,46 @@ describe('quyền', () => {
     expect(r.body.createdById).toBe(receptionist.id);
   });
 
+  it('sau xác nhận: lễ tân không huỷ dòng / giảm giá dòng phát sinh được (403), quản lý được; ở nháp lễ tân huỷ dòng được', async () => {
+    const manager = await registerUser(app, 'hd-quan-ly');
+    await addMember(app, A.owner, A.orgId, manager, ['manager']);
+    const lines = [
+      { kind: 'SERVICE', serviceId: A.party, quantity: 1 },
+      { kind: 'CUSTOM', name: 'Phụ kiện', unitPrice: 50_000, quantity: 1 },
+    ];
+    const voidAs = (u: TestUser, contractId: string, lineId: string) =>
+      request(app).post(url(A.orgId, `/${contractId}/lines/${lineId}/void`)).set(bearer(u)).send({ reason: 'Khách bỏ' });
+
+    // Nháp: lễ tân huỷ dòng được.
+    const draft = (await create(receptionist, A.orgId, { customerId: customerA, lines }).expect(201)).body;
+    await voidAs(receptionist, draft.id, draft.lines[1].id).expect(200);
+
+    const c = (await create(receptionist, A.orgId, { customerId: customerA, lines }).expect(201)).body;
+    await request(app).post(url(A.orgId, `/${c.id}/status`)).set(bearer(receptionist)).send({ to: 'CONFIRMED' }).expect(200);
+    const denied = await voidAs(receptionist, c.id, c.lines[1].id);
+    expect(denied.status).toBe(403);
+    expect(denied.body.error.message).toMatch(/cần quyền điều chỉnh hợp đồng/);
+    expect(denied.body.error.details).toEqual({ required: 'contracts.adjust' });
+    const unchanged = await deps.db.contract.findUniqueOrThrow({ where: { id: c.id } });
+    expect(unchanged.total).toBe(850_000n);
+
+    // Phát sinh sau xác nhận: không giảm giá → lễ tân được; có giảm giá dòng → cần quyền điều chỉnh.
+    const add = (u: TestUser, b: object) =>
+      request(app).post(url(A.orgId, `/${c.id}/lines`)).set(bearer(u)).set('idempotency-key', idem()).send(b);
+    await add(receptionist, { kind: 'SURCHARGE', serviceId: A.early, quantity: 1 }).expect(201);
+    expect((await add(receptionist, { kind: 'SERVICE', serviceId: A.party, quantity: 1, lineDiscount: 100_000 })).status).toBe(403);
+    await add(manager, { kind: 'SERVICE', serviceId: A.party, quantity: 1, lineDiscount: 100_000 }).expect(201);
+
+    const ok = await voidAs(manager, c.id, c.lines[1].id).expect(200);
+    expect(ok.body.total).toBe(800_000 + 200_000 + 700_000);
+    const audit = await deps.db.auditLog.findFirst({
+      where: { organizationId: A.orgId, entityId: c.id, action: 'contract.line_voided' },
+      orderBy: { createdAt: 'desc' },
+    });
+    expect(audit?.actorUserId).toBe(manager.id);
+    expect(audit?.data).toMatchObject({ contractStatus: 'CONFIRMED', actorRoles: ['manager'] });
+  });
+
   it('kế toán xem được nhưng không tạo được', async () => {
     expect((await request(app).get(url(A.orgId)).set(bearer(accountant))).status).toBe(200);
     expect((await create(accountant, A.orgId, body())).status).toBe(403);
@@ -749,19 +799,27 @@ describe('chốt chặn database', () => {
     const c = (
       await create(A.owner, A.orgId, { customerId: customerA, lines: [{ kind: 'SERVICE', serviceId: A.party, quantity: 1 }] }).expect(201)
     ).body;
+    // Dòng mới và tổng hợp đồng ghi cùng transaction (database đối chiếu tổng lúc commit).
     const row = (lineTotal: bigint) =>
-      deps.db.contractLine.create({
-        data: {
-          organizationId: A.orgId,
-          contractId: c.id,
-          kind: 'CUSTOM',
-          name: 'Ghi thẳng',
-          quantity: 2,
-          unitPrice: 100_000n,
-          lineDiscount: 10_000n,
-          lineTotal,
-          createdById: A.owner.id,
-        },
+      deps.db.$transaction(async (tx) => {
+        const line = await tx.contractLine.create({
+          data: {
+            organizationId: A.orgId,
+            contractId: c.id,
+            kind: 'CUSTOM',
+            name: 'Ghi thẳng',
+            quantity: 2,
+            unitPrice: 100_000n,
+            lineDiscount: 10_000n,
+            lineTotal,
+            createdById: A.owner.id,
+          },
+        });
+        await tx.contract.update({
+          where: { id: c.id },
+          data: { subtotal: { increment: lineTotal }, total: { increment: lineTotal } },
+        });
+        return line;
       });
     const err = await row(200_000n).catch((e: unknown) => e);
     expect(err).toBeInstanceOf(Error);
@@ -781,7 +839,11 @@ describe('chốt chặn database', () => {
     expect(String((upd as Error).message)).toMatch(/dòng đã chốt không được sửa/);
     const del = await deps.db.contractLine.delete({ where: { id: lineId } }).catch((e: unknown) => e);
     expect(String((del as Error).message)).toMatch(/không được xoá dòng/);
-    const ok = await deps.db.contractLine.update({ where: { id: lineId }, data: { voidedAt: new Date(), voidReason: 'thử' } });
+    const ok = await deps.db.$transaction(async (tx) => {
+      const voided = await tx.contractLine.update({ where: { id: lineId }, data: { voidedAt: new Date(), voidReason: 'thử' } });
+      await tx.contract.update({ where: { id: c.id }, data: { subtotal: 0n, total: 0n } });
+      return voided;
+    });
     expect(ok.voidedAt).not.toBeNull();
   });
 

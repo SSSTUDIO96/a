@@ -3,10 +3,8 @@ import type { Prisma } from '@prisma/client';
 import {
   INITIAL_STATUSES,
   MAX_TRAVEL_MIN,
-  STATUS_TRANSITIONS,
   WORK_STATUSES,
   WORK_STATUS_LABELS,
-  canTransition,
   computeBlock,
   isBlockingStatus,
   isTerminalStatus,
@@ -17,7 +15,9 @@ import { writeAudit } from '../../lib/audit';
 import { Phone } from './customers';
 import {
   appointmentInclude,
+  applyStatusChangeTx,
   assertActiveStaff,
+  assertBookable,
   assertNoOverlap,
   assertTimeRange,
   createAppointmentTx,
@@ -204,7 +204,16 @@ export const appointmentRoutes = [
         const isBlocking = isBlockingStatus(before.status);
         const staff = body.staff ?? before.staff.map((s) => ({ membershipId: s.membershipId, role: s.role }));
 
-        if (body.staff) await assertActiveStaff(tx, o.id, body.staff);
+        if (body.staff) {
+          await assertActiveStaff(tx, o.id, body.staff);
+          // Thợ đã tắt nhận lịch không được thêm vào lịch; thợ đã phân từ trước thì giữ nguyên.
+          const kept = new Set(before.staff.map((s) => s.membershipId));
+          await assertBookable(
+            tx,
+            o.id,
+            body.staff.map((s) => s.membershipId).filter((id) => !kept.has(id)),
+          );
+        }
         if (isBlocking && (timeChanged || body.staff)) {
           await assertNoOverlap(
             tx,
@@ -284,53 +293,7 @@ export const appointmentRoutes = [
       const uid = mustUser(userId);
       const row = await deps.db.$transaction(async (tx) => {
         const before = await lockAppointment(tx, o, params.appointmentId);
-        if (!canTransition(before.status, body.to)) {
-          throw new AppError(
-            'CONFLICT',
-            `Không chuyển được lịch từ "${WORK_STATUS_LABELS[before.status]}" sang "${WORK_STATUS_LABELS[body.to]}"`,
-            { from: before.status, to: body.to, allowed: STATUS_TRANSITIONS[before.status] },
-          );
-        }
-        const wasBlocking = isBlockingStatus(before.status);
-        const nowBlocking = isBlockingStatus(body.to);
-        if (!wasBlocking && nowBlocking) {
-          await assertNoOverlap(
-            tx,
-            o.id,
-            before.staff.map((s) => s.membershipId),
-            computeBlock(before),
-            before.id,
-          );
-        }
-        if (wasBlocking !== nowBlocking) {
-          await tx.appointmentStaff.updateMany({
-            where: { appointmentId: before.id, organizationId: o.id },
-            data: { isBlocking: nowBlocking },
-          });
-        }
-        await tx.appointment.update({
-          where: { id: before.id },
-          data: { status: body.to, ...(body.to === 'CANCELLED' ? { cancelReason: body.reason } : {}) },
-        });
-        await tx.appointmentStatusHistory.create({
-          data: {
-            organizationId: o.id,
-            appointmentId: before.id,
-            fromStatus: before.status,
-            toStatus: body.to,
-            reason: body.reason ?? null,
-            changedById: uid,
-          },
-        });
-        await writeAudit(tx, {
-          organizationId: o.id,
-          actorUserId: uid,
-          action: 'appointment.status_changed',
-          entityType: 'appointment',
-          entityId: before.id,
-          data: { code: before.code, from: before.status, to: body.to, reason: body.reason ?? null },
-          requestId,
-        });
+        await applyStatusChangeTx(tx, { orgId: o.id, userId: uid, requestId }, before, body.to, body.reason ?? null);
         return tx.appointment.findUniqueOrThrow({ where: { id: before.id }, include: appointmentInclude });
       });
       return { body: presentAppointment(row, await loadHistory(deps.db, o.id, row.id)) };

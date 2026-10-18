@@ -1,8 +1,10 @@
 import { z } from 'zod';
 import type { Prisma } from '@prisma/client';
+import { lockOrgAndRecheck } from '../../http/middleware';
 import { defineRoute, mustOrg, mustUser } from '../../http/route';
 import { AppError } from '../../lib/errors';
 import { writeAudit } from '../../lib/audit';
+import { assertCanTouchMember } from '../orgs/guards';
 import { Phone } from '../schedule/customers';
 import { presentStaff, staffMemberSelect } from './common';
 
@@ -17,10 +19,11 @@ export const profileRoutes = [
     scope: 'org',
     permission: 'staff.read',
     tag: 'Nhân sự',
-    summary: 'Danh sách thợ đang hoạt động kèm hồ sơ (bậc lương, ảnh, số điện thoại); lọc theo bậc, tìm theo tên',
+    summary: 'Danh sách thợ đang hoạt động kèm hồ sơ; số điện thoại thợ chỉ hiện cho người có staff.write',
     query: z.object({ tierId: z.uuid().optional(), q: z.string().trim().min(1).max(100).optional() }),
     handler: async ({ deps, org, query }) => {
       const o = mustOrg(org);
+      const showPhone = o.permissions.has('staff.write');
       const where: Prisma.MembershipWhereInput = {
         organizationId: o.id,
         status: 'ACTIVE',
@@ -31,11 +34,12 @@ export const profileRoutes = [
         where.OR = [
           { user: { fullName: { contains: query.q, mode: 'insensitive' } } },
           { staffProfile: { is: { displayName: { contains: query.q, mode: 'insensitive' } } } },
-          ...(digits.length >= 3 ? [{ staffProfile: { is: { phone: { contains: digits } } } }] : []),
+          // Không cho dò số điện thoại qua ô tìm kiếm khi không được xem số.
+          ...(showPhone && digits.length >= 3 ? [{ staffProfile: { is: { phone: { contains: digits } } } }] : []),
         ];
       }
       const rows = await deps.db.membership.findMany({ where, select: staffMemberSelect, orderBy: { createdAt: 'asc' } });
-      return { body: { items: rows.map(presentStaff) } };
+      return { body: { items: rows.map((m) => presentStaff(m, { showPhone })) } };
     },
   }),
 
@@ -59,18 +63,37 @@ export const profileRoutes = [
     handler: async ({ deps, org, params, body, userId, requestId }) => {
       const o = mustOrg(org);
       const member = await deps.db.$transaction(async (tx) => {
+        // Tra lại quyền sau khi khoá tổ chức: người vừa bị hạ quyền không lọt qua bằng quyền cũ.
+        const actor = await lockOrgAndRecheck(tx, o, 'staff.write');
         const target = await tx.membership.findFirst({
           where: { id: params.membershipId, organizationId: o.id, status: { not: 'REMOVED' } },
           select: staffMemberSelect,
         });
         if (!target) throw new AppError('NOT_FOUND', 'Không tìm thấy nhân sự');
-        if (body.tierId) {
-          const tier = await tx.staffTier.findFirst({
-            where: { id: body.tierId, organizationId: o.id },
-            select: { isActive: true },
-          });
-          if (!tier) throw new AppError('VALIDATION_FAILED', 'Bậc lương không thuộc tổ chức', { tierId: body.tierId });
-          if (!tier.isActive) throw new AppError('VALIDATION_FAILED', 'Bậc lương này đang ẩn, không gán được', { tierId: body.tierId });
+        // Luật thứ bậc như đổi vai trò: không sửa hồ sơ người đang giữ quyền mà mình không có.
+        assertCanTouchMember(
+          actor,
+          target.roles.map((r) => r.role),
+        );
+        const currentTierId = target.staffProfile?.tier?.id ?? null;
+        if (body.tierId !== undefined && body.tierId !== currentTierId) {
+          // Bậc quyết định tiền công: đổi bậc cần thêm quyền đặt tiền công, và không ai tự đổi bậc của mình trừ chủ.
+          if (!actor.permissions.has('payroll.write')) {
+            throw new AppError('FORBIDDEN', 'Đổi bậc lương cần quyền đặt tiền công', { required: 'payroll.write' });
+          }
+          if (target.id === actor.membershipId && !actor.roleKeys.includes('owner')) {
+            throw new AppError('FORBIDDEN', 'Không tự đổi bậc lương của chính mình được');
+          }
+          if (body.tierId) {
+            const tier = await tx.staffTier.findFirst({
+              where: { id: body.tierId, organizationId: o.id },
+              select: { isActive: true },
+            });
+            if (!tier) throw new AppError('VALIDATION_FAILED', 'Bậc lương không thuộc tổ chức', { tierId: body.tierId });
+            if (!tier.isActive) {
+              throw new AppError('VALIDATION_FAILED', 'Bậc lương này đang ẩn, không gán được', { tierId: body.tierId });
+            }
+          }
         }
         await tx.staffProfile.upsert({
           where: { membershipId: target.id },
@@ -100,7 +123,7 @@ export const profileRoutes = [
         });
         return tx.membership.findUniqueOrThrow({ where: { id: target.id }, select: staffMemberSelect });
       });
-      return { body: presentStaff(member) };
+      return { body: presentStaff(member, { showPhone: o.permissions.has('staff.write') }) };
     },
   }),
 ];

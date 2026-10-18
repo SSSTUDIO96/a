@@ -1,0 +1,9 @@
+Phông Be Vietnam Pro — tự chứa, không gọi Google Fonts lúc chạy.
+
+Nguồn: gói npm @fontsource/be-vietnam-pro 5.3.0 (phát hành 19/07/2026), thư mục files/.
+Đã chép: tập con latin + vietnamese, độ đậm 400, 500, 600, 700, kiểu thường, định dạng woff2.
+Tập con vietnamese gồm chữ có dấu tiếng Việt và ký hiệu ₫ (U+20AB).
+Khai báo @font-face ở apps/web/src/styles/base.css (unicode-range lấy từ unicode.json của gói).
+
+Giấy phép: SIL Open Font License 1.1 — toàn văn ở OFL.txt (chép nguyên từ tệp LICENSE của gói).
+Bản quyền: Copyright 2021 The Be Vietnam Pro Project Authors (https://github.com/bettergui/BeVietnamPro).

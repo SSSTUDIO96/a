@@ -81,6 +81,15 @@ function assertNotClosed(status: ContractStatus): void {
   }
 }
 
+// Sau xác nhận, việc làm GIẢM tiền (huỷ dòng, giảm giá) cần quyền điều chỉnh riêng; nháp chỉ cần contracts.write.
+function assertCanAdjust(o: OrgContext, status: ContractStatus, action: string): void {
+  if (status === 'CONFIRMED' && !o.permissions.has('contracts.adjust')) {
+    throw new AppError('FORBIDDEN', `Hợp đồng đã xác nhận: ${action} cần quyền điều chỉnh hợp đồng`, {
+      required: 'contracts.adjust',
+    });
+  }
+}
+
 async function lineTotals(tx: Tx, orgId: string, contractId: string) {
   const rows = await tx.contractLine.findMany({
     where: { contractId, organizationId: orgId },
@@ -349,6 +358,9 @@ export const contractRoutes: AnyRoute[] = [
       const detail = await deps.db.$transaction(async (tx) => {
         const c = await lockContract(tx, o.id, params.contractId);
         assertNotClosed(c.status);
+        if ((body.kind === 'PACKAGE' || body.kind === 'SERVICE') && (body.lineDiscount ?? 0) > 0) {
+          assertCanAdjust(o, c.status, 'giảm giá dòng phát sinh');
+        }
         const planned = await planLines(tx, o.id, [body], new Date());
         const last = await tx.contractLine.aggregate({
           where: { contractId: c.id, organizationId: o.id },
@@ -374,6 +386,7 @@ export const contractRoutes: AnyRoute[] = [
           data: {
             lineIds: planned.map((l) => l.id),
             addedAfterConfirm,
+            actorRoles: o.roleKeys,
             amount: planned.reduce((s, l) => s + l.lineTotal, 0),
             before: { subtotal: vnd(c.subtotal, 'tạm tính'), total: vnd(c.total, 'tổng') },
             after: { subtotal, total },
@@ -407,6 +420,7 @@ export const contractRoutes: AnyRoute[] = [
         });
         if (!line) throw new AppError('NOT_FOUND', 'Không tìm thấy dòng hợp đồng');
         if (line.voidedAt) throw new AppError('CONFLICT', `Dòng "${line.name}" đã huỷ trước đó`);
+        assertCanAdjust(o, c.status, `huỷ dòng "${line.name}"`);
         const children = await tx.contractLine.findMany({
           where: { parentLineId: line.id, organizationId: o.id, voidedAt: null },
           select: { id: true },
@@ -447,6 +461,8 @@ export const contractRoutes: AnyRoute[] = [
             lineId: line.id,
             voidedLineIds: voidedIds,
             reason: body.reason,
+            contractStatus: c.status,
+            actorRoles: o.roleKeys,
             before: { subtotal: vnd(c.subtotal, 'tạm tính'), total: vnd(c.total, 'tổng') },
             after: { subtotal, total },
             adjustments,

@@ -278,11 +278,12 @@ describe('tiền công theo bậc của một gói', () => {
     expect(strAmount.status).toBe(400);
   });
 
-  it('thợ (staff.read, không payroll.read) → 403; kế toán xem và đặt được', async () => {
+  it('thợ (staff.read, không payroll.read) → 403; kế toán chỉ xem (G3), chủ đặt được', async () => {
     expect((await request(app).get(`/api/v1/orgs/${orgA}/packages/${pkg.id}/pay-rates`).set(bearer(artistA))).status).toBe(403);
     expect((await putRates(orgA, artistA, `packages/${pkg.id}`, [{ tierId: tierChinh, amount: 1 }])).status).toBe(403);
     expect((await request(app).get(`/api/v1/orgs/${orgA}/packages/${pkg.id}/pay-rates`).set(bearer(accountantA))).status).toBe(200);
-    const set = await putRates(orgA, accountantA, `packages/${pkg.id}`, [{ tierId: tierPhu, amount: 650_000 }]);
+    expect((await putRates(orgA, accountantA, `packages/${pkg.id}`, [{ tierId: tierPhu, amount: 650_000 }])).status).toBe(403);
+    const set = await putRates(orgA, ownerA, `packages/${pkg.id}`, [{ tierId: tierPhu, amount: 650_000 }]);
     expect(set.status).toBe(200);
     expect(set.body.items[1].amount).toBe(650_000);
   });
@@ -358,5 +359,124 @@ describe('cách ly tổ chức', () => {
     const sheetB = await request(app).get(`/api/v1/orgs/${orgB}/packages/${pkgB.id}/pay-rates`).set(bearer(ownerB)).expect(200);
     const ids = sheetB.body.items.flatMap((i: { staff: { membershipId: string }[] }) => i.staff.map((s) => s.membershipId));
     expect(ids).toEqual([mB]);
+  });
+});
+
+describe('T2: thứ bậc khi sửa hồ sơ thợ, đổi bậc lương cần payroll.write', () => {
+  let org: string;
+  let owner: TestUser;
+  let manager: TestUser;
+  let admin: TestUser;
+  let tho: TestUser;
+  let mOwner: string;
+  let mManager: string;
+  let mAdmin: string;
+  let mTho: string;
+  let tierLow: string;
+  let tierHigh: string;
+
+  beforeAll(async () => {
+    owner = await registerUser(app, 'chu-t2');
+    manager = await registerUser(app, 'quan-ly-t2');
+    admin = await registerUser(app, 'quan-tri-t2');
+    tho = await registerUser(app, 'tho-t2');
+    org = await createOrg(app, owner, 't2');
+    mManager = await addMember(app, owner, org, manager, ['manager']);
+    mAdmin = await addMember(app, owner, org, admin, ['admin']);
+    mTho = await addMember(app, owner, org, tho, ['artist']);
+    const members = await request(app).get(`/api/v1/orgs/${org}/members`).set(bearer(owner)).expect(200);
+    mOwner = members.body.items.find((m: { user: { id: string } }) => m.user.id === owner.id).id;
+    tierLow = await makeTier(org, owner, 'Bậc 1');
+    tierHigh = await makeTier(org, owner, 'Bậc 5');
+    await patchStaff(org, owner, mManager, { tierId: tierLow }).expect(200);
+  });
+
+  it('BẮT: quản lý không tự nâng bậc của mình (không có payroll.write)', async () => {
+    const res = await patchStaff(org, manager, mManager, { tierId: tierHigh });
+    expect(res.status).toBe(403);
+    expect(res.body.error.details.required).toBe('payroll.write');
+    const p = await deps.db.staffProfile.findUniqueOrThrow({ where: { membershipId: mManager } });
+    expect(p.tierId).toBe(tierLow);
+  });
+
+  it('BẮT: quản lý không đổi bậc của thợ khác (bậc quyết định tiền công)', async () => {
+    await patchStaff(org, owner, mTho, { tierId: tierLow }).expect(200);
+    expect((await patchStaff(org, manager, mTho, { tierId: tierHigh })).status).toBe(403);
+    expect((await patchStaff(org, manager, mTho, { tierId: null })).status).toBe(403);
+    expect((await deps.db.staffProfile.findUniqueOrThrow({ where: { membershipId: mTho } })).tierId).toBe(tierLow);
+  });
+
+  it('BẮT: quản lý không sửa được hồ sơ chủ và quản trị', async () => {
+    const onOwner = await patchStaff(org, manager, mOwner, { displayName: 'Bị đổi', isBookable: false });
+    expect(onOwner.status).toBe(403);
+    expect(await deps.db.staffProfile.findUnique({ where: { membershipId: mOwner } })).toBeNull();
+    const onAdmin = await patchStaff(org, manager, mAdmin, { isBookable: false });
+    expect(onAdmin.status).toBe(403);
+    expect(onAdmin.body.error.details.missing).toContain('payroll.write');
+  });
+
+  it('BẮT: quản trị (có payroll.write, không phải chủ) không tự đổi bậc của mình', async () => {
+    const res = await patchStaff(org, admin, mAdmin, { tierId: tierHigh });
+    expect(res.status).toBe(403);
+    expect(res.body.error.message).toContain('chính mình');
+  });
+
+  it('GIỮ: quản lý vẫn sửa hồ sơ thợ dưới quyền và tên của chính mình; gửi lại đúng bậc hiện tại không bị chặn', async () => {
+    const res = await patchStaff(org, manager, mTho, { displayName: 'Thợ T2', isBookable: false, phone: '0912 111 222' });
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ displayName: 'Thợ T2', isBookable: false, phone: '0912111222' });
+    const self = await patchStaff(org, manager, mManager, { displayName: 'Quản lý T2', tierId: tierLow });
+    expect(self.status).toBe(200);
+    expect(self.body.tier.id).toBe(tierLow);
+  });
+
+  it('GIỮ: quản trị đổi bậc của thợ; chủ tự đổi bậc của mình', async () => {
+    const res = await patchStaff(org, admin, mTho, { tierId: tierHigh });
+    expect(res.status).toBe(200);
+    expect(res.body.tier.id).toBe(tierHigh);
+    const self = await patchStaff(org, owner, mOwner, { tierId: tierHigh });
+    expect(self.status).toBe(200);
+  });
+
+  it('BẮT: người vừa bị tước staff.write không sửa tiếp được (tra lại quyền trong transaction)', async () => {
+    await request(app).patch(`/api/v1/orgs/${org}/members/${mManager}`).set(bearer(owner)).send({ roleKeys: ['artist'] }).expect(200);
+    expect((await patchStaff(org, manager, mTho, { displayName: 'Sau khi bị hạ' })).status).toBe(403);
+    await request(app).patch(`/api/v1/orgs/${org}/members/${mManager}`).set(bearer(owner)).send({ roleKeys: ['manager'] }).expect(200);
+  });
+});
+
+describe('G5: số điện thoại thợ chỉ hiện cho người có staff.write', () => {
+  let org: string;
+  let owner: TestUser;
+  let tho: TestUser;
+  let leTan: TestUser;
+  let mTho: string;
+
+  beforeAll(async () => {
+    owner = await registerUser(app, 'chu-g5');
+    tho = await registerUser(app, 'tho-g5');
+    leTan = await registerUser(app, 'le-tan-g5');
+    org = await createOrg(app, owner, 'g5');
+    mTho = await addMember(app, owner, org, tho, ['artist']);
+    await addMember(app, owner, org, leTan, ['receptionist']);
+    await patchStaff(org, owner, mTho, { phone: '0987 654 321' }).expect(200);
+  });
+
+  it('GIỮ: chủ (staff.write) thấy số và tìm được theo số', async () => {
+    const res = await request(app).get(`/api/v1/orgs/${org}/staff`).set(bearer(owner)).expect(200);
+    expect(res.body.items.find((s: { membershipId: string }) => s.membershipId === mTho).phone).toBe('0987654321');
+    const byPhone = await request(app).get(`/api/v1/orgs/${org}/staff`).query({ q: '987654' }).set(bearer(owner)).expect(200);
+    expect(byPhone.body.items.map((s: { membershipId: string }) => s.membershipId)).toEqual([mTho]);
+  });
+
+  it('BẮT: thợ và lễ tân (chỉ staff.read) nhận phone null, không dò được số qua ô tìm kiếm', async () => {
+    for (const viewer of [tho, leTan]) {
+      const res = await request(app).get(`/api/v1/orgs/${org}/staff`).set(bearer(viewer)).expect(200);
+      expect(res.body.items.length).toBeGreaterThan(0);
+      for (const s of res.body.items) expect(s.phone).toBeNull();
+      expect(JSON.stringify(res.body)).not.toContain('0987654321');
+      const probe = await request(app).get(`/api/v1/orgs/${org}/staff`).query({ q: '987654' }).set(bearer(viewer)).expect(200);
+      expect(probe.body.items).toEqual([]);
+    }
   });
 });

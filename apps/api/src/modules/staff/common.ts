@@ -13,7 +13,7 @@ export const staffMemberSelect = {
   id: true,
   status: true,
   user: { select: { id: true, fullName: true } },
-  roles: { select: { role: { select: { key: true } } } },
+  roles: { select: { role: { select: { key: true, permissions: true } } } },
   staffProfile: {
     select: {
       displayName: true,
@@ -28,7 +28,8 @@ export const staffMemberSelect = {
 export type StaffMemberRow = Prisma.MembershipGetPayload<{ select: typeof staffMemberSelect }>;
 
 // Thành viên chưa có hồ sơ thợ vẫn hiện: tên lấy từ tài khoản, chưa có bậc, mặc định nhận lịch (khớp mặc định database).
-export function presentStaff(m: StaffMemberRow) {
+// Số điện thoại thợ chỉ trả cho người có quyền sửa hồ sơ thợ (staff.write); người khác nhận null.
+export function presentStaff(m: StaffMemberRow, view: { showPhone: boolean }) {
   const p = m.staffProfile;
   const displayName = p?.displayName ?? m.user.fullName;
   return {
@@ -38,7 +39,7 @@ export function presentStaff(m: StaffMemberRow) {
     displayName,
     initials: initialsOf(displayName),
     avatarUrl: p?.avatarUrl ?? null,
-    phone: p?.phone ?? null,
+    phone: view.showPhone ? (p?.phone ?? null) : null,
     tier: p?.tier ?? null,
     isBookable: p?.isBookable ?? true,
     hasProfile: p !== null,

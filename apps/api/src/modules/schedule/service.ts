@@ -3,9 +3,14 @@ import {
   INITIAL_STATUSES,
   MAX_APPOINTMENT_MS,
   MAX_TRAVEL_MIN,
+  STATUS_TRANSITIONS,
+  WORK_STATUS_LABELS,
+  canTransition,
   computeBlock,
   isBlockingStatus,
+  isTerminalStatus,
   normalizeVnPhone,
+  type WorkStatus,
 } from '@makeup/shared';
 import type { OrgContext } from '../../http/route';
 import { AppError } from '../../lib/errors';
@@ -182,6 +187,20 @@ export async function assertActiveStaff(tx: Prisma.TransactionClient, orgId: str
   }
 }
 
+// Thợ đã tắt "nhận lịch" không được xếp vào lịch mới. Chưa có hồ sơ thợ = nhận lịch (khớp mặc định database).
+export async function assertBookable(tx: Prisma.TransactionClient, orgId: string, membershipIds: string[]) {
+  if (membershipIds.length === 0) return;
+  const off = await tx.staffProfile.findMany({
+    where: { organizationId: orgId, membershipId: { in: membershipIds }, isBookable: false },
+    select: { membershipId: true },
+  });
+  if (off.length > 0) {
+    throw new AppError('VALIDATION_FAILED', 'Có thợ đang tắt nhận lịch', {
+      membershipIds: off.map((p) => p.membershipId),
+    });
+  }
+}
+
 // Truy vấn trước để báo trùng dễ đọc. Ràng buộc EXCLUDE ở database vẫn là chốt chặn cuối khi hai yêu cầu đua nhau.
 export async function assertNoOverlap(
   tx: Prisma.TransactionClient,
@@ -315,6 +334,11 @@ export async function createAppointmentTx(
   }
   assertTimeRange(input);
   await assertActiveStaff(tx, ctx.orgId, input.staff);
+  await assertBookable(
+    tx,
+    ctx.orgId,
+    input.staff.map((s) => s.membershipId),
+  );
   const customerId = await resolveCustomer(tx, ctx, input);
 
   // Lấy số trước khi kiểm trùng: yêu cầu đến sau phải đợi khoá bộ đếm, nên khi kiểm sẽ thấy lịch vừa lưu.
@@ -392,4 +416,89 @@ export async function createAppointmentTx(
     requestId: ctx.requestId,
   });
   return tx.appointment.findUniqueOrThrow({ where: { id: created.id }, include: appointmentInclude });
+}
+
+// Chuyển trạng thái một lịch đã khoá: kiểm bảng chuyển, kiểm trùng khi lịch bắt đầu chiếm giờ,
+// cập nhật isBlocking của thợ, ghi lịch sử trạng thái và nhật ký. Dùng chung cho đường API và huỷ theo hợp đồng.
+export async function applyStatusChangeTx(
+  tx: Prisma.TransactionClient,
+  ctx: TxCtx,
+  before: AppointmentRow,
+  to: WorkStatus,
+  reason: string | null,
+  auditExtra?: Record<string, string>,
+): Promise<void> {
+  if (!canTransition(before.status, to)) {
+    throw new AppError(
+      'CONFLICT',
+      `Không chuyển được lịch từ "${WORK_STATUS_LABELS[before.status]}" sang "${WORK_STATUS_LABELS[to]}"`,
+      { from: before.status, to, allowed: STATUS_TRANSITIONS[before.status] },
+    );
+  }
+  if (to === 'CANCELLED' && !reason) throw new AppError('VALIDATION_FAILED', 'Huỷ lịch phải ghi lý do');
+  const wasBlocking = isBlockingStatus(before.status);
+  const nowBlocking = isBlockingStatus(to);
+  if (!wasBlocking && nowBlocking) {
+    await assertNoOverlap(
+      tx,
+      ctx.orgId,
+      before.staff.map((s) => s.membershipId),
+      computeBlock(before),
+      before.id,
+    );
+  }
+  if (wasBlocking !== nowBlocking) {
+    await tx.appointmentStaff.updateMany({
+      where: { appointmentId: before.id, organizationId: ctx.orgId },
+      data: { isBlocking: nowBlocking },
+    });
+  }
+  await tx.appointment.update({
+    where: { id: before.id },
+    data: { status: to, ...(to === 'CANCELLED' ? { cancelReason: reason } : {}) },
+  });
+  await tx.appointmentStatusHistory.create({
+    data: {
+      organizationId: ctx.orgId,
+      appointmentId: before.id,
+      fromStatus: before.status,
+      toStatus: to,
+      reason,
+      changedById: ctx.userId,
+    },
+  });
+  await writeAudit(tx, {
+    organizationId: ctx.orgId,
+    actorUserId: ctx.userId,
+    action: 'appointment.status_changed',
+    entityType: 'appointment',
+    entityId: before.id,
+    data: { code: before.code, from: before.status, to, reason, ...auditExtra },
+    requestId: ctx.requestId,
+  });
+}
+
+// Huỷ hợp đồng thì huỷ các lịch đã gắn. Lịch đang làm dở (không còn đường sang "Đã huỷ" theo bảng chuyển)
+// trả về trong `blocking` và KHÔNG lịch nào bị đổi — bên hợp đồng từ chối huỷ, không để huỷ dở dang một nửa.
+// Lịch đã ở trạng thái cuối giữ nguyên.
+export async function cancelAppointmentsOfContractTx(
+  tx: Prisma.TransactionClient,
+  ctx: TxCtx,
+  contractId: string,
+  reason: string,
+): Promise<{ cancelled: string[]; blocking: string[] }> {
+  if (reason.trim() === '') throw new AppError('VALIDATION_FAILED', 'Huỷ lịch phải ghi lý do');
+  await tx.$queryRaw`SELECT id FROM appointments WHERE organization_id = ${ctx.orgId}::uuid AND contract_id = ${contractId}::uuid ORDER BY id FOR UPDATE`;
+  const rows = await tx.appointment.findMany({
+    where: { organizationId: ctx.orgId, contractId },
+    include: appointmentInclude,
+    orderBy: { code: 'asc' },
+  });
+  const blocking = rows.filter((r) => !isTerminalStatus(r.status) && !canTransition(r.status, 'CANCELLED')).map((r) => r.id);
+  if (blocking.length > 0) return { cancelled: [], blocking };
+  const toCancel = rows.filter((r) => canTransition(r.status, 'CANCELLED'));
+  for (const row of toCancel) {
+    await applyStatusChangeTx(tx, ctx, row, 'CANCELLED', reason, { via: 'contract.cancelled', contractId });
+  }
+  return { cancelled: toCancel.map((r) => r.id), blocking: [] };
 }
