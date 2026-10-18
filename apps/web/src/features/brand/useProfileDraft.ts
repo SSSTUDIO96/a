@@ -18,6 +18,8 @@ export interface ProfileDraft {
   setDraft: (update: (d: Draft) => Draft) => void;
   // Sau PUT / publish / unpublish: bản gốc và bản nháp theo máy chủ.
   apply: (r: BrandProfileResult) => void;
+  // Sau xuất bản / gỡ: chỉ đổi trạng thái công khai, KHÔNG đè bản nháp đang sửa.
+  setPublished: (r: BrandProfileResult) => void;
   reset: () => void;
   reload: () => void;
 }
@@ -58,6 +60,7 @@ export function useProfileDraft(orgId: string): ProfileDraft {
     setDraftState(d);
   }, []);
 
+  const setPublished = useCallback((r: BrandProfileResult) => setResult(r), []);
   const reset = useCallback(() => setDraftState(baseline), [baseline]);
   const reload = useCallback(() => setAttempt((n) => n + 1), []);
 
@@ -108,7 +111,7 @@ export function useProfileDraft(orgId: string): ProfileDraft {
     };
   }, [orgId, load.status]);
 
-  return { load, result, baseline, draft, setDraft, apply, reset, reload };
+  return { load, result, baseline, draft, setDraft, apply, setPublished, reset, reload };
 }
 
 // ---- Gói cho nhóm "Gói hiện trên trang" và khung xem trước ----

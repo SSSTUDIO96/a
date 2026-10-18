@@ -1,6 +1,6 @@
 import { Link } from 'react-router';
 import type { RevenueContractRow } from '../../api/types';
-import { Card, EmptyState, StatusTag } from '../../ui';
+import { Card, ContractStatusTag, EmptyState, StatusTag } from '../../ui';
 import { money } from '../payments/money';
 import { fmtDayMonth } from '../payments/vnTime';
 
@@ -37,12 +37,15 @@ export function RevenueByContractTable({ orgSlug, rows }: RevenueByContractTable
                     <Link className="rp-code" to={`/${orgSlug}/hop-dong/${r.contractId}`}>
                       {r.code}
                     </Link>{' '}
-                    {!r.bookedInPeriod && r.status !== 'CANCELLED' && (
-                      <StatusTag tone="neutral" title="Chỉ có tiền thu/hoàn trong kỳ, doanh số tính ở kỳ khác">
-                        Kỳ khác
-                      </StatusTag>
-                    )}
-                    {r.status === 'CANCELLED' && <StatusTag tone="danger">Đã huỷ</StatusTag>}
+                    {!r.bookedInPeriod &&
+                      (r.status === 'CONFIRMED' || r.status === 'COMPLETED' ? (
+                        <StatusTag tone="neutral" title="Chỉ có tiền thu/hoàn trong kỳ, doanh số tính ở kỳ khác">
+                          Kỳ khác
+                        </StatusTag>
+                      ) : (
+                        // Nháp / đã huỷ: không tính vào doanh số, chỉ có tiền thu/hoàn trong kỳ.
+                        <ContractStatusTag status={r.status} />
+                      ))}
                     <span className="rp-fx">{r.customer.fullName}</span>
                   </td>
                   <td className="rp-t-hide" data-l="Xác nhận">

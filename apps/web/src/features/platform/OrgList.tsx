@@ -156,7 +156,7 @@ export function OrgList({ stats, plans, filter, planCode, q, onFilter, onPlan, o
           onChange={(e) => onPlan(e.target.value)}
         />
       </div>
-      <div className="pf-list__body">
+      <div className="pf-list__body ui-ld__scroll">
         {pages.items.length === 0 && pages.loading ? (
           <ListRowSkeleton rows={6} label="Đang tải danh sách tổ chức" />
         ) : pages.items.length === 0 && pages.error ? (
