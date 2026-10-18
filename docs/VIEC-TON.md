@@ -54,3 +54,4 @@ Danh sách việc các thợ, thợ chấm và R&D đã nêu nhưng **chưa làm
 | 36 | src/ui thêm IconSearch, IconGrip, ô tìm có kính lúp, hộp thoại tự đổi Dialog/ngăn kéo đáy theo khổ (nay đang dựng tạm trong features/staff) | thợ Nhân sự |
 | 37 | Web: hiện `totalsOverflow`/tổng null ở sổ thu–báo cáo; `phoneHidden`; quản trị gửi `replaceCurrent` khi cố ý cắt kỳ, hiện `renewedUntil` | thợ O |
 | 38 | Thuê bao: đổi sang mô hình "dòng mới cắt kỳ cũ" để database chặn chồng thời gian bằng EXCLUDE | thợ O |
+| 39 | Lỗi khoá ngoại do database chặn (khi bước kiểm của máy chủ bị bỏ sót) đang trả 500 thay vì 400 "không tìm thấy" — đột biến 14 của cửa gác cho thấy | thợ G2 |
