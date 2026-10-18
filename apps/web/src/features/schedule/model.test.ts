@@ -14,8 +14,10 @@ import {
   daysOf,
   DEFAULT_MODE,
   indexByCell,
+  kindLabel,
   kindText,
   laneShortNames,
+  quantityText,
   layoutLanes,
   MODE_OPTIONS,
   nextStatuses,
@@ -322,5 +324,15 @@ describe('L7: "× n" theo số lượng dòng hợp đồng (kindText dùng chun
     expect(kindText(appt({ ...base, title: 'Makeup cô dâu', quantity: 1 }))).toBe('Makeup cô dâu');
     expect(kindText(appt({ ...base, title: 'Makeup cô dâu', quantity: null }))).toBe('Makeup cô dâu');
     expect(kindText(appt({ ...base, title: null, kind: 'PERSONAL_BLOCK', quantity: null }))).toBe('Bận việc riêng');
+  });
+});
+
+describe('L7: thẻ "× n" tách riêng cho ô ca hẹp (lưới C)', () => {
+  const base = { id: 'q', startsAt: '2026-10-21T02:00:00Z', endsAt: '2026-10-21T03:00:00Z' };
+  it('quantityText: 2 → "× 2"; 1 / null → null; kindLabel không kèm số lượng', () => {
+    expect(quantityText(appt({ ...base, quantity: 2 }))).toBe('× 2');
+    expect(quantityText(appt({ ...base, quantity: 1 }))).toBeNull();
+    expect(quantityText(appt({ ...base, quantity: null }))).toBeNull();
+    expect(kindLabel(appt({ ...base, title: 'Makeup phù dâu', quantity: 2 }))).toBe('Makeup phù dâu');
   });
 });

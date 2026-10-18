@@ -3,7 +3,7 @@ import { createContext, useContext } from 'react';
 import { WORK_STATUS_LABELS } from '@makeup/shared';
 import type { Appointment } from '../../api/types';
 import { Avatar, AvatarStack, Tooltip, WithTooltip } from '../../ui';
-import { isBlocking, kindText, swatchOf, UNASSIGNED, type StaffLane, type Swatch } from './model';
+import { isBlocking, kindLabel, kindText, quantityText, swatchOf, UNASSIGNED, type StaffLane, type Swatch } from './model';
 
 // Danh sách nhân vật của tổ chức (thứ tự cố định) — để nhân vật tự thêm có màu ổn định. Màn cung cấp qua ngữ cảnh này.
 export const OrgSubjectsContext = createContext<readonly string[]>([]);
@@ -48,9 +48,9 @@ export function apptClasses(a: Appointment, conflict: boolean, swatch: Swatch): 
 }
 
 // Chữ loại trên ô lưới C (ô hẹp, bản mẫu ghi "Tiệc", "Ăn hỏi"): bỏ chữ "Makeup" đứng đầu tên ca — app chỉ có ca makeup.
-// Tên ca đầy đủ vẫn nằm trong tooltip và hộp chi tiết.
-export function chipKind(a: Pick<Appointment, 'title' | 'kind' | 'quantity'>): string {
-  const t = kindText(a).replace(/^makeup\s+/iu, '');
+// Tên ca đầy đủ vẫn nằm trong tooltip và hộp chi tiết. KHÔNG kèm "× n": số lượng là thẻ riêng (ws-chip__qty) để không bị cắt.
+export function chipKind(a: Pick<Appointment, 'title' | 'kind'>): string {
+  const t = kindLabel(a).replace(/^makeup\s+/iu, '');
   return t.charAt(0).toLocaleUpperCase('vi') + t.slice(1);
 }
 
@@ -67,12 +67,14 @@ export function ApptChip({
   onOpen: (a: Appointment) => void;
 }) {
   const swatchOfName = useSwatchOf();
+  const qty = quantityText(a);
   return (
     <WithTooltip text={apptTip(a)} className="ws-chip-wrap">
       <button type="button" className={cx('ws-chip', apptClasses(a, conflict, swatchOfName(a.subjectName)))} onClick={() => onOpen(a)} data-appt={a.id}>
         <span className="ws-chip__top">
           <b className="num">{startLabel(a, day)}</b>
           <span className="ws-chip__kind">{chipKind(a)}</span>
+          {qty && <span className="ws-chip__qty num">{qty}</span>}
         </span>
         {a.customer && <span className="ws-chip__who">{a.customer.fullName}</span>}
       </button>

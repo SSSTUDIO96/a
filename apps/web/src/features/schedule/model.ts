@@ -85,8 +85,19 @@ export const KIND_LABELS: Record<Appointment['kind'], string> = {
 // Dùng chung cho mọi chế độ lịch (C lưới tuần qua chipKind, C điện thoại, B ngày, A cột thợ, tooltip, hộp chi tiết).
 // quantity null (ca không gắn dòng hợp đồng) hoặc 1 → không ghi gì.
 export function kindText(a: Pick<Appointment, 'title' | 'kind' | 'quantity'>): string {
-  const base = a.title?.trim() || KIND_LABELS[a.kind];
-  return a.quantity !== null && a.quantity > 1 ? `${base} × ${a.quantity}` : base;
+  const qty = quantityText(a);
+  return qty ? `${kindLabel(a)} ${qty}` : kindLabel(a);
+}
+
+// Tên loại ca (không kèm số lượng): tên ca nếu có, không thì loại sự kiện.
+export function kindLabel(a: Pick<Appointment, 'title' | 'kind'>): string {
+  return a.title?.trim() || KIND_LABELS[a.kind];
+}
+
+// "× n" khi dòng hợp đồng gắn với ca có số lượng > 1; còn lại null. Ô ca hẹp (lưới C) vẽ phần này thành thẻ riêng KHÔNG
+// bị cắt, chỉ tên loại ca được rút gọn "…".
+export function quantityText(a: Pick<Appointment, 'quantity'>): string | null {
+  return a.quantity !== null && a.quantity !== undefined && a.quantity > 1 ? `× ${a.quantity}` : null;
 }
 
 // Ca không chặn lịch (nháp, đã huỷ, khách không đến) vẽ mờ, không báo đỏ (bản vẽ 4.1).

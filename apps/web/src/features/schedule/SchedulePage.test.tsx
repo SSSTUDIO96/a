@@ -1,4 +1,7 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Appointment, StaffMember } from '../../api/types';
@@ -278,9 +281,12 @@ describe('L7: ca phù dâu 2 người ghi "× 2" ở mọi chế độ lịch', 
     renderScreen(OWNER);
     await screen.findByTestId('che-do-C');
     const chip = document.querySelector('[data-appt="a4"]') as HTMLElement;
-    expect(chip.querySelector('.ws-chip__kind')?.textContent).toBe('Phù dâu × 2');
+    // "× 2" là thẻ riêng (không bị cắt "…" cùng tên loại ca), nằm cùng dòng giờ.
+    expect(chip.querySelector('.ws-chip__kind')?.textContent).toBe('Phù dâu');
+    expect(chip.querySelector('.ws-chip__top .ws-chip__qty')?.textContent).toBe('× 2');
     expect(document.querySelector('[data-appt="q1"] .ws-chip__kind')?.textContent).toBe('Cô dâu');
     expect(document.querySelector('[data-appt="free"] .ws-chip__kind')?.textContent).toBe('Tiệc');
+    expect(document.querySelectorAll('[data-appt="q1"] .ws-chip__qty, [data-appt="free"] .ws-chip__qty')).toHaveLength(0);
     expect(document.body.textContent).toContain('Makeup phù dâu × 2'); // tooltip đầy đủ (apptTip)
 
     fireEvent.click(modeButton('Ngày'));
@@ -301,6 +307,19 @@ describe('L7: ca phù dâu 2 người ghi "× 2" ở mọi chế độ lịch', 
     fireEvent.click(a4);
     const dlg = await screen.findByRole('dialog');
     expect(dlg.textContent).toContain('L-0004 · Makeup phù dâu × 2');
+  });
+
+  it('BẮT (CSS): thẻ "× n" không co, không cắt, và KHÔNG bị ẩn ở khổ máy tính bảng (chỉ tên loại ca bị ẩn/rút gọn)', () => {
+    const css = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'schedule.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+    const rules = [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((m) => ({ sel: (m[1] ?? '').trim(), body: m[2] ?? '' }));
+    const qty = rules.filter((r) => r.sel.split(',').some((x) => x.trim().endsWith('.ws-chip__qty')));
+    expect(qty.length).toBeGreaterThan(0);
+    expect(qty.some((r) => /flex:\s*none/.test(r.body))).toBe(true);
+    for (const r of qty) {
+      expect(r.body).not.toMatch(/display:\s*none|overflow:\s*hidden|text-overflow/);
+    }
+    // Tên loại ca vẫn là phần rút gọn "…" (và bị ẩn ở máy tính bảng như cũ).
+    expect(rules.some((r) => r.sel === '.ws-chip__kind' && /text-overflow:\s*ellipsis/.test(r.body))).toBe(true);
   });
 
   it('BẮT: lưới C trên điện thoại (WeekGridCMobile) cũng ghi "× 2"', async () => {

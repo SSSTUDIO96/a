@@ -97,6 +97,9 @@
 .ws-chip__top { display: flex; gap: 4px; min-width: 0; white-space: nowrap; }
 .ws-chip__top b { color: var(--c); font-weight: 700; flex: none; }
 .ws-chip__kind { color: var(--c); font-weight: 600; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+/* L7: "× 2" (phù dâu 2 người) là thẻ riêng không co, không cắt — chỉ tên loại ca rút gọn "…". Máy tính bảng ẩn tên loại
+   ca nhưng vẫn giữ thẻ này cạnh giờ. */
+.ws-chip__qty { color: var(--c); font-weight: 700; flex: none; }
 .ws-chip__who { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* Trạng thái ô ca (dùng chung các chế độ) */
