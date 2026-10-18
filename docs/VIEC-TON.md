@@ -45,13 +45,16 @@ Danh sách việc các thợ, thợ chấm và R&D đã nêu nhưng **chưa làm
 | 27 | Chế độ tối | R&D 2 |
 | 28 | Màn Thành viên & vai trò | R&D 2 |
 | 29 | Huỷ riêng từng dịch vụ phụ trong hợp đồng đã xác nhận | thợ Hợp đồng |
-| 30 | `src/api/types.ts` chưa khai `customer.phoneHidden`, `totalsOverflow`, tổng `null` khi vượt ngưỡng ở thu tiền (máy chủ đã trả) | thợ Thu tiền |
+| ~~30~~ | ~~`src/api/types.ts` chưa khai `phoneHidden`, `totalsOverflow`, tổng `null`~~ — **đã làm** 19/10 (W-HDKH, W-PP; commit 745f454, 6a6df30) | thợ Thu tiền |
 | 31 | DateInput/MoneyInput nhận `ref`; DateInput có giới hạn ngày min/max | thợ Thu tiền |
 | 32 | Máy chủ: `GET /contracts` trả `paid`, `remaining`; lọc "chưa có ngày sự kiện"; phiếu thu có `installmentId`, tài khoản nhận, người thu; xuất CSV sổ thu ở máy chủ | thợ Thu tiền |
 | 33 | Dịch vụ phụ có bật "công khai" hiện cả trên trang giới thiệu — anh xác nhận giữ hay chỉ hiện gói | thợ Thương hiệu |
 | 34 | Thẻ `og:` cho Zalo/Facebook in sẵn từ máy chủ; đặt `VITE_PUBLIC_SITE_ORIGIN` trên Vercel | thợ Thương hiệu |
 | 35 | `GET /staff` trả ngày vào studio ("tham gia …") và tên vai trò | thợ Nhân sự |
 | 36 | src/ui thêm IconSearch, IconGrip, ô tìm có kính lúp, hộp thoại tự đổi Dialog/ngăn kéo đáy theo khổ (nay đang dựng tạm trong features/staff) | thợ Nhân sự |
-| 37 | Web: hiện `totalsOverflow`/tổng null ở sổ thu–báo cáo; `phoneHidden`; quản trị gửi `replaceCurrent` khi cố ý cắt kỳ, hiện `renewedUntil` | thợ O |
+| 37 | Web: quản trị gửi `replaceCurrent` khi cố ý cắt kỳ, hiện `renewedUntil` (phần tổng null / `phoneHidden` đã làm 19/10) | thợ O |
 | 38 | Thuê bao: đổi sang mô hình "dòng mới cắt kỳ cũ" để database chặn chồng thời gian bằng EXCLUDE | thợ O |
-| 39 | Lỗi khoá ngoại do database chặn (khi bước kiểm của máy chủ bị bỏ sót) đang trả 500 thay vì 400 "không tìm thấy" — đột biến 14 của cửa gác cho thấy | thợ G2 |
+| ~~39~~ | ~~Lỗi khoá ngoại ra 500~~ — **đã làm** 19/10 (thợ U, commit 2f362c9): P2003 và 23503 đều ra 400 | thợ G2 |
+| 40 | Phụ phí cũ đang mang số phút giả (1 phút do web cũ gửi) — chủ tự xoá trong hộp sửa dịch vụ, máy chủ không tự đổi | thợ V |
+| 41 | Xoá bản ghi còn được tham chiếu nay ra 400 "không tìm thấy dữ liệu liên quan"; muốn báo 409 "đang được dùng" thì đường xoá phải tự kiểm trước | thợ U |
+| 42 | Màn lập hợp đồng khoá học chưa có ô "Lý do giảm" (máy chủ chưa có trường) và chưa đổi "Người phụ trách" sau khi tạo (PATCH chưa nhận) | thợ W-HDKH |
