@@ -73,4 +73,6 @@ Anh Chiến nhắn lúc khoảng 15:13 UTC ngày 18/10/2026: *"Tự làm vào ch
 | 22:10 | Lễ tân huỷ hợp đồng đã xác nhận | Cần quyền "Điều chỉnh hợp đồng đã xác nhận" như huỷ dòng | Hai cửa cùng một luật | Được |
 | 22:10 | Trần số tiền ở bảng giá | Cùng trần với phiếu thu | Một luật cho mọi số tiền | Được |
 
+| 23:40 | Database thử mặc định `makeup_test` chứa dữ liệu thử cũ vượt trần 100 tỷ (9 dòng) | Dựng lại từ đầu (xoá database thử, tạo mới, áp đủ migration). **Chỉ database thử**, không đụng database phát triển hay dữ liệu thật | Để lệnh kiểm tra gốc chạy được với chốt trần tiền mới | Được: dữ liệu thử tự sinh lại khi chạy bài thử |
+
 **Cần anh xem lại nhất:** (1) cách anh vào thao tác thực tế (dòng 19:44): chạy trên máy anh hay cho phép đưa lên mạng; (2) phân quyền theo vai trò mẫu (dòng 15:16) — studio anh có thể muốn thợ chính thấy cả lịch của đội.

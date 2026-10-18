@@ -354,6 +354,8 @@ describe('mở từ màn Khách hàng: /hop-dong/moi?customerId=…', () => {
       phone: '0912345678',
       email: 'phuongthao@gmail.com',
       note: null,
+      avatarFileId: null,
+      avatarUrl: null,
       createdAt: '',
       updatedAt: '',
     });

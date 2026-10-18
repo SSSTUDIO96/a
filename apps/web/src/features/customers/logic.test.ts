@@ -17,7 +17,7 @@ import {
 } from './logic';
 
 const T = '2026-08-12T03:00:00.000Z';
-const C: Customer = { id: 'k1', fullName: 'Tôn Nữ Phương Thảo', phone: '0912345678', email: 'thao@gmail.com', note: 'Da nhạy cảm', createdAt: T, updatedAt: T };
+const C: Customer = { id: 'k1', fullName: 'Tôn Nữ Phương Thảo', phone: '0912345678', email: 'thao@gmail.com', note: 'Da nhạy cảm', avatarFileId: null, avatarUrl: null, createdAt: T, updatedAt: T };
 
 describe('số điện thoại', () => {
   it('định dạng 0912 345 678; số lạ để nguyên', () => {

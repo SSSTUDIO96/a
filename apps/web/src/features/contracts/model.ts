@@ -420,7 +420,7 @@ export function serverWarnings(list: StaffWarning[] | undefined, lineLabel: (ind
     // Đỏ: trùng lịch đã chiếm giờ / trùng dòng khác của hợp đồng này. Giữ chỗ nháp trùng giờ: xám. Có ca thật cùng ngày:
     // vàng (đếm cả giữ chỗ). Chỉ có giữ chỗ nháp cùng ngày khác giờ: xám "cùng ngày, khác giờ".
     const level: WarnLevel | null =
-      w.overlaps.length > 0 || same.length > 0
+      w.overlaps.length > 0
         ? 'OVERLAP'
         : overlapHolds.length > 0
           ? 'DRAFT_HOLD'

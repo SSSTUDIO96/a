@@ -198,13 +198,12 @@ export function deleteDesignCard(orgId: string, cardId: string) {
 
 // ---- Tải ảnh của thẻ ----
 
-// Mục đích tệp của thẻ (schema.prisma FilePurpose += DESIGN_PHOTO, DESIGN_CARD — bản vẽ C3 mục 1.1). Kiểu FilePurpose
-// ở types.ts chưa có hai giá trị này (tệp của gói khác) nên đổi kiểu tại đây, đúng một chỗ.
-export type DesignFilePurpose = 'DESIGN_PHOTO' | 'DESIGN_CARD';
+// Mục đích tệp của thẻ (schema.prisma FilePurpose: DESIGN_PHOTO, DESIGN_CARD — bản vẽ C3 mục 1.1).
+export type DesignFilePurpose = Extract<FilePurpose, 'DESIGN_PHOTO' | 'DESIGN_CARD'>;
 
 // DESIGN_PHOTO: ảnh người dùng tải lên cho thẻ; DESIGN_CARD: ảnh PNG đã xuất.
 export function uploadDesignFile(orgId: string, purpose: DesignFilePurpose, name: string, data: Blob, idempotencyKey: string) {
-  return uploadFile(orgId, { purpose: purpose as FilePurpose, name, data }, idempotencyKey);
+  return uploadFile(orgId, { purpose, name, data }, idempotencyKey);
 }
 
 // Thẻ chào mừng: "Đổi ảnh" học viên = cập nhật Customer.avatarFileId (C3 mục 1.3, PATCH /customers/:id đã có).

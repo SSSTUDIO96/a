@@ -316,6 +316,9 @@ export interface Customer {
   phone: string | null;
   email: string | null;
   note: string | null;
+  // Ảnh đại diện khách (tệp CUSTOMER_AVATAR); avatarUrl = URL ký có hạn để hiện, null = hiện chữ viết tắt.
+  avatarFileId: string | null;
+  avatarUrl: string | null;
   createdAt: IsoDateTime;
   updatedAt: IsoDateTime;
 }
@@ -909,7 +912,11 @@ export type FilePurpose =
   | 'COURSE_RESOURCE'
   | 'SUBMISSION'
   | 'WELCOME_CARD'
-  | 'OTHER';
+  | 'OTHER'
+  // Ảnh người dùng tải lên cho thẻ (chào mừng / feedback / lời chúc).
+  | 'DESIGN_PHOTO'
+  // Ảnh PNG thẻ đã xuất.
+  | 'DESIGN_CARD';
 export type FileStatus = 'UPLOADING' | 'READY' | 'DELETED';
 
 // files/service.ts — presentFile.
