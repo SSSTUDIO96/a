@@ -32,7 +32,9 @@ const STAFF = [
 ];
 const SHEET = {
   owner: { kind: 'package', id: 'p1', name: 'Cô dâu' },
-  items: [{ tier: { id: 't1', name: 'Thợ chính', sortOrder: 0 }, amount: 700_000, updatedAt: T, staff: STAFF.map((s) => ({ membershipId: s.membershipId, displayName: s.displayName, avatarUrl: null, initials: s.initials })) }],
+  // Bảng công chỉ có Lê Minh Tú (Linh Trần không ở bảng này) → màu của Tú phải xét trên CẢ sổ thợ (GET /staff), không chỉ
+  // những người đang hiện trên bảng; xét riêng bảng thì Tú lấy lại màu băm gốc = màu của Linh Trần.
+  items: [{ tier: { id: 't1', name: 'Thợ chính', sortOrder: 0 }, amount: 700_000, updatedAt: T, staff: STAFF.filter((s) => s.membershipId !== LINH).map((s) => ({ membershipId: s.membershipId, displayName: s.displayName, avatarUrl: null, initials: s.initials })) }],
 };
 const json = (status: number, body: unknown) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
 
@@ -96,12 +98,12 @@ describe('L2: một người một màu, một chữ tắt ở Thợ makeup, L�
     // Tiền công theo gói.
     renderAt('/chien/nhan-su/tien-cong/goi/p1');
     await waitFor(() => expect(document.querySelector('.sh-main .ui-av[title="Lê Minh Tú"]')).not.toBeNull());
-    const pay = { linh: tone(main(), 'Linh Trần'), tu: tone(main(), 'Lê Minh Tú') };
+    const pay = { tu: tone(main(), 'Lê Minh Tú') };
 
     console.log(`[L2] Lê Minh Tú: Thợ makeup ${staffPage.tu.bg} · Lịch ${lich.tu.bg} · Tiền công ${pay.tu.bg}; Linh Trần ${staffPage.linh.bg}`);
     expect(staffPage.linh.bg).not.toBe(staffPage.tu.bg);
     expect(lich).toEqual(staffPage);
-    expect(pay).toEqual(staffPage);
+    expect(pay.tu).toEqual(staffPage.tu);
     expect(staffPage).toEqual({ linh: { bg: WANT(LINH), ini: 'LT' }, tu: { bg: WANT(TU), ini: 'LT' } });
   });
 });

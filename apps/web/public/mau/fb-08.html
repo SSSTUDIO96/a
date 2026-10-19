@@ -9,15 +9,16 @@
      Ảnh người và logo mặc định: vector do R&D tự vẽ. -->
 <link rel="stylesheet" href="phong/phong.css"><link rel="stylesheet" href="chung/mau.css">
 <style>
-#c{background:#000;color:#fff}
-.bgp{position:absolute;inset:0}
+#c{background:#1C1617;color:#fff}
+/* Ảnh khung tròn lớn trên nền tối (trước đây ảnh tràn toàn khung) — khung mặc định tròn, 19/10/2026. */
+.bgp{position:absolute;left:50%;top:150px;width:580px;height:580px;margin-left:-290px;border-radius:50%;overflow:hidden;box-shadow:0 0 0 10px #1C1617,0 0 0 11.5px #8C7A6A}
 .th0{position:absolute;left:60px;top:56px;display:flex;align-items:center;gap:14px}
 .ld{width:58px;height:58px;border-radius:50%;background:#FFFDF9;display:grid;place-items:center}.ld img{width:46px;height:46px}
 .th0 span.t{font:600 18px var(--f-sans);letter-spacing:.26em;text-transform:uppercase;background:rgba(20,16,16,.72);padding:10px 16px;border-radius:8px}
 .pn{position:absolute;left:44px;right:44px;bottom:44px;height:560px;background:rgba(22,17,18,.84);border-radius:24px;padding:48px 56px 42px;display:flex;flex-direction:column}
 .nd{font:italic 500 42px/1.42 var(--f-chan);flex:1 1 0;min-height:0;overflow:hidden}
 .pr{border-top:1px solid rgba(255,255,255,.2);padding-top:22px;margin-top:16px}.pr b{font:700 26px var(--f-sans);letter-spacing:.06em}.pr span{font:500 21px var(--f-sans);color:#CFC4C0;margin-left:12px}
-.vuong .pn{height:470px}.vuong .nd{font-size:36px}
+.vuong .pn{height:470px}.vuong .bgp{top:130px;width:390px;height:390px;margin-left:-195px}.vuong .nd{font-size:36px}
 .nd{display:flex;flex-direction:column;justify-content:center}
 </style></head><body><div id="c"><div class="bgp"><img class="ph" data-f="a1" alt=""></div>
 <div class="th0"><span class="ld"><img data-f="logo" alt=""></span><span class="t" data-f="th"></span></div>

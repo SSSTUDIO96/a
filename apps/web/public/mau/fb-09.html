@@ -13,17 +13,19 @@
 .w{position:absolute;inset:0;display:flex;flex-direction:column;padding:64px 70px 56px}
 .top{display:flex;align-items:center;gap:14px}.top img{width:54px;height:54px}.top span{font:600 18px var(--f-sans);letter-spacing:.26em;text-transform:uppercase;color:#8A2E45}
 .tt{font:italic 700 58px/1.15 var(--f-chan2);margin-top:30px}
-.ts{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:30px;height:560px}
-.ts div{position:relative;overflow:hidden;border-radius:18px}
-.ts em{position:absolute;left:18px;top:18px;font:700 16px var(--f-sans);letter-spacing:.24em;font-style:normal;background:#fff;color:#231E1D;padding:8px 14px;border-radius:30px}
+/* Trước – sau: hai ảnh khung tròn (trước đây chữ nhật bo góc) — khung mặc định tròn, 19/10/2026; nhãn đặt ngoài khung để không bị cắt. */
+.ts{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:30px;height:450px}
+.ts>div{position:relative;display:flex;justify-content:center}
+.ts .o{width:440px;height:440px;overflow:hidden;border-radius:50%;flex:none}
+.ts em{position:absolute;left:6px;top:6px;font:700 16px var(--f-sans);letter-spacing:.24em;font-style:normal;background:#fff;color:#231E1D;padding:8px 14px;border-radius:30px}
 .ts div:last-child em{background:#8A2E45;color:#fff}
 .nd{font:400 30px/1.5 var(--f-sans);margin-top:30px;flex:1 1 0;min-height:0;overflow:hidden}
 .pr{margin-top:18px}.pr b{font:700 28px var(--f-sans)}.pr span{font:500 21px var(--f-sans);color:#7C7370;margin-left:12px}
-.vuong .ts{height:400px;margin-top:22px}.vuong .tt{margin-top:18px;font-size:48px}.vuong .nd{margin-top:18px;font-size:27px}.vuong .w{padding:50px 70px 44px}
+.vuong .ts{height:330px;margin-top:22px}.vuong .ts .o{width:330px;height:330px}.vuong .tt{margin-top:18px;font-size:48px}.vuong .nd{margin-top:18px;font-size:27px}.vuong .w{padding:50px 70px 44px}
 .nd{display:flex;flex-direction:column;justify-content:center}
 </style></head><body><div id="c"><div class="w"><div class="top"><img data-f="logo" alt=""><span data-f="th"></span></div>
 <div class="tt">Cảm nhận sau buổi makeup</div>
-<div class="ts"><div><img class="ph" data-f="a1" alt=""><em>TRƯỚC</em></div><div><img class="ph" data-f="a2" alt=""><em>SAU</em></div></div>
+<div class="ts"><div><div class="o"><img class="ph" data-f="a1" alt=""></div><em>TRƯỚC</em></div><div><div class="o"><img class="ph" data-f="a2" alt=""></div><em>SAU</em></div></div>
 <div class="nd" data-f="nd" data-fitc="40"></div><div class="pr"><b data-f="kh"></b><span data-f="dv"></span></div></div></div>
 <script>window.MAC_DINH={"a1": "chung/anh-truoc.svg", "a2": "chung/anh-sau.svg", "loai": "dv"};</script>
 <script src="chung/qrcode.js"></script><script src="chung/mau.js"></script><script src="chung/html-to-image.js"></script><script src="chung/xuat.js"></script></body></html>

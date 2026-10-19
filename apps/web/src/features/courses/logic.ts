@@ -31,6 +31,8 @@ export interface CoursePerms {
   // Ô chọn giảng viên đọc danh sách thợ (staff.read); ô "Ở đâu" đọc cơ sở (catalog.read).
   staff: boolean;
   locations: boolean;
+  // Nút "Đưa buổi học lên Lịch" ở thẻ lớp: máy chủ cần cả courses.write và schedule.write.
+  calendar: boolean;
 }
 
 export function coursePerms(has: (p: Permission) => boolean): CoursePerms {
@@ -40,7 +42,37 @@ export function coursePerms(has: (p: Permission) => boolean): CoursePerms {
     enroll: has('contracts.write'),
     staff: has('staff.read'),
     locations: has('catalog.read'),
+    calendar: has('courses.write') && has('schedule.write'),
   };
+}
+
+// ---------- Buổi học trên Lịch (việc tồn 6) ----------
+
+export const NO_TIME_REASON = 'Lớp chưa có giờ học — sửa lớp, nhập giờ học rồi mới đưa buổi học lên Lịch';
+
+// Trạng thái Lịch trên thẻ lớp: "Chưa lên Lịch" / "Đã lên Lịch · 6 buổi sắp tới" / "Đã lên Lịch · các buổi đã qua".
+export function calendarText(k: Pick<ClassView, 'calendar' | 'status'>): { label: string; on: boolean } {
+  const { total, upcoming } = k.calendar;
+  if (total === 0) return { label: 'Chưa lên Lịch', on: false };
+  if (upcoming === 0) return { label: k.status === 'CANCELLED' ? `Đã lên Lịch ${total} buổi (đã huỷ lớp)` : `Đã lên Lịch · ${total} buổi đã qua`, on: true };
+  return { label: `Đã lên Lịch · ${upcoming} buổi sắp tới`, on: true };
+}
+
+// Các dòng xem trước của hộp "Đưa buổi học lên Lịch".
+export function sessionSyncLines(s: SessionSyncSummary): string[] {
+  const out: string[] = [];
+  if (s.create > 0) {
+    const range = s.firstNewDate && s.lastNewDate ? (s.firstNewDate === s.lastNewDate ? ` (${fullDate(s.firstNewDate)})` : ` (${fullDate(s.firstNewDate)} → ${fullDate(s.lastNewDate)})`) : '';
+    out.push(`Thêm ${s.create} buổi học${range}`);
+  }
+  if (s.update > 0) out.push(`Đổi giờ / giảng viên / nơi học của ${s.update} buổi cho khớp lịch lớp`);
+  if (s.cancel > 0) out.push(`Huỷ ${s.cancel} buổi không còn trong lịch lớp`);
+  if (s.keep > 0) out.push(`${s.keep} buổi đã khớp lịch lớp — giữ nguyên`);
+  if (s.past > 0) out.push(`${s.past} buổi đã diễn ra — giữ nguyên`);
+  if (s.skippedManual.length > 0) out.push(`${s.skippedManual.length} buổi đã huỷ tay (${s.skippedManual.map(dayMonth).join(', ')}) — không thêm lại`);
+  if (s.create + s.update + s.cancel === 0 && s.keep + s.past === 0) out.push('Không còn buổi học nào từ hôm nay đến ngày kết thúc lớp');
+  else if (s.create + s.update + s.cancel === 0) out.push('Lịch đã khớp lịch lớp — không cần cập nhật');
+  return out;
 }
 
 // ---------- Chữ hiển thị ----------

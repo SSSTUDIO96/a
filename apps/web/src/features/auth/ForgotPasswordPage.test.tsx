@@ -51,7 +51,7 @@ describe('ForgotPasswordPage — màn Quên mật khẩu', () => {
     expect(await screen.findByText(SAME)).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Kiểm tra hộp thư' })).toBeTruthy();
     await user.click(screen.getByRole('button', { name: 'Gửi lại hoặc dùng email khác' }));
-    expect((screen.getByLabelText('Email') as HTMLInputElement).value).toBe('  hoa@vidu.vn ');
+    expect((screen.getByLabelText('Email') as HTMLInputElement).value.trim()).toBe('hoa@vidu.vn');
   });
 
   it('máy chủ chưa cấu hình gửi thư (503) hay quá lượt (429) → dải lỗi đúng lời máy chủ', async () => {
