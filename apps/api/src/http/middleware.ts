@@ -26,7 +26,6 @@ export async function authenticate(req: Request, deps: Deps): Promise<string> {
     where: { id: claims.sub },
     select: { id: true, status: true, passwordChangedAt: true },
   });
-  await deps.db.user.findUnique({ where: { id: claims.sub }, select: { passwordChangedAt: true } });
   if (!user || user.status !== 'ACTIVE') {
     throw new AppError('UNAUTHENTICATED', 'Tài khoản không còn hoạt động');
   }
