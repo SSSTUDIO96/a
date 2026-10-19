@@ -188,3 +188,10 @@ Mỗi lỗi ghi đủ: triệu chứng · gốc bệnh · số đo · cách ch�
 - **Số đo (thợ đào, app thật):** 390×844 và 375×667, ba chế độ Lịch, cuộn tới cuối: thanh dưới luôn sát đáy khung, chồng lấn 0 px, nội dung cuối cách thanh 22–25 px. Hợp đồng, Khách, Bảng giá cũng 0 px.
 - **Cách chặn:** ảnh nộp cho anh Chiến hoặc dùng làm bằng chứng giao diện **phải là ảnh khung màn hình** (`fullPage: false`), cuộn từng đoạn nếu cần. Ảnh cả trang chỉ dùng nội bộ và phải ghi chữ "ảnh cả trang — thanh cố định hiện sai chỗ" ngay trên tên tệp.
 - **Phát hiện kèm (lỗi thật, nhỏ):** mã chưa có `env(safe-area-inset-bottom)` cho thanh dưới; iPhone có thanh Home thì thanh dưới sát mép vuốt. Đã giao sửa.
+
+## 28. Hết hạn mức tài khoản giữa chừng — 5 thợ dừng cùng lúc (19/10/2026)
+
+- **Triệu chứng:** 5 thợ đang chạy (D-W1, D-W2, D-W4, D-M4, E1) cùng báo lỗi "Your organization has disabled Claude subscription access" (HTTP 403) và dừng giữa bước; máy khởi động lại.
+- **Gốc:** hết hạn mức sử dụng trong ngày của tài khoản, không phải lỗi mã.
+- **Hậu quả:** phần đang làm dở nằm trên đĩa, chưa ai kiểm; database thử và tiến trình chạy dở có thể mất; một migration đang viết ở thư mục nháp có thể mất.
+- **Cách chặn / cách làm lại:** (1) chụp ngay một commit tên "WIP … CHƯA nghiệm thu" để không mất phần dở; (2) bật lại PostgreSQL; (3) đánh thức lại ĐÚNG thợ cũ (giữ trí nhớ việc đang làm), báo rõ nó dừng ở bước nào và phần nào đã/ chưa có trên đĩa — không giao thợ mới làm lại từ đầu; (4) migration luôn viết ở nháp rồi mv một lần (sổ lỗi M1), nên dừng giữa chừng không để lại thư mục nửa vời.
