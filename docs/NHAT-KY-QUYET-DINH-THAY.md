@@ -82,5 +82,10 @@ Anh Chiến nhắn lúc khoảng 15:13 UTC ngày 18/10/2026: *"Tự làm vào ch
 | 01:40 | T1: gợi ý tiến độ "Cọc + 2/3 đợt" cách nhau cố định 30 ngày, có đợt hạn sau ngày cưới | Chia đều các đợt từ hôm nay tới ngày sự kiện (khoá học: ngày kết thúc lớp); không có ngày thì giữ 30 ngày | Không đợt nào được hạn sau ngày cưới | Được |
 | 01:40 | L5: gói mặc định tắt "hiện trên trang công khai" | Giữ nguyên, ghi việc tồn cho anh | Có thể là chủ ý: anh chọn gói nào lộ giá | Được |
 | 09:30 | Tên ngắn của thợ trên lịch và hợp đồng | Studio đặt tên hiển thị thì dùng nguyên tên đó; chưa đặt thì lấy tiếng cuối của họ tên ("Nguyễn Thu Hà" → "Hà"). Chế độ lịch B (danh sách trong ngày) vẫn ghi tên đầy đủ vì đủ chỗ | Một người một tên trên mọi khổ màn | Được |
+| 19/10 sáng | Việc tồn 2, 5, 8, 10b (anh nói "Làm hết đi") | Giữ phương án đang chạy: lịch mới tạo để **Nháp**; giảng viên xem **mọi lớp**; tổ chức bị khoá **chặn hẳn**; gói mới **không** tự hiện trên trang công khai | Đều là phương án đề xuất, lùi được bằng một chỗ sửa | Được |
+| 19/10 sáng | Việc tồn 3, 6, 7 | Làm: thêm màu cho nhân vật thứ 7 trở đi; sinh buổi học lên Lịch theo lịch lớp; thêm mẫu chào mừng thứ 20 | Việc rõ, vào thẳng xưởng | Được |
+| 19/10 sáng | Việc tồn 4 (loại sự kiện), thông báo, cổng học viên, app iPhone, nền hoa văn | Đi R&D trước, bày 3 phương án có ảnh; anh vắng thì trợ lý chọn 1 và vẫn xuất ảnh cả 3 | Việc mới có giao diện mới (luật 8) | Được |
+| 19/10 sáng | Đặt lại mật khẩu qua email | Dựng sẵn với "người gửi thư" thay được: chạy thử thì in đường dẫn ra nhật ký máy chủ; gửi thư thật cần anh chọn dịch vụ email (có thể tốn phí) | Không tự mua dịch vụ trả phí | Được |
+| 19/10 sáng | Việc tồn 9 (phông SS-Album), 10 (ảnh màn ssnew) | Chờ anh gửi tệp | Máy đám mây không đọc được ổ H: | — |
 
 **Cần anh xem lại nhất:** (1) cách anh vào thao tác thực tế (dòng 19:44): chạy trên máy anh hay cho phép đưa lên mạng; (2) phân quyền theo vai trò mẫu (dòng 15:16) — studio anh có thể muốn thợ chính thấy cả lịch của đội.
