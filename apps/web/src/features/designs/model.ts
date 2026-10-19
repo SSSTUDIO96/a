@@ -25,7 +25,7 @@ export const KIND_TABS: readonly { kind: DesignKind; path: KindPath; label: stri
   { kind: 'GREETING', path: 'loi-chuc', label: 'Lời chúc' },
 ];
 
-export const KIND_LABEL: Record<DesignKind, string> = { WELCOME: 'Chào mừng', FEEDBACK: 'Feedback', GREETING: 'Lời chúc' };
+export const KIND_LABEL: Record<DesignKind, string> = { WELCOME: 'Chào mừng', FEEDBACK: 'Feedback', GREETING: 'Lời chúc', CERTIFICATE: 'Giấy chứng nhận' };
 export const CONTRACT_KIND_LABEL: Record<ContractKindKey, string> = { COURSE: 'Khoá học', SERVICE: 'Dịch vụ makeup' };
 const CONTRACT_KIND_WORD: Record<ContractKindKey, string> = { COURSE: 'khoá học', SERVICE: 'dịch vụ' };
 const CONTRACT_KIND_ORDER: readonly ContractKindKey[] = ['COURSE', 'SERVICE'];

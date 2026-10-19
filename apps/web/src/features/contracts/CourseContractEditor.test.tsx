@@ -36,6 +36,8 @@ vi.mock('../../api/catalog', () => ({
   listServices: vi.fn(async () => ({ items: [], page: 1, pageSize: 100, total: 0 })),
   listMakeupSubjects: vi.fn(async () => ({ items: [] })),
   listStudioLocations: vi.fn(async () => ({ items: [] })),
+  listOccasions: vi.fn(async () => ({ items: [] })),
+  listSurchargeRules: vi.fn(async () => ({ items: [] })),
   getTravelFeePolicy: vi.fn(async () => ({ defaultMode: 'PER_KM', fixedAmount: 0, perKmAmount: 0, freeKm: 0, minimumAmount: 0, roundTrip: true, tiers: [], updatedAt: '' })),
 }));
 

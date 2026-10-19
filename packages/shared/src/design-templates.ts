@@ -1,9 +1,11 @@
 // Danh mục mẫu thiết kế (thẻ chào mừng / feedback / lời chúc) — BAN-VE-C3-DAO-TAO mục 1.4.
+// Thêm loại CERTIFICATE (giấy chứng nhận cc-01..cc-16, A4 ngang 1754x1240) — BAN-VE-F-GIAY-CHUNG-NHAN mục 3.3 + đính chính 19/10/2026 tối:
+// KHÔNG phải DesignCard (có số, thu hồi, cấp lại — bảng certificates riêng); chỉ dùng danh mục này để vẽ ô chọn mẫu và điền ô.
 // Mẫu là MÃ và TỆP VẼ, không phải dữ liệu của tổ chức, nên không nằm trong database.
 // Máy chủ dùng danh mục để kiểm (mã mẫu, loại hợp đồng, số ảnh); web dùng để vẽ ô chọn mẫu và điền ô.
 // Thêm mẫu = thêm 1 mục ở đây + 1 tệp vẽ; không sửa màn nào.
 
-export type DesignKind = 'WELCOME' | 'FEEDBACK' | 'GREETING';
+export type DesignKind = 'WELCOME' | 'FEEDBACK' | 'GREETING' | 'CERTIFICATE';
 export type ContractKindKey = 'SERVICE' | 'COURSE';
 export const CONTRACT_KIND_KEYS = ['SERVICE', 'COURSE'] as const satisfies readonly ContractKindKey[];
 
@@ -45,6 +47,12 @@ export const SLOT_SOURCES = {
   a1: { label: 'Ảnh 1', from: 'DesignCardPhoto[0]', contract: 'BOTH', input: true },
   a2: { label: 'Ảnh 2', from: 'DesignCardPhoto[1]', contract: 'BOTH', input: true },
   a3: { label: 'Ảnh 3', from: 'DesignCardPhoto[2]', contract: 'BOTH', input: true },
+  // Ô riêng của giấy chứng nhận (đều chỉ có ở khoá học). `ngay` (khai giảng) KHÔNG dùng cho giấy: tệp vẽ gọi ngày cấp là `ncap`.
+  so: { label: 'Số giấy chứng nhận', from: 'Certificate.code', contract: 'COURSE' },
+  ncap: { label: 'Ngày cấp', from: 'Certificate.issuedOn', contract: 'COURSE' },
+  lai: { label: 'Ngày cấp lại', from: 'Certificate.reissuedOn (chỉ bản cấp lại)', contract: 'COURSE' },
+  gd: { label: 'Người ký (Giám đốc)', from: 'OrganizationProfile.certSignerName (chụp vào Certificate.signerName)', contract: 'COURSE' },
+  gdcv: { label: 'Chức danh người ký', from: 'OrganizationProfile.certSignerTitle (trống = "Giám đốc trung tâm")', contract: 'COURSE' },
 } as const satisfies Record<string, SlotSource>;
 
 export type SlotKey = keyof typeof SLOT_SOURCES;
@@ -52,7 +60,8 @@ export const SLOT_KEYS = Object.keys(SLOT_SOURCES) as SlotKey[];
 // Ô ảnh người dùng tải lên, theo thứ tự sort_order 0..2 của DesignCardPhoto.
 export const PHOTO_SLOTS = ['a1', 'a2', 'a3'] as const satisfies readonly SlotKey[];
 
-export const DESIGN_SIZES = ['1080x1350', '1080x1080'] as const;
+// 1754x1240 = A4 ngang 150 dpi, chỉ giấy chứng nhận (khung vẽ 1123×794 phóng lên khi xuất — public/mau/chung/cc-xuat.js).
+export const DESIGN_SIZES = ['1080x1350', '1080x1080', '1754x1240'] as const;
 export type DesignSize = (typeof DESIGN_SIZES)[number];
 // DesignCard.fontOverride: thay mọi phông viết tay của mẫu bằng chữ ký N (tham số ?ky=N của tệp vẽ).
 // 1-4: phông tạm của R&D; 5 MonteCarlo · 6 Ephesis (chữ ký nét mảnh đều, kho SS-Album, OFL 1.1);
@@ -108,9 +117,10 @@ function tpl(
   fonts: string[],
   origin: DesignTemplate['origin'],
   frameShape: FrameShape = 'circle',
+  sizes: DesignSize[] = BOTH_SIZES,
 ): DesignTemplate {
   const photoFrames = slots.filter((s) => (FRAME_SLOTS as readonly SlotKey[]).includes(s)).length;
-  return { code, version: 1, kind, name, contractKinds, slots, photos: photosOf(slots), fonts, sizes: BOTH_SIZES, origin, photoFrames, frameShape };
+  return { code, version: 1, kind, name, contractKinds, slots, photos: photosOf(slots), fonts, sizes, origin, photoFrames, frameShape };
 }
 
 const VT = (n: number) => `MP Viết tay ${n}`;
@@ -119,6 +129,16 @@ const KY = (n: number) => `MP Chữ ký ${n}`;
 const CHAN = 'MP Chữ có chân';
 const CHAN_DAM = 'MP Chữ đậm có chân';
 const SANS = 'MP Chữ không chân';
+// Phông tiêu đề "GIẤY CHỨNG NHẬN" của mẫu cc: SS-Album nhóm A (public/mau/phong/ss-album/ss-album.css), có sẵn trong app.
+const PRATA = 'SSA Prata';
+const GREAT_VIBES = 'SSA Great Vibes';
+const CERT_SIZES: DesignSize[] = ['1754x1240'];
+// Ô chung của cả 16 mẫu giấy chứng nhận (đúng data-f trên tệp vẽ; `lai` nằm trong dòng số, `gdcv` là nhãn chức danh người ký 2).
+const CERT_SLOTS: SlotKey[] = ['logo', 'th', 'anh', 'ten', 'khoa', 'lop', 'so', 'ncap', 'lai', 'gv', 'gd', 'gdcv'];
+
+function cert(code: string, name: string, ky: string, tieuDe: string, origin: DesignTemplate['origin']): DesignTemplate {
+  return tpl(code, 'CERTIFICATE', name, COURSE, CERT_SLOTS, [ky, tieuDe, CHAN_DAM, CHAN, SANS], origin, 'circle', CERT_SIZES);
+}
 
 // Ô của từng mẫu khai theo ĐÚNG ô tệp vẽ dùng (data-f, data-chat → nd, data-sao → sao, data-qr → web; các khoá
 // suy ra như ngayCham → ngay, gio → lich, nskCham → nsk, nktCham → nkt, kh → ten, dv → SUB_LINE), đối chiếu với
@@ -189,6 +209,26 @@ export const DESIGN_TEMPLATES: readonly DesignTemplate[] = [
     ['logo', 'th', 'anh', 'td', 'ten', 'cc', 'khoa', 'lop', 'nkt', 'gv'], [VT(1), VT(3), CHAN, SANS], 'TU_SANG_TAC'),
   tpl('lc-06', 'GREETING', 'Thiệp hoa lá gửi mẹ cô dâu', SERVICE,
     ['logo', 'th', 'a1', 'td', 'ten', 'cc', 'nv', 'nsk'], [VT(3), CHAN, SANS], 'TU_SANG_TAC'),
+
+  // ---------- Giấy chứng nhận (khoá học, A4 ngang; mã = CERTIFICATE_TEMPLATES ở certificates.ts) ----------
+  // Phông liệt kê: chữ ký của tên học viên (mặc định của mẫu, đổi được bằng ?ky=), phông tiêu đề, rồi chữ in của huy hiệu / dòng phụ.
+  // 01–05 dựng sát 5 ảnh anh Chiến gửi, 16 "vinh danh kim cương" sát ảnh 16 (HOC_TU_ANH); 06–15 R&D tự sáng tác.
+  cert('cc-01', 'Xanh đêm dải vàng', KY(1), PRATA, 'HOC_TU_ANH'),
+  cert('cc-02', 'Đen nhung mảng đỏ', KY(2), PRATA, 'HOC_TU_ANH'),
+  cert('cc-03', 'Trắng sóng đỏ vàng', KY(1), PRATA, 'HOC_TU_ANH'),
+  cert('cc-04', 'Kem sóng chìm', KY(3), GREAT_VIBES, 'HOC_TU_ANH'),
+  cert('cc-05', 'Hoa văn vàng cổ điển', KY(2), PRATA, 'HOC_TU_ANH'),
+  cert('cc-06', 'Guilloche bạc', KY(4), PRATA, 'TU_SANG_TAC'),
+  cert('cc-07', 'Hồng mận vàng hồng', KY(1), PRATA, 'TU_SANG_TAC'),
+  cert('cc-08', 'Đen Art Deco', KY(2), PRATA, 'TU_SANG_TAC'),
+  cert('cc-09', 'Ngà nguyệt quế', KY(3), GREAT_VIBES, 'TU_SANG_TAC'),
+  cert('cc-10', 'Lục bảo khung vát', KY(1), PRATA, 'TU_SANG_TAC'),
+  cert('cc-11', 'Xanh hoàng gia tia sáng', KY(1), PRATA, 'TU_SANG_TAC'),
+  cert('cc-12', 'Hồng phấn vòng hoa', KY(3), PRATA, 'TU_SANG_TAC'),
+  cert('cc-13', 'Đen cẩm thạch vân vàng', KY(2), PRATA, 'TU_SANG_TAC'),
+  cert('cc-14', 'Trắng hình học champagne', KY(1), PRATA, 'TU_SANG_TAC'),
+  cert('cc-15', 'Đỏ nhung ren vàng', KY(2), PRATA, 'TU_SANG_TAC'),
+  cert('cc-16', 'Vinh danh kim cương', KY(2), PRATA, 'HOC_TU_ANH'),
 ];
 
 const BY_CODE: ReadonlyMap<string, DesignTemplate> = new Map(DESIGN_TEMPLATES.map((t) => [t.code, t]));

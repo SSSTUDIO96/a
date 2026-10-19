@@ -36,7 +36,7 @@ export function throwIfIssues(issues: FieldIssue[]): void {
   throw new AppError('VALIDATION_FAILED', issues[0]?.message ?? 'Dữ liệu gửi lên không hợp lệ', { formErrors: [], fieldErrors, issues });
 }
 
-const KIND_LABEL: Record<DesignKind, string> = { WELCOME: 'chào mừng', FEEDBACK: 'feedback', GREETING: 'lời chúc' };
+const KIND_LABEL: Record<DesignKind, string> = { WELCOME: 'chào mừng', FEEDBACK: 'feedback', GREETING: 'lời chúc', CERTIFICATE: 'giấy chứng nhận' };
 const CONTRACT_LABEL: Record<ContractKindKey, string> = { COURSE: 'khoá học', SERVICE: 'dịch vụ' };
 
 // Mẫu có trong danh mục, đúng loại thẻ, hợp với loại hợp đồng. Mã lạ → lỗi ở templateCode (không lấy mẫu đầu tiên).

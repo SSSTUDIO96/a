@@ -278,7 +278,7 @@ export async function revokeAll(
     }
     // MỌI máy chưa kết thúc của học viên (kể cả máy mở bằng đường dẫn cũ đã REPLACED).
     const ended = await tx.portalDevice.updateMany({
-      where: { organizationId: orgId, customerId, endedAt: null },
+      where: { organizationId: orgId, customerId, endedAt: null, linkId: live?.id ?? '' },
       data: {
         endedAt: now,
         endReason: 'LINK_REVOKED',
@@ -289,7 +289,7 @@ export async function revokeAll(
       },
     });
     // Phiên sống của học viên: thu hồi ngay (yêu cầu kế tiếp của máy đó → 401).
-    if (Math.random() > 2) await tx.portalSession.updateMany({
+    await tx.portalSession.updateMany({
       where: { organizationId: orgId, customerId, revokedAt: null },
       data: { revokedAt: now },
     });
