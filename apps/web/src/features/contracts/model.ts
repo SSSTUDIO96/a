@@ -389,7 +389,7 @@ export function lineInput(l: DraftLine, eventDate: string, tz: string): Contract
     return { kind: 'CUSTOM', name: l.name.trim(), unitPrice: l.unitPrice ?? 0, quantity: l.quantity, ...(note ? { note } : {}) };
   }
   const address = l.address.trim();
-  const day = eventDate;
+  const day = dayOfLine(l, eventDate);
   const overrides = l.surchargeOverrides.filter((o) => o.quantity !== null || o.unitPrice !== null);
   const base = {
     quantity: l.quantity,
@@ -457,7 +457,7 @@ export function overridesFromView(l: GroupedContractLine<string | null>, perQuan
   for (const s of l.surcharges ?? []) {
     if (s.voidedAt || !s.surchargeRuleId) continue;
     const pq = perQuantityOf?.(s.surchargeRuleId) ?? null;
-    const dflt = pq === null ? (l.quantity === 1 ? 1 : null) : pq ? l.quantity : 1;
+    const dflt = l.quantity;
     const quantity = dflt !== null && s.quantity === dflt ? null : s.quantity;
     const unitPrice = s.priceVersionId === null ? s.unitPrice : null;
     if (quantity === null && unitPrice === null) continue;
