@@ -33,6 +33,8 @@ let rs=7;const rnd=()=>{rs=(rs*16807)%2147483647;return (rs-1)/2147483646;};
 /* ---------------- Màu chữ theo khung ---------------- */
 const BANG={'tien-giay':{nhan:'#1F4E8C',vien:'#1F4E8C',phu:'#2C3E5C'},'ba-tu':{nhan:'#22407A',vien:'#22407A',phu:'#3A3550'},
   'co-dien':{nhan:'#7E4A14',vien:'#A0601E',phu:'#5C4632'}};
+// Giấy vân R&D vẽ có đốm sẫm: chữ nhỏ vàng nâu #7A6340 chỉ còn ~4,05:1 → đậm hơn một nấc (đo lại đạt ≥ 4,5).
+for(const g of ['chu-nhat','panel','tem','tran'])if(!ANH)BANG[g]={nhan:'#6B5535'};
 if(BANG[GIAY])for(const [k,v] of Object.entries(BANG[GIAY]))document.documentElement.style.setProperty('--'+k,v);
 
 /* ---------------- Nền hoa lá nét khắc (đậm) ---------------- */
@@ -93,13 +95,12 @@ function dauSap(cx,cy,r,chu,mau){const G=mau==='do'?['#E07A6E','#B23B32','#86241
 
 /* ---------------- (e) Khung vàng nâu cổ điển ---------------- */
 function xoanC(m,sw){return `<path d="M0,0 C26,0 44,-14 44,-30 C44,-42 32,-46 25,-40 C19,-35 22,-26 29,-27" fill="none" stroke="${m}" stroke-width="${sw}" stroke-linecap="round"/>`;}
-function fleur(m){return `<path d="M0,0 C11,14 13,36 0,62 C-13,36 -11,14 0,0Z" fill="${m}"/>`+
-  [1,-1].map(sg=>`<g transform="scale(${sg},1)"><path d="M2,14 C16,8 34,14 34,32 C34,44 22,48 18,40 C24,40 26,32 20,28 C14,24 8,26 5,32 Z" fill="${m}"/></g>`).join('')+
-  `<rect x="-14" y="10" width="28" height="5" rx="2" fill="${m}"/><path d="M0,15 C4,22 4,26 0,30 C-4,26 -4,22 0,15Z" fill="${m}"/>`;}
-function gocCoDien(m){return `<g transform="translate(24,24) rotate(-45)">${fleur(m)}</g>`+
-  `<g transform="translate(92,8)">${xoanC(m,2)}<path d="M0,0 H90" stroke="${m}" stroke-width="1.3"/><circle cx="96" cy="0" r="3" fill="${m}"/></g>`+
-  `<g transform="translate(8,92) matrix(0,1,1,0,0,0)">${xoanC(m,2)}<path d="M0,0 H90" stroke="${m}" stroke-width="1.3"/><circle cx="96" cy="0" r="3" fill="${m}"/></g>`+
-  `<path d="M60,30 C70,46 76,58 92,60 M30,60 C46,70 58,76 60,92" fill="none" stroke="${m}" stroke-width="1.4"/>`;}
+// Fleur-de-lis: cánh giữa nhọn, hai cánh bên vươn ra rồi cuộn xuống, đai ngang, hai đuôi nhỏ. Vẽ hướng lên (−y).
+function fleur(m){const ben=`<path d="M3,-6 C14,-18 30,-30 42,-22 C52,-15 46,-2 36,-4 C42,-8 41,-16 34,-17 C24,-18 14,-10 8,0 Z" fill="${m}"/><path d="M5,6 C10,12 18,16 26,14 C22,20 12,20 4,12 Z" fill="${m}"/>`;
+  return `<path d="M0,-4 C9,-20 12,-44 0,-72 C-12,-44 -9,-20 0,-4 Z" fill="${m}"/>${ben}<g transform="scale(-1,1)">${ben}</g><rect x="-14" y="-4" width="28" height="7" rx="3" fill="${m}"/><path d="M0,3 L4,12 L0,20 L-4,12Z" fill="${m}"/>`;}
+function gocCoDien(m){const xo=`<g transform="scale(1,-1)">${xoanC(m,2)}</g><path d="M0,0 H90" stroke="${m}" stroke-width="1.3"/><circle cx="96" cy="0" r="3" fill="${m}"/>`;
+  return `<g transform="translate(40,40) rotate(-45) scale(.85)">${fleur(m)}</g>`+
+  `<g transform="translate(96,10)">${xo}</g><g transform="translate(10,96) matrix(0,1,1,0,0,0)">${xo}</g>`;}
 function cumGiua(m){return `<path d="M0,-7 L7,0 L0,7 L-7,0Z" fill="${m}"/>`+[1,-1].map(sg=>`<g transform="scale(${sg},1) translate(12,0)"><path d="M0,0 C14,-14 34,-12 36,0 C38,10 26,14 22,6 C20,1 26,-2 29,1" fill="none" stroke="${m}" stroke-width="1.8" stroke-linecap="round"/><path d="M0,0 C14,14 34,12 36,0" fill="none" stroke="${m}" stroke-width="1.3"/></g>`).join('');}
 function khungCoDien(m,nen){const o=36,i=50;let s=`<rect width="${W}" height="${H}" fill="${nen}"/><rect x="${o}" y="${o}" width="${W-2*o}" height="${H-2*o}" fill="none" stroke="${m}" stroke-width="2.6"/><rect x="${i}" y="${i}" width="${W-2*i}" height="${H-2*i}" fill="none" stroke="${m}" stroke-width="1"/>`;
   const g=gocCoDien(m),d=i+8;

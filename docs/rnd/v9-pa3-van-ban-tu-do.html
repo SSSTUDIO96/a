@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="ten" content="R&D 09 — PA3 Văn bản tự do">
+<title>PA3 Văn bản tự do — R&D 09</title>
+<!-- R&D 09 — Phương án 3 "SOẠN VĂN BẢN TỰ DO CÓ BIẾN CHÈN (như mẫu Word)". Mức tùy chỉnh CAO NHẤT.
+     Studio gõ cả hợp đồng như trong Word: chữ đậm/nghiêng, căn giữa, danh sách; chèn biến {Tên khách} {Ngày sự kiện}…
+     và thẻ khối dữ liệu [[Bảng dịch vụ]] [[Tiến độ thanh toán]] [[Điều khoản]] [[Chỗ ký]] (bảng tự đổ từ hợp đồng).
+     Xem trước = v9-mau-in/in.html?tudo=1 (bộ dựng thật đọc văn bản tự do + thay biến + thay thẻ khối).
+     Token + component: v4-chung/v4.css. ?truong = hiện nguồn dữ liệu. Màn: #c-quan-ly · #c-sua · #c-in. Dữ liệu giả. -->
+<link rel="stylesheet" href="v4-chung/v4.css">
+<link rel="stylesheet" href="v9-chung/v9.css">
+</head>
+<body>
+<script src="v4-chung/v4.js"></script>
+<script src="v9-chung/v9.js"></script>
+<script>
+(function () {
+const I = V4.icon;
+const KIDS = 'Hồ sơ thương hiệu|Mẫu in hợp đồng|Mẫu điều khoản';
+const PA = (t) => `<div class="pa"><b>Phương án 3</b> · Soạn văn bản tự do có biến chèn (như mẫu Word) · ${t}</div>`;
+const b = (x, loi) => `<span class="bien${loi ? ' loi' : ''}" data-f="BIẾN {${x}} → ${loi ? 'KHÔNG có ở loại hợp đồng này' : 'thay bằng dữ liệu hợp đồng lúc in'}">{${x}}</span>`;
+const k = (x, src) => `<span class="dong-khoi" data-f="THẺ KHỐI [[${x}]] → ${src}">▦ [[${x}]] — bảng tự đổ dữ liệu khi in</span>`;
+
+V4.mucLuc('R&D 09 — Phương án 3: Văn bản tự do', 'Mức tùy chỉnh cao nhất: soạn cả hợp đồng như Word, chèn biến và thẻ khối dữ liệu. Thêm ?truong để hiện nguồn dữ liệu.', [
+  ['Màn', [
+    ['c-quan-ly', 'Quản lý mẫu in', 'Danh sách mẫu văn bản, cảnh báo mẫu có biến lỗi, nhập từ Word'],
+    ['c-sua', 'Soạn văn bản', 'Thanh công cụ chữ, biến, thẻ khối, kiểm tra mẫu, xem trước'],
+    ['c-in', 'Bấm In ở hợp đồng', 'Chọn mẫu, xem từng trang, in / PDF'],
+  ]],
+]);
+
+// ---------- Màn 1: Quản lý ----------
+const DS = [
+  ['Hợp đồng dịch vụ — bản luật sư soạn', 'Dịch vụ', 5, 38, true, ''],
+  ['Hợp đồng tiệc nhỏ (1 trang)', 'Dịch vụ', 2, 7, false, ''],
+  ['Hợp đồng đào tạo 2026', 'Khoá học', 3, 31, true, ''],
+  ['Hợp đồng đào tạo — bản cũ 2025', 'Khoá học', 1, 0, false, 'Có 1 biến không dùng được: {Ngày sự kiện}'],
+];
+V4.man('c-quan-ly', { shell: 'org', nav: 'cai-dat', kid: 'Mẫu in hợp đồng', kids: KIDS, title: 'Mẫu in hợp đồng', act: '+' }, `
+${PA('Màn quản lý')}
+<div class="ph"><h1>Mẫu in hợp đồng</h1><span class="sp"></span><button class="btn">${I('up', 's')}Nhập từ tệp Word</button><button class="btn pri">${I('plus', 's')}Soạn mẫu mới</button></div>
+<div class="card">
+  <div class="lh">Mẫu văn bản <span class="sp"></span>4 mẫu</div>
+  ${DS.map(([t, l, v, n, d, loi]) => `<div class="lr noav${loi ? '' : ''}"><div class="tx"><span class="n"><span data-f="MỚI: PrintTemplate.name">${t}</span> ${d ? '<span class="tag nv" data-f="MỚI: PrintTemplate.isDefault">Mặc định</span>' : ''}</span>
+    <span class="d"><span data-f="MỚI: PrintTemplate.appliesTo">${l}</span> · <span data-f="MỚI: PrintTemplate.version">bản v${v}</span> · <span data-f="TÍNH: đếm ContractPrint (MỚI)">đã in ${n} hợp đồng</span></span>
+    ${loi ? `<span class="d" style="color:var(--danger)" data-f="TÍNH: kiểm biến của PrintTemplate.body theo appliesTo">${I('warn', 's')} ${loi}</span>` : ''}</div>
+    <div class="rt"><button class="btn sm">Soạn</button></div></div>`).join('')}
+</div>
+<div class="bn yel" style="margin-top:16px">${I('warn', 's')}<span>Mẫu văn bản tự do không tự co giãn như bố cục có sẵn: bảng dài, điều khoản dài sẽ chảy sang trang theo đúng chữ bạn gõ. Hãy bấm <b>Xem trước</b> với một hợp đồng dài trước khi đặt làm mặc định.</span></div>
+<div class="rnd-note"><b>R&D:</b> "Nhập từ tệp Word" chỉ lấy chữ (không lấy định dạng phức tạp, bảng, ảnh) — studio phải tự đặt biến. Đây là phần tốn công và dễ lỗi nhất của phương án này.</div>
+`);
+
+// ---------- Màn 2: Soạn văn bản ----------
+const NHOM = [
+  ['Studio', ['Tên studio', 'Địa chỉ studio', 'SĐT studio', 'Người đại diện']],
+  ['Khách', ['Tên khách', 'SĐT khách', 'CCCD khách', 'Địa chỉ khách']],
+  ['Hợp đồng', ['Mã hợp đồng', 'Ngày lập', 'Ngày sự kiện']],
+  ['Tiền', ['Tổng tiền', 'Tổng tiền bằng chữ', 'Tiền cọc', 'Đã thu', 'Còn lại']],
+  ['Lớp học', ['Tên khoá', 'Tên lớp', 'Ngày khai giảng']],
+];
+const THE = ['Bảng dịch vụ', 'Tiến độ thanh toán', 'Phiếu thu đã nhận', 'Điều khoản', 'Nội quy', 'Chỗ ký'];
+V4.man('c-sua', { shell: 'org', nav: 'cai-dat', kid: 'Mẫu in hợp đồng', kids: KIDS, title: 'Soạn mẫu in', back: '#c-quan-ly', act: 'Lưu' }, `
+${PA('Màn soạn văn bản')}
+<div class="ph"><h1>Hợp đồng dịch vụ — bản luật sư soạn</h1><span class="tag">bản v5</span><span class="sp"></span><span class="seg sm"><button class="on">Soạn</button><button>Xem trước</button></span><button class="btn pri">Lưu thành bản v6</button></div>
+<div class="sua" style="grid-template-columns:minmax(0,1fr) 300px">
+  <div class="vstack">
+    <div class="soan" data-f="MỚI: PrintTemplate.body (văn bản có định dạng + biến + thẻ khối)">
+      <div class="cu"><select aria-label="Kiểu chữ"><option>Chữ có chân (Lora)</option></select><select aria-label="Cỡ chữ"><option>11</option></select><span class="ng"></span>
+        <button class="on" aria-label="Đậm">B</button><button aria-label="Nghiêng"><i>I</i></button><button aria-label="Gạch chân"><u>U</u></button><span class="ng"></span>
+        <button aria-label="Căn trái">≡</button><button class="on" aria-label="Căn giữa">☰</button><button aria-label="Danh sách số">1.</button><span class="ng"></span>
+        <button aria-label="Chèn biến" style="width:auto;padding:0 8px;color:var(--accent)">{ } Biến</button><button aria-label="Chèn khối" style="width:auto;padding:0 8px;color:#5B45A0">▦ Khối</button></div>
+      <div class="vb">
+        <h3>HỢP ĐỒNG DỊCH VỤ TRANG ĐIỂM</h3>
+        <p style="text-align:center"><i>Số: ${b('Mã hợp đồng')} — lập ngày ${b('Ngày lập')}</i></p>
+        <p><b>Bên A:</b> ${b('Tên studio')}, địa chỉ ${b('Địa chỉ studio')}, điện thoại ${b('SĐT studio')}, đại diện ông/bà ${b('Người đại diện')}.</p>
+        <p><b>Bên B:</b> ${b('Tên khách')}, điện thoại ${b('SĐT khách')}, CCCD số ${b('CCCD khách')}.</p>
+        <p>Bên A nhận trang điểm cho Bên B trong ngày ${b('Ngày sự kiện')} theo bảng dưới đây:</p>
+        ${k('Bảng dịch vụ', 'ContractLine (+ addons, travel)')}
+        <p>Tổng giá trị hợp đồng là <b>${b('Tổng tiền')}</b> (${b('Tổng tiền bằng chữ')}). Bên B đặt cọc ${b('Tiền cọc')}; đã thanh toán ${b('Đã thu')}, còn lại ${b('Còn lại')}.</p>
+        ${k('Tiến độ thanh toán', 'PaymentInstallment')}
+        <p><b>Điều khoản</b></p>
+        ${k('Điều khoản', 'Contract.terms (bản chụp)')}
+        <p>Học viên tham gia lớp ${b('Tên lớp', true)} theo lịch…<span class="con-tro"></span></p>
+      </div>
+    </div>
+  </div>
+  <div class="vstack">
+    <div class="card"><div class="ch2"><h2>Kiểm tra mẫu</h2><span class="tag huy">1 lỗi</span></div><div class="cb" style="padding-top:10px">
+      <div class="bn red">${I('warn', 's')}<span><b>{Tên lớp}</b> chỉ có ở hợp đồng khoá học — mẫu này dùng cho dịch vụ, khi in sẽ ra "—".</span></div>
+      <div class="bn ok" style="margin-top:8px">${I('check', 's')}<span>Đã có chỗ ký và điều khoản.</span></div>
+    </div></div>
+    <div class="card"><div class="ch2"><h2>Chèn biến</h2></div><div class="cb" style="padding-top:8px">
+      ${NHOM.map(([n, ds]) => `<div class="grp">${n}</div><div class="bien-ds" style="padding:6px 0">${ds.map((x) => `<button class="bien" type="button">{${x}}</button>`).join('')}</div>`).join('')}
+    </div></div>
+    <div class="card"><div class="ch2"><h2>Chèn khối dữ liệu</h2></div><div class="cb" style="padding-top:8px"><div class="bien-ds">${THE.map((x) => `<button class="bien khoi-dl" type="button">▦ ${x}</button>`).join('')}</div></div></div>
+  </div>
+</div>
+<div class="card" style="margin-top:16px"><div class="ch2"><h2>Xem trước (bấm "Xem trước")</h2><small>bộ dựng thật đọc văn bản tự do · HĐDV-000128</small></div><div class="cb" style="padding-top:12px">${V9.xt('tudo=1&loai=dich-vu&ban=dai', 520, 2300)}</div></div>
+<div class="rnd-note"><b>R&D:</b> phương án này cần một trình soạn chữ có định dạng (rich text) trên cả điện thoại; gõ trên điện thoại chỉ hợp sửa chữ nhỏ. Lỗi biến chỉ bắt được bằng bước "Kiểm tra mẫu" — không có lưới an toàn như bố cục có sẵn.</div>
+`);
+
+// ---------- Màn 3: In ----------
+V4.man('c-in', { shell: 'org', nav: 'hd', kid: 'Danh sách hợp đồng', title: 'HĐDV-000128', back: '#c-quan-ly' }, `
+${PA('Bấm In ở hợp đồng')}
+${V9.nenHopDong()}
+${V9.dlgIn({
+  anhTrang: ['anh-rnd09/pa3-tu-do-dich-vu-trang-1.png', 'anh-rnd09/pa3-tu-do-dich-vu-trang-2.png'],
+  ds: [
+    { on: true, t: 'Hợp đồng dịch vụ — bản luật sư soạn', d: 'Mặc định dịch vụ · bản v5 (bản đã in lần đầu)' },
+    { t: 'Hợp đồng tiệc nhỏ (1 trang)', d: 'bản v2' },
+  ],
+  canhBao: `<div class="bn ok" data-f="TÍNH: kiểm biến của mẫu theo hợp đồng này">${I('check', 's')}<span>Mọi biến đều có dữ liệu cho hợp đồng này.</span></div>`,
+  ghiChu: `<p class="fx" data-f="MỚI: ContractPrint (… templateVersion) — hoặc lưu luôn PDF đã in (StoredFile, FilePurpose mới CONTRACT_PDF)">Bản đã in được lưu lại để in lại y hệt.</p>`,
+})}
+`);
+
+V4.boot();
+})();
+</script>
+</body>
+</html>

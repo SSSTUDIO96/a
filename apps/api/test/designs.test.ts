@@ -212,12 +212,12 @@ const feedback = (w: World, extra: object = {}) => ({
 const issuePaths = (res: request.Response) => (res.body.error.details.issues as { path: string }[]).map((i) => i.path);
 
 describe('danh mục mẫu (GET /design-templates)', () => {
-  it('trả đủ 26 mẫu; lọc theo loại thẻ và loại hợp đồng', async () => {
+  it('trả đủ 27 mẫu; lọc theo loại thẻ và loại hợp đồng', async () => {
     const all = await request(app).get(url(A.orgId, '/design-templates')).set(bearer(A.owner)).expect(200);
     expect(all.body).toHaveLength(DESIGN_TEMPLATES.length);
-    expect(all.body).toHaveLength(26);
+    expect(all.body).toHaveLength(27);
     const welcome = await request(app).get(url(A.orgId, '/design-templates')).query({ kind: 'WELCOME' }).set(bearer(A.owner)).expect(200);
-    expect(welcome.body.map((t: { code: string }) => t.code)).toEqual(['shd-01', 'shd-02', 'shd-03', 'shd-04', 'shd-05', 'shd-06', 'shd-07', 'shd-08', 'shd-09', 'shd-10']);
+    expect(welcome.body.map((t: { code: string }) => t.code)).toEqual(['shd-01', 'shd-02', 'shd-03', 'shd-04', 'shd-05', 'shd-06', 'shd-07', 'shd-08', 'shd-09', 'shd-10', 'shd-11']);
     const svc = await request(app).get(url(A.orgId, '/design-templates')).query({ contractKind: 'SERVICE' }).set(bearer(A.owner)).expect(200);
     const codes = svc.body.map((t: { code: string }) => t.code);
     expect(codes).not.toContain('shd-01');
