@@ -1,0 +1,17 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=1080">
+<title>R&D 07 · Ảnh studio tải lên: trước và sau</title>
+<!-- Phương án 2: trái = ảnh studio tải lên (ở đây là ảnh GIẢ LẬP R&D tự vẽ), phải = thẻ app tự làm chìm (PNG xuất thật). -->
+<link rel="stylesheet" href="../v3-mau-chao-mung/phong/phong.css">
+<style>*{box-sizing:border-box;margin:0;padding:0}body{background:#ddd}
+#c{width:1080px;padding:40px 44px 44px;background:#fff;font-family:'MP Chữ không chân',sans-serif;color:#2A2420}
+h1{font:600 32px 'MP Chữ không chân'}.ph{font-size:19px;color:#6b6157;margin-top:6px;line-height:1.45}
+.h{display:grid;grid-template-columns:1fr 70px 1fr;align-items:center;margin-top:26px;gap:0}
+.h img{width:100%;aspect-ratio:4/5;object-fit:cover;border-radius:10px;border:1px solid #e3dccf;display:block}
+.mt{text-align:center;font-size:40px;color:#A63D62}.cap{font-size:17px;color:#6b6157;margin-top:8px;line-height:1.4}
+</style></head><body><div id="c">
+<h1>Ảnh nền của studio → app tự làm chìm</h1>
+<div class="ph">Studio tải ảnh lên một lần. App bỏ màu, tô lại bằng hai màu của mẫu, khoét chỗ ảnh và chữ ký, rồi tự hạ độ đậm tới khi mọi dòng chữ đạt chuẩn tương phản.</div>
+<div class="h"><div><img src="anh-tai-len-gia-lap/hoa-mau-nuoc.jpg"><div class="cap">Ảnh tải lên 1: tranh hoa màu nước rực (giả lập)</div></div><div class="mt">→</div><div><img src="../anh-rnd07/pa2-hoa-mau-nuoc.png"><div class="cap">Thẻ ra: độ đậm <b id="c1"></b>; app đã tự đo, mọi dòng chữ đạt chuẩn</div></div></div>
+<div class="h"><div><img src="anh-tai-len-gia-lap/vai-ren.jpg"><div class="cap">Ảnh tải lên 2: vải ren trắng trên nền be (giả lập)</div></div><div class="mt">→</div><div><img src="../anh-rnd07/pa2-vai-ren.png"><div class="cap">Thẻ ra: app tự đảo chiều sáng tối (ren trắng thành nét chìm), độ đậm <b id="c2"></b></div></div></div>
+</div><script>const P=new URLSearchParams(location.search);document.getElementById('c1').textContent=P.get('c1')||'';document.getElementById('c2').textContent=P.get('c2')||'';
+Promise.all([...document.images].map(i=>i.decode().catch(()=>0))).then(()=>document.fonts.ready).then(()=>document.body.dataset.ready='1');</script></body></html>

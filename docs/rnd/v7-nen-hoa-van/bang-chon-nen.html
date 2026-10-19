@@ -1,0 +1,33 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=1080">
+<title>R&D 07 · Bảng chọn ô Nền</title>
+<!-- Mô phỏng ô "Nền" trong màn tạo thẻ (phương án 1 + lối vào phương án 2). Mỗi ô mẫu vẽ bằng đúng thư viện chung/hoa-van.js,
+     cùng độ đậm mặc định dùng trên thẻ. Chụp phần tử #c ra PNG. -->
+<link rel="stylesheet" href="../v3-mau-chao-mung/phong/phong.css">
+<style>*{box-sizing:border-box;margin:0;padding:0}body{background:#ddd}
+#c{width:1080px;padding:44px 48px 48px;background:#FFFFFF;font-family:'MP Chữ không chân',sans-serif;color:#2A2420}
+h1{font:600 34px 'MP Chữ không chân';letter-spacing:-.01em}.ph{font-size:20px;color:#6b6157;margin-top:8px}
+.g{display:grid;grid-template-columns:repeat(4,1fr);gap:22px;margin-top:30px}
+.o{border:2px solid #e3dccf;border-radius:16px;overflow:hidden;background:#fff}.o.chon{border-color:#A63D62;box-shadow:0 0 0 4px #f3d9e3}
+.o svg,.o .tr{display:block;width:100%;aspect-ratio:1/1}.o .tr{background:#F5EFE4;display:flex;align-items:center;justify-content:center;color:#8C7A5B;font-size:19px;text-align:center;padding:16px}
+.o b{display:block;font:600 19px 'MP Chữ không chân';padding:12px 14px 2px}.o i{display:block;font:400 16px 'MP Chữ không chân';color:#7a7066;padding:0 14px 14px;font-style:normal}
+.tai{border-style:dashed}.tai .tr{background:repeating-linear-gradient(45deg,#F5EFE4 0 12px,#efe6d6 12px 24px);flex-direction:column;gap:10px}
+.tai .tr span{font-size:46px;line-height:1;color:#A63D62}
+.dam{margin-top:30px;display:flex;align-items:center;gap:20px;font-size:21px}.thanh{flex:1;height:8px;border-radius:4px;background:linear-gradient(90deg,#A63D62 0 40%,#e9e2d6 40%);position:relative}
+.thanh::after{content:'';position:absolute;left:40%;top:50%;width:28px;height:28px;margin:-14px;border-radius:50%;background:#fff;border:3px solid #A63D62}
+.gc{margin-top:22px;font-size:18px;color:#6b6157;line-height:1.5}
+</style></head><body><div id="c">
+<h1>Nền thẻ</h1><div class="ph">Chọn họa tiết chìm cho thẻ. Ảnh và chữ ký luôn được chừa sạch, chữ luôn đủ rõ.</div>
+<div class="g" id="g"></div>
+<div class="dam"><span>Độ đậm họa tiết</span><div class="thanh"></div><span>Nhạt · <b>Vừa</b> · Đậm</span></div>
+<div class="gc">Ba nấc, không cho kéo tự do: Nhạt = 0,10 · Vừa = 0,14–0,20 (tuỳ họa tiết) · Đậm = 0,24. Nấc nào cũng đã đo tương phản trước khi đưa vào thư viện.</div>
+</div>
+<script src="chung/hoa-van.js"></script>
+<script>
+const DAM={damask:.16,ren:.13,'la-canh':.2,'song-nuoc':.14,may:.2,'hoi-van':.12};
+const MO={damask:'Sang, cổ điển',ren:'Mềm, nữ tính','la-canh':'Nhẹ, hiện đại','song-nuoc':'Á Đông, đều','may':'Á Đông, thoáng','hoi-van':'Hợp làm viền hơn nền'};
+let h=`<div class="o"><div class="tr">Trơn<br>(như mẫu hiện nay)</div><b>Trơn</b><i>Mặc định</i></div>`;
+for(const [id,hv] of Object.entries(HOA_VAN)){let t=hv.ve('#B8975A');if(hv.che)t=t.split('#F5EFE4').join('#F5EFE4');
+  h+=`<div class="o${id==='damask'?' chon':''}"><svg viewBox="0 0 300 300"><defs><pattern id="p-${id}" width="${hv.w}" height="${hv.h}" patternUnits="userSpaceOnUse" patternTransform="translate(150,150)">${t}</pattern></defs><rect width="300" height="300" fill="#F5EFE4"/><rect width="300" height="300" fill="url(#p-${id})" opacity="${Math.min(1,DAM[id]*2.2)}"/></svg><b>${hv.ten}</b><i>${MO[id]}</i></div>`;}
+h+=`<div class="o tai"><div class="tr"><span>+</span>Ảnh nền của studio<br>(tải một lần, mọi thẻ dùng chung)</div><b>Ảnh của tôi</b><i>Phương án 2</i></div>`;
+document.getElementById('g').innerHTML=h;document.body.dataset.ready='1';
+</script></body></html>

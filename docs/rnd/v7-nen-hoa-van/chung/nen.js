@@ -6,9 +6,9 @@
      ?khung=<mã khung>                               Phương án 3: khung trang trí thay hai đường viền vàng
      ?khunganh=tron|vien-thuoc                       Khung ảnh học viên (mặc định tròn)
      ?vien=0|1|2                                     Số đường viền vàng giữ lại (mặc định 2; có ?khung thì 0)
-   VÙNG AN TOÀN: phần tử mang data-an-toan="<px>" (ảnh, tên chữ ký) được khoét sạch họa tiết, mép mờ dần,
+   VÙNG AN TOÀN: phần tử mang data-an-toan="<px>" (ảnh, tên chữ ký, chữ nhỏ dưới 24 px) được khoét sạch họa tiết, mép mờ dần,
    nên họa tiết không bao giờ đè lên ảnh và chữ ký. Phương án 2 còn tự hạ độ đậm tới khi mọi dòng chữ đạt ngưỡng
-   tương phản (chữ nhỏ ≥ 4,5:1, chữ lớn ≥ 3:1 — chuẩn WCAG AA). */
+   tương phản ≥ 4,5:1 cho MỌI dòng chữ (khắt khe hơn WCAG AA, vốn chỉ đòi 3:1 cho chữ lớn). */
 (function(){
 const P=new URLSearchParams(location.search);
 const NS='http://www.w3.org/2000/svg';
@@ -36,10 +36,12 @@ function lopSvg(){const s=document.createElementNS(NS,'svg');const W=c.offsetWid
   s.setAttribute('width',W);s.setAttribute('height',H);s.setAttribute('viewBox',`0 0 ${W} ${H}`);
   s.setAttribute('class','lop-nen');s.style.cssText='position:absolute;left:0;top:0;pointer-events:none';
   c.insertBefore(s,c.firstChild);return s;}
-function matNa(vung,W,H){
-  return `<filter id="mo" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="14"/></filter>
-<mask id="kho" maskUnits="userSpaceOnUse" x="0" y="0" width="${W}" height="${H}"><rect width="${W}" height="${H}" fill="#fff"/><g filter="url(#mo)">`+
-  vung.map(v=>`<rect x="${v.x-v.pad}" y="${v.y-v.pad}" width="${v.w+2*v.pad}" height="${v.h+2*v.pad}" rx="${v.r+v.pad}" fill="#000"/>`).join('')+`</g></mask>`;}
+// Mép vùng an toàn mờ dần; độ mờ = pad/2,5 nên ở đúng mép phần tử họa tiết đã tắt hẳn (cách mép khoét 2,5 lần độ mờ).
+function matNa(vung,W,H){const pads=[...new Set(vung.map(v=>v.pad))];
+  return pads.map(p=>`<filter id="mo${p}" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="${f2(p/2.5)}"/></filter>`).join('')+
+  `<mask id="kho" maskUnits="userSpaceOnUse" x="0" y="0" width="${W}" height="${H}"><rect width="${W}" height="${H}" fill="#fff"/>`+
+  vung.map(v=>`<rect x="${f2(v.x-v.pad)}" y="${f2(v.y-v.pad)}" width="${f2(v.w+2*v.pad)}" height="${f2(v.h+2*v.pad)}" rx="${f2(v.r+v.pad)}" fill="#000" filter="url(#mo${v.pad})"/>`).join('')+`</mask>`;}
+const f2=(n)=>Math.round(n*10)/10;
 
 /* ---------- Phương án 1: họa tiết dựng sẵn ---------- */
 function veHoaVan(){const id=P.get('nen');const hv=window.HOA_VAN[id];if(!hv)return;
@@ -77,13 +79,13 @@ async function veAnhNen(){const src=P.get('anhnen');if(!src)return;
   const dao=tb/(W*H)>.5;if(dao)for(let j=0;j<muc.length;j++)muc[j]=1-muc[j];
   // mặt nạ vùng an toàn (0 = khoét sạch)
   const mk=document.createElement('canvas');mk.width=W;mk.height=H;const m=mk.getContext('2d',{willReadFrequently:true});
-  m.fillStyle='#fff';m.fillRect(0,0,W,H);m.filter='blur(14px)';m.fillStyle='#000';
-  vungAnToan().forEach(v=>{m.beginPath();m.roundRect(v.x-v.pad,v.y-v.pad,v.w+2*v.pad,v.h+2*v.pad,v.r+v.pad);m.fill();});
+  m.fillStyle='#fff';m.fillRect(0,0,W,H);m.fillStyle='#000';
+  vungAnToan().forEach(v=>{m.filter=`blur(${v.pad/2.5}px)`;m.beginPath();m.roundRect(v.x-v.pad,v.y-v.pad,v.w+2*v.pad,v.h+2*v.pad,v.r+v.pad);m.fill();});
   const md=m.getImageData(0,0,W,H).data;
   const DAM=rgb(P.get('mauchim')||'rgb(150,118,72)');
   // các dòng chữ cần đo
   const chu=[...c.querySelectorAll('.w [data-do]')].map(el=>{const cs=getComputedStyle(el);const fc=rgb(cs.color);
-    const co=parseFloat(cs.fontSize),dam=parseInt(cs.fontWeight)>=700;return {el,hop:hopDong(el),L:lum(...fc),nguong:(co>=24||(co>=18.66&&dam))?3:4.5};});
+    const co=parseFloat(cs.fontSize),dam=parseInt(cs.fontWeight)>=700;return {el,hop:hopDong(el),L:lum(...fc),nguong:4.5};}); // chuẩn nhà: MỌI dòng chữ ≥ 4,5:1 (WCAG AA chỉ đòi 3:1 cho chữ lớn — ta khắt khe hơn)
   let chim=P.has('chim')?+P.get('chim'):.24;const out=x.createImageData(W,H);const o=out.data;let lan=0,thap=99;
   for(;lan<12;lan++){
     for(let j=0,i=0;j<muc.length;j++,i+=4){const a=muc[j]*chim*(md[i]/255);

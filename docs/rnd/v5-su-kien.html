@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>R&amp;D 05 — Loại sự kiện cho ca makeup</title>
+<link rel="stylesheet" href="v4-chung/phong.css">
+<link rel="stylesheet" href="v5-chung/san-pham.css">
+<link rel="stylesheet" href="v5-chung/v5.css">
+</head>
+<body>
+
+<!-- ===================== TRƯỚC: như sản phẩm hôm nay (tô theo nhân vật) ===================== -->
+<section class="v5-man" data-man="truoc-c" data-active="lich" data-title="Lịch makeup" data-note="TRƯỚC — như hôm nay: màu ca theo NHÂN VẬT" data-desc="Trước · Lịch chế độ C (thợ × ngày), tô theo nhân vật">
+  <div class="v5-lich" data-mode="C" data-color="nv"></div>
+</section>
+<section class="v5-man" data-man="truoc-b" data-active="lich" data-title="Lịch makeup" data-note="TRƯỚC — như hôm nay: màu ca theo NHÂN VẬT" data-desc="Trước · Lịch chế độ B (ngày)">
+  <div class="v5-lich" data-mode="B" data-color="nv"></div>
+</section>
+<section class="v5-man" data-man="truoc-a" data-active="lich" data-title="Lịch makeup" data-note="TRƯỚC — như hôm nay: màu ca theo NHÂN VẬT" data-desc="Trước · Lịch chế độ A (cột thợ)">
+  <div class="v5-lich" data-mode="A" data-color="nv"></div>
+</section>
+<section class="v5-man" data-man="truoc-hd" data-active="hop-dong" data-child="hop-dong-moi" data-title="Lập hợp đồng mới" data-back="1" data-h1="Lập hợp đồng" data-note="TRƯỚC — màn lập hợp đồng hôm nay (chưa có ô sự kiện)" data-desc="Trước · Lập hợp đồng">
+  <div class="v5-hd" data-opt="0"></div>
+</section>
+
+<!-- ===================== A: một loại sự kiện cho cả hợp đồng (danh sách cố định) ===================== -->
+<section class="v5-man" data-man="a-c" data-active="lich" data-title="Lịch makeup" data-note="Phương án A — loại sự kiện gắn ở HỢP ĐỒNG (danh sách cố định): màu ca theo sự kiện" data-desc="A · Lịch C">
+  <div class="v5-lich" data-mode="C" data-color="A"></div>
+</section>
+<section class="v5-man" data-man="a-b" data-active="lich" data-title="Lịch makeup" data-note="Phương án A — sự kiện gắn ở HỢP ĐỒNG" data-desc="A · Lịch B">
+  <div class="v5-lich" data-mode="B" data-color="A"></div>
+</section>
+<section class="v5-man" data-man="a-a" data-active="lich" data-title="Lịch makeup" data-note="Phương án A — sự kiện gắn ở HỢP ĐỒNG" data-desc="A · Lịch A">
+  <div class="v5-lich" data-mode="A" data-color="A"></div>
+</section>
+<section class="v5-man" data-man="a-hd" data-active="hop-dong" data-child="hop-dong-moi" data-title="Lập hợp đồng mới" data-back="1" data-h1="Lập hợp đồng" data-note="Phương án A — chọn MỘT sự kiện ngay dưới Ngày sự kiện" data-desc="A · Lập hợp đồng">
+  <div class="v5-hd" data-opt="A"></div>
+</section>
+
+<!-- ===================== B: gắn ở từng dòng (danh sách cố định) ===================== -->
+<section class="v5-man" data-man="b-c" data-active="lich" data-title="Lịch makeup" data-note="Phương án B — loại sự kiện gắn ở TỪNG DÒNG hợp đồng (danh sách cố định)" data-desc="B · Lịch C">
+  <div class="v5-lich" data-mode="C" data-color="B"></div>
+</section>
+<section class="v5-man" data-man="b-b" data-active="lich" data-title="Lịch makeup" data-note="Phương án B — sự kiện gắn ở TỪNG DÒNG" data-desc="B · Lịch B">
+  <div class="v5-lich" data-mode="B" data-color="B"></div>
+</section>
+<section class="v5-man" data-man="b-a" data-active="lich" data-title="Lịch makeup" data-note="Phương án B — sự kiện gắn ở TỪNG DÒNG" data-desc="B · Lịch A">
+  <div class="v5-lich" data-mode="A" data-color="B"></div>
+</section>
+<section class="v5-man" data-man="b-hd" data-active="hop-dong" data-child="hop-dong-moi" data-title="Lập hợp đồng mới" data-back="1" data-h1="Lập hợp đồng" data-note="Phương án B — mỗi dòng gói có hàng &quot;Sự kiện&quot;, dòng mới lấy theo dòng trên" data-desc="B · Lập hợp đồng">
+  <div class="v5-hd" data-opt="B"></div>
+</section>
+
+<!-- ===================== C: danh sách do studio tự đặt + công tắc tô màu ===================== -->
+<section class="v5-man" data-man="c-c" data-active="lich" data-title="Lịch makeup" data-note="Phương án C — danh sách sự kiện do STUDIO tự đặt (tên + màu), gắn ở từng dòng; Lịch có công tắc &quot;Tô màu: Sự kiện | Nhân vật&quot;" data-desc="C · Lịch C (tô theo sự kiện)">
+  <div class="v5-lich" data-mode="C" data-color="C" data-colorby="ev"></div>
+</section>
+<section class="v5-man" data-man="c-b" data-active="lich" data-title="Lịch makeup" data-note="Phương án C — danh sách do studio đặt" data-desc="C · Lịch B">
+  <div class="v5-lich" data-mode="B" data-color="C" data-colorby="ev"></div>
+</section>
+<section class="v5-man" data-man="c-a" data-active="lich" data-title="Lịch makeup" data-note="Phương án C — danh sách do studio đặt" data-desc="C · Lịch A">
+  <div class="v5-lich" data-mode="A" data-color="C" data-colorby="ev"></div>
+</section>
+<section class="v5-man" data-man="c-nv" data-active="lich" data-title="Lịch makeup" data-note="Phương án C — bấm &quot;Nhân vật&quot; trên công tắc: về đúng màu như hôm nay" data-desc="C · Lịch C khi bật &quot;Tô màu: Nhân vật&quot;">
+  <div class="v5-lich" data-mode="C" data-color="nv" data-colorby="nv"></div>
+</section>
+<section class="v5-man" data-man="c-hd" data-active="hop-dong" data-child="hop-dong-moi" data-title="Lập hợp đồng mới" data-back="1" data-h1="Lập hợp đồng" data-note="Phương án C — hàng &quot;Sự kiện&quot; ở mỗi dòng chọn từ danh sách của studio" data-desc="C · Lập hợp đồng">
+  <div class="v5-hd" data-opt="C"></div>
+</section>
+<section class="v5-man" data-man="c-ds" data-active="cai-dat" data-child="cai-dat-sk" data-title="Loại sự kiện" data-back="1" data-h1="Cài đặt · Loại sự kiện" data-note="Phương án C — studio tự thêm, đổi tên, chọn màu, sắp xếp, ẩn (giống màn Nhân vật của Bảng giá)" data-desc="C · Cài đặt › Loại sự kiện">
+  <div class="ui-card moi" data-moi="bảng mới Occasion (name, colorIndex, sortOrder, isActive)" style="max-width:760px">
+    <div class="ui-card__head"><span class="ui-card__title">Loại sự kiện <span class="ui-card__sub">6 loại · màu dùng chung 6 màu của Lịch</span></span><button type="button" class="ui-btn ui-btn--primary ui-btn--sm" id="c-ds-add"></button></div>
+    <div class="ui-card__body ui-card__body--flush" id="c-ds-list"></div>
+    <div class="ui-card__foot"><span>Kéo ⋮⋮ để đổi thứ tự trong ô chọn. Ẩn loại không xoá các ca cũ đã gắn.</span></div>
+  </div>
+</section>
+
+<script src="v5-chung/v5-lich.js"></script>
+<script>
+(function () {
+  const ico = (n, c) => window.v5ico(n, c);
+  const av = (i, c, s) => window.v5av(i, c, s);
+  const EV = window.V5EV;
+
+  // Thẻ chọn sự kiện (chip một lựa chọn)
+  function evChips(list, on, attr) {
+    return `<div class="v5-evsel moi" ${attr}>${Object.entries(list).map(([k, [n, sw]]) => `<button type="button" class="ui-chip ws-sw-${sw}" aria-pressed="${k === on}"><i></i>${n}</button>`).join('')}</div>`;
+  }
+  function evSelect(on) {
+    const [n, sw] = EV.C[on];
+    return `<span class="ct-fl moi" data-moi="ContractLine.occasionId (chọn từ Occasion)"><span class="ws-sw-${sw}" style="display:inline-flex;align-items:center;gap:8px;height:30px;padding:0 8px 0 10px;border:1px solid var(--line);border-radius:var(--r-ctl);background:var(--surface);font-size:13px;min-width:190px"><i style="width:10px;height:10px;border-radius:3px;background:var(--c)"></i>${n}<span style="margin-left:auto;color:var(--muted)">${ico('down')}</span></span><a class="ct-lnk" href="#">Sửa danh sách</a></span>`;
+  }
+
+  function line(o) {
+    const evRow = o.ev ? `<div class="ct-rw"><span class="ct-rw__l">Sự kiện</span>${o.ev}</div>` : '';
+    return `<div class="ct-ln">
+      <div class="ct-ln__hd"><span class="ct-ln__ttl"><span class="ui-tag ui-tag--accent" data-f="ContractLine.subjectName">${o.subj}</span><span class="ct-ln__n" data-f="ContractLine.name">${o.name}</span></span><span class="ct-ln__sp"></span>
+        <span class="ui-qty ui-qty--sm"><button type="button" class="ui-qty__btn">−</button><span class="ui-qty__val">${o.q}</span><button type="button" class="ui-qty__btn">+</button></span><button type="button" class="ui-btn ui-btn--ghost ui-btn--sm ui-btn--icon">${ico('x')}</button></div>
+      ${evRow}
+      <div class="ct-rw"><span class="ct-rw__l">Giờ <span class="ui-tip">?</span></span><div class="ct-dcr"><div class="ct-fl" data-f="ContractLine.scheduledStart / scheduledEnd"><input class="ui-input ui-input--sm ct-time num" value="${o.s}"> – <input class="ui-input ui-input--sm ct-time num" value="${o.e}"><span class="ct-fx ct-num">${o.q} × ${o.price}</span></div></div></div>
+      <div class="ct-rw"><span class="ct-rw__l">Thợ phụ trách <span class="ui-tip">?</span></span><div class="ct-fl" data-f="ContractLineStaff.membershipId">${av(o.ini, o.c, 'sm')}<span class="ct-tn">${o.tho}</span><span class="ct-fl__grow"></span><button type="button" class="ui-btn ui-btn--sm">Chọn thợ</button></div></div>
+      <div class="ct-rw"><span class="ct-rw__l">Làm ở đâu</span><div class="ct-fl"><div class="ui-seg ui-seg--sm"><button type="button" class="ui-seg__opt" aria-checked="${o.loc === 'Studio'}">Studio</button><button type="button" class="ui-seg__opt" aria-checked="${o.loc === 'Tại nhà'}">Tại nhà</button><button type="button" class="ui-seg__opt" aria-checked="${o.loc === 'Nơi khác'}">Nơi khác</button></div><span class="ct-fx">${o.addr}</span></div></div>
+      <div class="ct-ln__ft"><span>Cộng ${o.subj.toLowerCase()}</span><b class="ct-num">${o.sum}</b></div>
+    </div>`;
+  }
+
+  function hd(opt) {
+    const A = opt === 'A', B = opt === 'B', C = opt === 'C';
+    const catalog = `<div class="ui-card ct-pick"><div class="ui-card__head"><span class="ui-card__title">Bảng giá</span></div><div class="ui-card__body"><div class="ct-cat"><div class="ct-cat__sch"><input class="ui-input" placeholder="Tìm gói, dịch vụ, phụ phí"><div class="ct-cat__chips"><button type="button" class="ui-chip" aria-pressed="true">Tất cả</button><button type="button" class="ui-chip">Cô dâu</button><button type="button" class="ui-chip">Mẹ cô dâu</button><button type="button" class="ui-chip">Phù dâu</button></div></div><div class="ct-cat__ls"><div class="ct-lbl">Gói</div>
+      <div class="ct-pk"><span><span class="ct-pk__n">Cô dâu cao cấp</span><br><span class="ct-pk__m">Cô dâu · Studio, Tại nhà, Nơi khác</span></span><button type="button" class="ui-btn ui-btn--sm">${ico('plus')}2.500.000 ₫</button><span class="ct-pk__in">${ico('check')}Đã có trong hợp đồng</span></div>
+      <div class="ct-pk"><span><span class="ct-pk__n">Mẹ cô dâu</span><br><span class="ct-pk__m">Mẹ cô dâu · Studio, Tại nhà, Nơi khác</span></span><button type="button" class="ui-btn ui-btn--sm">${ico('plus')}800.000 ₫</button></div>
+      <div class="ct-pk"><span><span class="ct-pk__n">Phù dâu</span><br><span class="ct-pk__m">Phù dâu · Studio, Tại nhà, Nơi khác</span></span><button type="button" class="ui-btn ui-btn--sm">${ico('plus')}400.000 ₫</button></div>
+      <div class="ct-lbl">Dịch vụ</div>
+      <div class="ct-sp1"><span class="ct-sp1__n">Dặm makeup (đổi kiểu buổi tối)</span><span class="ct-fx ct-num">600.000 ₫</span><button type="button" class="ui-btn ui-btn--sm ui-btn--icon">${ico('plus')}</button></div>
+      </div></div></div></div>`;
+    const evA = A ? `<div class="ct-set"><span class="ct-set__l">Sự kiện</span>${evChips(EV.A, 'cuoi', 'data-moi="Contract.occasion (danh sách cố định)"')}</div>` : '';
+    const head = `<div class="ui-card ct-head"><div class="ui-card__head"><span class="ui-card__title">Hợp đồng mới</span><span class="ui-tag ui-tag--draft">Nháp</span></div><div class="ui-card__body"><div class="ct-head__body">
+      <div class="ct-set ct-set--top"><span class="ct-set__l">Khách hàng</span><div class="ct-kh" data-f="Contract.customerId → Customer.fullName, phone"><span class="ct-kh__main"><span class="ct-kh__name">Vũ Thị Hồng Nhung</span><br><span class="ct-fx">0912 345 678</span></span><button type="button" class="ui-btn ui-btn--sm">Đổi</button></div></div>
+      <div class="ct-set"><label class="ct-set__l">Ngày sự kiện</label><input class="ui-input ct-date num" value="22/11/2026" data-f="Contract.eventDate"></div>
+      ${evA}
+    </div></div></div>`;
+    const evB1 = B ? evChips(EV.B, 'cuoi', 'data-moi="ContractLine.occasion (danh sách cố định)"') : C ? evSelect('vuquy') : '';
+    const evB2 = B ? evChips(EV.B, 'tiec', '') : C ? evSelect('tiec') : '';
+    const l1 = line({ subj: 'Cô dâu', name: 'Cô dâu cao cấp', q: 1, s: '05:00', e: '07:00', price: '2.500.000 ₫', ini: 'LT', c: 3, tho: 'Linh Trần', loc: 'Tại nhà', addr: '25 Nguyễn Văn Cừ, Long Biên · 7,35 km', sum: '2.647.000 ₫', ev: evB1 });
+    const l2 = line({ subj: 'Cô dâu', name: 'Dặm makeup (đổi kiểu buổi tối)', q: 1, s: '17:30', e: '18:30', price: '600.000 ₫', ini: 'LT', c: 3, tho: 'Linh Trần', loc: 'Nơi khác', addr: 'Nhà hàng Riverside, Long Biên', sum: '600.000 ₫', ev: evB2 });
+    const tg = (sw, n) => (B || C ? `<span class="v5-evtag ws-sw-${sw} moi">${n}</span>` : '');
+    const row = (subj, name, meta, t) => `<div class="ct-xr"><span class="ct-xr__n"><span class="ui-tag ui-tag--accent">${subj}</span>${name} <span class="ct-fx">· ${meta}</span></span><span class="ct-xr__r">${t}</span></div>`;
+    const more = `<div class="ui-card"><div class="ui-card__head"><span class="ui-card__title" style="font-size:14px">2 dòng khác <span class="ui-card__sub">thu gọn trong bản mẫu</span></span></div>${row('Phù dâu', 'Phù dâu × 2', '06:00 – 06:45 · Phạm Thu Hà', B ? tg('rose', 'Cưới') : tg('taupe', 'Lễ vu quy'))}${row('Mẹ cô dâu', 'Mẹ cô dâu', '07:00 – 08:00 · Lê Minh Tú', B ? tg('rose', 'Cưới') : tg('taupe', 'Lễ vu quy'))}</div>`;
+    const tot = `<div class="ct-totbar"><div class="ui-total"><div class="ui-total__sums"><span class="ui-total__item">Tổng<span class="ui-total__amt num">4.847.000 ₫</span></span><span class="ui-total__item ui-total__item--dep">Cọc<span class="ui-total__amt num">1.500.000 ₫</span></span></div><div class="ui-total__actions"><button type="button" class="ui-btn">Lưu nháp</button><button type="button" class="ui-btn ui-btn--primary">Xác nhận hợp đồng</button></div></div></div>`;
+    const addm = `<button type="button" class="ui-btn ui-btn--dashed ui-btn--block ct-addm">${ico('plus')}Thêm từ bảng giá</button>`;
+    return `<div class="ct-page"><div class="ct-grid">${catalog}<div class="ct-col">${head}${addm}${l1}${more}${l2}${tot}</div></div></div>`;
+  }
+
+  function dsList() {
+    const rows = [['vuquy', 14], ['cuoi', 22], ['an-hoi', 9], ['tiec', 6], ['pre', 4], ['kyyeu', 3]];
+    const sws = ['rose', 'violet', 'amber', 'green', 'blue', 'taupe'];
+    return rows.map(([k, n], i) => {
+      const [name, sw] = EV.C[k];
+      return `<div class="ui-lrow" style="grid-template-columns:auto minmax(0,1fr) auto"><span class="ui-lrow__lead" style="gap:10px"><span class="v5-grip">⋮⋮</span></span><span class="ui-lrow__text"><span class="ui-lrow__title" ${i === 0 ? 'data-moi="Occasion.name"' : ''}>${name}</span><span class="ui-lrow__sub" ${i === 0 ? 'data-moi="đếm ContractLine theo occasionId"' : ''}>${n} dòng hợp đồng đang dùng</span></span><span class="ui-lrow__right" style="flex-direction:row;align-items:center;gap:12px"><span class="v5-palette" ${i === 0 ? 'data-moi="Occasion.colorIndex (0–5)"' : ''}>${sws.map((s) => `<span class="ws-sw-${s}${s === sw ? ' on' : ''}"></span>`).join('')}</span><span class="ui-switch" role="switch" aria-checked="true" ${i === 0 ? 'data-moi="Occasion.isActive"' : ''}></span></span></div>`;
+    }).join('');
+  }
+
+  const base = window.v5render;
+  window.v5render = function (sec) {
+    base(sec);
+    sec.querySelectorAll('.v5-hd').forEach((el) => { if (!el.dataset.done) { el.dataset.done = '1'; el.innerHTML = hd(el.dataset.opt); } });
+    const l = sec.querySelector('#c-ds-list');
+    if (l && !l.dataset.done) { l.dataset.done = '1'; l.innerHTML = dsList(); sec.querySelector('#c-ds-add').innerHTML = ico('plus') + 'Thêm loại'; }
+  };
+})();
+</script>
+<script src="v5-chung/v5.js"></script>
+</body>
+</html>

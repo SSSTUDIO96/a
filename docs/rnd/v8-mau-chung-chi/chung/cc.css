@@ -1,0 +1,36 @@
+/* Khung chung cho 10 mẫu chứng nhận tốt nghiệp — A4 ngang (297×210 mm). R&D 08.
+   Mỗi <section class="cc"> = 1 trang in. Bố cục bên trong vẽ theo px trên khung 1122×794 (A4 ở 96 dpi). */
+@import url('../phong/phong.css');
+@page { size: A4 landscape; margin: 0; }
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#E9E5E1}
+body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+:root{
+  --f-ten:var(--f-ky-1); --ten-co:var(--ky-co-1);
+  --vang:linear-gradient(115deg,#8A6420 0%,#E9CF86 22%,#B88A35 45%,#F3DE9C 70%,#9C7428 100%);
+  --vang-dam:#8A6420;
+}
+.cc{position:relative;width:297mm;height:210mm;overflow:hidden;margin:0 auto;background:#fff;color:#1C1A18;
+  break-after:page;page-break-after:always;font-family:var(--f-chan)}
+.cc:last-child{break-after:auto;page-break-after:auto}
+@media screen{ .cc + .cc{margin-top:24px} body.xem{padding:24px 0} }
+@media print{ html,body{background:none} }
+.cc > *{position:absolute}
+.vang-chu{background:var(--vang);-webkit-background-clip:text;background-clip:text;color:transparent}
+.ten{font-family:var(--f-ten);font-weight:400;white-space:nowrap;overflow:hidden;line-height:1.35;padding:0 .12em}
+.caps{font-family:var(--f-sans);text-transform:uppercase;letter-spacing:.22em;font-weight:600}
+/* Ô ảnh học viên — khung tròn mặc định (luật 19/10/2026: "Mẫu nào cũng phải có ảnh", "khung ảnh mặc định để hình tròn") */
+.anh{border-radius:50%;overflow:hidden;background:#E9D6CC}
+.anh img{width:100%;height:100%;object-fit:cover;display:block}
+.anh.chua-anh{display:grid;place-items:center}
+.anh.chua-anh img{display:none}
+.anh.chua-anh::after{content:attr(data-chu);font-family:var(--f-chan2);font-weight:600;font-size:46px;letter-spacing:.04em;color:#8A6420}
+.huy svg{width:100%;height:auto;display:block}
+.o-logo img{width:100%;height:100%;object-fit:contain;display:block}
+/* Hai chỗ ký */
+.ky{display:flex;flex-direction:column;align-items:center;text-align:center}
+.ky .dl{width:100%;border-top:1px solid currentColor;opacity:.55;margin-bottom:8px}
+.ky .cv{font-family:var(--f-sans);font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;font-weight:600}
+.ky .nm{font-family:var(--f-chan);font-size:17px;font-weight:600;margin-top:2px}
+.meta{font-family:var(--f-sans);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;font-weight:500}
+.meta b{font-weight:700;letter-spacing:.08em}

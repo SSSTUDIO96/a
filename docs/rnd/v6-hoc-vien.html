@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="ten" content="R&D 06 — Cổng học viên">
+<title>Cổng học viên — R&D 06</title>
+<!-- Bản mẫu R&D vòng 6 — Cổng học viên tự đăng nhập. Ba phương án A / B / C khác nhau ở CÁCH VÀO và BỐ CỤC.
+     Token + component: ../v4-chung/v4.css (chép đúng apps/web/src/styles/tokens.css, họ thiết kế C).
+     Mở kèm ?truong để dán nhãn trường dữ liệu: tím = trường đã có trong apps/api/prisma/schema.prisma,
+     xanh "TÍNH" = máy chủ tính từ trường đã có, nâu "MỚI" = cần trường mới (xem BAO-CAO-RND-06 mục "Đề xuất trường mới").
+     Ngày giả định trong bản mẫu: Thứ Ba 10/11/2026. Mọi tên người, số điện thoại là dữ liệu mẫu. -->
+<link rel="stylesheet" href="v4-chung/v4.css">
+<link rel="stylesheet" href="v6-chung/v6.css">
+</head>
+<body>
+<script src="v4-chung/v4.js"></script>
+<script>
+(function () {
+const I = V4.icon, vnd = V4.vnd;
+const X = {
+  image: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/>',
+  book: '<path d="M5 4h10a3 3 0 013 3v13H8a3 3 0 01-3-3z"/><path d="M5 17a3 3 0 013-3h10"/>',
+  user: '<circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/>',
+  link: '<path d="M10 14a4 4 0 006 0l3-3a4 4 0 00-6-6l-1 1"/><path d="M14 10a4 4 0 00-6 0l-3 3a4 4 0 006 6l1-1"/>',
+  copy: '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 00-1-1H5a1 1 0 00-1 1v10a1 1 0 001 1h3"/>',
+  shield: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/>',
+  device: '<rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/>',
+  chat: '<path d="M4 5h16v11H9l-5 4z"/>',
+  map: '<path d="M9 4l6 2 5-2v14l-5 2-6-2-5 2V6z"/><path d="M9 4v14M15 6v14"/>',
+  out: '<path d="M14 4h5v16h-5M10 8l-4 4 4 4M6 12h10"/>',
+  mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>',
+  doc: '<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 13h6M10 17h6"/>',
+  dl: '<path d="M12 4v11M7 10l5 5 5-5M4 20h16"/>',
+  bank: '<path d="M3 10h18L12 4zM5 10v8M9 10v8M15 10v8M19 10v8M3 20h18"/>',
+};
+const ic = (n, c) => X[n] ? `<svg class="i${c ? ' ' + c : ''}" viewBox="0 0 24 24" aria-hidden="true">${X[n]}</svg>` : I(n, c);
+
+const LOGO = 'v3-mau-chao-mung/chung/logo-mau.svg';
+const ANH_HV = 'v3-mau-chao-mung/chung/anh-hoc-vien.svg';
+const avHV = (cls) => `<span class="av${cls ? ' ' + cls : ''}" style="background:#F3E3E9 url('${ANH_HV}') center/cover" data-f="Customer.avatarFileId"></span>`;
+const BRAND = 'Chiến Makeup Academy';
+
+// ---------- Dữ liệu mẫu ----------
+const SES = [
+  ['03', 'T3', 'past'], ['05', 'T5', 'past'], ['07', 'T7', 'past'], ['10', 'T3', 'today'], ['12', 'T5', ''], ['14', 'T7', ''],
+  ['17', 'T3', ''], ['19', 'T5', ''], ['21', 'T7', ''], ['24', 'T3', ''], ['26', 'T5', ''], ['28', 'T7', ''],
+];
+
+// ---------- Khối dùng chung ----------
+function top(sub, tabs) {
+  return `<header class="pt-top"><img class="lg" src="${LOGO}" alt="" data-f="OrganizationProfile.logoFileId">
+  <div class="brand2" data-f="OrganizationProfile.brandName">${BRAND}<small>${sub || 'Cổng học viên'}</small></div>${tabs || ''}${avHV('sm')}</header>`;
+}
+function hi(compact) {
+  return `<div class="hi">${compact ? '' : avHV('lg')}<div class="t"><h1 data-f="Customer.fullName">Chào Phương Thảo</h1>
+  <p><span data-f="Course.name">Makeup chuyên nghiệp</span> · <span data-f="CourseClass.name">Lớp K12</span> · <span class="tag ok" data-f="Enrollment.status">Đang học</span></p></div></div>`;
+}
+function nextCard() {
+  return `<div class="card next"><div class="ch2"><h2>Buổi học tới</h2><span class="tag nv" data-f="TÍNH: buổi thứ n từ CourseClass.startDate + weekdays">Buổi 4/12</span></div>
+  <div class="cb" style="padding-top:10px">
+   <div class="when" data-f="TÍNH: ngày từ CourseClass.weekdays · giờ từ startMinute/endMinute">Hôm nay, Thứ Ba 10/11 <small>18:00–22:00</small></div>
+   <div class="rowi">${ic('user', 's')}<span>Giảng viên <b data-f="CourseClass.instructorMembershipId → StaffProfile.displayName">Nguyễn Thu Hà</b></span></div>
+   <div class="rowi">${ic('pin', 's')}<span><b data-f="StudioLocation.name">Cơ sở Cầu Giấy</b><br><span class="muted" data-f="StudioLocation.address">25 Hoàng Quốc Việt, Cầu Giấy, Hà Nội</span></span></div>
+   <div class="row" style="margin-top:6px"><a class="btn sm" href="#" data-f="StudioLocation.latitude/longitude">${ic('map', 's')}Chỉ đường</a><a class="btn sm ghost" href="#" data-f="MỚI: ClassSession (buổi dời/huỷ)">Cả lịch học</a></div>
+  </div></div>`;
+}
+function moneySum(btn) {
+  return `<div class="card"><div class="ch2"><h2>Học phí</h2><small data-f="Contract.code">HĐKH-000042</small></div><div class="cb">
+  <div class="money3"><div><span>Tổng phải đóng</span><b data-f="Contract.total">${vnd(14000000)}</b></div>
+  <div><span>Đã đóng</span><b data-f="TÍNH: Σ Payment.amount (RECEIPT chưa huỷ) − REFUND">${vnd(8000000)}</b></div>
+  <div class="rem"><span>Còn lại</span><b data-f="TÍNH: Contract.total − đã đóng">${vnd(6000000)}</b></div></div>
+  <div class="prog" data-f="TÍNH: đã đóng / Contract.total"><i style="width:57%"></i></div>
+  <div class="bn yel" style="margin-top:12px">${I('clock', 's')}<span><b>Đợt 1 còn thiếu ${vnd(1000000)}</b> — hạn 03/11, đã qua 7 ngày. Đợt 2: ${vnd(5000000)}, hạn 17/11.</span></div>
+  ${btn ? `<div class="row" style="margin-top:12px"><a class="btn sm" href="#">Xem chi tiết các đợt</a></div>` : ''}
+  </div></div>`;
+}
+function installments() {
+  return `<div class="card"><div class="ch2"><h2>Tiến độ đóng tiền</h2><small>3 đợt</small></div><div class="cb">
+  <div class="ins"><span class="dot ok">${I('check')}</span><div><div class="n" data-f="PaymentInstallment.name (isDeposit)">Đặt cọc</div><div class="d" data-f="PaymentInstallment.dueDate">Hạn 20/10/2026 · đã đủ</div></div><div class="a" data-f="PaymentInstallment.amount">${vnd(3000000)}</div></div>
+  <div class="ins"><span class="dot part">!</span><div><div class="n">Đợt 1</div><div class="d">Hạn 03/11/2026 · <span style="color:var(--warn)">quá hạn 7 ngày</span></div></div><div class="a">${vnd(6000000)}<small style="color:var(--warn)" data-f="TÍNH: dồn tiền đã đóng vào đợt theo thứ tự (chưa có Payment.installmentId)">còn thiếu ${vnd(1000000)}</small></div></div>
+  <div class="ins"><span class="dot"></span><div><div class="n">Đợt 2</div><div class="d">Hạn 17/11/2026</div></div><div class="a">${vnd(5000000)}</div></div>
+  </div></div>`;
+}
+function receipts() {
+  return `<div class="card"><div class="ch2"><h2>Đã đóng</h2><small>2 phiếu thu</small></div><div class="cb">
+  <div class="ins"><span class="dot ok">${I('check')}</span><div><div class="n" data-f="Payment.code">PT-000318</div><div class="d"><span data-f="Payment.receivedAt">20/10/2026</span> · <span data-f="Payment.method">Chuyển khoản</span></div></div><div class="a" data-f="Payment.amount">${vnd(3000000)}</div></div>
+  <div class="ins"><span class="dot ok">${I('check')}</span><div><div class="n">PT-000355</div><div class="d">03/11/2026 · Tiền mặt</div></div><div class="a">${vnd(5000000)}</div></div>
+  </div></div>`;
+}
+function bank() {
+  return `<div class="card"><div class="ch2"><h2>Cách đóng tiền</h2></div><div class="cb">
+  <dl class="kv"><dt>Ngân hàng</dt><dd data-f="MỚI: OrganizationProfile.bankName">Vietcombank</dd>
+  <dt>Số tài khoản</dt><dd><b data-f="MỚI: OrganizationProfile.bankAccountNo">0011 0045 67890</b> <a class="btn sm ghost" href="#">${ic('copy', 's')}Chép</a></dd>
+  <dt>Chủ tài khoản</dt><dd data-f="MỚI: OrganizationProfile.bankAccountName">NGUYEN TRONG CHIEN</dd>
+  <dt>Nội dung</dt><dd><b data-f="Contract.code + Customer.fullName">HĐKH-000042 Phuong Thao</b></dd></dl>
+  <p class="fx">Chuyển xong trung tâm sẽ ghi phiếu thu, số "Đã đóng" cập nhật sau khi trung tâm xác nhận.</p></div></div>`;
+}
+function contractCard() {
+  return `<div class="card"><div class="ch2"><h2>Hợp đồng</h2><span class="tag ok" data-f="Contract.status">Đã xác nhận</span></div><div class="cb">
+  <dl class="kv"><dt>Mã</dt><dd data-f="Contract.code">HĐKH-000042</dd><dt>Ngày ký</dt><dd data-f="Contract.confirmedAt">02/11/2026</dd>
+  <dt>Khoá học</dt><dd data-f="ContractLine(kind COURSE).name">Makeup chuyên nghiệp — Lớp K12</dd>
+  <dt>Học phí</dt><dd class="num" data-f="ContractLine.unitPrice">${vnd(15000000)}</dd><dt>Giảm</dt><dd class="num" data-f="Contract.discount">− ${vnd(1000000)}</dd>
+  <dt>Phải đóng</dt><dd class="num b" data-f="Contract.total">${vnd(14000000)}</dd></dl>
+  <a class="lnk" href="#">${ic('doc')}<span class="t">Điều khoản hợp đồng<small data-f="Contract.terms">Bản lúc ký, không đổi khi trung tâm sửa mẫu</small></span><span class="faint">›</span></a></div></div>`;
+}
+function classCard(t) {
+  return `<div class="card"><div class="ch2"><h2>${t || 'Lớp của tôi'}</h2></div><div class="cb">
+  <dl class="kv"><dt>Khoá</dt><dd data-f="Course.name">Makeup chuyên nghiệp</dd><dt>Lớp</dt><dd data-f="CourseClass.name">K12</dd>
+  <dt>Lịch</dt><dd data-f="CourseClass.weekdays + startMinute/endMinute">Thứ Ba · Thứ Năm · Thứ Bảy, 18:00–22:00</dd>
+  <dt>Thời gian</dt><dd data-f="CourseClass.startDate / endDate">03/11 – 28/11/2026 · <span data-f="Course.sessionCount">12 buổi</span></dd>
+  <dt>Giảng viên</dt><dd><span class="who">${V4.av('Nguyễn Thu Hà', true, 'xs')}<span data-f="StaffProfile.displayName + avatarFileId">Nguyễn Thu Hà</span></span></dd>
+  <dt>Địa điểm</dt><dd data-f="StudioLocation.name + address">Cơ sở Cầu Giấy — 25 Hoàng Quốc Việt</dd></dl></div></div>`;
+}
+function sessions(n, title, from) {
+  from = from || 0;
+  const rows = SES.slice(from, from + n).map(([d, t, k], j) => { const i = j + from; return `<div class="ses ${k}"><div class="dt"><b>${d}</b><span>${t} · th11</span></div>
+   <div><div class="n">Buổi ${i + 1}${k === 'today' ? ' · <span style="color:var(--accent)">hôm nay</span>' : ''}</div><div class="d">18:00–22:00 · Cơ sở Cầu Giấy</div></div>
+   ${k === 'past' ? '<span class="tag">Đã qua</span>' : k === 'today' ? '<span class="tag nv">Hôm nay</span>' : ''}</div>`; }).join('');
+  return `<div class="card"><div class="ch2"><h2>${title || 'Lịch học'}</h2><small data-f="TÍNH: các ngày từ CourseClass.startDate→endDate theo weekdays">12 buổi · dự kiến</small></div><div class="cb">${rows}
+  ${n < 12 ? `<div class="row" style="padding:8px 0 2px"><a class="btn sm ghost" href="#">Xem cả 12 buổi</a></div>` : ''}
+  <p class="fx" style="padding-top:6px" data-f="MỚI: ClassSession (ngày thật, dời, huỷ) · SessionAttendance">"Đã qua" tính theo ngày, chưa phải điểm danh. Buổi dời/huỷ cần trường mới.</p></div></div>`;
+}
+function rules(open) {
+  return `<div class="card"><div class="ch2"><h2>Nội quy</h2><small data-f="Contract.rulesTemplateVersion + confirmedAt">bản lúc ký 02/11/2026</small></div><div class="cb" style="padding-top:10px">
+  <ol class="rules" data-f="Contract.rules (bản chụp lúc xác nhận)">
+   <li>Đi học đúng giờ; muộn quá 30 phút tính là vắng.</li>
+   <li>Nghỉ có báo trước được học bù 1 buổi ở lớp sau của cùng khoá.</li>
+   ${open ? `<li>Mang bộ cọ, mút cá nhân; trung tâm cấp mỹ phẩm thực hành.</li>
+   <li>Không quay phim, phát trực tiếp buổi học khi giảng viên chưa đồng ý.</li>
+   <li>Học phí đã đóng không hoàn sau buổi 3; được bảo lưu một lần trong 6 tháng.</li>` : ''}
+  </ol>${open ? '' : '<div class="row" style="padding-top:8px"><a class="btn sm ghost" href="#">Xem đủ 5 điều</a></div>'}</div></div>`;
+}
+function photos() {
+  return `<div class="card"><div class="ch2"><h2>Ảnh của tôi</h2><small>2 ảnh</small></div><div class="cb" style="padding-top:12px">
+  <div class="cards2"><figure><img src="anh-rnd06/the-chao-mung.png" alt="Thẻ chào mừng" data-f="DesignCard(kind WELCOME).outputFileId"><figcaption>Chào mừng · 02/11</figcaption></figure>
+  <figure><img src="anh-rnd06/the-feedback.png" alt="Thẻ cảm nhận" data-f="DesignCard(kind FEEDBACK).outputFileId · MỚI: DesignCard.portalVisible"><figcaption>Cảm nhận · 09/11</figcaption></figure></div>
+  <div class="row" style="padding-top:10px"><a class="btn sm" href="#">${ic('dl', 's')}Lưu vào Ảnh</a></div></div></div>`;
+}
+function contact() {
+  return `<div class="card"><div class="ch2"><h2>Cần hỏi trung tâm?</h2></div><div class="cb" style="padding-top:12px"><div class="row">
+  <a class="btn pri" href="#" data-f="OrganizationProfile.phone">${I('phone', 's')}Gọi 0912 345 678</a><a class="btn" href="#" data-f="OrganizationProfile.zalo">${ic('chat', 's')}Nhắn Zalo</a></div></div></div>`;
+}
+const foot = `<div class="foot">Chỉ em xem được trang này · Chạy trên Makeup Pro</div>`;
+const gateHead = (sub) => `<div class="head"><img src="${LOGO}" alt="" data-f="OrganizationProfile.logoFileId"><b data-f="OrganizationProfile.brandName">${BRAND}</b><small>${sub || 'Cổng học viên'}</small></div>`;
+const powered = `<div class="powered">${I('lock', 's')}Chạy trên Makeup Pro</div>`;
+
+// ================= MỤC LỤC =================
+V4.mucLuc('R&D 06 — Cổng học viên tự đăng nhập', 'Ba phương án khác nhau ở cách vào và bố cục. Thêm ?truong vào đường dẫn để hiện tên trường dữ liệu trên từng ô. Ngày giả định: Thứ Ba 10/11/2026.', [
+  ['A — Email + mật khẩu · bố cục "trang chủ nhiều thẻ" + thanh 4 tab', [
+    ['a-moi', 'Trung tâm mời học viên (máy tính)', 'Nhập email, gửi thư đặt mật khẩu'],
+    ['a-vao', 'Học viên đăng nhập', ''], ['a-nha', 'Trang chủ', 'thẻ Buổi tới · Học phí · Lớp · Ảnh'], ['a-hoc-phi', 'Tab Học phí', ''], ['a-ho-so', 'Tab Hồ sơ', 'nội quy, hợp đồng, ảnh, đăng xuất']]],
+  ['B — Đường dẫn riêng gửi qua Zalo + 4 số cuối điện thoại · bố cục "một trang cuộn"', [
+    ['b-nv', 'Trung tâm gửi đường dẫn (máy tính)', 'sao chép tin nhắn, xem máy đã mở, thu hồi'],
+    ['b-mo', 'Học viên mở đường dẫn trên máy mới', 'nhập 4 số cuối'], ['b-sai', 'Nhập sai / đường dẫn bị khoá', ''], ['b-trang', 'Trang của học viên', 'một trang, chip neo các mục']]],
+  ['C — Mã OTP qua số điện thoại · bố cục "đầu trang + thẻ tab"', [
+    ['c-vao', 'Nhập số điện thoại', 'chọn nhận mã qua Zalo hoặc SMS'], ['c-otp', 'Nhập mã 6 số', ''], ['c-chon', 'Một số điện thoại có 2 hồ sơ', ''],
+    ['c-nha', 'Tab Lịch học', ''], ['c-hoc-phi', 'Tab Học phí', '']]],
+]);
+
+// ================= PHƯƠNG ÁN A =================
+V4.man('a-moi', { shell: 'org', nav: 'khach', title: 'Phương Thảo', back: '#muc-luc' }, `
+<div class="ph"><h1>Tôn Nữ Hoàng Bảo Ngọc Phương Thảo</h1><span class="sub">Học viên · 0987 654 321</span></div>
+<div class="g2"><div class="vstack">${classCard('Lớp đang học')}</div>
+<div class="vstack"><div class="card"><div class="ch2"><h2>Cổng học viên</h2><span class="tag draft">Chưa mời</span></div><div class="cb" style="padding-top:12px">
+<p class="muted small" style="margin-bottom:12px">Học viên tự đăng nhập bằng email + mật khẩu để xem lịch học, học phí, nội quy và ảnh của mình. Gửi thư mời để học viên tự đặt mật khẩu.</p>
+<div class="fld"><label>Email học viên <span class="req">*</span></label><input class="ctl" value="phuongthao.ton@gmail.com" data-f="Customer.email"></div>
+<div class="bn grey">${I('clock', 's')}<span>Thư mời hết hạn sau 48 giờ. Học viên quên mật khẩu tự bấm "Quên mật khẩu" — máy chủ gửi thư đặt lại.</span></div>
+</div><div class="cf"><button class="btn pri">${ic('mail', 's')}Gửi thư mời</button></div></div>
+<div class="bn yel">${I('warn', 's')}<span>Cần dịch vụ gửi thư (chưa có trong máy chủ). Học viên không có email thì phương án này không dùng được.</span></div></div></div>`);
+
+V4.man('a-vao', { shell: 'none', title: 'A — Đăng nhập' }, `<div class="gate">${gateHead()}
+<div class="card"><div class="cb"><h1>Đăng nhập</h1><p class="lead">Dùng email trung tâm đã gửi thư mời.</p>
+<div class="fld"><label>Email</label><input class="ctl" style="height:42px" placeholder="ban@vidu.vn" value="phuongthao.ton@gmail.com" data-f="MỚI: PortalAccount.email"></div>
+<div class="fld"><label>Mật khẩu</label><input class="ctl" style="height:42px" type="password" value="matkhau12" data-f="MỚI: PortalAccount.passwordHash"></div>
+<button class="btn pri full">Vào cổng học viên</button>
+<div style="text-align:center;margin-top:12px"><a href="#" class="small">Quên mật khẩu?</a></div></div>
+<div class="cf" style="justify-content:center"><span class="muted small">Chưa có tài khoản? Nhờ trung tâm gửi thư mời.</span></div></div>${powered}</div>`);
+
+const tabA = (on) => `<nav class="pt-tab">${[['nha', 'Trang chủ', I('tong-quan')], ['lich', 'Lịch học', I('lich')], ['tien', 'Học phí', I('tien')], ['hs', 'Hồ sơ', ic('user')]].map(([k, t, s]) => `<a href="#" class="${k === on ? 'on' : ''}">${s}${t}</a>`).join('')}</nav>`;
+V4.man('a-nha', { shell: 'none', title: 'A — Trang chủ' }, `<div class="pt has-tab">${top()}
+<main class="pt-main">${hi()}
+<div class="dash"><div class="span7 stack">${nextCard()}${sessions(4, 'Lịch học sắp tới', 3)}</div>
+<div class="span5 stack">${moneySum(true)}${photos()}</div></div>${foot}</main>${tabA('nha')}</div>`);
+
+V4.man('a-hoc-phi', { shell: 'none', title: 'A — Học phí' }, `<div class="pt has-tab">${top('Học phí')}
+<main class="pt-main"><div class="dash"><div class="span6 stack">${moneySum(false)}${installments()}</div><div class="span6 stack">${receipts()}${bank()}</div></div>${foot}</main>${tabA('tien')}</div>`);
+
+V4.man('a-ho-so', { shell: 'none', title: 'A — Hồ sơ' }, `<div class="pt has-tab">${top('Hồ sơ')}
+<main class="pt-main">${hi()}<div class="dash"><div class="span6 stack">${classCard()}${rules(true)}</div><div class="span6 stack">${contractCard()}
+<div class="card"><div class="cb" style="padding-top:4px"><a class="lnk" href="#">${I('lock')}<span class="t">Đổi mật khẩu</span></a><a class="lnk" href="#">${ic('out')}<span class="t">Đăng xuất</span></a></div></div></div></div>${foot}</main>${tabA('hs')}</div>`);
+
+// ================= PHƯƠNG ÁN B =================
+V4.man('b-nv', { shell: 'org', nav: 'khach', title: 'Phương Thảo', back: '#muc-luc' }, `
+<div class="ph"><h1>Tôn Nữ Hoàng Bảo Ngọc Phương Thảo</h1><span class="sub">Học viên · 0987 654 321</span></div>
+<div class="g2"><div class="vstack">${classCard('Lớp đang học')}</div>
+<div class="vstack"><div class="card"><div class="ch2"><h2>Cổng học viên</h2><span class="tag ok" data-f="MỚI: PortalLink.revokedAt = trống">Đang mở</span></div><div class="cb" style="padding-top:12px">
+<p class="muted small" style="margin-bottom:10px">Gửi tin này cho học viên qua Zalo. Học viên bấm đường dẫn, nhập <b>4 số cuối số điện thoại</b> là vào — không cần mật khẩu.</p>
+<div class="msg" style="max-width:none;margin-bottom:10px">Chào Phương Thảo, đây là trang học viên của em tại Chiến Makeup Academy (lịch học, học phí, nội quy, ảnh):<br><span class="url" data-f="MỚI: PortalLink.tokenHash (chìa nằm sau dấu #)">https://chienmakeup.vn/hv#Q7xK2m9vR4tLp8Wc</span><br>Mở bằng điện thoại của em và nhập 4 số cuối số điện thoại đã đăng ký. Đường dẫn này chỉ dành cho em, đừng chuyển cho người khác nhé.</div>
+<div class="row"><button class="btn pri">${ic('copy', 's')}Sao chép tin nhắn</button><button class="btn">${ic('link', 's')}Tạo đường dẫn mới</button></div>
+<div class="grp" style="margin-top:14px">Máy đã mở cổng <span class="faint" style="font-weight:400">(tối đa 2)</span></div>
+<div class="lr noav" style="padding-left:0;padding-right:0"><div class="tx"><span class="n" data-f="MỚI: PortalDevice.label">iPhone · Safari</span><span class="d" data-f="MỚI: PortalDevice.createdAt / lastSeenAt">Mở lần đầu 03/11 20:14 · lần cuối hôm nay 07:52</span></div><button class="btn sm danger">Chặn máy này</button></div>
+</div><div class="cf"><button class="btn danger">Thu hồi đường dẫn và chặn mọi máy</button></div></div>
+<div class="bn grey">${ic('shield', 's')}<span>Đường dẫn chưa mở hết hạn sau 7 ngày. Nhập sai 4 số cuối 5 lần là khoá, trung tâm phải tạo đường dẫn mới.</span></div></div></div>`);
+
+V4.man('b-mo', { shell: 'none', title: 'B — Mở trên máy mới' }, `<div class="gate">${gateHead()}
+<div class="card"><div class="cb"><h1>Mở trang học viên</h1>
+<p class="lead">Đường dẫn này dành riêng cho một học viên. Nhập <b>4 số cuối số điện thoại</b> em đã đăng ký với trung tâm.</p>
+<div class="pin4" data-f="Customer.phone (4 số cuối, so ở máy chủ)"><span>3</span><span>3</span><span>2</span><span class="f">1</span></div>
+<label class="row small" style="margin-bottom:14px"><input type="checkbox" checked> Nhớ máy này 90 ngày</label>
+<button class="btn pri full">Mở trang của tôi</button></div>
+<div class="cf" style="justify-content:center"><span class="muted small">Không phải em? Đóng trang này và báo trung tâm.</span></div></div>${powered}</div>`);
+
+V4.man('b-sai', { shell: 'none', title: 'B — Sai / bị khoá' }, `<div class="gate">${gateHead()}
+<div class="lh" style="width:min(420px,100%);background:none;border:0;padding:0 2px 6px">Trạng thái 1 · nhập sai</div><div class="card"><div class="cb"><h1>Mở trang học viên</h1>
+<p class="lead">Nhập 4 số cuối số điện thoại em đã đăng ký với trung tâm.</p>
+<div class="pin4 err"><span>5</span><span>6</span><span>7</span><span>8</span></div>
+<div class="bn red" style="margin-bottom:12px">${I('warn', 's')}<span>Chưa đúng. Còn <b>2 lần</b> thử, sau đó đường dẫn bị khoá.</span></div>
+<button class="btn pri full">Thử lại</button></div></div>
+<div class="lh" style="width:min(420px,100%);background:none;border:0;padding:16px 2px 6px">Trạng thái 2 · đường dẫn bị khoá</div><div class="card"><div class="cb" style="text-align:center"><div style="color:var(--danger);margin-bottom:6px">${I('lock')}</div><b>Đường dẫn đã bị khoá</b>
+<p class="muted small" style="margin-top:4px">Nhập sai 5 lần, hoặc trung tâm đã thu hồi, hoặc đã mở trên 2 máy. Nhắn trung tâm để nhận đường dẫn mới.</p>
+<a class="btn" style="margin-top:10px" href="#">${ic('chat', 's')}Nhắn trung tâm</a></div></div>${powered}</div>`);
+
+const chipsB = `<div class="anch m-only2"><div class="chips scroll">${['Lịch học', 'Học phí', 'Nội quy', 'Ảnh', 'Hợp đồng'].map((t, i) => `<a class="chip${i === 0 ? ' on' : ''}" href="#">${t}</a>`).join('')}</div></div>`;
+V4.man('b-trang', { shell: 'none', title: 'B — Trang học viên' }, `<div class="pt">${top()}
+<main class="pt-main"><div class="bside"><nav>${['Buổi học tới', 'Lịch học', 'Học phí', 'Nội quy', 'Ảnh của tôi', 'Hợp đồng', 'Liên hệ'].map((t, i) => `<a href="#" class="${i === 0 ? 'on' : ''}">${t}</a>`).join('')}</nav>
+<div class="stack">${hi()}${chipsB}${nextCard()}
+<section class="sec">${moneySum(false)}</section>
+<section class="sec">${installments()}</section>
+<section class="sec">${sessions(12)}</section>
+<section class="sec">${rules(true)}</section>
+<section class="sec">${photos()}</section>
+<section class="sec">${contractCard()}</section>
+<section class="sec">${contact()}</section>
+<div class="foot">Đang mở trên iPhone · Safari · <a href="#">Thoát khỏi máy này</a></div></div></div></main></div>`);
+
+// ================= PHƯƠNG ÁN C =================
+V4.man('c-vao', { shell: 'none', title: 'C — Nhập số điện thoại' }, `<div class="gate">${gateHead()}
+<div class="card"><div class="cb"><h1>Đăng nhập</h1><p class="lead">Nhập số điện thoại em đã đăng ký học. Trung tâm gửi mã 6 số để xác nhận.</p>
+<div class="fld"><label>Số điện thoại</label><input class="ctl" style="height:42px;font-size:17px" value="0987 654 321" inputmode="tel" data-f="Customer.phone (đã chuẩn hoá 0xxxxxxxxx)"></div>
+<div class="fld"><label>Nhận mã qua</label><div class="seg" style="width:100%"><button class="on" style="flex:1">Zalo</button><button style="flex:1">Tin nhắn SMS</button></div>
+<span class="fx">Zalo: cần số này có tài khoản Zalo. SMS: tốn phí cho trung tâm mỗi tin.</span></div>
+<button class="btn pri full">Gửi mã</button></div></div>${powered}</div>`);
+
+V4.man('c-otp', { shell: 'none', title: 'C — Nhập mã' }, `<div class="gate">${gateHead()}
+<div class="card"><div class="cb"><h1>Nhập mã 6 số</h1><p class="lead">Mã đã gửi qua Zalo tới <b>0987 654 321</b>. Mã dùng được 5 phút.</p>
+<div class="otp" data-f="MỚI: PortalOtp.codeHash · expiresAt · attempts"><span>4</span><span>8</span><span>2</span><span>0</span><span class="f">7</span><span></span></div>
+<button class="btn pri full">Xác nhận</button>
+<div class="row" style="justify-content:space-between;margin-top:12px"><span class="muted small">Gửi lại sau 0:42</span><a class="small" href="#">Đổi số điện thoại</a></div></div>
+<div class="cf" style="justify-content:center"><span class="muted small">Không nhận được qua Zalo? Gửi bằng SMS sau 0:42</span></div></div>${powered}</div>`);
+
+V4.man('c-chon', { shell: 'none', title: 'C — Chọn hồ sơ' }, `<div class="gate">${gateHead()}
+<div class="card"><div class="cb"><h1>Số này có 2 hồ sơ</h1><p class="lead">Số 0987 654 321 đã đăng ký cho 2 học viên. Chọn người muốn xem.</p>
+<div class="who-pick"><a href="#">${avHV()}<span class="t"><b data-f="Customer.fullName (cùng Customer.phone)">Tôn Nữ Hoàng Bảo Ngọc Phương Thảo</b><small data-f="Enrollment → Course.name · CourseClass.name">Makeup chuyên nghiệp · Lớp K12</small></span><span class="faint">›</span></a>
+<a href="#">${V4.av('Tôn Nữ Minh Anh', false)}<span class="t"><b>Tôn Nữ Minh Anh</b><small>Makeup cá nhân · Lớp K7 · đã học xong</small></span><span class="faint">›</span></a></div></div>
+<div class="cf" style="justify-content:flex-start"><span class="fx">Ai cầm máy có số này đều xem được cả hai hồ sơ. Muốn tách, nhờ trung tâm đổi số của một người.</span></div></div>${powered}</div>`);
+
+const cHead = (on) => `<div class="c-head"><div class="hi" style="margin-bottom:10px">${avHV('lg')}<div class="t"><h1 data-f="Customer.fullName" style="font-size:18px">Tôn Nữ Hoàng Bảo Ngọc Phương Thảo</h1>
+<p><span data-f="Course.name">Makeup chuyên nghiệp</span> · <span data-f="CourseClass.name">K12</span> · GV <span data-f="StaffProfile.displayName">Nguyễn Thu Hà</span></p></div></div>
+<nav class="ctabs">${['Lịch học', 'Học phí', 'Giấy tờ', 'Ảnh'].map((t) => `<a href="#" class="${t === on ? 'on' : ''}">${t}</a>`).join('')}</nav></div>`;
+V4.man('c-nha', { shell: 'none', title: 'C — Lịch học' }, `<div class="pt">${top('Cổng học viên', `<a class="btn sm ghost d-only" href="#">${ic('out', 's')}Đăng xuất</a>`)}
+<main class="pt-main">${cHead('Lịch học')}
+<div class="dash"><div class="span5 stack">${nextCard()}<div class="card d-only"><div class="ch2"><h2>Học phí</h2></div><div class="cb"><div class="money3"><div><span>Đã đóng</span><b>${vnd(8000000)}</b></div><div class="rem"><span>Còn lại</span><b>${vnd(6000000)}</b></div><div></div></div><div class="prog"><i style="width:57%"></i></div></div></div></div>
+<div class="span7">${sessions(12)}</div></div>${foot}</main></div>`);
+
+V4.man('c-hoc-phi', { shell: 'none', title: 'C — Học phí' }, `<div class="pt">${top()}
+<main class="pt-main">${cHead('Học phí')}
+<div class="dash"><div class="span6 stack">${moneySum(false)}${installments()}</div><div class="span6 stack">${receipts()}${bank()}</div></div>${foot}</main></div>`);
+
+V4.boot();
+})();
+</script>
+</body>
+</html>

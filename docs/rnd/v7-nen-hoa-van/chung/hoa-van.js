@@ -27,7 +27,7 @@ function damaskNua(c){return `
 <path d="M0,-62 C22,-74 48,-66 52,-40 C56,-14 30,-6 24,-22 C20,-33 34,-38 38,-28" fill="none" stroke="${c}" stroke-width="2.4" stroke-linecap="round"/>
 <path d="M52,-40 C70,-52 80,-74 72,-98 C60,-84 52,-64 52,-40 Z" fill="${c}"/>
 <path d="M0,-50 C10,-30 10,-10 0,8 Z" fill="${c}"/>
-<path d="M0,16 C26,14 54,34 52,68 C36,56 16,42 0,40 Z" fill="${c}"/>
+<path d="M0,16 C18,12 40,20 50,40 C54,50 50,60 42,62 C46,52 40,42 30,40 C20,38 10,40 0,42 Z" fill="${c}"/>
 <path d="M52,68 C62,82 58,98 46,106 C40,110 34,104 38,98" fill="none" stroke="${c}" stroke-width="2.2" stroke-linecap="round"/>
 <path d="M0,48 C9,64 9,84 0,102 Z" fill="${c}"/>
 <path d="M0,108 C14,110 20,120 14,130" fill="none" stroke="${c}" stroke-width="2.2" stroke-linecap="round"/>
@@ -66,7 +66,7 @@ function may(c){const m=`<path d="M0,0 C-10,-26 20,-40 34,-22 C44,-46 82,-42 84,
 <path d="M56,-8 C54,-26 78,-28 76,-12 C75,-4 66,-5 67,-11" fill="none" stroke="${c}" stroke-width="1.3" stroke-linecap="round"/>
 <path d="M100,16 C124,22 136,6 128,-4 C123,-10 114,-5 118,1" fill="none" stroke="${c}" stroke-width="1.4" stroke-linecap="round"/>
 <path d="M-6,16 C-30,24 -46,14 -44,4" fill="none" stroke="${c}" stroke-width="1.4" stroke-linecap="round"/>`;
-  return `<g transform="translate(50,60)">${m}</g><g transform="translate(180,150) scale(-1,1)">${m}</g><g transform="translate(270,150) scale(-1,1)">${m}</g>`;}
+  return `<g transform="translate(62,70)">${m}</g><g transform="translate(250,170) scale(-1,1)">${m}</g>`;}
 
 /* ---------- 6. Hồi văn (vuông móc nối, viền đình chùa) ---------- */
 function hoiVan(c){return `<path d="M0,52 H60 M8,52 V8 H52 V44 H20 V20 H40 V32 H30" fill="none" stroke="${c}" stroke-width="2.2" stroke-linejoin="miter"/>`;}
@@ -76,7 +76,7 @@ window.HOA_VAN={
   ren:{ten:'Ren lưới hoa',w:96,h:84,ve:ren},
   'la-canh':{ten:'Lá cành nét mảnh',w:290,h:290,ve:laCanh},
   'song-nuoc':{ten:'Sóng nước Á Đông',w:68,h:34,ve:songNuoc,che:true},
-  may:{ten:'Mây lành',w:240,h:220,ve:may},
+  may:{ten:'Mây lành',w:300,h:200,ve:may},
   'hoi-van':{ten:'Hồi văn',w:60,h:60,ve:hoiVan},
 };
 
@@ -110,14 +110,15 @@ function khungRen(W,H,mau){const d=40,L=W-2*d,Hh=H-2*d;
   const goc=(x,y)=>bong(x,y,13,mau);
   return s+goc(d,d)+goc(W-d,d)+goc(d,H-d)+goc(W-d,H-d);}
 // Dải hồi văn chạy quanh thẻ (kiểu khung tranh Á Đông).
-function khungHoiVan(W,H,mau){const d=34,t=34,uid='hv'+Math.round(Math.random()*1e6);
+function khungHoiVan(W,H,mau){const d=34,t=34;
   const tile=`<path d="M0,30 H34 M5,30 V4 H30 V26 H12 V12 H24 V20 H18" fill="none" stroke="${mau}" stroke-width="1.8"/>`;
-  return `<defs><pattern id="${uid}a" width="34" height="34" patternUnits="userSpaceOnUse" x="${d}" y="${d}">${tile}</pattern>
-<pattern id="${uid}b" width="34" height="34" patternUnits="userSpaceOnUse" patternTransform="rotate(90)" x="${d}" y="${d}">${tile}</pattern></defs>
-<rect x="${d+t}" y="${d}" width="${W-2*d-2*t}" height="${t}" fill="url(#${uid}a)"/><rect x="${d+t}" y="${H-d-t}" width="${W-2*d-2*t}" height="${t}" fill="url(#${uid}a)"/>
-<rect x="${d}" y="${d+t}" width="${t}" height="${H-2*d-2*t}" fill="url(#${uid}b)"/><rect x="${W-d-t}" y="${d+t}" width="${t}" height="${H-2*d-2*t}" fill="url(#${uid}b)"/>
-<rect x="${d-6}" y="${d-6}" width="${W-2*d+12}" height="${H-2*d+12}" fill="none" stroke="${mau}" stroke-width="1.4"/>
-<rect x="${d+t+6}" y="${d+t+6}" width="${W-2*d-2*t-12}" height="${H-2*d-2*t-12}" fill="none" stroke="${mau}" stroke-width=".8"/>`+
+  // Dải dọc theo trục x, dài len: chia đều số ô vuông móc, giãn nhẹ cho khít (cạnh nào cũng tròn ô, không bị cắt dở).
+  const dai=(len)=>{const n=Math.max(1,Math.round(len/34)),b=len/n;let s='';for(let i=0;i<n;i++)s+=`<g transform="translate(${f(i*b)},0) scale(${f(b/34)},1)">${tile}</g>`;return s;};
+  const LW=W-2*d-2*t,LH=H-2*d-2*t;
+  return `<g transform="translate(${d+t},${d})">${dai(LW)}</g><g transform="translate(${W-d-t},${H-d}) rotate(180)">${dai(LW)}</g>`+
+    `<g transform="translate(${d},${H-d-t}) rotate(-90)">${dai(LH)}</g><g transform="translate(${W-d},${d+t}) rotate(90)">${dai(LH)}</g>`+
+    `<rect x="${d-6}" y="${d-6}" width="${W-2*d+12}" height="${H-2*d+12}" fill="none" stroke="${mau}" stroke-width="1.4"/>`+
+    `<rect x="${d+t+6}" y="${d+t+6}" width="${LW-12}" height="${LH-12}" fill="none" stroke="${mau}" stroke-width=".8"/>`+
   [[d,d],[W-d-t,d],[d,H-d-t],[W-d-t,H-d-t]].map(([x,y])=>`<rect x="${x+3}" y="${y+3}" width="${t-6}" height="${t-6}" fill="none" stroke="${mau}" stroke-width="1.6"/><rect x="${x+11}" y="${y+11}" width="${t-22}" height="${t-22}" fill="${mau}"/>`).join('');}
 
 window.KHUNG={
