@@ -93,6 +93,13 @@ export function photoRule(t: DesignTemplate): PhotoRule {
   return { min, max, text };
 }
 
+// Ô ảnh học viên (`anh`, lấy từ hồ sơ khách — không phải ảnh tải lên). Mẫu nào cũng có ảnh (anh Chiến 19/10/2026), nên
+// mẫu có ô này mà khách chưa có ảnh thì chặn xuất, báo cùng câu với ảnh tải lên: "Mẫu này cần đúng N ảnh".
+export function avatarError(t: DesignTemplate, hasAvatar: boolean): string | null {
+  if (!t.slots.includes('anh') || hasAvatar) return null;
+  return `Mẫu này cần đúng ${t.photoFrames} ảnh (đang có ${t.photoFrames - 1}). Thêm ảnh học viên.`;
+}
+
 export function photoCountError(t: DesignTemplate, count: number): string | null {
   const r = photoRule(t);
   if (count >= r.min && count <= r.max) return null;
@@ -252,21 +259,24 @@ export function cardCreateInput(args: {
   return out;
 }
 
-export type FormField = 'contract' | 'template' | 'photos' | 'body' | 'title' | 'rating' | 'receivedAt' | 'size';
+export type FormField = 'contract' | 'template' | 'photos' | 'avatar' | 'body' | 'title' | 'rating' | 'receivedAt' | 'size';
 export type FormErrors = Partial<Record<FormField, string>>;
 
 export const BODY_MAX = 2000;
 export const TITLE_MAX = 120;
 
 // Kiểm trước khi gửi (máy chủ vẫn là chốt).
-export function checkDraft(args: { kind: DesignKind; template: DesignTemplate | null; contractId: string | null; draft: CardDraft }): FormErrors {
-  const { kind, template, contractId, draft } = args;
+export function checkDraft(args: { kind: DesignKind; template: DesignTemplate | null; contractId: string | null; draft: CardDraft; hasAvatar?: boolean }): FormErrors {
+  const { kind, template, contractId, draft, hasAvatar = false } = args;
   const e: FormErrors = {};
   if (!contractId) e.contract = 'Chọn hợp đồng nguồn.';
   if (!template) e.template = 'Chọn một mẫu.';
   else {
     const pe = photoCountError(template, draft.photoFileIds.length);
     if (pe) e.photos = pe;
+    // Chỉ chặn khi đã chọn hợp đồng (chưa chọn thì lỗi "Chọn hợp đồng nguồn" đã đủ).
+    const ae = contractId ? avatarError(template, hasAvatar) : null;
+    if (ae) e.avatar = ae;
   }
   // Ô nhập mà mẫu có thì phải điền — không để ô trống trên ảnh.
   if (kind === 'FEEDBACK' && template?.slots.includes('sao') && draft.rating === null) e.rating = 'Chọn số sao.';

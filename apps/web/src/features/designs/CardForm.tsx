@@ -151,8 +151,8 @@ export function CardForm(props: {
           </>
         )}
 
-        {kind === 'WELCOME' && ready && (
-          <SettingRow label="Ảnh học viên" stack tip="Lấy từ ảnh của khách trong hồ sơ khách hàng. Đổi ảnh ở đây là đổi ảnh trong hồ sơ khách.">
+        {(kind === 'WELCOME' || template?.slots.includes('anh')) && ready && (
+          <SettingRow label="Ảnh học viên" stack required={!!template?.slots.includes('anh')} tip="Lấy từ ảnh của khách trong hồ sơ khách hàng. Đổi ảnh ở đây là đổi ảnh trong hồ sơ khách.">
             {perms.customers ? (
               <ImageUpload value={props.avatarUrl} shape="round" size={88} layout="inline" uploadLabel="Thêm ảnh" changeLabel="Đổi ảnh" onUpload={props.onAvatar} errorMessage={userMessage}>
                 <span className="mtk-hint">{props.avatarUrl ? 'Ảnh trong hồ sơ khách' : 'Khách chưa có ảnh'}</span>
@@ -162,6 +162,7 @@ export function CardForm(props: {
             ) : (
               <span className="mtk-hint">Khách chưa có ảnh</span>
             )}
+            {errors.avatar && <p className="mtk-err">{errors.avatar}</p>}
           </SettingRow>
         )}
 

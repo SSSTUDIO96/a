@@ -197,9 +197,9 @@
   const HANG = hangDichVu();
 
   const tongRows = () => {
-    const r = [['Tạm tính', f('Contract.subtotal', vnd(C.subtotal))]];
-    if (C.discount > 0) r.push(['Giảm giá', f('Contract.discount', '− ' + vnd(C.discount))]);
-    r.push(['Tổng cộng', f('Contract.total', vnd(C.total)), 'tong']);
+    // Không giảm giá thì tạm tính = tổng → bỏ dòng tạm tính cho gọn.
+    const r = C.discount > 0 ? [['Tạm tính', f('Contract.subtotal', vnd(C.subtotal))], ['Giảm giá', f('Contract.discount', '− ' + vnd(C.discount))]] : [];
+    r.push(['Tổng cộng', f('Contract.total', vnd(C.total)), 'dong-tong']);
     return r;
   };
   const chu = on('bang-chu') ? f('TÍNH: đọc Contract.total thành chữ (hàm mới)', esc(bangChu(C.total)), 'span', 'bang-chu') : '';
@@ -238,7 +238,7 @@
   const tblThu = (cls) => (C.payments.length
     ? `<table class="${cls}"><thead><tr><th>Phiếu thu</th><th>Ngày</th><th>Hình thức</th><th class="r">Số tiền</th></tr></thead><tbody>${C.payments.map((p) => `<tr><td>${f('Payment.code', esc(p.code))}</td><td>${f('Payment.receivedAt', d2(p.receivedAt))}</td><td>${f('Payment.method', PTTT[p.method])}</td><td class="r">${f('Payment.amount', vnd(p.amount))}</td></tr>`).join('')}</tbody></table>`
     : `<p class="mo">${f('Payment (chưa có phiếu thu)', 'Chưa nhận khoản thanh toán nào.')}</p>`);
-  const daThuDong = () => `<div class="dong-tien"><span>Đã thu</span>${f('TÍNH: Σ Payment.amount (RECEIPT chưa huỷ)', vnd(daThu))}</div><div class="dong-tien dam"><span>Còn phải thanh toán</span>${f('TÍNH: Contract.total − đã thu', vnd(conLai))}</div>`;
+  const daThuDong = () => !C.payments.length ? '' : `<div class="dong-tien"><span>Đã thu</span>${f('TÍNH: Σ Payment.amount (RECEIPT chưa huỷ)', vnd(daThu))}</div><div class="dong-tien dam"><span>Còn phải thanh toán</span>${f('TÍNH: Contract.total − đã thu', vnd(conLai))}</div>`;
 
   // Mẫu 1 — CỔ ĐIỂN TRANG TRỌNG: quốc hiệu, chữ có chân, "Điều 1, 2…", ký nháy cuối trang.
   function mau1() {
@@ -248,20 +248,20 @@
     const nh = on('chuyen-khoan') ? nganHang() : null;
     const svc = `<table class="bang"><thead><tr><th class="c">STT</th><th>${SV ? 'Dịch vụ' : 'Khoá học / hạng mục'}</th><th class="c">SL</th><th class="r">Đơn giá</th><th class="r">Thành tiền</th></tr></thead><tbody>${HANG.map((h) => `<tr class="cap${h.cap}"><td class="c">${h.stt}</td><td>${h.ten}${h.chiTiet.length ? `<div class="ct">${h.chiTiet.join('<br>')}</div>` : ''}</td><td class="c">${h.sl}</td><td class="r">${vnd(h.dg)}</td><td class="r">${f('ContractLine.lineTotal', vnd(h.tt))}</td></tr>`).join('')}</tbody></table>`;
     return `
-      ${sec('quoc-hieu', `<div class="qh"><b>CỘNG HOÀ XÃ HỘI CHỦ NGHĨA VIỆT NAM</b><span>Độc lập – Tự do – Hạnh phúc</span><i></i></div>`)}
-      ${sec('dau-trang', `<div class="dt">${logo('lg')}<div><b>${brand}</b><small>${lienHe.slice(0, 2).join(' · ')}</small></div></div>`)}
+      <div class="dau">${sec('dau-trang', `<div class="dt">${logo('lg')}<div><b>${brand}</b><small>${lienHe[0]}</small><small>${lienHe[1]}</small></div></div>`)}
+      ${sec('quoc-hieu', `<div class="qh"><b>CỘNG HOÀ XÃ HỘI CHỦ NGHĨA VIỆT NAM</b><span>Độc lập – Tự do – Hạnh phúc</span><i></i></div>`)}</div>
       ${sec('tieu-de', `<h1 class="td">${esc(TIEU_DE)}</h1><p class="so">Số: ${soHd}${nhap}</p>`)}
       <p class="mo">Hôm nay, ${ngayLapTxt.replace('Ngày ', '')}, tại ${f('OrganizationProfile.address', esc(S.address))}, chúng tôi gồm:</p>
-      ${sec('hai-ben', `<div class="ben"><h3>BÊN A (Bên ${SV ? 'cung cấp dịch vụ' : 'đào tạo'}): ${brand}</h3><dl>${benA().slice(1).map(([a, b]) => `<dt>${a}:</dt><dd>${b}</dd>`).join('')}</dl></div>
-        <div class="ben"><h3>BÊN B (${SV ? 'Khách hàng' : 'Học viên'}): ${f('Customer.fullName', esc(C.customer.fullName).toUpperCase())}</h3><dl>${benB().slice(1).map(([a, b]) => `<dt>${a}:</dt><dd>${b}</dd>`).join('')}</dl></div>`)}
+      ${sec('hai-ben', `<div class="hai-ben"><div class="ben"><h3>BÊN A (Bên ${SV ? 'cung cấp dịch vụ' : 'đào tạo'}): ${brand}</h3><dl>${benA().slice(1).map(([a, b]) => `<dt>${a}:</dt><dd>${b}</dd>`).join('')}</dl></div>
+        <div class="ben"><h3>BÊN B (${SV ? 'Khách hàng' : 'Học viên'}): ${f('Customer.fullName', esc(C.customer.fullName).toUpperCase())}</h3><dl>${benB().slice(1).map(([a, b]) => `<dt>${a}:</dt><dd>${b}</dd>`).join('')}</dl></div></div>`)}
       ${sec('chu-dau', `<p class="mo">${thayBien(CHU_DAU)}</p>`)}
       ${sec('dich-vu', D(SV ? 'Nội dung dịch vụ' : 'Nội dung đào tạo') + svc)}
-      ${sec('tien', D('Giá trị hợp đồng và thanh toán') + `<table class="tong">${tongRows().map(([a, b, c]) => `<tr class="${c || ''}"><td>${a}</td><td class="r">${b}</td></tr>`).join('')}</table>${chu ? `<p class="bc">Bằng chữ: ${chu}.</p>` : ''}<p>Tiền cọc phải thu: ${coc}.</p>`)}
+      ${sec('tien', D('Giá trị hợp đồng và thanh toán') + `<table class="bang-tong">${tongRows().map(([a, b, c]) => `<tr class="${c || ''}"><td>${a}</td><td class="r">${b}</td></tr>`).join('')}</table><p>${chu ? `<span class="bc">Bằng chữ: ${chu}.</span> ` : ''}Tiền cọc phải thu: ${coc}.</p>`)}
       ${sec('tien-do', `<h3 class="tieu">Tiến độ thanh toán</h3>` + tblDot('bang nho'))}
-      ${sec('da-thu', `<h3 class="tieu">Các khoản đã thanh toán</h3>` + tblThu('bang nho') + daThuDong())}
+      ${sec('da-thu', (C.payments.length ? `<h3 class="tieu">Các khoản đã thanh toán</h3>` + tblThu('bang nho') : '') + daThuDong())}
       ${nh ? `<p class="ck">Chuyển khoản: ${nh.ten} · Số TK ${nh.so} · Chủ TK ${nh.chu} · Nội dung: ${nh.nd}</p>` : ''}
-      ${sec('dieu-khoan', D('Điều khoản') + `<p class="nguon">${dkNguon()}</p>` + f(nguonDk, danhSach(C.terms.items), 'div'))}
-      ${C.rules ? sec('noi-quy', D('Nội quy lớp học') + `<p class="nguon">${nqNguon()}</p>` + f(nguonNq, danhSach(C.rules.items), 'div')) : ''}
+      ${sec('dieu-khoan', D(`Điều khoản <small class="nguon">(${dkNguon()})</small>`) + f(nguonDk, danhSach(C.terms.items), 'div'))}
+      ${C.rules ? sec('noi-quy', D(`Nội quy lớp học <small class="nguon">(${nqNguon()})</small>`) + f(nguonNq, danhSach(C.rules.items, 'dk nq'), 'div')) : ''}
       ${C.notes ? sec('ghi-chu', D('Thoả thuận khác') + `<p>${f('Contract.notes', esc(C.notes))}</p>`) : ''}
       ${sec('chu-cuoi', D('Hiệu lực hợp đồng') + `<p>${thayBien(CHU_CUOI)}</p>`)}
       ${sec('chu-ky', `<div class="ky"><div><b>ĐẠI DIỆN BÊN A</b><i>(Ký, ghi rõ họ tên)</i><span>${k.a}</span></div><div><b>BÊN B</b><i>(Ký, ghi rõ họ tên)</i><span>${k.b}</span></div></div>`)}`;
@@ -271,21 +271,22 @@
   function mau2() {
     const k = kyTen();
     const nh = on('chuyen-khoan') ? nganHang() : null;
-    const meta = [['Số hợp đồng', soHd + nhap], ['Ngày lập', ngayLapTxt.replace('Ngày ', '').replace(/ tháng /, '/').replace(/ năm /, '/')]];
+    const meta = [['Số hợp đồng', soHd + nhap], ['Ngày lập', f(C.confirmedAt ? 'Contract.confirmedAt' : 'Contract.createdAt', d2(ngayLap))]];
     if (C.eventDate) meta.push(['Ngày sự kiện', f('Contract.eventDate', `${thu(C.eventDate)}, ${d2(C.eventDate)}`)]);
     if (course) meta.push(['Khai giảng', f('CourseClass.startDate', d2(course.klass.startDate))]);
+    const dong = (rows) => rows.map(([a, b]) => `<p><span>${a}</span>${b}</p>`).join('');
     return `
-      ${sec('dau-trang', `<header class="dt">${logo('lg')}<div class="ten"><b>${brand}</b><small>${f('OrganizationProfile.tagline', esc(S.tagline))}</small></div><div class="lh">${lienHe.join('<br>')}</div></header>`)}
-      ${sec('tieu-de', `<p class="eb">${brand}</p><h1 class="td">${esc(TIEU_DE.charAt(0) + TIEU_DE.slice(1).toLowerCase())}</h1><dl class="meta">${meta.map(([a, b]) => `<div><dt>${a}</dt><dd>${b}</dd></div>`).join('')}</dl>`)}
-      ${sec('hai-ben', `<div class="ben2"><section><h3>${SV ? 'Studio (Bên A)' : 'Trung tâm (Bên A)'}</h3>${benA().map(([a, b]) => `<p><span>${a}</span>${b}</p>`).join('')}</section><section><h3>${SV ? 'Khách hàng (Bên B)' : 'Học viên (Bên B)'}</h3>${benB().map(([a, b]) => `<p><span>${a}</span>${b}</p>`).join('')}</section></div>`)}
+      ${sec('dau-trang', `<header class="dt">${logo('lg')}<div class="ten"><b>${brand}</b><small>${f('OrganizationProfile.tagline', esc(S.tagline))}</small></div><div class="lh">${lienHe[0]}<br>${lienHe.slice(1).join(' · ')}</div></header>`)}
+      ${sec('tieu-de', `<div class="tdo"><h1 class="td">${esc(TIEU_DE.charAt(0) + TIEU_DE.slice(1).toLowerCase())}</h1><dl class="meta">${meta.map(([a, b]) => `<div><dt>${a}</dt><dd>${b}</dd></div>`).join('')}</dl></div>`)}
+      ${sec('hai-ben', `<div class="ben2"><section><h3>${SV ? 'Studio · Bên A' : 'Trung tâm · Bên A'}</h3>${dong(benA())}</section><section><h3>${SV ? 'Khách hàng · Bên B' : 'Học viên · Bên B'}</h3>${dong(benB())}</section></div>`)}
       ${sec('chu-dau', `<p class="mo">${thayBien(CHU_DAU)}</p>`)}
       ${sec('dich-vu', `<h2 class="h">${SV ? 'Dịch vụ' : 'Khoá học'}</h2><ul class="ds">${HANG.map((h) => `<li class="cap${h.cap}"><div class="t"><b>${h.ten}</b>${h.chiTiet.length ? `<small>${h.chiTiet.join('<br>')}</small>` : ''}</div><div class="sl">${h.sl > 1 || h.cap === 0 ? `${h.sl} × ${vnd(h.dg)}` : ''}</div><div class="r">${f('ContractLine.lineTotal', vnd(h.tt))}</div></li>`).join('')}</ul>`)}
-      ${sec('tien', `<div class="tong"><div class="bc">${chu ? `<span>Bằng chữ</span>${chu}` : ''}</div><table>${tongRows().map(([a, b, c]) => `<tr class="${c || ''}"><td>${a}</td><td class="r">${b}</td></tr>`).join('')}<tr><td>Cọc phải thu</td><td class="r">${coc}</td></tr></table></div>`)}
+      ${sec('tien', `<div class="khoi-tong"><div class="bc">${chu ? `<span>Bằng chữ</span>${chu}` : ''}</div><table>${tongRows().map(([a, b, c]) => `<tr class="${c || ''}"><td>${a}</td><td class="r">${b}</td></tr>`).join('')}<tr><td>Cọc phải thu</td><td class="r">${coc}</td></tr></table></div>`)}
       <div class="hai-cot">
         ${sec('tien-do', `<section><h2 class="h">Tiến độ thanh toán</h2><ol class="moc">${dot.map((i) => `<li class="${i.paid >= i.amount ? 'xong' : ''}"><b>${f('PaymentInstallment.name', esc(i.name))}</b><span>${f('PaymentInstallment.dueDate', 'Hạn ' + d2(i.dueDate))} · ${f(nguonDot, dotTrangThai(i))}</span><em>${f('PaymentInstallment.amount', vnd(i.amount))}</em></li>`).join('')}</ol></section>`)}
-        ${sec('da-thu', `<section><h2 class="h">Đã thanh toán</h2>${C.payments.length ? `<ul class="thu">${C.payments.map((p) => `<li><span>${f('Payment.code', esc(p.code))} · ${f('Payment.receivedAt', d2(p.receivedAt))} · ${f('Payment.method', PTTT[p.method])}</span><b>${f('Payment.amount', vnd(p.amount))}</b></li>`).join('')}</ul>` : `<p class="mo">Chưa nhận khoản thanh toán nào.</p>`}${daThuDong()}</section>`)}
+        <section>${on('da-thu') && C.payments.length ? `<h2 class="h">Đã thanh toán</h2><ul class="thu">${C.payments.map((p) => `<li><span>${f('Payment.code', esc(p.code))} · ${f('Payment.receivedAt', d2(p.receivedAt))} · ${f('Payment.method', PTTT[p.method])}</span><b>${f('Payment.amount', vnd(p.amount))}</b></li>`).join('')}</ul>${daThuDong()}` : ''}
+        ${nh ? `<h2 class="h">Chuyển khoản</h2><div class="ck">${nh.qr}<div><p>${nh.ten}</p><p>STK <b>${nh.so}</b></p><p>${nh.chu}</p><p>Nội dung: <b>${nh.nd}</b></p></div></div>` : ''}</section>
       </div>
-      ${nh ? `<div class="ck">${nh.qr}<div><h2 class="h">Chuyển khoản</h2><p>${nh.ten}</p><p>Số tài khoản <b>${nh.so}</b> · ${nh.chu}</p><p>Nội dung: <b>${nh.nd}</b></p></div></div>` : ''}
       ${sec('dieu-khoan', `<h2 class="h">Điều khoản <small>${dkNguon()}</small></h2>` + f(nguonDk, danhSach(C.terms.items), 'div'))}
       ${C.rules ? sec('noi-quy', `<h2 class="h">Nội quy lớp học <small>${nqNguon()}</small></h2>` + f(nguonNq, danhSach(C.rules.items, 'dk nq'), 'div')) : ''}
       ${C.notes ? sec('ghi-chu', `<h2 class="h">Ghi chú</h2><p>${f('Contract.notes', esc(C.notes))}</p>`) : ''}
@@ -309,11 +310,11 @@
       ${sec('chu-dau', `<p class="mo">${thayBien(CHU_DAU)}</p>`)}
       ${sec('dich-vu', `<h2 class="h">I. ${SV ? 'BẢNG DỊCH VỤ' : 'BẢNG KHOÁ HỌC'}</h2><table class="khung sv"><thead><tr>${cotSv}</tr></thead><tbody>${HANG.map((h) => `<tr class="cap${h.cap}"><td class="c">${h.stt}</td><td>${h.ten}</td><td class="ct">${h.chiTiet.join('<br>') || '—'}</td><td class="c">${h.sl}</td><td class="r">${vnd(h.dg)}</td><td class="r">${h.giam ? vnd(h.giam) : '—'}</td><td class="r">${f('ContractLine.lineTotal', vnd(h.tt))}</td></tr>`).join('')}</tbody>
         ${on('tien') ? `<tfoot>${tong.map(([a, b, c]) => `<tr class="${c || ''}"><td colspan="6" class="r">${a}</td><td class="r">${b}</td></tr>`).join('')}${chu ? `<tr><td colspan="7" class="bc">Bằng chữ: ${chu}</td></tr>` : ''}<tr><td colspan="6" class="r">Tiền cọc phải thu</td><td class="r">${coc}</td></tr></tfoot>` : ''}</table>`)}
-      ${sec('tien-do', `<h2 class="h">II. TIẾN ĐỘ THANH TOÁN</h2><table class="khung"><thead><tr><th class="c">STT</th><th>Đợt</th><th>Hạn thanh toán</th><th class="r">Số tiền</th><th class="r">Đã thu</th><th>Tình trạng</th></tr></thead><tbody>${dot.map((i, n) => `<tr><td class="c">${n + 1}</td><td>${f('PaymentInstallment.name', esc(i.name))}${i.isDeposit ? ' (cọc)' : ''}</td><td>${f('PaymentInstallment.dueDate', d2(i.dueDate))}</td><td class="r">${f('PaymentInstallment.amount', vnd(i.amount))}</td><td class="r">${f(nguonDot, i.paid ? vnd(i.paid) : '—')}</td><td>${f(nguonDot, dotTrangThai(i).replace(/^Đã thu .*/, 'Thu một phần'))}</td></tr>`).join('')}</tbody><tfoot><tr><td colspan="3" class="r">Cộng</td><td class="r">${f('TÍNH: Σ PaymentInstallment.amount', vnd(dot.reduce((s, i) => s + i.amount, 0)))}</td><td class="r">${f('TÍNH: Σ Payment.amount', vnd(daThu))}</td><td></td></tr></tfoot></table>`)}
-      ${sec('da-thu', `<h2 class="h">III. PHIẾU THU ĐÃ NHẬN</h2>${C.payments.length ? `<table class="khung"><thead><tr><th>Số phiếu</th><th>Ngày thu</th><th>Hình thức</th><th class="r">Số tiền</th></tr></thead><tbody>${C.payments.map((p) => `<tr><td>${f('Payment.code', esc(p.code))}</td><td>${f('Payment.receivedAt', d2(p.receivedAt))}</td><td>${f('Payment.method', PTTT[p.method])}</td><td class="r">${f('Payment.amount', vnd(p.amount))}</td></tr>`).join('')}</tbody><tfoot><tr><td colspan="3" class="r">Còn phải thanh toán</td><td class="r">${f('TÍNH: Contract.total − đã thu', vnd(conLai))}</td></tr></tfoot></table>` : `<table class="khung"><tbody><tr><td>Chưa nhận khoản thanh toán nào. Còn phải thanh toán: <b>${f('TÍNH: Contract.total − đã thu', vnd(conLai))}</b></td></tr></tbody></table>`}`)}
-      ${nh ? `<table class="khung ck"><tbody><tr><td class="nh">Ngân hàng</td><td>${nh.ten}</td><td rowspan="4" class="qr-o">${nh.qr}</td></tr><tr><td class="nh">Số tài khoản</td><td><b>${nh.so}</b></td></tr><tr><td class="nh">Chủ tài khoản</td><td>${nh.chu}</td></tr><tr><td class="nh">Nội dung CK</td><td>${nh.nd}</td></tr></tbody></table>` : ''}
-      ${sec('dieu-khoan', `<h2 class="h">IV. ĐIỀU KHOẢN <small>(${dkNguon()})</small></h2>` + f(nguonDk, `<table class="khung dkb"><thead><tr><th class="c">Điều</th><th>Nội dung</th></tr></thead><tbody>${C.terms.items.map((x, i) => `<tr><td class="c">${i + 1}</td><td>${esc(x)}</td></tr>`).join('')}</tbody></table>`, 'div'))}
-      ${C.rules ? sec('noi-quy', `<h2 class="h">V. NỘI QUY LỚP HỌC <small>(${nqNguon()})</small></h2>` + f(nguonNq, `<table class="khung dkb"><thead><tr><th class="c">STT</th><th>Nội dung</th></tr></thead><tbody>${C.rules.items.map((x, i) => `<tr><td class="c">${i + 1}</td><td>${esc(x)}</td></tr>`).join('')}</tbody></table>`, 'div')) : ''}
+      ${sec('tien-do', `<h2 class="h">II. TIẾN ĐỘ THANH TOÁN</h2><table class="khung"><thead><tr><th class="c">STT</th><th>Đợt</th><th>Hạn thanh toán</th><th class="r">Số tiền</th><th class="r">Đã thu</th><th>Tình trạng</th></tr></thead><tbody>${dot.map((i, n) => `<tr><td class="c">${n + 1}</td><td>${f('PaymentInstallment.name', esc(i.name))}${i.isDeposit ? ' (cọc)' : ''}</td><td>${f('PaymentInstallment.dueDate', d2(i.dueDate))}</td><td class="r">${f('PaymentInstallment.amount', vnd(i.amount))}</td><td class="r">${f(nguonDot, i.paid ? vnd(i.paid) : '—')}</td><td>${f(nguonDot, dotTrangThai(i).replace(/^Đã thu .*/, 'Thu một phần'))}</td></tr>`).join('')}</tbody><tfoot><tr><td colspan="3" class="r">Cộng</td><td class="r">${f('TÍNH: Σ PaymentInstallment.amount', vnd(dot.reduce((s, i) => s + i.amount, 0)))}</td><td class="r">${f('TÍNH: Σ Payment.amount', vnd(daThu))}</td><td>Còn ${f('TÍNH: Contract.total − đã thu', vnd(conLai))}</td></tr></tfoot></table>`)}
+      ${C.payments.length ? sec('da-thu', `<h2 class="h">III. PHIẾU THU ĐÃ NHẬN</h2>${C.payments.length ? `<table class="khung"><thead><tr><th>Số phiếu</th><th>Ngày thu</th><th>Hình thức</th><th class="r">Số tiền</th></tr></thead><tbody>${C.payments.map((p) => `<tr><td>${f('Payment.code', esc(p.code))}</td><td>${f('Payment.receivedAt', d2(p.receivedAt))}</td><td>${f('Payment.method', PTTT[p.method])}</td><td class="r">${f('Payment.amount', vnd(p.amount))}</td></tr>`).join('')}</tbody><tfoot><tr><td colspan="3" class="r">Còn phải thanh toán</td><td class="r">${f('TÍNH: Contract.total − đã thu', vnd(conLai))}</td></tr></tfoot></table>` : `<table class="khung"><tbody><tr><td>Chưa nhận khoản thanh toán nào.</td></tr></tbody></table>`}`) : ''}
+      ${nh ? `<table class="khung ck"><tbody><tr><td class="nh">Chuyển khoản</td><td>${nh.ten} · STK <b>${nh.so}</b> · Chủ TK ${nh.chu}</td><td rowspan="2" class="qr-o">${nh.qr}</td></tr><tr><td class="nh">Nội dung CK</td><td>${nh.nd}</td></tr></tbody></table>` : ''}
+      ${sec('dieu-khoan', `<h2 class="h">${C.payments.length ? 'IV' : 'III'}. ĐIỀU KHOẢN <small>(${dkNguon()})</small></h2>` + f(nguonDk, `<table class="khung dkb"><thead><tr><th class="c">Điều</th><th>Nội dung</th></tr></thead><tbody>${C.terms.items.map((x, i) => `<tr><td class="c">${i + 1}</td><td>${esc(x)}</td></tr>`).join('')}</tbody></table>`, 'div'))}
+      ${C.rules ? sec('noi-quy', `<h2 class="h">${C.payments.length ? 'V' : 'IV'}. NỘI QUY LỚP HỌC <small>(${nqNguon()})</small></h2>` + f(nguonNq, `<table class="khung dkb"><thead><tr><th class="c">STT</th><th>Nội dung</th></tr></thead><tbody>${C.rules.items.map((x, i) => `<tr><td class="c">${i + 1}</td><td>${esc(x)}</td></tr>`).join('')}</tbody></table>`, 'div')) : ''}
       ${C.notes ? sec('ghi-chu', `<table class="khung"><tbody><tr><td class="nh">Ghi chú</td><td>${f('Contract.notes', esc(C.notes))}</td></tr></tbody></table>`) : ''}
       ${sec('chu-cuoi', `<p class="cuoi">${thayBien(CHU_CUOI)}</p>`)}
       ${sec('chu-ky', `<table class="khung ky"><thead><tr><th>${k.nhanA}</th><th>${k.nhanB}</th></tr></thead><tbody><tr><td><i>(Ký, ghi rõ họ tên)</i><span></span>${k.a}</td><td><i>(Ký, ghi rõ họ tên)</i><span></span>${k.b}</td></tr></tbody></table>`)}`;
@@ -330,7 +331,7 @@
       ${sec('chu-dau', `<p class="mo">${thayBien(CHU_DAU)}</p>`)}
       ${sec('dich-vu', `<table class="sv"><thead><tr><th>${SV ? 'Dịch vụ' : 'Khoá học'}</th><th class="c">SL</th><th class="r">Đơn giá</th><th class="r">Thành tiền</th></tr></thead><tbody>${HANG.map((h) => `<tr class="cap${h.cap}"><td>${h.ten}${h.chiTiet.length ? ` <span class="ct">— ${h.chiTiet.join(' · ')}</span>` : ''}</td><td class="c">${h.sl}</td><td class="r">${vnd(h.dg)}</td><td class="r">${f('ContractLine.lineTotal', vnd(h.tt))}</td></tr>`).join('')}</tbody></table>`)}
       <div class="hang-tien">
-        ${sec('tien', `<div class="tong">${tong.map(([a, b, c]) => `<span class="${c || ''}">${a} <b>${b}</b></span>`).join('')}<span>Cọc <b>${coc}</b></span>${chu ? `<em>(${chu})</em>` : ''}</div>`)}
+        ${sec('tien', `<div class="khoi-tong">${tong.map(([a, b, c]) => `<span class="${c || ''}">${a} <b>${b}</b></span>`).join('')}<span>Cọc <b>${coc}</b></span>${chu ? `<em>(${chu})</em>` : ''}</div>`)}
         ${sec('tien-do', `<div class="dot"><b>Tiến độ:</b> ${dot.map((i, n) => `${n + 1}) ${f('PaymentInstallment.name', esc(i.name))} ${f('PaymentInstallment.amount', vnd(i.amount))} hạn ${f('PaymentInstallment.dueDate', d2(i.dueDate))} — ${f(nguonDot, dotTrangThai(i).toLowerCase())}`).join('; ')}.</div>`)}
         ${sec('da-thu', `<div class="dot"><b>Đã thu:</b> ${C.payments.length ? C.payments.map((p) => `${f('Payment.code', esc(p.code))} ${f('Payment.receivedAt', d2(p.receivedAt))} ${f('Payment.method', PTTT[p.method].toLowerCase())} ${f('Payment.amount', vnd(p.amount))}`).join('; ') : 'chưa có'} · <b>Còn lại: ${f('TÍNH: Contract.total − đã thu', vnd(conLai))}</b>${nh ? ` · CK: ${nh.ten} — ${nh.so} — ${nh.chu} — ND: ${nh.nd}` : ''}</div>`)}
       </div>
@@ -346,6 +347,11 @@
     const k = kyTen();
     const nh = on('chuyen-khoan') ? nganHang() : null;
     const hv = '<div class="hv" aria-hidden="true"><i></i><b></b><i></i></div>';
+    const tong = [...tongRows(), ['Tiền cọc', coc]];
+    if (on('da-thu') && C.payments.length) {
+      tong.push(['Đã thanh toán', f('TÍNH: Σ Payment.amount (RECEIPT chưa huỷ)', vnd(daThu))]);
+      tong.push(['Còn phải thanh toán', f('TÍNH: Contract.total − đã thu', vnd(conLai)), 'dam']);
+    }
     return `
       <div class="khung-trang" aria-hidden="true"></div>
       ${sec('dau-trang', `<header class="dt">${logo('lg')}<b class="ten">${brand}</b><small>${f('OrganizationProfile.tagline', esc(S.tagline))}</small><small class="lh">${lienHe.join(' · ')}</small></header>`)}
@@ -353,12 +359,14 @@
       ${sec('hai-ben', `<div class="ben"><section><small>${k.nhanA}</small><b>${brand}</b>${benA().slice(1).map(([a, b]) => `<p>${a}: ${b}</p>`).join('')}</section><section><small>${k.nhanB}</small><b>${f('Customer.fullName', esc(C.customer.fullName))}</b>${benB().slice(1).map(([a, b]) => `<p>${a}: ${b}</p>`).join('')}</section></div>`)}
       ${sec('chu-dau', `<p class="mo">${thayBien(CHU_DAU)}</p>`)}
       ${sec('dich-vu', `${hv}<h2 class="h">${SV ? 'Dịch vụ' : 'Khoá học'}</h2><table class="sv"><tbody>${HANG.map((h) => `<tr class="cap${h.cap}"><td>${h.ten}${h.chiTiet.length ? `<small>${h.chiTiet.join('<br>')}</small>` : ''}</td><td class="c">${h.sl > 1 ? `${h.sl} × ${vnd(h.dg)}` : ''}</td><td class="r">${f('ContractLine.lineTotal', vnd(h.tt))}</td></tr>`).join('')}</tbody></table>`)}
-      ${sec('tien', `<div class="tong">${tongRows().map(([a, b, c]) => `<p class="${c || ''}"><span>${a}</span>${b}</p>`).join('')}${chu ? `<p class="bc">${chu}</p>` : ''}<p><span>Tiền cọc</span>${coc}</p></div>`)}
-      ${sec('tien-do', `<h2 class="h nho">Tiến độ thanh toán</h2><table class="sv dot"><tbody>${dot.map((i) => `<tr><td>${f('PaymentInstallment.name', esc(i.name))}<small>${f('PaymentInstallment.dueDate', 'Hạn ' + d2(i.dueDate))} · ${f(nguonDot, dotTrangThai(i))}</small></td><td class="r">${f('PaymentInstallment.amount', vnd(i.amount))}</td></tr>`).join('')}</tbody></table>`)}
-      ${sec('da-thu', `<div class="thu">${C.payments.length ? C.payments.map((p) => `<p>Đã nhận ${f('Payment.amount', vnd(p.amount))} — phiếu ${f('Payment.code', esc(p.code))}, ${f('Payment.receivedAt', d2(p.receivedAt))}, ${f('Payment.method', PTTT[p.method].toLowerCase())}.</p>`).join('') : '<p>Chưa nhận khoản thanh toán nào.</p>'}<p>Còn phải thanh toán: <b>${f('TÍNH: Contract.total − đã thu', vnd(conLai))}</b></p></div>`)}
-      ${nh ? `<p class="ck">Chuyển khoản · ${nh.ten} · ${nh.so} · ${nh.chu} · Nội dung “${nh.nd}”</p>` : ''}
-      ${sec('dieu-khoan', `${hv}<h2 class="h">Điều khoản</h2><p class="nguon">${dkNguon()}</p>` + f(nguonDk, danhSach(C.terms.items), 'div'))}
-      ${C.rules ? sec('noi-quy', `<h2 class="h nho">Nội quy lớp học</h2><p class="nguon">${nqNguon()}</p>` + f(nguonNq, danhSach(C.rules.items), 'div')) : ''}
+      <div class="tien2">
+        ${sec('tien-do', `<section><h2 class="h nho">Tiến độ thanh toán</h2><table class="sv dot"><tbody>${dot.map((i) => `<tr><td>${f('PaymentInstallment.name', esc(i.name))}<small>${f('PaymentInstallment.dueDate', 'Hạn ' + d2(i.dueDate))} · ${f(nguonDot, dotTrangThai(i))}</small></td><td class="r">${f('PaymentInstallment.amount', vnd(i.amount))}</td></tr>`).join('')}</tbody></table></section>`)}
+        ${sec('tien', `<div class="khoi-tong">${tong.map(([a, b, c]) => `<p class="${c || ''}"><span>${a}</span>${b}</p>`).join('')}${chu ? `<p class="bc">${chu}</p>` : ''}</div>`)}
+      </div>
+      ${on('da-thu') && C.payments.length ? `<p class="thu">${C.payments.map((p) => `Phiếu thu ${f('Payment.code', esc(p.code))} · ${f('Payment.receivedAt', d2(p.receivedAt))} · ${f('Payment.method', PTTT[p.method].toLowerCase())} · ${f('Payment.amount', vnd(p.amount))}`).join('<br>')}</p>` : ''}
+      ${nh ? `<p class="ck">${nh.ten} · ${nh.so} · ${nh.chu} · Nội dung “${nh.nd}”</p>` : ''}
+      ${sec('dieu-khoan', `${hv}<h2 class="h">Điều khoản <small class="nguon">${dkNguon()}</small></h2>` + f(nguonDk, danhSach(C.terms.items), 'div'))}
+      ${C.rules ? sec('noi-quy', `<h2 class="h nho">Nội quy lớp học <small class="nguon">${nqNguon()}</small></h2>` + f(nguonNq, danhSach(C.rules.items, 'dk nq'), 'div')) : ''}
       ${C.notes ? sec('ghi-chu', `<p class="gc"><i>Ghi chú:</i> ${f('Contract.notes', esc(C.notes))}</p>`) : ''}
       ${sec('chu-cuoi', `<p class="cuoi">${thayBien(CHU_CUOI)}</p>`)}
       ${sec('chu-ky', `<div class="ky"><div><small>${k.nhanA}</small><span></span><b>${k.a}</b></div><div><small>${k.nhanB}</small><span></span><b>${k.b}</b></div></div>`)}`;
@@ -383,7 +391,7 @@
   function tuDo() {
     const k = kyTen();
     const THE = {
-      'Bảng dịch vụ': () => `<table class="bang"><thead><tr><th class="c">STT</th><th>Hạng mục</th><th class="c">SL</th><th class="r">Đơn giá</th><th class="r">Thành tiền</th></tr></thead><tbody>${HANG.map((h) => `<tr class="cap${h.cap}"><td class="c">${h.stt}</td><td>${h.ten}${h.chiTiet.length ? `<div class="ct">${h.chiTiet.join('<br>')}</div>` : ''}</td><td class="c">${h.sl}</td><td class="r">${vnd(h.dg)}</td><td class="r">${vnd(h.tt)}</td></tr>`).join('')}<tr class="tong"><td></td><td colspan="3">Tổng cộng</td><td class="r">${vnd(C.total)}</td></tr></tbody></table>`,
+      'Bảng dịch vụ': () => `<table class="bang"><thead><tr><th class="c">STT</th><th>Hạng mục</th><th class="c">SL</th><th class="r">Đơn giá</th><th class="r">Thành tiền</th></tr></thead><tbody>${HANG.map((h) => `<tr class="cap${h.cap}"><td class="c">${h.stt}</td><td>${h.ten}${h.chiTiet.length ? `<div class="ct">${h.chiTiet.join('<br>')}</div>` : ''}</td><td class="c">${h.sl}</td><td class="r">${vnd(h.dg)}</td><td class="r">${vnd(h.tt)}</td></tr>`).join('')}<tr class="dong-tong"><td></td><td colspan="3">Tổng cộng</td><td class="r">${vnd(C.total)}</td></tr></tbody></table>`,
       'Tiến độ thanh toán': () => tblDot('bang nho'),
       'Điều khoản': () => f(nguonDk, danhSach(C.terms.items), 'div'),
       'Nội quy': () => (C.rules ? f(nguonNq, danhSach(C.rules.items), 'div') : ''),

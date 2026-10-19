@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="ten" content="Cấp chứng chỉ — Phương án B (từ Mẫu thiết kế) — R&D 08">
+<title>Cấp chứng chỉ B — R&D 08</title>
+<link rel="stylesheet" href="v4-chung/v4.css">
+<link rel="stylesheet" href="v8-chung/v8.css">
+</head>
+<body>
+<script src="v8-chung/v8.js"></script>
+<script>
+const { icon, av, the, man, mucLuc } = V4;
+const MAU = [['01','Xanh đêm dải vàng'],['02','Đen nhung mảng đỏ'],['03','Trắng sóng đỏ vàng'],['04','Kem sóng chìm'],['05','Hoa văn vàng cổ điển'],['06','Guilloche bạc'],['07','Hồng mận vàng hồng'],['08','Đen Art Deco'],['09','Ngà nguyệt quế'],['10','Lục bảo khung vát']];
+const HV = ['Tôn Nữ Hoàng Bảo Ngọc Phương Thảo','Lê Thị Mai','Nguyễn Ngọc Ánh Dương','Phạm Quỳnh Hương','Đặng Thuỳ Trâm','Hoàng Minh Anh','Vũ Thu Trang','Bùi Khánh Linh'];
+const tabs = (on) => `<div class="tabs2">${['Thẻ chào mừng','Feedback','Lời chúc','Chứng chỉ','Thẻ đã tạo','Câu chúc soạn sẵn'].map(t => `<a href="#" class="${t === on ? 'on' : ''}">${t}${t === 'Chứng chỉ' ? ' <span class="mtag">mới</span>' : ''}</a>`).join('')}</div>`;
+const luoi = (on) => `<div class="g5">${MAU.map(([m, t]) => `<a class="mt${m === on ? ' on' : ''}" href="#b-cap">${the(m, {})}<span>${m} · ${t}</span></a>`).join('')}</div>`;
+const hvList = HV.map((t, i) => `<label class="hv${i === 0 ? ' on' : ''}"><input type="checkbox" ${i < 7 ? 'checked' : ''}>${av(t, i !== 3, 'sm')}<span class="tx"><span class="n">${t}</span><span class="d">${i === 5 ? 'Đã cấp · CC-2026-0003' : 'Chưa cấp'}</span></span></label>`).join('');
+
+mucLuc('Cấp chứng chỉ — Phương án B: bắt đầu từ Mẫu thiết kế', 'Mẫu thiết kế có thêm thẻ "Chứng chỉ": chọn mẫu trước → chọn lớp → chọn học viên → xem trước → In / PDF. Hợp người thích chọn "đẹp" trước rồi mới chọn người.', [
+  ['Máy tính (1440)', [['b-mau', 'Mẫu thiết kế — thẻ Chứng chỉ: lưới 10 mẫu', ''], ['b-cap', 'Ba bước: Mẫu ✓ → Lớp → Học viên, xem trước bên phải', '']]],
+  ['Điện thoại (390)', [['b-m-mau', 'Lưới mẫu 2 cột', ''], ['b-m-cap', 'Ba bước xếp dọc', '']]],
+]);
+
+man('b-mau', { nav: 'mau', title: 'Mẫu thiết kế' }, `
+  <div class="ph"><h1>Mẫu thiết kế</h1></div>${tabs('Chứng chỉ')}
+  <div class="bn grey" style="margin-bottom:14px">${icon('cert','s')}<span>Chứng chỉ khổ A4 ngang, dùng cho học viên của lớp đã kết thúc. Bấm một mẫu để bắt đầu.</span></div>
+  ${luoi('05')}`);
+
+man('b-cap', { nav: 'mau', title: 'Chứng chỉ', back: '#b-mau' }, `
+  <div class="ph"><a class="btn icon ghost" href="#b-mau">${icon('back')}</a><h1>Chứng chỉ · Hoa văn vàng cổ điển</h1></div>
+  <div class="c2 has-sum">
+    <div class="card left">
+      <div class="step"><span class="so xong">${icon('check','s')}</span><span class="t"><b>Mẫu</b><small>05 · Hoa văn vàng cổ điển</small></span><a class="btn sm ghost" href="#b-mau">Đổi</a></div>
+      <div class="step"><span class="so xong">${icon('check','s')}</span><span class="t"><b>Lớp</b><small data-f="CourseClass (endDate ≤ hôm nay, status ≠ CANCELLED)">Chỉ hiện lớp đã kết thúc</small></span></div>
+      <div class="cb" style="padding-top:8px"><select class="ctl"><option>Makeup chuyên nghiệp · K12 (kết thúc 20/12/2026)</option><option>Makeup chuyên nghiệp · K11 (kết thúc 10/10/2026)</option><option>Cô dâu nâng cao · NC2 (kết thúc 30/09/2026)</option></select></div>
+      <div class="step"><span class="so">3</span><span class="t"><b>Học viên</b><small>Đã chọn 7 / 8</small></span><label class="row small"><input type="checkbox"> Tất cả</label></div>
+      <div class="ls">${hvList}</div>
+    </div>
+    <div class="right">
+      <div class="card"><div class="ch2"><h2>Xem trước</h2><small>1/7</small></div><div class="xem-to">${the('05', { ten: HV[0], so: 'CC-2026-0008' })}
+        <div class="nav3"><a class="btn icon" href="#">${icon('left')}</a><b>1/7 · ${HV[0]}</b><a class="btn icon" href="#">${icon('right')}</a></div></div></div>
+      <div class="card"><div class="cb"><div class="set"><label>Ngày cấp <span class="mtag">trường mới</span></label><input class="ctl r" value="20/12/2026"></div><div class="set"><label>Phông tên</label><select class="ctl"><option>Theo mẫu (Chữ ký 2)</option></select></div></div></div>
+      <div class="sumbar"><div class="t"><b>7 chứng chỉ</b> <span class="muted small">· 7 trang A4 ngang</span></div><a class="btn" href="#">${icon('img','s')}Tải ảnh</a><a class="btn pri" href="#">${icon('in','s')}Cấp và in (7)</a></div>
+    </div></div>`);
+
+man('b-m-mau', { nav: 'mau', title: 'Mẫu thiết kế', mobile: 'list' }, `
+  <div class="chips scroll" style="margin-bottom:12px">${['Chào mừng','Feedback','Lời chúc','Chứng chỉ','Đã tạo'].map(t => `<a class="chip${t === 'Chứng chỉ' ? ' on' : ''}" href="#">${t}</a>`).join('')}</div>
+  ${luoi('05')}`);
+
+man('b-m-cap', { nav: 'mau', title: 'Chứng chỉ · mẫu 05', back: '#b-m-mau', mobile: 'detail' }, `
+  <div class="vstack has-sum">
+    <div class="card"><div class="xem-to">${the('05', { ten: HV[0], so: 'CC-2026-0008' })}<div class="nav3"><a class="btn icon" href="#">${icon('left')}</a><b>1/7</b><a class="btn icon" href="#">${icon('right')}</a></div></div></div>
+    <div class="card"><div class="step"><span class="so xong">${icon('check','s')}</span><span class="t"><b>Lớp</b><small>Makeup chuyên nghiệp · K12</small></span><a class="btn sm ghost" href="#">Đổi</a></div>
+      <div class="step"><span class="so">3</span><span class="t"><b>Học viên</b><small>Đã chọn 7 / 8</small></span></div>${hvList}</div>
+    <div class="sumbar"><div class="t"><b>7 chứng chỉ</b></div><a class="btn pri" href="#">${icon('in','s')}Cấp và in</a></div>
+  </div>`);
+V4.boot();
+</script>
+</body>
+</html>

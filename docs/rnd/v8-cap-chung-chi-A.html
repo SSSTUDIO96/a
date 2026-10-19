@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="ten" content="Cấp chứng chỉ — Phương án A (từ thẻ lớp) — R&D 08">
+<title>Cấp chứng chỉ A — R&D 08</title>
+<link rel="stylesheet" href="v4-chung/v4.css">
+<link rel="stylesheet" href="v8-chung/v8.css">
+</head>
+<body>
+<script src="v8-chung/v8.js"></script>
+<script>
+const { icon, av, the, man, mucLuc, tip } = V4;
+// Học viên lớp K12 (Enrollment ACTIVE). anh = ảnh học viên (Customer.avatarFileId); '' = chưa có ảnh.
+const HV = [
+  { ten: 'Tôn Nữ Hoàng Bảo Ngọc Phương Thảo', anh: 'chung/anh-hoc-vien.svg', so: '' },
+  { ten: 'Lê Thị Mai', anh: 'chung/anh-hv-2.svg', so: '' },
+  { ten: 'Nguyễn Ngọc Ánh Dương', anh: 'chung/anh-hv-3.svg', so: '' },
+  { ten: 'Phạm Quỳnh Hương', anh: '', so: '' },
+  { ten: 'Đặng Thuỳ Trâm', anh: 'chung/anh-hv-5.svg', so: '' },
+  { ten: 'Hoàng Minh Anh', anh: 'chung/anh-hv-4.svg', so: 'CC-2026-0003' },
+  { ten: 'Vũ Thu Trang', anh: 'chung/anh-hv-2.svg', so: '' },
+  { ten: 'Bùi Khánh Linh', anh: 'chung/anh-hv-3.svg', so: '' },
+];
+const MAU = [['01','Xanh đêm dải vàng'],['02','Đen nhung mảng đỏ'],['03','Trắng sóng đỏ vàng'],['04','Kem sóng chìm'],['05','Hoa văn vàng cổ điển'],['06','Guilloche bạc'],['07','Hồng mận vàng hồng'],['08','Đen Art Deco'],['09','Ngà nguyệt quế'],['10','Lục bảo khung vát']];
+const p = (h, extra) => Object.assign({ ten: h.ten, anh: h.anh || '0', so: h.so || 'CC-2026-0008' }, extra || {});
+const avHv = (h, cls) => h.anh ? `<span class="av${cls ? ' ' + cls : ''}" style="background-image:url('v8-mau-chung-chi/${h.anh}')"></span>` : av(h.ten, false, cls);
+const hang = (h, i, sel) => `<label class="hv${i === sel ? ' on' : ''}" data-f="Enrollment(ACTIVE) → Customer.fullName, avatarFileId">
+  <input type="checkbox" checked>${avHv(h, 'sm')}
+  <span class="tx"><span class="n">${h.ten}</span><span class="d">${h.so ? `Đã cấp · <b class="num">${h.so}</b>` : 'Chưa cấp'}${h.anh ? '' : ' · <span style="color:var(--warn)">chưa có ảnh</span>'}</span></span>
+  ${h.so ? '<span class="pill-ok">Đã cấp</span>' : ''}</label>`;
+const dsHv = (sel) => HV.map((h, i) => hang(h, i, sel)).join('');
+const strip = (on) => `<div class="strip">${MAU.map(([m, t]) => `<a class="mt${m === on ? ' on' : ''}" href="#">${the(m, { ten: 'Lê Thị Mai', anh: 'chung/anh-hv-2.svg' })}<span>${m} · ${t}</span></a>`).join('')}</div>`;
+
+mucLuc('Cấp chứng chỉ — Phương án A: bấm từ thẻ lớp', 'Lớp kết thúc → nút "Cấp chứng chỉ" trên thẻ lớp → chọn học viên → chọn mẫu → xem trước từng người → In / Lưu PDF nhiều trang. Bấm "Hiện trường dữ liệu" để thấy ô nào lấy từ đâu.', [
+  ['Máy tính (1440)', [
+    ['a-lop', 'Đào tạo — thẻ lớp đã kết thúc có nút "Cấp chứng chỉ"', ''],
+    ['a-cap', 'Màn Cấp chứng chỉ: danh sách học viên + chọn mẫu + xem trước', 'màn chính'],
+    ['a-xac-nhan', 'Hộp xác nhận cấp số', ''],
+    ['a-in', 'Bản in sẵn sàng: In ngay / Tải PDF / Chia sẻ', ''],
+    ['a-so', 'Sổ chứng chỉ đã cấp: In lại / Cấp lại', ''],
+    ['a-cap-lai', 'Cấp lại (sửa tên sai)', ''],
+    ['a-trang-thai', 'Trạng thái: chưa kết thúc, không quyền, chưa có ảnh', ''],
+  ]],
+  ['Điện thoại (390)', [
+    ['a-m-lop', 'Khoá học — thẻ lớp', ''],
+    ['a-m-ds', 'Chọn học viên + mẫu', ''],
+    ['a-m-xem', 'Xem trước từng người (vuốt)', ''],
+    ['a-m-in', 'In trên điện thoại: In / Chia sẻ Zalo / Lưu PDF / Lưu ảnh', ''],
+  ]],
+]);
+
+const theLop = (mobile) => `<article class="kc-class">
+  <div class="t"><b data-f="CourseClass.name">Makeup chuyên nghiệp · K12</b><span class="tag">Đã kết thúc</span><span class="tag ok">8 học viên</span></div>
+  <div class="kc-who"><span data-f="CourseClass.startDate/endDate">${icon('lich','s')}02/11/2026 → 20/12/2026</span><span>${icon('clock','s')}T3 · T5 · T7, 18:00–22:00</span><span data-f="CourseClass.instructorMembershipId">${av('Nguyễn Thu Hà', false, 'xs')}Nguyễn Thu Hà</span>${mobile ? '' : `<span>${icon('pin','s')}Cơ sở Cầu Giấy</span>`}</div>
+  <div class="bar"><i style="width:100%"></i></div>
+  <div class="kc-act"><span class="c" data-f="Certificate (đếm theo lớp) — trường mới"><b class="num">1</b>/8 đã cấp chứng chỉ</span>
+    <a class="btn sm ghost" href="#">${icon('khach','s')}Học viên</a>
+    <a class="btn sm pri" href="#${mobile ? 'a-m-ds' : 'a-cap'}">${icon('cert','s')}Cấp chứng chỉ</a></div>
+</article>`;
+const theLopMo = `<article class="kc-class">
+  <div class="t"><b>Makeup cô dâu nâng cao · NC3</b><span class="tag ok">6/10 chỗ</span></div>
+  <div class="kc-who"><span>${icon('lich','s')}04/11/2026 → 30/12/2026</span><span>${icon('clock','s')}T2 · T4, 09:00–12:00</span><span>${av('Lê Minh Tú', false, 'xs')}Lê Minh Tú</span></div>
+  <div class="bar"><i style="width:60%"></i></div>
+  <div class="kc-act"><span class="c"><b class="num">6</b> đã ghi danh / tối đa <b class="num">10</b></span>
+    <a class="btn sm ghost" href="#">${icon('khach','s')}Học viên</a><a class="btn sm" href="#">Sửa</a><a class="btn sm pri" href="#">Ghi danh</a></div>
+</article>`;
+
+man('a-lop', { nav: 'dao-tao', kid: 'Khoá & lớp', title: 'Khoá học' }, `
+  <div class="ph"><h1>Đào tạo</h1><span class="sub">Khoá & lớp</span><span class="sp"></span><a class="btn pri" href="#">${icon('plus','s')}Thêm khoá</a></div>
+  <div class="c2 narrow"><div class="card left"><div class="ch2"><h2>Khoá học</h2></div>
+    <div class="ls"><a class="lr noav sel" href="#"><span class="tx"><span class="n">Makeup chuyên nghiệp</span><span class="d">Nhiều lớp · 3 lớp</span></span></a>
+    <a class="lr noav" href="#"><span class="tx"><span class="n">Makeup cô dâu nâng cao</span><span class="d">Nhiều lớp · 2 lớp</span></span></a>
+    <a class="lr noav" href="#"><span class="tx"><span class="n">Trang điểm cá nhân</span><span class="d">Một lớp</span></span></a></div></div>
+  <div class="right">
+    <div class="bn ok">${icon('cert','s')}<span>Lớp <b>K12</b> đã kết thúc ngày 20/12/2026. Bấm <b>Cấp chứng chỉ</b> để in chứng chỉ cho học viên (chọn 1 hoặc nhiều người).</span></div>
+    ${theLop(false)}${theLopMo}
+  </div></div>`);
+
+man('a-cap', { nav: 'dao-tao', kid: 'Khoá & lớp', title: 'Cấp chứng chỉ', back: '#a-lop' }, `
+  <div class="ph"><a class="btn icon ghost" href="#a-lop" aria-label="Quay lại">${icon('back')}</a><h1>Cấp chứng chỉ</h1><span class="sub" data-f="Course.name · CourseClass.name · endDate">Makeup chuyên nghiệp · K12 · kết thúc 20/12/2026</span></div>
+  <div class="c2 has-sum">
+    <div class="card left">
+      <div class="ch2"><h2>Học viên</h2><small>8 đang học · 1 đã cấp</small></div>
+      <label class="hv" style="background:var(--soft)"><input type="checkbox" checked><span></span><span class="tx"><span class="n">Chọn tất cả (8)</span><span class="d">Học viên đã huỷ ghi danh không hiện ở đây</span></span></label>
+      <div class="ls">${dsHv(1)}</div>
+    </div>
+    <div class="right">
+      <div class="card"><div class="ch2"><h2>Mẫu chứng chỉ</h2><small>10 mẫu · khổ A4 ngang</small></div>${strip('05')}
+        <div class="cb"><div class="set"><label>Ngày cấp <span class="mtag">trường mới</span></label><input class="ctl r" value="20/12/2026" data-f="Certificate.issuedAt (mặc định = CourseClass.endDate)"></div>
+        <div class="set"><label>Phông tên học viên</label><select class="ctl"><option>Theo mẫu (Chữ ký 2)</option><option>Chữ ký 1</option><option>Chữ ký 3</option><option>Chữ ký 4</option></select></div>
+        <div class="set"><label>Số chứng chỉ ${tip('Máy chủ tự đánh số khi bấm Cấp, nối tiếp theo năm: CC-2026-0001, 0002… Người đã cấp giữ nguyên số cũ.')}</label><span class="r muted small" data-f="Certificate.code — OrgCounter 'certificate:2026'">Tự cấp: <b class="num">CC-2026-0008 → 0014</b></span></div>
+        <div class="set"><label>Người ký</label><span class="r small" data-f="CourseClass.instructor + OrganizationProfile.certSignerName (mới)">Nguyễn Thu Hà · Nguyễn Trọng Chiến</span></div></div>
+      </div>
+      <div class="card"><div class="ch2"><h2>Xem trước</h2><small>bấm tên bên trái hoặc mũi tên để xem từng người</small></div>
+        <div class="xem-to">${the('05', p(HV[1]))}
+          <div class="nav3"><a class="btn icon" href="#">${icon('left')}</a><b>2/8 · Lê Thị Mai</b><a class="btn icon" href="#">${icon('right')}</a></div></div></div>
+      <div class="sumbar"><div class="t"><b>Đã chọn 8 học viên</b> <span class="muted small">· 7 cấp mới + 1 in lại · 8 trang A4 ngang</span></div>
+        <a class="btn" href="#">${icon('img','s')}Tải ảnh</a><a class="btn pri" href="#a-xac-nhan">${icon('in','s')}Cấp và in (8)</a></div>
+    </div>
+  </div>`);
+
+man('a-xac-nhan', { nav: 'dao-tao', kid: 'Khoá & lớp', title: 'Cấp chứng chỉ' }, `
+  <div class="dlg-bg"><div class="dlg"><div class="dh"><h2>Cấp 7 chứng chỉ mới?</h2></div><div class="db">
+    <p style="margin:10px 0">Máy chủ sẽ đánh số <b class="num">CC-2026-0008</b> đến <b class="num">CC-2026-0014</b> cho 7 học viên chưa có chứng chỉ, ngày cấp <b>20/12/2026</b>, mẫu <b>05 · Hoa văn vàng cổ điển</b>.</p>
+    <p class="muted" style="margin-bottom:10px"><b>Hoàng Minh Anh</b> đã có chứng chỉ <span class="num">CC-2026-0003</span>: chỉ in lại, giữ số cũ.</p>
+    <div class="bn yel">${icon('warn','s')}<span>Đã cấp thì số và tên không sửa được. Tên sai: vào Sổ chứng chỉ → <b>Cấp lại</b> (bản cũ bị thu hồi).</span></div>
+  </div><footer><a class="btn" href="#a-cap">Huỷ</a><a class="btn pri" href="#a-in">Cấp và mở bản in</a></footer></div></div>`);
+
+man('a-in', { nav: 'dao-tao', kid: 'Khoá & lớp', title: 'Cấp chứng chỉ' }, `
+  <div class="dlg-bg"><div class="dlg"><div class="dh"><h2>Bản in đã sẵn sàng</h2><a class="btn icon ghost" href="#a-cap">${icon('x')}</a></div><div class="db">
+    <div class="bn ok" style="margin:10px 0">${icon('check','s')}<span>Đã cấp 7 chứng chỉ (CC-2026-0008 → 0014). Tệp PDF: <b>8 trang A4 ngang</b>, mỗi học viên một trang.</span></div>
+    <a class="opt" href="#"><span class="ic">${icon('in')}</span><span><b>In ngay</b><small>Mở hộp in của máy. Chọn khổ A4, hướng Ngang, lề Không, bật "In nền".</small></span></a>
+    <a class="opt" href="#"><span class="ic">${icon('down')}</span><span><b>Tải PDF (8 trang)</b><small>Chung-chi-K12-2026-12-20.pdf · đem ra tiệm in hoặc in sau</small></span></a>
+    <a class="opt" href="#"><span class="ic">${icon('img')}</span><span><b>Tải ảnh từng người (8 ảnh PNG)</b><small>Ảnh 1754×1240 để gửi riêng cho từng học viên qua Zalo</small></span></a>
+  </div><footer><a class="btn" href="#a-so">Xem sổ chứng chỉ</a><a class="btn pri" href="#a-cap">Xong</a></footer></div></div>`);
+
+const SO = [['CC-2026-0003','Hoàng Minh Anh','K12','15/12/2026','05','Hiệu lực'],['CC-2026-0008','Tôn Nữ Hoàng Bảo Ngọc Phương Thảo','K12','20/12/2026','05','Hiệu lực'],['CC-2026-0009','Lê Thị Mai','K12','20/12/2026','05','Hiệu lực'],['CC-2026-0010','Nguyễn Ngọc Ánh Dương','K12','20/12/2026','05','Hiệu lực'],['CC-2026-0011','Phạm Quỳnh Hương','K12','20/12/2026','05','Đã thu hồi'],['CC-2026-0015','Phạm Quỳnh Hương','K12','20/12/2026','05','Hiệu lực · cấp lại từ 0011']];
+man('a-so', { nav: 'dao-tao', kid: 'Chứng chỉ đã cấp', title: 'Chứng chỉ đã cấp' }, `
+  <div class="ph"><h1>Chứng chỉ đã cấp</h1><span class="sub">Sổ chứng chỉ của trung tâm</span><span class="sp"></span></div>
+  <div class="card"><div class="ch2"><h2>Năm 2026</h2><div class="srch" style="width:280px"><svg class="i s" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4-4"/></svg><input class="ctl" placeholder="Tìm số hoặc tên học viên"></div></div>
+  <table class="tbl m-cards"><thead><tr><th><input type="checkbox"></th><th>Số</th><th>Học viên</th><th>Lớp</th><th>Ngày cấp</th><th>Mẫu</th><th>Trạng thái</th><th></th></tr></thead><tbody>
+  ${SO.map(r => `<tr><td><input type="checkbox"></td><td class="num" data-l="Số" data-f="Certificate.code"><b>${r[0]}</b></td><td data-l="Học viên" data-f="Certificate.snapshot.ten">${r[1]}</td><td data-l="Lớp">${r[2]}</td><td data-l="Ngày cấp" class="num">${r[3]}</td><td data-l="Mẫu">${r[4]}</td><td data-l="Trạng thái">${r[5].startsWith('Đã thu') ? `<span class="tag huy">${r[5]}</span>` : `<span class="tag ok">${r[5]}</span>`}</td><td class="r">${r[5].startsWith('Đã thu') ? '' : `<a class="btn sm" href="#">${icon('in','s')}In lại</a> <a class="btn sm ghost" href="#a-cap-lai">Cấp lại</a>`}</td></tr>`).join('')}
+  </tbody></table></div>`);
+
+man('a-cap-lai', { nav: 'dao-tao', kid: 'Chứng chỉ đã cấp', title: 'Cấp lại' }, `
+  <div class="dlg-bg"><div class="dlg"><div class="dh"><h2>Cấp lại chứng chỉ CC-2026-0011</h2></div><div class="db">
+    <div class="set"><label>Lý do</label><select class="ctl" data-f="Certificate.revokeReason (mới)"><option>Sai tên / sai dấu</option><option>Đổi mẫu chứng chỉ</option><option>Khác</option></select></div>
+    <div class="set"><label>Tên in trên chứng chỉ</label><input class="ctl" value="Phạm Quỳnh Hương" data-f="Customer.fullName (sửa ở hồ sơ khách)"></div>
+    <div class="bn grey" style="margin-top:8px">${icon('clock','s')}<span>Bản <b>CC-2026-0011</b> chuyển "Đã thu hồi" (vẫn nằm trong sổ). Bản mới nhận số <b>CC-2026-0015</b>, ghi "cấp lại từ 0011". Muốn giữ nguyên số cũ thay vì số mới: anh quyết (mục 7 báo cáo).</span></div>
+  </div><footer><a class="btn" href="#a-so">Huỷ</a><a class="btn pri" href="#a-so">Cấp lại và in</a></footer></div></div>`);
+
+man('a-trang-thai', { nav: 'dao-tao', kid: 'Khoá & lớp', title: 'Trạng thái' }, `
+  <div class="ph"><h1>Các trạng thái của nút "Cấp chứng chỉ"</h1></div>
+  <div class="states">
+    <div class="card"><h4>Lớp chưa kết thúc</h4><div class="kc-act"><span class="c">Kết thúc 30/12/2026</span><span class="btn sm dis" title="Lớp kết thúc 30/12/2026 — cấp được từ ngày đó">${icon('cert','s')}Cấp chứng chỉ</span></div><p class="fx" style="margin-top:8px">Rê chuột/nhấn giữ: "Lớp kết thúc 30/12/2026 — cấp được từ ngày đó". Cho cấp sớm không: anh quyết.</p></div>
+    <div class="card"><h4>Không có quyền (Giảng viên, Kế toán)</h4><div class="kc-act"><span class="c">8 học viên</span><a class="btn sm ghost" href="#">Học viên</a></div><p class="fx" style="margin-top:8px">Không hiện nút. Quyền mới <code>certificates.issue</code>: Chủ, Quản trị, Quản lý. Giảng viên chỉ xem.</p></div>
+    <div class="card"><h4>Học viên chưa có ảnh</h4><div style="width:100%">${the('05', { ten: 'Phạm Quỳnh Hương', anh: '0' })}</div><p class="fx" style="margin-top:8px">Khung tròn in chữ cái đầu (PH). Danh sách báo "chưa có ảnh" + nút Thêm ảnh (ghi vào Customer.avatarFileId).</p></div>
+    <div class="card"><h4>Lớp không còn ai học</h4><div class="empty" style="padding:12px 0">${icon('khach')}<span>Lớp này không có học viên đang học.</span></div></div>
+  </div>`);
+
+// ===== Điện thoại =====
+man('a-m-lop', { nav: 'dao-tao', title: 'Khoá học', mobile: 'list' }, `
+  <div class="vstack"><div class="chips scroll"><a class="chip on" href="#">Makeup chuyên nghiệp</a><a class="chip" href="#">Cô dâu nâng cao</a><a class="chip" href="#">Cá nhân</a></div>
+  <div class="bn ok">${icon('cert','s')}<span>Lớp K12 đã kết thúc. Cấp chứng chỉ ngay?</span></div>
+  ${theLop(true)}${theLopMo}</div>`);
+
+man('a-m-ds', { nav: 'dao-tao', title: 'Cấp chứng chỉ · K12', back: '#a-m-lop', mobile: 'detail' }, `
+  <div class="vstack has-sum">
+    <div class="card"><div class="ch2"><h2>Mẫu</h2><a class="btn sm ghost" href="#">Đổi mẫu</a></div>
+      <div class="cb" style="padding-top:12px"><div class="row" style="flex-wrap:nowrap"><div style="width:120px;flex:none">${the('05', { ten: 'Lê Thị Mai', anh: 'chung/anh-hv-2.svg' })}</div><span><b>05 · Hoa văn vàng cổ điển</b><br><span class="muted small">Chữ ký 2 · A4 ngang</span></span></div></div>
+      <div class="cb"><div class="set"><label>Ngày cấp</label><input class="ctl r" value="20/12/2026"></div></div></div>
+    <div class="card"><div class="ch2"><h2>Học viên</h2><small>bấm tên để xem trước</small></div>
+      <label class="hv" style="background:var(--soft)"><input type="checkbox" checked><span></span><span class="tx"><span class="n">Chọn tất cả (8)</span></span></label>
+      ${dsHv(-1)}</div>
+    <div class="sumbar"><div class="t"><b>Đã chọn 8</b> <span class="muted small">· 8 trang</span></div><a class="btn pri" href="#a-m-xem">Xem trước</a></div>
+  </div>`);
+
+man('a-m-xem', { nav: 'dao-tao', title: 'Xem trước · 2/8', back: '#a-m-ds', mobile: 'detail' }, `
+  <div class="vstack has-sum">
+    <div class="card"><div class="xem-to">${the('05', p(HV[1]))}
+      <div class="nav3"><a class="btn icon" href="#">${icon('left')}</a><b>2/8 · Lê Thị Mai</b><a class="btn icon" href="#">${icon('right')}</a></div>
+      <label class="row" style="justify-content:center;margin-top:8px"><input type="checkbox" checked> In người này</label></div></div>
+    <div class="bn grey">${icon('eye','s')}<span>Vuốt trái/phải để xem từng học viên. Xoay ngang điện thoại để xem to.</span></div>
+    <div class="sumbar"><div class="t"><b>8 chứng chỉ</b></div><a class="btn pri" href="#a-m-in">${icon('in','s')}Cấp và in</a></div>
+  </div>`);
+
+man('a-m-in', { nav: 'dao-tao', title: 'Xem trước · 2/8', back: '#a-m-ds', mobile: 'detail' }, `
+  <div class="card"><div class="xem-to">${the('05', p(HV[1]))}</div></div>
+  <div class="sheet-bg"></div><div class="sheet"><div class="grab"></div><h2>In 8 chứng chỉ</h2><p class="muted small">PDF 8 trang A4 ngang · đã cấp số CC-2026-0008 → 0014</p>
+    <a class="opt" href="#"><span class="ic">${icon('in')}</span><span><b>In bằng máy in</b><small>iPhone: AirPrint · Android: Mopria / app máy in. Chọn khổ A4.</small></span></a>
+    <a class="opt" href="#"><span class="ic">${icon('share')}</span><span><b>Chia sẻ PDF (Zalo, Messenger…)</b><small>Gửi cho tiệm in, hoặc mở trong Zalo rồi in</small></span></a>
+    <a class="opt" href="#"><span class="ic">${icon('down')}</span><span><b>Lưu PDF vào máy</b><small>Tệp / Files · Tải xuống</small></span></a>
+    <a class="opt" href="#"><span class="ic">${icon('img')}</span><span><b>Lưu 8 ảnh vào Thư viện ảnh</b><small>Gửi riêng từng học viên</small></span></a>
+  </div>`);
+
+V4.boot();
+</script>
+</body>
+</html>

@@ -14,6 +14,7 @@ import { CourseDialog, type CourseDialogTarget } from './CourseDialog';
 import { CourseList, groupCourses } from './CourseList';
 import { EnrollmentsDialog } from './EnrollmentsDialog';
 import { GroupsDialog } from './GroupsDialog';
+import { SessionSyncDialog } from './SessionSyncDialog';
 import { LoadError } from './LoadError';
 import { coursePerms } from './logic';
 import { usePickers } from './usePickers';
@@ -29,7 +30,8 @@ type Modal =
   | { kind: 'groups' }
   | { kind: 'students'; cls: ClassView; title: string }
   | { kind: 'archive' }
-  | { kind: 'cancel-class'; cls: ClassView };
+  | { kind: 'cancel-class'; cls: ClassView }
+  | { kind: 'calendar'; cls: ClassView; title: string };
 
 export function CoursesPage() {
   const params = useParams();
@@ -121,6 +123,7 @@ export function CoursesPage() {
         onOpenClass={() => open({ kind: 'class', target: { kind: 'create' } })}
         onEditClass={(cls) => open({ kind: 'class', target: { kind: 'edit', cls } })}
         onStudents={(cls) => open({ kind: 'students', cls, title: course.mode === 'SINGLE_CLASS' ? course.name : cls.name })}
+        onCalendar={(cls, title) => open({ kind: 'calendar', cls, title })}
       />
     );
   }
@@ -197,6 +200,7 @@ export function CoursesPage() {
         <GroupsDialog orgId={org.orgId} groups={groupList} canWrite={perms.write} onClose={close} onChanged={reloadAll} />
       )}
       {modal?.kind === 'students' && <EnrollmentsDialog orgId={org.orgId} cls={modal.cls} title={modal.title} onClose={close} />}
+      {modal?.kind === 'calendar' && <SessionSyncDialog orgId={org.orgId} cls={modal.cls} title={modal.title} onClose={close} onDone={detail.reload} />}
       <ConfirmDialog
         open={modal?.kind === 'archive'}
         onClose={close}
@@ -221,7 +225,7 @@ export function CoursesPage() {
         onClose={close}
         danger
         title={modal?.kind === 'cancel-class' ? `Huỷ lớp ${modal.cls.name}?` : 'Huỷ lớp?'}
-        message="Lớp đã huỷ không nhận ghi danh và không sửa được nữa. Lớp còn học viên thì phải chuyển hoặc huỷ ghi danh trước."
+        message="Lớp đã huỷ không nhận ghi danh và không sửa được nữa. Lớp còn học viên thì phải chuyển hoặc huỷ ghi danh trước. Buổi học chưa diễn ra trên Lịch huỷ theo; buổi đã qua giữ nguyên."
         confirmLabel="Huỷ lớp"
         cancelLabel="Giữ lớp"
         requireReason

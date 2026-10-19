@@ -107,12 +107,15 @@ describe('Mẫu thiết kế — tạo thẻ', () => {
   });
 
   it('400 mẫu sai loại hợp đồng → lời máy chủ hiện ở ô chọn mẫu (không chỉ dải chung)', async () => {
+    // Học viên có ảnh (mẫu nào cũng có ô ảnh — thiếu ảnh thì web chặn trước, không gửi máy chủ).
     const calls = setupServer(OWNER, 'ACADEMY', (method, path) =>
       method === 'POST' && path === '/orgs/org-1/design-cards'
         ? err(400, 'VALIDATION_FAILED', 'Mẫu shd-01 chỉ dùng cho hợp đồng khoá học', {
             issues: [{ path: 'templateCode', message: 'Mẫu shd-01 chỉ dùng cho hợp đồng khoá học' }],
           })
-        : undefined,
+        : path === '/orgs/org-1/contracts/c1/design-data'
+          ? json(200, { ...DATA.c1, anhUrl: '/api/v1/files/raw/anh' })
+          : undefined,
     );
     renderAt('/qh/mau-thiet-ke/the-chao');
     await pickContract('HĐKH-000001');
@@ -122,6 +125,16 @@ describe('Mẫu thiết kế — tạo thẻ', () => {
     expect((await within(grid).findByRole('alert')).textContent).toBe('Mẫu shd-01 chỉ dùng cho hợp đồng khoá học');
     const post = calls.find((c) => c.method === 'POST' && c.path === '/orgs/org-1/design-cards');
     expect(post?.body).toEqual({ kind: 'WELCOME', templateCode: 'shd-01', contractId: 'c1', courseClassId: 'cls-1', photoFileIds: [], fontOverride: null, size: '1080x1350' });
+  });
+
+  it('BẮT: thẻ chào mừng mà học viên chưa có ảnh → chặn xuất, báo "Mẫu này cần đúng 1 ảnh", không gửi máy chủ', async () => {
+    const calls = setupServer(OWNER, 'ACADEMY');
+    renderAt('/qh/mau-thiet-ke/the-chao');
+    await pickContract('HĐKH-000001');
+    await screen.findByText(/Học viên/);
+    await userEvent.click(screen.getByRole('button', { name: 'Tải ảnh PNG' }));
+    expect(await screen.findByText('Mẫu này cần đúng 1 ảnh (đang có 0). Thêm ảnh học viên.')).toBeTruthy();
+    expect(calls.some((c) => c.method === 'POST' && c.path.includes('design-cards'))).toBe(false);
   });
 
   it('Feedback: thiếu lời khen và ảnh → lỗi đúng ô, không gửi máy chủ', async () => {

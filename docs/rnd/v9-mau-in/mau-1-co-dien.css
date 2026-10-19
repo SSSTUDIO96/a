@@ -1,0 +1,56 @@
+/* MẪU 1 — CỔ ĐIỂN TRANG TRỌNG. Quốc hiệu – tiêu ngữ, chữ có chân (Lora), "Điều 1, Điều 2…", bảng kẻ mảnh,
+   cuối mỗi trang: số hợp đồng · Trang x/y · ô ký nháy (thói quen hợp đồng giấy ở Việt Nam). */
+@page m1{
+  size:A4; margin:14mm 15mm 16mm 20mm;
+  @bottom-left{font:7.5pt 'MP Lora',serif;color:#6b625c}
+  @bottom-center{font:7.5pt 'MP Lora',serif;color:#6b625c}
+  @bottom-right{font:7.5pt 'MP Lora',serif;color:#6b625c}
+}
+.g1{page:m1;font:9.4pt/1.36 'MP Lora',Georgia,serif;color:#1d1a18;padding:14mm 15mm 16mm 20mm}
+.g1 .dau{display:flex;justify-content:space-between;align-items:flex-start;gap:6mm}
+.g1 .qh{text-align:center;margin-left:auto}
+.g1 .qh b{display:block;font-size:9.6pt;letter-spacing:.01em}
+.g1 .qh span{display:block;font-weight:700;font-size:10.2pt}
+.g1 .qh i{display:block;width:40mm;margin:1mm auto 0;border-top:.6pt solid #1d1a18}
+.g1 .dt{display:flex;align-items:center;gap:2.5mm;max-width:70mm}
+.g1 .dt .lg{width:11mm;height:11mm;flex:none}
+.g1 .dt b{display:block;font-size:9.6pt;text-transform:uppercase;letter-spacing:.03em}
+.g1 .dt small{display:block;color:#5a524c;font-size:7.8pt;line-height:1.35}
+.g1 .td{text-align:center;font-size:15.5pt;font-weight:700;letter-spacing:.03em;margin:4mm 0 .5mm}
+.g1 .so{text-align:center;font-style:italic;margin-bottom:3mm!important}
+.g1 .mo{text-align:justify}
+.g1 .hai-ben{display:grid;grid-template-columns:1fr 1fr;gap:6mm;margin:1.5mm 0 2mm}
+.g1 .ben{min-width:0}
+.g1 .ben h3{font-size:10pt;font-weight:700}
+.g1 .ben dl{display:grid;grid-template-columns:19mm minmax(0,1fr);margin:.5mm 0 0;gap:0 1.5mm;font-size:9.4pt}
+.g1 .ben dt{color:#3b3430}
+.g1 .ben dd{margin:0}
+.g1 .dieu{font-size:10.2pt;font-weight:700;margin:2.6mm 0 .8mm}
+.g1 .tieu{font-size:10pt;font-weight:700;font-style:italic;margin:2mm 0 .5mm}
+.g1 .bang{margin:1mm 0 2mm;font-size:9.8pt}
+.g1 .bang th,.g1 .bang td{border:.6pt solid #3b3430;padding:.8mm 2mm}
+.g1 .bang th{font-weight:700;text-align:center;background:#f4f1ee}
+.g1 .bang th.r{text-align:right}
+.g1 .bang .ct{font-size:8.6pt;font-style:italic;color:#4b433e;margin-top:.6mm;line-height:1.4}
+.g1 .bang tr.cap1 td:nth-child(2){padding-left:6mm}
+.g1 .bang.nho{font-size:9.3pt}
+.g1 .bang .dong-tong td{font-weight:700}
+.g1 table.bang-tong{width:72mm;margin:1mm 0 1mm auto;font-size:10pt}
+.g1 table.bang-tong td{padding:.6mm 0 .6mm 3mm}
+.g1 table.bang-tong tr.dong-tong td{font-weight:700;border-top:.6pt solid #1d1a18;font-size:11pt}
+.g1 .bc{font-style:italic}
+.g1 .dong-tien{display:flex;justify-content:flex-end;gap:6mm;font-size:10pt}
+.g1 .dong-tien span{min-width:40mm;text-align:right}
+.g1 .dong-tien.dam{font-weight:700}
+.g1 .ck{margin-top:2mm;font-size:9.5pt}
+.g1 .nguon{font-size:8.3pt;font-style:italic;font-weight:400;color:#5a524c}
+.g1 .dk{margin:0;padding-left:2.4em;text-align:justify;font-size:9.5pt}
+.g1 .dk li{margin-bottom:.5mm;padding-left:.5mm}
+.g1 .dk.nq{columns:2;column-gap:8mm;text-align:left}
+.g1 .dk.nq li{break-inside:avoid}
+.g1 .ky{display:grid;grid-template-columns:1fr 1fr;gap:10mm;margin-top:4mm;text-align:center}
+.g1 .ky div{display:flex;flex-direction:column}
+.g1 .ky i{font-size:9pt}
+.g1 .ky span{margin-top:14mm;font-weight:700}
+.g1.tu-do-1 .the{margin:2mm 0}
+@media print{ .g1{padding:0} }

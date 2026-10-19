@@ -18,6 +18,7 @@ import type {
   CourseListItem,
   CourseMode,
   CourseUpdateInput,
+  SessionSyncSummary,
 } from '../../api/courses';
 
 // ---------- Quyền ----------

@@ -3,6 +3,7 @@ import { DESIGN_TEMPLATES, findDesignTemplate, type DesignTemplate } from '@make
 import type { DesignData } from '../../api/designs';
 import { ApiError } from '../../api/errors';
 import {
+  avatarError,
   cardCreateInput,
   checkDraft,
   contractKindsForKind,
@@ -112,6 +113,18 @@ describe('số ảnh theo mẫu (photos.min..max)', () => {
     expect(photoRule(T('fb-04')).max).toBe(3);
     expect(photoRule(T('lc-01')).max).toBe(1);
     expect(photoRule(T('shd-01'))).toMatchObject({ max: 0, text: 'Mẫu này không có ô ảnh tải lên' });
+  });
+
+  it('BẮT: mẫu có ô ảnh học viên mà khách chưa có ảnh → "Mẫu này cần đúng 1 ảnh"; có ảnh / mẫu không có ô này → null', () => {
+    expect(avatarError(T('shd-01'), false)).toBe('Mẫu này cần đúng 1 ảnh (đang có 0). Thêm ảnh học viên.');
+    expect(avatarError(T('lc-05'), false)).toBe('Mẫu này cần đúng 1 ảnh (đang có 0). Thêm ảnh học viên.');
+    expect(avatarError(T('shd-11'), true)).toBeNull();
+    expect(avatarError(T('fb-05'), false)).toBeNull();
+    const draft = { title: '', body: '', rating: null, receivedAt: null, photoFileIds: [] };
+    expect(checkDraft({ kind: 'WELCOME', template: T('shd-01'), contractId: 'c1', draft }).avatar).toBe('Mẫu này cần đúng 1 ảnh (đang có 0). Thêm ảnh học viên.');
+    expect(checkDraft({ kind: 'WELCOME', template: T('shd-01'), contractId: 'c1', draft, hasAvatar: true })).toEqual({});
+    // GIỮ: ảnh tải lên vẫn báo đúng câu cũ.
+    expect(checkDraft({ kind: 'FEEDBACK', template: T('fb-05'), contractId: 'c1', draft: { ...draft, body: 'x' } }).photos).toBe('Mẫu này cần đúng 2 ảnh (đang có 0).');
   });
 
   it('thiếu hoặc thừa ảnh → lời lỗi có số đang có; đủ → null', () => {

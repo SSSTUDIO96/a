@@ -58,6 +58,10 @@ export type DesignSize = (typeof DESIGN_SIZES)[number];
 export const FONT_OVERRIDES = ['ky-1', 'ky-2', 'ky-3', 'ky-4'] as const;
 export type FontOverride = (typeof FONT_OVERRIDES)[number];
 export const MAX_DESIGN_PHOTOS = 3;
+export const FRAME_SHAPES = ['circle', 'pill'] as const;
+export type FrameShape = (typeof FRAME_SHAPES)[number];
+// Ô có khung ảnh trên mẫu: ảnh học viên (dữ liệu) + ảnh tải lên.
+export const FRAME_SLOTS = ['anh', 'a1', 'a2', 'a3'] as const satisfies readonly SlotKey[];
 
 export interface DesignTemplate {
   code: string; // 'shd-01'
@@ -69,6 +73,12 @@ export interface DesignTemplate {
   photos: { min: number; max: number }; // 0..3
   fonts: string[]; // 'MP Viết tay 1', 'MP Chữ có chân'…
   sizes: DesignSize[];
+  // Số khung ảnh trên mẫu = ô ảnh học viên `anh` (lấy từ hồ sơ khách) + ô ảnh tải lên a1..a3. Mẫu nào cũng ≥ 1
+  // (anh Chiến 19/10/2026: "Mẫu nào cũng phải có ảnh nhé").
+  photoFrames: number;
+  // Hình khung ảnh: mặc định tròn; đúng một mẫu dạng viên thuốc (shd-11) — "khung ảnh mặc định để hình tròn và có 1 mẫu
+  // để dạng viên thuốc" (anh Chiến 19/10/2026).
+  frameShape: FrameShape;
   origin: 'HOC_TU_ANH' | 'TU_SANG_TAC'; // ghi nguồn
 }
 
@@ -94,8 +104,10 @@ function tpl(
   slots: SlotKey[],
   fonts: string[],
   origin: DesignTemplate['origin'],
+  frameShape: FrameShape = 'circle',
 ): DesignTemplate {
-  return { code, version: 1, kind, name, contractKinds, slots, photos: photosOf(slots), fonts, sizes: BOTH_SIZES, origin };
+  const photoFrames = slots.filter((s) => (FRAME_SLOTS as readonly SlotKey[]).includes(s)).length;
+  return { code, version: 1, kind, name, contractKinds, slots, photos: photosOf(slots), fonts, sizes: BOTH_SIZES, origin, photoFrames, frameShape };
 }
 
 const VT = (n: number) => `MP Viết tay ${n}`;
@@ -110,9 +122,10 @@ const SANS = 'MP Chữ không chân';
 // trang bày docs/rnd/v3-bay-mau.html. Phông theo dòng "Phông:" của trang bày.
 export const DESIGN_TEMPLATES: readonly DesignTemplate[] = [
   // ---------- Chào mừng (hợp đồng khoá học; ảnh học viên lấy từ `anh`, không tải lên) ----------
+  // shd-01 thêm ảnh học viên khung tròn 19/10/2026 (trước đây là mẫu duy nhất không có ảnh).
   tpl('shd-01', 'WELCOME', 'Thư mời kem', COURSE,
-    ['logo', 'th', 'khoa', 'lop', 'ngay', 'ten', 'diachi'], [VT(1), CHAN, SANS], 'HOC_TU_ANH'),
-  tpl('shd-02', 'WELCOME', 'Đen vàng vòm cửa', COURSE,
+    ['logo', 'th', 'anh', 'khoa', 'lop', 'ngay', 'ten', 'diachi'], [VT(1), CHAN, SANS], 'HOC_TU_ANH'),
+  tpl('shd-02', 'WELCOME', 'Đen vàng khung tròn', COURSE,
     ['logo', 'th', 'anh', 'ten', 'khoa', 'lop', 'ngay'], [VT(1), CHAN, SANS], 'TU_SANG_TAC'),
   tpl('shd-03', 'WELCOME', 'Ngày khai giảng lớn', COURSE,
     ['logo', 'th', 'ngay', 'anh', 'ten', 'khoa', 'lop', 'diachi', 'web'], [VT(3), CHAN_DAM, SANS], 'HOC_TU_ANH'),
@@ -126,14 +139,16 @@ export const DESIGN_TEMPLATES: readonly DesignTemplate[] = [
     ['logo', 'th', 'anh', 'ten', 'khoa', 'lop', 'ngay', 'lich'], [VT(4), CHAN, SANS], 'TU_SANG_TAC'),
   tpl('shd-08', 'WELCOME', 'Chữ ký trên nền trắng', COURSE,
     ['anh', 'ten', 'khoa', 'lop', 'ngay', 'logo', 'th'], [VT(2), CHAN, SANS], 'TU_SANG_TAC'),
-  tpl('shd-09', 'WELCOME', 'Thiệp vàng hồng khung bầu dục', COURSE,
+  tpl('shd-09', 'WELCOME', 'Thiệp vàng hồng khung tròn', COURSE,
     ['logo', 'th', 'anh', 'ten', 'khoa', 'lop', 'ngay', 'gv'], [VT(3), CHAN, SANS], 'TU_SANG_TAC'),
   tpl('shd-10', 'WELCOME', 'Thư tay của giảng viên', COURSE,
     ['logo', 'th', 'anh', 'ten', 'khoa', 'lop', 'ngay', 'lich', 'diachi', 'gv'], [VT(1), VT(3), CHAN, SANS], 'TU_SANG_TAC'),
   // Mẫu thứ 20 (9 mẫu đợt 1 của R&D + shd-01..10 + mẫu này; việc tồn 7): tên học viên viết CHỮ KÝ nét mảnh đều
   // (docs/SO-Y-MUON.md 18/10/2026) trên dòng ký tên; dòng thông tin trống tự ẩn; không có logo thì ẩn ô logo (L6).
+  // Mẫu DUY NHẤT khung ảnh viên thuốc: bố cục hai cột dựng quanh ảnh đứng cao, và là mẫu mới nên không đổi mẫu người
+  // dùng đã quen.
   tpl('shd-11', 'WELCOME', 'Chữ ký mảnh nền đá', COURSE,
-    ['logo', 'th', 'anh', 'ten', 'khoa', 'lop', 'ngay', 'lich', 'gv', 'diachi'], [KY(1), CHAN, SANS], 'TU_SANG_TAC'),
+    ['logo', 'th', 'anh', 'ten', 'khoa', 'lop', 'ngay', 'lich', 'gv', 'diachi'], [KY(1), CHAN, SANS], 'TU_SANG_TAC', 'pill'),
 
   // ---------- Feedback (fb-09 chỉ dịch vụ; còn lại cả hai loại hợp đồng) ----------
   tpl('fb-01', 'FEEDBACK', 'Tin nhắn và ảnh polaroid', BOTH_KINDS,
@@ -144,13 +159,13 @@ export const DESIGN_TEMPLATES: readonly DesignTemplate[] = [
     ['a1', 'sao', 'nd', 'ten', ...SUB_LINE, 'logo', 'th'], [CHAN, SANS], 'HOC_TU_ANH'),
   tpl('fb-04', 'FEEDBACK', 'Thư cảm ơn nền kem', BOTH_KINDS,
     ['nd', 'ten', ...SUB_LINE, 'nfb', 'a1', 'a2', 'a3', 'logo', 'th'], [VT(1), VT(3), CHAN, SANS], 'TU_SANG_TAC'),
-  tpl('fb-05', 'FEEDBACK', 'Đen vàng hai vòm ảnh', BOTH_KINDS,
+  tpl('fb-05', 'FEEDBACK', 'Đen vàng hai ảnh tròn', BOTH_KINDS,
     ['a1', 'a2', 'nd', 'ten', ...SUB_LINE, 'logo', 'th'], [CHAN, CHAN_DAM, SANS], 'TU_SANG_TAC'),
-  tpl('fb-06', 'FEEDBACK', 'Lưới ba ảnh', BOTH_KINDS,
+  tpl('fb-06', 'FEEDBACK', 'Ba ảnh tròn', BOTH_KINDS,
     ['a1', 'a2', 'a3', 'nd', 'ten', ...SUB_LINE, 'logo', 'th'], [CHAN, SANS], 'TU_SANG_TAC'),
   tpl('fb-07', 'FEEDBACK', 'Khung điện thoại tin nhắn', BOTH_KINDS,
     ['a1', 'ten', 'nd', 'nfb', ...SUB_LINE, 'logo', 'th'], [VT(1), SANS], 'HOC_TU_ANH'),
-  tpl('fb-08', 'FEEDBACK', 'Ảnh nền toàn khung', BOTH_KINDS,
+  tpl('fb-08', 'FEEDBACK', 'Ảnh tròn lớn, thẻ tối', BOTH_KINDS,
     ['a1', 'logo', 'th', 'nd', 'ten', ...SUB_LINE], [CHAN, SANS], 'TU_SANG_TAC'),
   tpl('fb-09', 'FEEDBACK', 'Trước – sau', SERVICE,
     ['a1', 'a2', 'nd', 'ten', 'nv', 'goi', 'nsk', 'logo', 'th'], [CHAN_DAM, SANS], 'TU_SANG_TAC'),
@@ -165,7 +180,7 @@ export const DESIGN_TEMPLATES: readonly DesignTemplate[] = [
   tpl('lc-03', 'GREETING', 'Ảnh lớn, khung trắng', SERVICE,
     ['a1', 'logo', 'th', 'td', 'ten', 'cc', 'nv', 'goi', 'nsk'], [VT(3), CHAN, SANS], 'TU_SANG_TAC'),
   // Trang bày ghi 8 ô (không có `goi`), nhưng tệp vẽ lc-04.html có hiện "Tên gói · Ngày sự kiện" ở chân: khai theo tệp vẽ.
-  tpl('lc-04', 'GREETING', 'Hai ảnh nghiêng, xanh rêu', SERVICE,
+  tpl('lc-04', 'GREETING', 'Hai ảnh tròn, xanh rêu', SERVICE,
     ['a1', 'a2', 'td', 'ten', 'cc', 'goi', 'nsk', 'logo', 'th'], [VT(1), CHAN, SANS], 'TU_SANG_TAC'),
   tpl('lc-05', 'GREETING', 'Chúc mừng hoàn thành khoá học', COURSE,
     ['logo', 'th', 'anh', 'td', 'ten', 'cc', 'khoa', 'lop', 'nkt', 'gv'], [VT(1), VT(3), CHAN, SANS], 'TU_SANG_TAC'),

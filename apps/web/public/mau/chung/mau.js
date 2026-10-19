@@ -39,7 +39,7 @@ if(THAT){
 }else{
   D.dv=G('dv',DV?`${D.nv} · ${D.goi} · ${cham(D.nsk)}`:'Makeup chuyên nghiệp · Lớp K10');
 }
-// Ảnh trong suốt 1×1 cho ô ảnh không có dữ liệu (khung ẩn đi; bộ xuất ảnh không phải tải gì).
+// Ảnh trong suốt 1×1 cho ô logo không có dữ liệu (ô logo ẩn đi; bộ xuất ảnh không phải tải gì).
 const TRONG='data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
 const THU=['Chủ nhật','Thứ Hai','Thứ Ba','Thứ Tư','Thứ Năm','Thứ Sáu','Thứ Bảy'];
 // Ngày dd/mm/yyyy → các phần; ngày trống hoặc sai dạng → null (các ô suy ra để trống).

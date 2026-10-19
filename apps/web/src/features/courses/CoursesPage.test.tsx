@@ -46,6 +46,7 @@ const cls = (id: string, courseId: string, name: string, enrolledCount: number, 
   note: null,
   instructor: { membershipId: 'm-2', name: 'Nguyễn Thu Hà' },
   location: { id: 'l1', name: 'Studio Chiến', address: '25 Hoàng Quốc Việt' },
+  calendar: { total: 0, upcoming: 0 },
   ...extra,
 });
 
@@ -491,5 +492,77 @@ describe('Sửa khoá, mở lớp, lỗi 409', () => {
     expect(within(d).getByText('Đã thu 3.000.000 ₫ / 9.500.000 ₫')).toBeTruthy();
     expect(within(d).getByText('Số điện thoại: cần quyền xem khách · HĐKH-000015')).toBeTruthy();
     expect(within(d).getByText('Tiền: cần quyền xem hợp đồng')).toBeTruthy();
+  });
+});
+
+describe('Buổi học lên Lịch ở thẻ lớp (việc tồn 6)', () => {
+  const SUMMARY = { create: 8, update: 0, cancel: 0, keep: 0, past: 0, skippedManual: [], firstNewDate: '2026-10-25', lastNewDate: '2026-11-22' };
+  const synced = { ...NC_CLASSES[2]!, calendar: { total: 8, upcoming: 8 } };
+
+  it('BẮT: thẻ lớp ghi "Chưa lên Lịch"; bấm "Đưa lên Lịch" → xem trước (dryRun) → xác nhận ghi thật → thẻ tải lại thành "Đã lên Lịch · 8 buổi sắp tới"', async () => {
+    let done = false;
+    const calls = setupServer(OWNER, (method, path, body) => {
+      if (method === 'POST' && path === '/orgs/org-1/classes/k3/sessions/sync') {
+        const dry = (body as { dryRun: boolean }).dryRun;
+        if (!dry) done = true;
+        return json(200, { dryRun: dry, summary: SUMMARY, conflicts: [], class: dry ? NC_CLASSES[2] : synced });
+      }
+      if (method === 'GET' && path === '/orgs/org-1/courses/nc' && done) return json(200, { course: NC, classes: [NC_CLASSES[0], NC_CLASSES[1], synced] });
+      return undefined;
+    });
+    renderAt('/hv/dao-tao/nc');
+    const k3 = await screen.findByRole('article', { name: 'Lớp Nâng cao K3' });
+    expect(k3.textContent).toContain('Chưa lên Lịch');
+    fireEvent.click(within(k3).getByRole('button', { name: 'Đưa lên Lịch' }));
+    const d = await screen.findByRole('dialog', { name: 'Buổi học lớp Nâng cao K3 trên Lịch' });
+    expect(await within(d).findByText('Thêm 8 buổi học (25/10/2026 → 22/11/2026)')).toBeTruthy();
+    expect(d.textContent).toContain('giữ giờ của giảng viên');
+    expect(writes(calls).map((c) => c.body)).toEqual([{ dryRun: true }]);
+    fireEvent.click(within(d).getByRole('button', { name: 'Đưa lên Lịch' }));
+    expect(await within(d).findByText(/Đã cập nhật Lịch: 8 buổi sắp tới/)).toBeTruthy();
+    expect(writes(calls).map((c) => c.body)).toEqual([{ dryRun: true }, { dryRun: false }]);
+    fireEvent.click(within(d).getByRole('button', { name: 'Xong' }));
+    await waitFor(() => expect(screen.getByRole('article', { name: 'Lớp Nâng cao K3' }).textContent).toContain('Đã lên Lịch · 8 buổi sắp tới'));
+    expect(within(screen.getByRole('article', { name: 'Lớp Nâng cao K3' })).getByRole('button', { name: 'Cập nhật Lịch' })).toBeTruthy();
+  });
+
+  it('BẮT: xem trước thấy trùng giờ giảng viên → liệt kê lịch trùng, KHÔNG có nút ghi', async () => {
+    const calls = setupServer(OWNER, (method, path) => {
+      if (method === 'POST' && path === '/orgs/org-1/classes/k3/sessions/sync') {
+        return json(200, {
+          dryRun: true,
+          summary: SUMMARY,
+          conflicts: [{ appointmentId: 'x', code: 'LH-000777', startsAt: '2026-11-01T01:30:00.000Z', endsAt: '2026-11-01T03:00:00.000Z', blockStart: '2026-11-01T01:30:00.000Z', blockEnd: '2026-11-01T03:00:00.000Z', membershipId: 'm-2', staffName: 'Nguyễn Thu Hà' }],
+          class: NC_CLASSES[2],
+        });
+      }
+      return undefined;
+    });
+    renderAt('/hv/dao-tao/nc');
+    const k3 = await screen.findByRole('article', { name: 'Lớp Nâng cao K3' });
+    fireEvent.click(within(k3).getByRole('button', { name: 'Đưa lên Lịch' }));
+    const d = await screen.findByRole('dialog', { name: 'Buổi học lớp Nâng cao K3 trên Lịch' });
+    const alert = await within(d).findByRole('alert');
+    expect(alert.textContent).toContain('LH-000777');
+    expect(alert.textContent).toContain('Nguyễn Thu Hà');
+    expect(alert.textContent).toContain('01/11 08:30–10:00');
+    expect(within(d).queryByRole('button', { name: 'Đưa lên Lịch' })).toBeNull();
+    expect(writes(calls).filter((c) => (c.body as { dryRun?: boolean })?.dryRun === false)).toEqual([]);
+  });
+
+  it('GIỮ: lớp chưa có giờ học → nút tắt kèm lý do; thiếu schedule.write (giảng viên) → không có nút', async () => {
+    setupServer(OWNER, (method, path) =>
+      method === 'GET' && path === '/orgs/org-1/courses/nc' ? json(200, { course: NC, classes: [{ ...NC_CLASSES[2], startTime: null, endTime: null }] }) : undefined,
+    );
+    renderAt('/hv/dao-tao/nc');
+    const k3 = await screen.findByRole('article', { name: 'Lớp Nâng cao K3' });
+    const off = within(k3).getByRole('button', { name: 'Đưa lên Lịch' });
+    expect(off.getAttribute('aria-disabled')).toBe('true');
+    vi.unstubAllGlobals();
+    document.body.innerHTML = '';
+    setupServer(INSTRUCTOR);
+    renderAt('/hv/dao-tao/nc');
+    const k3b = await screen.findByRole('article', { name: 'Lớp Nâng cao K3' });
+    expect(within(k3b).queryByRole('button', { name: /Lên Lịch|Đưa lên Lịch|Cập nhật Lịch/ })).toBeNull();
   });
 });

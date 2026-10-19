@@ -302,13 +302,15 @@ describe('không lộ thẻ', () => {
     const reqRes = await request(app).post(REQ).send({ email: u.email }).expect(202);
     await expect.poll(() => sent.length).toBe(1);
     const token = tokenOf(sent[0]);
-    const bad = await request(app).post(CONFIRM).send({ token: token.slice(0, -2), password: NEW_PASSWORD });
+    const badToken = token.slice(0, -2);
+    const bad = await request(app).post(CONFIRM).send({ token: badToken, password: NEW_PASSWORD });
     const ok = await request(app).post(CONFIRM).send({ token, password: NEW_PASSWORD });
     const reuse = await request(app).post(CONFIRM).send({ token, password: NEW_PASSWORD });
     expect([bad.status, ok.status, reuse.status]).toEqual([400, 204, 400]);
     const responses = [reqRes, bad, ok, reuse].map((r) => JSON.stringify({ b: r.body, h: r.headers }));
     const audits = await base.db.auditLog.findMany({ where: { OR: [{ actorUserId: u.id }, { entityId: u.id }] } });
-    const secrets = [token, hashResetToken(token), NEW_PASSWORD];
+    // Kể cả thẻ SAI đã gửi lên (41/43 ký tự của thẻ thật): phản hồi lỗi không được lặp lại nó.
+    const secrets = [token, badToken, hashResetToken(token), NEW_PASSWORD];
     const haystacks = { 'nhật ký': lines.join('\n'), 'phản hồi': responses.join('\n'), audit: JSON.stringify(audits) };
     let leaks = 0;
     for (const [where, text] of Object.entries(haystacks)) {

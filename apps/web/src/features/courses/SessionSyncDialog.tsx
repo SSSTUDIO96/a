@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { syncClassSessions, type ClassView, type SessionSyncResult } from '../../api/courses';
 import { userMessage } from '../../api/errors';
 import { conflictsOf } from '../schedule/model';
+import { dayKeyOf, ddmm, hhmm } from '../schedule/time';
 import { Button, Dialog, ListRowSkeleton } from '../../ui';
 import { fullDate, scheduleText, sessionSyncLines } from './logic';
 
@@ -136,8 +137,7 @@ export function SessionSyncDialog({
   );
 }
 
-// "Th 3 02/03 18:00–20:00" theo giờ Việt Nam.
+// "02/03 18:00–20:00" theo giờ Việt Nam (hàm thời gian chung của màn Lịch).
 function conflictTime(startsAt: string, endsAt: string): string {
-  const fmt = (iso: string, o: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', ...o }).format(new Date(iso));
-  return `${fmt(startsAt, { day: '2-digit', month: '2-digit' })} ${fmt(startsAt, { hour: '2-digit', minute: '2-digit', hour12: false })}–${fmt(endsAt, { hour: '2-digit', minute: '2-digit', hour12: false })}`;
+  return `${ddmm(dayKeyOf(startsAt))} ${hhmm(startsAt)}–${hhmm(endsAt)}`;
 }

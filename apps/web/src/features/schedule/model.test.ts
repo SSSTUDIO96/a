@@ -22,6 +22,8 @@ import {
   MODE_OPTIONS,
   nextStatuses,
   legendSubjects,
+  isCourseSession,
+  whoText,
   swatchOf,
   UNASSIGNED,
 } from './model';
@@ -363,5 +365,17 @@ describe('L7: thẻ "× n" tách riêng cho ô ca hẹp (lưới C)', () => {
     expect(quantityText(appt({ ...base, quantity: 1 }))).toBeNull();
     expect(quantityText(appt({ ...base, quantity: null }))).toBeNull();
     expect(kindLabel(appt({ ...base, title: 'Makeup phù dâu', quantity: 2 }))).toBe('Makeup phù dâu');
+  });
+});
+
+describe('buổi học (việc tồn 6)', () => {
+  it('BẮT: dòng "ai" là tên khách, buổi học là tên lớp; chú thích không gộp buổi học vào "Khác"; thanh tải trong ngày biết buổi học', () => {
+    expect(whoText({ customer: { id: 'c', fullName: 'Lan', phone: null }, courseClass: null })).toBe('Lan');
+    expect(whoText({ customer: null, courseClass: { id: 'k', name: 'K12 tối', courseId: 'c', courseName: 'Khoá' } })).toBe('K12 tối');
+    expect(whoText({ customer: null, courseClass: null })).toBeNull();
+    expect(legendSubjects([{ subjectName: null, kind: 'COURSE_SESSION' }])).toEqual([]);
+    expect(legendSubjects([{ subjectName: null, kind: 'MAKEUP' }]).map((s) => s.label)).toEqual(['Khác']);
+    expect(isCourseSession({ kind: 'COURSE_SESSION' })).toBe(true);
+    expect(isCourseSession({ kind: 'MAKEUP' })).toBe(false);
   });
 });

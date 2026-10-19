@@ -19,9 +19,11 @@ export interface CourseDetailProps {
   onOpenClass: () => void;
   onEditClass: (k: ClassView) => void;
   onStudents: (k: ClassView) => void;
+  // Nút "Đưa lên Lịch" ở thẻ lớp (hiện khi perms.calendar). title = tên hiện trên thẻ.
+  onCalendar?: (k: ClassView, title: string) => void;
 }
 
-export function CourseDetail({ course, classes, groups, perms, onEdit, onToMulti, onOpenClass, onEditClass, onStudents }: CourseDetailProps) {
+export function CourseDetail({ course, classes, groups, perms, onEdit, onToMulti, onOpenClass, onEditClass, onStudents, onCalendar }: CourseDetailProps) {
   const group = groups.find((g) => g.id === course.groupId);
   const single = course.mode === 'SINGLE_CLASS';
   const live = liveClasses(classes);
@@ -71,7 +73,14 @@ export function CourseDetail({ course, classes, groups, perms, onEdit, onToMulti
         {head}
         <Card title="Học viên & lịch học" className="kc-classes">
           {only ? (
-            <ClassCard cls={only} title={course.name} canEnroll={perms.enroll} onEdit={perms.write ? onEdit : undefined} onStudents={() => onStudents(only)} />
+            <ClassCard
+              cls={only}
+              title={course.name}
+              canEnroll={perms.enroll}
+              onEdit={perms.write ? onEdit : undefined}
+              onStudents={() => onStudents(only)}
+              onCalendar={perms.calendar && onCalendar ? () => onCalendar(only, course.name) : undefined}
+            />
           ) : (
             <EmptyState message="Lớp của khoá này đã huỷ." />
           )}
@@ -118,7 +127,15 @@ export function CourseDetail({ course, classes, groups, perms, onEdit, onToMulti
         ) : (
           <div className="kc-class-list">
             {live.map((k) => (
-              <ClassCard key={k.id} cls={k} title={k.name} canEnroll={perms.enroll} onEdit={perms.write ? () => onEditClass(k) : undefined} onStudents={() => onStudents(k)} />
+              <ClassCard
+                key={k.id}
+                cls={k}
+                title={k.name}
+                canEnroll={perms.enroll}
+                onEdit={perms.write ? () => onEditClass(k) : undefined}
+                onStudents={() => onStudents(k)}
+                onCalendar={perms.calendar && onCalendar ? () => onCalendar(k, k.name) : undefined}
+              />
             ))}
           </div>
         )}

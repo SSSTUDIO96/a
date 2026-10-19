@@ -21,7 +21,9 @@ function renderAt(state?: unknown) {
   );
 }
 
-beforeEach(() => requestPasswordReset.mockReset());
+beforeEach(() => {
+  requestPasswordReset.mockReset();
+});
 
 describe('ForgotPasswordPage — màn Quên mật khẩu', () => {
   it('nhãn + ô Email, lời giải thích nằm trong tooltip (không viết ra màn); email mang từ màn Đăng nhập', () => {
@@ -55,9 +57,11 @@ describe('ForgotPasswordPage — màn Quên mật khẩu', () => {
   });
 
   it('máy chủ chưa cấu hình gửi thư (503) hay quá lượt (429) → dải lỗi đúng lời máy chủ', async () => {
-    requestPasswordReset.mockRejectedValue(
-      new ApiError('NOT_CONFIGURED', 'Máy chủ chưa cấu hình gửi thư nên chưa đặt lại mật khẩu qua email được.', 503, 'req-1', { reason: 'MAIL_NOT_CONFIGURED' }),
-    );
+    requestPasswordReset.mockImplementation(async () => {
+      throw new ApiError('NOT_CONFIGURED', 'Máy chủ chưa cấu hình gửi thư nên chưa đặt lại mật khẩu qua email được.', 503, 'req-1', {
+        reason: 'MAIL_NOT_CONFIGURED',
+      });
+    });
     const user = userEvent.setup();
     renderAt();
     await user.type(screen.getByLabelText('Email'), 'hoa@vidu.vn');

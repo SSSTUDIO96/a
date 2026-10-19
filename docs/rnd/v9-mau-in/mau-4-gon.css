@@ -1,0 +1,42 @@
+/* MẪU 4 — GỌN MỘT TRANG. Chữ nhỏ, lề hẹp, hai bên gói trong 2 dòng, tiền + tiến độ + đã thu trong một dải,
+   điều khoản chia 2 cột. Mục tiêu: hợp đồng dịch vụ nhiều dòng vẫn vừa 1 trang; 45 điều khoản ≤ 2 trang. */
+@page m4{
+  size:A4; margin:10mm 11mm 12mm;
+  @bottom-left{font:6.5pt 'Be Vietnam Pro',sans-serif;color:#777}
+  @bottom-center{font:6.5pt 'Be Vietnam Pro',sans-serif;color:#777}
+}
+.g4{page:m4;font:8.2pt/1.36 'Be Vietnam Pro',Inter,sans-serif;color:#1a1a1a;padding:10mm 11mm 12mm}
+.g4 .dt{display:flex;align-items:center;gap:3mm;padding-bottom:2mm;border-bottom:1.2pt solid #1a1a1a}
+.g4 .dt .lg{width:10mm;height:10mm}
+.g4 .dt .ten{flex:1;min-width:0}
+.g4 .dt .ten b{display:block;font-size:9.5pt}
+.g4 .dt .ten small{color:#555;font-size:7pt}
+.g4 .dt .tdo{text-align:right}
+.g4 .td{font-size:11.5pt;font-weight:700;letter-spacing:.03em}
+.g4 .dt .tdo small{color:#555;font-size:7.2pt}
+.g4 .ben{margin:2mm 0 1mm}
+.g4 .ben p{margin:0 0 .3mm!important}
+.g4 .mo{margin:0 0 1mm!important;color:#333}
+.g4 .sv{font-size:7.9pt}
+.g4 .sv th{font-size:6.8pt;text-transform:uppercase;letter-spacing:.04em;color:#555;text-align:left;border-bottom:.8pt solid #1a1a1a;padding:.8mm 1.2mm}
+.g4 .sv th.r{text-align:right}.g4 .sv th.c{text-align:center}
+.g4 .sv td{border-bottom:.4pt solid #cfcac6;padding:.9mm 1.2mm}
+.g4 .sv .ct{color:#555;font-size:7.2pt}
+.g4 .sv tr.cap1 td:first-child{padding-left:4mm}
+.g4 .hang-tien{border:.6pt solid #1a1a1a;border-radius:1mm;padding:1.6mm 2.2mm;margin:2mm 0}
+.g4 .khoi-tong{display:flex;flex-wrap:wrap;gap:1mm 6mm;align-items:baseline}
+.g4 .khoi-tong span.dong-tong b{font-size:10.5pt}
+.g4 .khoi-tong em{flex-basis:100%;font-size:7.4pt;color:#444}
+.g4 .dot{font-size:7.5pt;margin-top:1mm;color:#222}
+.g4 .h{font-size:8pt;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin:2.2mm 0 1mm}
+.g4 .h small{text-transform:none;letter-spacing:0;font-weight:400;color:#666;font-size:7pt}
+.g4 .dk{margin:0;padding-left:2.1em;font-size:7.2pt;line-height:1.36;color:#222}
+.g4 .dk li{margin-bottom:.35mm;break-inside:avoid}
+.g4 .dk.cot{columns:2;column-gap:7mm}
+.g4 .gc{font-size:7.6pt;margin-top:1.5mm!important}
+.g4 .cuoi{font-size:7.6pt;font-style:italic;margin-top:1.5mm!important}
+.g4 .ky{display:grid;grid-template-columns:1fr 1fr;gap:10mm;text-align:center;margin-top:2mm}
+.g4 .ky div{display:flex;flex-direction:column}
+.g4 .ky b{font-size:7.4pt;letter-spacing:.06em}
+.g4 .ky span{height:15mm}
+@media print{ .g4{padding:0} }

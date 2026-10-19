@@ -47,6 +47,32 @@ describe('danh mục ↔ tệp vẽ', () => {
   });
 });
 
+describe('khung ảnh (anh Chiến 19/10/2026: mẫu nào cũng có ảnh, khung mặc định tròn, 1 mẫu viên thuốc)', () => {
+  it('BẮT: tệp vẽ của mọi mẫu có đúng số khung ảnh khai trong danh mục (photoFrames ≥ 1)', () => {
+    for (const t of DESIGN_TEMPLATES) {
+      const imgs = [...html(t.code).matchAll(/<img[^>]*data-f="(anh|a1|a2|a3)"/g)].map((m) => m[1]);
+      expect(imgs.length, t.code).toBe(t.photoFrames);
+      expect(t.photoFrames, t.code).toBeGreaterThanOrEqual(1);
+    }
+  });
+
+  it('BẮT: không còn khung vòm (bo hai góc trên) hay bầu dục; chỉ shd-11 dùng khung viên thuốc', () => {
+    for (const t of DESIGN_TEMPLATES) {
+      const src = html(t.code);
+      expect(src, t.code).not.toMatch(/border-radius:\s*\d+px \d+px 0 0/);
+    }
+    expect(DESIGN_TEMPLATES.filter((t) => t.frameShape === 'pill').map((t) => t.code)).toEqual(['shd-11']);
+    expect(html('shd-11')).toMatch(/\.cap\{width:384px;height:576px;border-radius:192px;/);
+  });
+
+  it('BẮT: ô ảnh trống (dữ liệu thật) hiện gợi ý "Thêm ảnh …" thay vì ẩn khung', () => {
+    const js = readFileSync(fileOf('/mau/chung/mau.js'), 'utf8');
+    expect(js).toMatch(/const NHAN_ANH=\{anh:'ảnh học viên',a1:'ảnh 1',a2:'ảnh 2',a3:'ảnh 3'\}/);
+    expect(js).toMatch(/else if\(NHAN_ANH\[el\.dataset\.f\]\)\{el\.src=goiYAnh\(el\.dataset\.f\);el\.classList\.add\('goi-y-anh'\)/);
+    expect(js).toContain("Thêm '+NHAN_ANH[k]");
+  });
+});
+
 describe('mẫu chào mừng thứ 20 — shd-11 "Chữ ký mảnh nền đá"', () => {
   it('BẮT: có trên lưới thẻ chào mừng của hợp đồng khoá học — đủ 11 mẫu trong app (+ 9 mẫu đợt 1 của R&D = 20)', () => {
     const codes = templateChoices('WELCOME', 'COURSE', 'fit').map((c) => c.template.code);

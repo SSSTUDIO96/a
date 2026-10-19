@@ -18,6 +18,7 @@ body{background:#E9E5E1;color:#221C19;-webkit-print-color-adjust:exact;print-col
 .giay h1,.giay h2,.giay h3{margin:0}
 .giay table{width:100%;border-collapse:collapse}
 .giay td,.giay th{vertical-align:top}
+.giay th{white-space:nowrap}
 .giay .r{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
 .giay .c{text-align:center}
 .giay img{display:block;max-width:100%}
@@ -63,8 +64,9 @@ body.show-f [data-f^="BIẾN"]::before,body.show-f [data-f^="THẺ"]::before{bac
   .thanh{display:none!important}
   .ban{padding:0}
   .giay{width:auto;min-height:0;margin:0;box-shadow:none}
-  .giay tr,.giay li,.giay .ky,.giay .ben,.giay .tong,.giay .ck,.giay dl{break-inside:avoid}
-  .giay h1,.giay h2,.giay h3,.giay .nguon{break-after:avoid}
+  .giay tr,.giay li,.giay .ky,.giay .ben,.giay .khoi-tong,.giay .bang-tong,.giay .ck,.giay dl{break-inside:avoid}
+  .giay h1,.giay h2,.giay h3,.giay .nguon,.giay .hv{break-after:avoid}
+  .giay h1,.giay h2,.giay h3{break-inside:avoid}
   .giay thead{display:table-header-group}  /* đầu bảng lặp lại khi bảng sang trang — chủ đích */
   .giay tfoot{display:table-row-group}     /* KHÔNG lặp dòng tổng ở mọi trang (Chrome mặc định lặp tfoot) */
   .giay .ky{break-before:avoid}

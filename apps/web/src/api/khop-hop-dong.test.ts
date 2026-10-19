@@ -112,7 +112,8 @@ const DOMAIN_HAM = Object.entries(MODULES).flatMap(([mod, exports]) =>
     .filter(([, v]) => typeof v === 'function')
     .map(([fn]) => `${mod}.${fn}`),
 );
-const EXTRA_HAM = ['auth.register', 'auth.createOrganization', 'auth.getMe', 'org.getOrganization'];
+// courses.syncClassSessions (thợ K2, buổi học lên Lịch): nạp kiểu để so, gọi trong bài hợp đồng khoá học.
+const EXTRA_HAM = ['auth.register', 'auth.createOrganization', 'auth.getMe', 'org.getOrganization', 'courses.syncClassSessions'];
 
 let KIEU: Record<string, Kieu> = {};
 const called = new Set<string>();
@@ -734,6 +735,16 @@ describe('types.ts khớp đúng dữ liệu máy chủ thật trả về (tên 
       newIdempotencyKey(),
     );
     const k1 = first(made.classes, 'lớp đầu tiên');
+    expect(k1.calendar).toEqual({ total: 0, upcoming: 0 });
+
+    // Buổi học lên Lịch (thợ K2): xem trước rồi ghi thật; bấm lại không sinh trùng; buổi học trên Lịch đúng dạng Appointment.
+    const preview = await chk('courses.syncClassSessions', courses.syncClassSessions(hv, k1.id, true), 'syncClassSessions (xem trước)');
+    expect(preview.summary.create).toBeGreaterThan(0);
+    const synced = await chk('courses.syncClassSessions', courses.syncClassSessions(hv, k1.id, false), 'syncClassSessions (ghi)');
+    expect(synced.class.calendar.total).toBe(preview.summary.create);
+    expect((await courses.syncClassSessions(hv, k1.id, false)).summary).toMatchObject({ create: 0, keep: preview.summary.create });
+    const onCal = await chk('schedule.listAppointments', schedule.listAppointments(hv, { from: '2026-11-02T00:00:00+07:00', to: '2026-11-09T00:00:00+07:00' }), 'listAppointments (buổi học)');
+    expect(first(onCal.items, 'buổi học trên Lịch')).toMatchObject({ kind: 'COURSE_SESSION', status: 'CONFIRMED', sessionDate: '2026-11-03', courseClass: { id: k1.id, name: 'K1' } });
 
     // Mẫu điều khoản / nội quy: thêm, sửa nội dung (phiên bản tăng), đặt mặc định, danh sách theo loại hợp đồng.
     const terms = await chk(

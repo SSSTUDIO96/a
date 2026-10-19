@@ -14,7 +14,7 @@ export class ConsoleMailer implements Mailer {
     // Ghi ĐỒNG BỘ ngay trong lần gọi (trước await đầu tiên): khi máy chủ trả lời, dòng nhật ký đã có.
     this.logger.warn(
       { mail: { driver: this.driver, to: message.to, subject: message.subject, text: message.text } },
-      `Thư tới ${message.to}: ${message.subject}`,
+      `${CONSOLE_MAIL_MARK} Thư tới ${message.to}: ${message.subject}`,
     );
   }
 }

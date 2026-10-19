@@ -1,0 +1,50 @@
+/* MẪU 3 — BẢNG KẺ ĐẦY ĐỦ. Mọi phần trong bảng có kẻ ô (kiểu chứng từ kế toán), nhiều cột: thời gian, địa điểm, thợ,
+   giảm giá từng dòng, đã thu từng đợt. Đầu bảng tự lặp lại khi bảng sang trang; dòng tổng KHÔNG lặp. */
+@page m3{
+  size:A4; margin:12mm 12mm 15mm;
+  @bottom-left{font:7pt 'Be Vietnam Pro',sans-serif;color:#555}
+  @bottom-center{font:7pt 'Be Vietnam Pro',sans-serif;color:#555}
+  @bottom-right{font:7pt 'Be Vietnam Pro',sans-serif;color:#555}
+}
+.g3{page:m3;font:8.3pt/1.36 'Be Vietnam Pro',Inter,sans-serif;color:#141414;padding:12mm 12mm 15mm}
+.g3 .khung{border:.8pt solid #333;margin-bottom:1.8mm}
+.g3 .khung th,.g3 .khung td{border:.6pt solid #555;padding:.7mm 1.5mm}
+.g3 .khung th{background:#ECE8E4;white-space:nowrap;font-size:7.4pt;font-weight:700;text-transform:uppercase;letter-spacing:.03em;text-align:left}
+.g3 .khung th.r{text-align:right}.g3 .khung th.c{text-align:center}
+.g3 .khung .nh{background:#F6F4F2;font-weight:600;white-space:nowrap;width:1%}
+.g3 .khung tfoot td{font-weight:700;background:#F6F4F2}
+.g3 .khung tfoot tr.dong-tong td{font-size:10.5pt;background:#ECE8E4}
+.g3 .khung .bc{font-style:italic;font-weight:400!important}
+.g3 .dt td{vertical-align:middle}
+.g3 .dt .lo{width:19mm;text-align:center}
+.g3 .dt .lg{width:14mm;height:14mm;margin:auto}
+.g3 .dt b{font-size:11pt}
+.g3 .dt .so-o{width:46mm;text-align:center;background:#F6F4F2}
+.g3 .dt .so-o small{display:block;font-size:7pt;letter-spacing:.06em;color:#555}
+.g3 .dt .so-o b{display:block;font-size:12.5pt;margin:.6mm 0}
+.g3 .qh{text-align:center;margin:1mm 0}
+.g3 .qh b,.g3 .qh span{display:block}
+.g3 .qh span{font-weight:600;text-decoration:underline}
+.g3 .td{text-align:center;font-size:13.5pt;font-weight:700;letter-spacing:.06em;margin:1.5mm 0 2mm}
+.g3 .ben td{width:25%}
+.g3 .ben .nh{width:1%}
+.g3 .mo{margin:0 0 1.2mm!important}
+.g3 .h{font-size:8.6pt;font-weight:700;margin:2.4mm 0 1mm;letter-spacing:.02em}
+.g3 .h small{font-weight:400;font-size:7.6pt;color:#555}
+.g3 .sv .ct{font-size:7.4pt;color:#3d3d3d;line-height:1.4}
+.g3 .sv tr.cap1 td:nth-child(2){padding-left:4mm;color:#333}
+.g3 .sv td:nth-child(1){width:8mm}
+.g3 .sv td:nth-child(2){width:27%}
+.g3 .sv td:nth-child(3){width:36%}
+.g3 .sv td:nth-child(4){width:8mm}
+.g3 .ck{width:100%}
+.g3 .ck .qr-o{width:22mm;text-align:center;vertical-align:middle}
+.g3 .ck .qr{width:11mm;height:11mm;font-size:6pt}
+.g3 .dkb td:first-child{width:11mm}
+.g3 .dkb td{text-align:justify;font-size:7.9pt}
+.g3 .cuoi{margin:1.2mm 0!important;font-style:italic}
+.g3 .ky th{text-align:center!important;width:50%}
+.g3 .ky td{text-align:center;vertical-align:top}
+.g3 .ky i{display:block;font-size:7.6pt}
+.g3 .ky span{display:block;height:12mm}
+@media print{ .g3{padding:0} }

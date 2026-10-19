@@ -549,3 +549,87 @@ describe('T3: giờ kết thúc trước giờ bắt đầu', () => {
     expect(calls.find((c) => c.method === 'POST')?.body).toMatchObject({ endsAt: '2026-10-24T10:00:00+07:00' });
   });
 });
+
+describe('Buổi học trên Lịch (việc tồn 6)', () => {
+  // Buổi học của lớp "K12 tối" (Thứ Tư 21/10 = hôm nay), giảng viên Thu Hà; cạnh một ca makeup thường của Minh Anh.
+  const SESSION = a('bh1', 'LH-0101', '2026-10-21T18:00:00+07:00', '2026-10-21T20:00:00+07:00', ['m-ha'], {
+    kind: 'COURSE_SESSION',
+    title: null,
+    customer: null,
+    courseClass: { id: 'k12', name: 'K12 tối', courseId: 'kh-1', courseName: 'Makeup cá nhân' },
+    sessionDate: '2026-10-21',
+    locationType: 'STUDIO',
+    address: '25 Hoàng Quốc Việt',
+  });
+  const MAKEUP = a('mk1', 'L-0201', '2026-10-21T08:00:00+07:00', '2026-10-21T09:00:00+07:00', ['m-anh'], { title: 'Makeup tiệc' });
+  const ITEMS = [SESSION, MAKEUP];
+
+  it('BẮT: lưới C, B, A đều ghi "Buổi học" + tên lớp và tô màu riêng (is-course); ca makeup không bị tô; chú thích có "Buổi học"', async () => {
+    setupServer({ items: ITEMS });
+    renderScreen(OWNER);
+    await screen.findByTestId('che-do-C');
+    const chip = document.querySelector('[data-appt="bh1"]') as HTMLElement;
+    expect(chip.classList.contains('is-course')).toBe(true);
+    expect(chip.querySelector('.ws-chip__kind')?.textContent).toBe('Buổi học');
+    expect(chip.querySelector('.ws-chip__who')?.textContent).toBe('K12 tối');
+    expect(document.querySelector('[data-appt="mk1"]')?.classList.contains('is-course')).toBe(false);
+    expect(document.body.textContent).toContain('Lớp K12 tối'); // tooltip
+    expect(screen.getByLabelText('Chú thích màu').textContent).toContain('Buổi học');
+
+    fireEvent.click(modeButton('Ngày'));
+    await screen.findByTestId('che-do-B');
+    const item = [...document.querySelectorAll('.ws-item')].find((el) => el.textContent?.includes('K12 tối')) as HTMLElement;
+    expect(item.classList.contains('is-course')).toBe(true);
+    expect(item.querySelector('.ws-item__sv')?.textContent).toContain('Buổi học');
+    expect(item.querySelector('.ws-item__kh')?.textContent).toBe('K12 tối');
+
+    fireEvent.click(modeButton('Cột thợ'));
+    await screen.findByTestId('che-do-A');
+    const ev = document.querySelector('[data-appt="bh1"]') as HTMLElement;
+    expect(ev.classList.contains('is-course')).toBe(true);
+    expect(ev.querySelector('.ws-ev__kind')?.textContent).toBe('Buổi học');
+    expect(ev.querySelector('.ws-ev__kh')?.textContent).toBe('K12 tối');
+  });
+
+  it('BẮT: bấm vào buổi học mở chi tiết: tên lớp, khoá, giảng viên, nơi học; KHÔNG có nút "Sửa" (lịch theo lớp), vẫn đổi trạng thái được', async () => {
+    setupServer({ items: ITEMS });
+    renderScreen(OWNER);
+    await screen.findByTestId('che-do-C');
+    fireEvent.click(document.querySelector('[data-appt="bh1"]') as HTMLElement);
+    const dlg = await screen.findByRole('dialog');
+    expect(within(dlg).getByRole('heading').textContent).toContain('K12 tối');
+    expect(dlg.textContent).toContain('LH-0101 · Buổi học');
+    expect(dlg.textContent).toContain('Makeup cá nhân');
+    expect(dlg.textContent).toContain('Giảng viên');
+    expect(dlg.textContent).not.toContain('Chưa gắn khách');
+    expect(within(dlg).getByRole('link', { name: 'Mở khoá học' }).getAttribute('href')).toBe('/hoa-dao/dao-tao/kh-1');
+    expect(within(dlg).queryByRole('button', { name: 'Sửa' })).toBeNull();
+    expect(within(dlg).getByRole('button', { name: 'Bắt đầu làm' })).toBeTruthy();
+  });
+
+  it('GIỮ: ca makeup thường vẫn có nút "Sửa" và dòng "Khách"', async () => {
+    setupServer({ items: ITEMS });
+    renderScreen(OWNER);
+    await screen.findByTestId('che-do-C');
+    fireEvent.click(document.querySelector('[data-appt="mk1"]') as HTMLElement);
+    const dlg = await screen.findByRole('dialog');
+    expect(within(dlg).getByRole('button', { name: 'Sửa' })).toBeTruthy();
+    expect(dlg.textContent).toContain('Khách L-0201');
+  });
+
+  it('BẮT: lưới C trên điện thoại ghi "Buổi học" + tên lớp, màu riêng', async () => {
+    vi.stubGlobal('matchMedia', (q: string) => ({
+      matches: q === '(max-width: 640px)',
+      media: q,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    }));
+    setupServer({ items: ITEMS });
+    renderScreen(OWNER);
+    await waitFor(() => expect(document.querySelectorAll('.ws-ag').length).toBeGreaterThan(0));
+    const row = [...document.querySelectorAll('.ws-ag')].find((el) => el.textContent?.includes('K12 tối')) as HTMLElement;
+    expect(row.classList.contains('is-course')).toBe(true);
+    expect(row.querySelector('.ws-ag__kind')?.textContent).toContain('Buổi học');
+    expect(document.querySelectorAll('.ws-pt.is-course').length).toBe(1);
+  });
+});

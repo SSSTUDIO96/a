@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   DESIGN_TEMPLATES,
+  FRAME_SHAPES,
+  FRAME_SLOTS,
   findDesignTemplate,
   listDesignTemplates,
   PHOTO_SLOTS,
@@ -21,7 +23,7 @@ describe('danh mục mẫu thiết kế', () => {
   it('BẮT: mẫu chào mừng thứ 20 (shd-11) — khoá học, chữ ký nét mảnh, đủ ô, không ô ảnh tải lên', () => {
     const t = findDesignTemplate('shd-11');
     expect(t).toBeDefined();
-    expect(t).toMatchObject({ kind: 'WELCOME', name: 'Chữ ký mảnh nền đá', contractKinds: ['COURSE'], origin: 'TU_SANG_TAC', version: 1 });
+    expect(t).toMatchObject({ kind: 'WELCOME', name: 'Chữ ký mảnh nền đá', contractKinds: ['COURSE'], origin: 'TU_SANG_TAC', version: 1, frameShape: 'pill', photoFrames: 1 });
     expect([...t!.slots].sort()).toEqual(['anh', 'diachi', 'gv', 'khoa', 'lich', 'logo', 'lop', 'ngay', 'ten', 'th'].sort());
     expect(t!.fonts).toEqual(['MP Chữ ký 1', 'MP Chữ có chân', 'MP Chữ không chân']);
     expect(t!.photos).toEqual({ min: 0, max: 0 });
@@ -65,6 +67,29 @@ describe('danh mục mẫu thiết kế', () => {
       expect(t.photos.min).toBeLessThanOrEqual(t.photos.max);
       expect(t.photos.max).toBeLessThanOrEqual(3);
     }
+  });
+  it('BẮT: mẫu nào cũng có ảnh — số khung ảnh (ảnh học viên + ảnh tải lên) đúng từng mẫu, tổng 34 khung', () => {
+    const want: Record<string, number> = {
+      ...Object.fromEntries(codes('shd', 11).map((c) => [c, 1])),
+      'fb-01': 1, 'fb-02': 1, 'fb-03': 1, 'fb-04': 3, 'fb-05': 2, 'fb-06': 3, 'fb-07': 1, 'fb-08': 1, 'fb-09': 2, 'fb-10': 1,
+      'lc-01': 1, 'lc-02': 1, 'lc-03': 1, 'lc-04': 2, 'lc-05': 1, 'lc-06': 1,
+    };
+    for (const t of DESIGN_TEMPLATES) {
+      const frames = t.slots.filter((s) => (FRAME_SLOTS as readonly string[]).includes(s));
+      expect(t.photoFrames, t.code).toBeGreaterThanOrEqual(1);
+      expect(t.photoFrames, t.code).toBe(frames.length);
+      expect(t.photoFrames, t.code).toBe(want[t.code]);
+      // Ảnh học viên (dữ liệu) không tính vào số ảnh tải lên.
+      expect(t.photos.max, t.code).toBe(frames.filter((s) => s !== 'anh').length);
+    }
+    expect(DESIGN_TEMPLATES.reduce((n, t) => n + t.photoFrames, 0)).toBe(34);
+    // shd-01 "Thư mời kem" trước đây là mẫu duy nhất không có ảnh.
+    expect(findDesignTemplate('shd-01')!.slots).toContain('anh');
+  });
+  it('BẮT: khung ảnh mặc định tròn; đúng 1 mẫu khung viên thuốc (shd-11)', () => {
+    expect(DESIGN_TEMPLATES.filter((t) => t.frameShape === 'pill').map((t) => t.code)).toEqual(['shd-11']);
+    expect(DESIGN_TEMPLATES.filter((t) => t.frameShape === 'circle')).toHaveLength(DESIGN_TEMPLATES.length - 1);
+    for (const t of DESIGN_TEMPLATES) expect(FRAME_SHAPES, t.code).toContain(t.frameShape);
   });
   it('loại hợp đồng theo bảng "Danh mục đợt đầu"', () => {
     const kinds = (code: string) => [...findDesignTemplate(code)!.contractKinds].sort().join('+');

@@ -56,6 +56,8 @@ describe('auth.ts — đặt lại mật khẩu', () => {
       }),
     );
     const m = await fresh();
+    // Kể cả khi đang có phiên trong bộ nhớ: yêu cầu đặt lại là đường công khai, không gửi thẻ đăng nhập.
+    (await import('./client')).setAccessToken('tok-dang-dang-nhap');
     await expect(m.requestPasswordReset('a@b.vn')).resolves.toEqual({ message: 'Nếu email này có tài khoản…' });
     expect(calls[0]?.url).toBe('/api/v1/auth/password-reset/request');
     expect(calls[0]?.init?.method).toBe('POST');

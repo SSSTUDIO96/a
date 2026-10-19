@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="ten" content="Cấp chứng chỉ — Phương án C (từ hồ sơ học viên) — R&D 08">
+<title>Cấp chứng chỉ C — R&D 08</title>
+<link rel="stylesheet" href="v4-chung/v4.css">
+<link rel="stylesheet" href="v8-chung/v8.css">
+</head>
+<body>
+<script src="v8-chung/v8.js"></script>
+<script>
+const { icon, av, the, man, mucLuc } = V4;
+const KH = [['Tôn Nữ Hoàng Bảo Ngọc Phương Thảo','0905 123 456'],['Lê Thị Mai','0912 222 333'],['Nguyễn Ngọc Ánh Dương','0987 654 321'],['Phạm Quỳnh Hương','0934 111 222'],['Đặng Thuỳ Trâm','0977 888 999']];
+const ds = (sel) => KH.map(([t, s], i) => `<a class="lr${i === sel ? ' sel' : ''}" href="#c-ho-so">${av(t, i !== 3, 'sm')}<span class="tx"><span class="n">${t}</span><span class="d">${s} · Học viên K12</span></span></a>`).join('');
+const theKhoa = `<div class="card" data-f="Enrollment(customerId) + Certificate (mới)"><div class="ch2"><h2>Khoá học & chứng chỉ</h2></div>
+  <div class="hv" style="grid-template-columns:minmax(0,1fr) auto"><span class="tx"><span class="n">Makeup chuyên nghiệp · K12</span><span class="d">02/11 → 20/12/2026 · Đã kết thúc · Chưa có chứng chỉ</span></span><a class="btn sm pri" href="#c-cap">${icon('cert','s')}Cấp chứng chỉ</a></div>
+  <div class="hv" style="grid-template-columns:minmax(0,1fr) auto"><span class="tx"><span class="n">Trang điểm cá nhân · CN5</span><span class="d">Đã cấp <b class="num">CC-2026-0002</b> · 15/08/2026 · mẫu 09</span></span><span class="row"><a class="btn sm" href="#">${icon('eye','s')}Xem</a><a class="btn sm" href="#">${icon('in','s')}In lại</a></span></div>
+  <div class="hv" style="grid-template-columns:minmax(0,1fr) auto"><span class="tx"><span class="n">Cô dâu nâng cao · NC3</span><span class="d">Đang học · kết thúc 30/12/2026</span></span><span class="btn sm dis" title="Lớp chưa kết thúc">Cấp chứng chỉ</span></div>
+</div>`;
+
+mucLuc('Cấp chứng chỉ — Phương án C: từ hồ sơ từng học viên', 'Khách hàng → hồ sơ học viên → thẻ "Khoá học & chứng chỉ" → Cấp / Xem / In lại từng người. Không in nhiều người một lúc (muốn in cả lớp phải mở từng hồ sơ).', [
+  ['Máy tính (1440)', [['c-ho-so', 'Hồ sơ học viên có thẻ Khoá học & chứng chỉ', ''], ['c-cap', 'Hộp cấp chứng chỉ một người', '']]],
+  ['Điện thoại (390)', [['c-m-ho-so', 'Hồ sơ học viên', ''], ['c-m-cap', 'Cấp một người — xem trước + In / Chia sẻ', '']]],
+]);
+
+man('c-ho-so', { nav: 'khach', title: 'Khách hàng' }, `
+  <div class="ph"><h1>Khách hàng</h1></div>
+  <div class="c2 narrow"><div class="card left"><div class="sch"><div class="srch"><svg class="i s" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4-4"/></svg><input class="ctl" placeholder="Tìm tên hoặc số điện thoại"></div></div><div class="ls">${ds(1)}</div></div>
+  <div class="right">
+    <div class="card"><div class="ch2">${av('Lê Thị Mai', true, 'lg')}<h2 style="font-size:20px">Lê Thị Mai<br><small>0912 222 333 · mai.le@gmail.com</small></h2><a class="btn sm" href="#">Sửa</a></div></div>
+    ${theKhoa}
+    <div class="card"><div class="ch2"><h2>Hợp đồng</h2><small>2</small></div><div class="cb muted small" style="padding:12px 18px">HĐ-2026-0041 · Makeup chuyên nghiệp K12 · đã thu đủ</div></div>
+  </div></div>`);
+
+man('c-cap', { nav: 'khach', title: 'Khách hàng' }, `
+  <div class="dlg-bg"><div class="dlg w"><div class="dh"><h2>Cấp chứng chỉ · Lê Thị Mai</h2><a class="btn icon ghost" href="#c-ho-so">${icon('x')}</a></div><div class="db">
+    <div class="g2" style="margin-top:12px"><div>${the('05', { ten: 'Lê Thị Mai', anh: 'chung/anh-hv-2.svg', so: 'CC-2026-0008' })}</div>
+    <div><div class="set"><label>Mẫu</label><select class="ctl"><option>05 · Hoa văn vàng cổ điển</option></select></div>
+      <div class="set"><label>Khoá · lớp</label><span class="r">Makeup chuyên nghiệp · K12</span></div>
+      <div class="set"><label>Ngày cấp</label><input class="ctl r" value="20/12/2026"></div>
+      <div class="set"><label>Phông tên</label><select class="ctl"><option>Theo mẫu (Chữ ký 2)</option></select></div>
+      <div class="set"><label>Số</label><span class="r num"><b>CC-2026-0008</b> (tự cấp)</span></div></div></div>
+  </div><footer><a class="btn" href="#">${icon('img','s')}Tải ảnh</a><a class="btn" href="#">${icon('down','s')}Tải PDF</a><a class="btn pri" href="#">${icon('in','s')}Cấp và in</a></footer></div></div>`);
+
+man('c-m-ho-so', { nav: 'khach', title: 'Lê Thị Mai', back: '#', mobile: 'detail' }, `
+  <div class="vstack"><div class="card"><div class="ch2">${av('Lê Thị Mai', true, 'lg')}<h2>Lê Thị Mai<br><small>0912 222 333</small></h2></div></div>${theKhoa}</div>`);
+
+man('c-m-cap', { nav: 'khach', title: 'Cấp chứng chỉ', back: '#c-m-ho-so', mobile: 'detail' }, `
+  <div class="vstack has-sum">
+    <div class="card"><div class="xem-to">${the('05', { ten: 'Lê Thị Mai', anh: 'chung/anh-hv-2.svg', so: 'CC-2026-0008' })}</div></div>
+    <div class="card"><div class="cb"><div class="set"><label>Mẫu</label><select class="ctl"><option>05 · Hoa văn vàng</option></select></div><div class="set"><label>Ngày cấp</label><input class="ctl r" value="20/12/2026"></div></div></div>
+    <div class="sumbar"><a class="btn" href="#">${icon('share','s')}Chia sẻ</a><span class="sp" style="flex:1"></span><a class="btn pri" href="#">${icon('in','s')}Cấp và in</a></div>
+  </div>`);
+V4.boot();
+</script>
+</body>
+</html>

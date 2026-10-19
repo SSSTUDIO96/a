@@ -33,11 +33,6 @@
   chung.ngayChu = m ? `Ngày ${+m[1]} tháng ${+m[2]} năm ${m[3]}` : '';
   chung.nam = m ? m[3] : '';
   chung.ngaySo = chung.ngay;
-  if (P.get('ky')) {
-    const n = P.get('ky');
-    document.documentElement.style.setProperty('--f-ten', `var(--f-ky-${n})`);
-    document.documentElement.style.setProperty('--ten-co', `var(--ky-co-${n})`);
-  }
 
   // ===== Huy hiệu tự vẽ (SVG) — không dùng ảnh tham khảo =====
   let uid = 0;
@@ -80,7 +75,9 @@
   function huyHieu(el) {
     const d = el.dataset;
     const id = 'hh' + ++uid;
-    const nen = d.nen || '#1C2433', chu = d.chu || 'url(#' + id + 'g)', kieu = d.kieu || 'rang';
+    // Chữ trong huy hiệu tô MÀU ĐẶC (không tô dải màu): bản PDF in vector đọc ổn ở mọi trình xem PDF (Poppler vẽ sai chữ tô dải màu).
+    const CHU_KIM = { vang: '#E6CB80', bac: '#E6EBF0', hong: '#F2CDB8' };
+    const nen = d.nen || '#1C2433', chu = d.chu || CHU_KIM[d.kim || 'vang'], kieu = d.kieu || 'rang';
     const duoi = d.duoi === '1';
     const dong1 = d.dong1 || 'TỐT NGHIỆP', dong2 = d.dong2 || chung.nam || '';
     const ruy = d.ruy || '#8E1D24';
@@ -149,6 +146,14 @@
       dien(el, Object.assign({}, chung, hv));
     });
   } else dien(mau, chung);
+  // ?ky=1..4: đổi phông chữ ký của tên — đặt thẳng lên từng trang (đè phông mặc định mẫu khai trong .cN).
+  if (/^[1-4]$/.test(P.get('ky') || '')) {
+    const n = P.get('ky');
+    document.querySelectorAll('.cc').forEach((el) => {
+      el.style.setProperty('--f-ten', `var(--f-ky-${n})`);
+      el.style.setProperty('--ten-co', `var(--ky-co-${n})`);
+    });
+  }
 
   // ===== Co chữ cho vừa: tên dài tự nhỏ lại (một dòng), câu dài tự nhỏ lại =====
   function fit() {

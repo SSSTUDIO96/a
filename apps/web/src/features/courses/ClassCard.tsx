@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router';
 import type { ClassView } from '../../api/courses';
 import { Avatar, Button, IconCalendar, IconClock, StatusTag } from '../../ui';
 import { IconPin, IconUsers } from './icons';
-import { fullDate, scheduleText, seatInfo } from './logic';
+import { calendarText, fullDate, NO_TIME_REASON, scheduleText, seatInfo } from './logic';
 import { OffButton } from './OffButton';
 import { SeatBar, SeatTag } from './SeatTag';
 import { staffInitials, useCurrentOrgStaffNaming } from '../staff/useStaffNaming';
@@ -22,9 +22,11 @@ export interface ClassCardProps {
   // Có thì hiện nút "Sửa" (courses.write).
   onEdit?: () => void;
   onStudents: () => void;
+  // Có thì hiện nút "Đưa lên Lịch" / "Cập nhật Lịch" (courses.write + schedule.write).
+  onCalendar?: () => void;
 }
 
-export function ClassCard({ cls, title, canEnroll, onEdit, onStudents }: ClassCardProps) {
+export function ClassCard({ cls, title, canEnroll, onEdit, onStudents, onCalendar }: ClassCardProps) {
   const { orgSlug } = useParams();
   const seat = seatInfo(cls.enrolledCount, cls.capacity);
   // L2: màu + chữ tắt ảnh giảng viên qua sổ thợ chung (ui/staffName.ts) — cùng màu với Thợ makeup, Lịch.
@@ -34,6 +36,9 @@ export function ClassCard({ cls, title, canEnroll, onEdit, onStudents }: ClassCa
   const cancelled = cls.status === 'CANCELLED';
   const closed = cls.status === 'CLOSED';
   const state = cancelled ? 'cancelled' : seat.state === 'FULL' ? 'full' : 'open';
+  const cal = calendarText(cls);
+  const hasTime = cls.startTime !== null && cls.endTime !== null;
+  const calLabel = cls.calendar.total === 0 ? 'Đưa lên Lịch' : 'Cập nhật Lịch';
   return (
     <article className={`kc-class kc-class--${state}`} aria-label={`Lớp ${title}`}>
       <div className="kc-class__t">
@@ -71,6 +76,10 @@ export function ClassCard({ cls, title, canEnroll, onEdit, onStudents }: ClassCa
         )}
       </div>
       <SeatBar enrolledCount={cls.enrolledCount} capacity={cls.capacity} />
+      <div className={`kc-cal${cal.on ? ' is-on' : ''}`}>
+        <IconCalendar />
+        <span>{cal.label}</span>
+      </div>
       <div className="kc-class__act">
         <span className="kc-class__count">
           <b className="num">{cls.enrolledCount}</b> đã ghi danh / tối đa <b className="num">{cls.capacity}</b>
@@ -84,6 +93,15 @@ export function ClassCard({ cls, title, canEnroll, onEdit, onStudents }: ClassCa
               Sửa
             </Button>
           )}
+          {onCalendar &&
+            !cancelled &&
+            (hasTime ? (
+              <Button size="sm" onClick={onCalendar} title="Đưa các buổi học của lớp lên Lịch theo thứ và giờ học — bấm lại không sinh trùng">
+                {calLabel}
+              </Button>
+            ) : (
+              <OffButton label={calLabel} reason={NO_TIME_REASON} />
+            ))}
           {canEnroll && !cancelled &&
             (seat.state === 'FULL' ? (
               <OffButton label="Hết chỗ" reason={FULL_REASON} />

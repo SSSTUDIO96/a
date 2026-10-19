@@ -5,6 +5,7 @@ import {
   buildClassUpdate,
   buildCourseUpdate,
   buildCreateBody,
+  calendarText,
   courseListSub,
   coursePerms,
   emptyCourseForm,
@@ -12,6 +13,7 @@ import {
   nextClassName,
   scheduleText,
   seatInfo,
+  sessionSyncLines,
   sessionText,
   validateCourseForm,
   withCourseCapacity,
@@ -25,7 +27,7 @@ const course: Course = {
 };
 const k: ClassView = {
   id: 'c', courseId: 'k', name: 'Makeup Hàn Quốc', startDate: '2026-11-15', endDate: '2026-12-02', weekdays: [1, 3], startTime: '18:00', endTime: '22:00',
-  capacity: 8, enrolledCount: 5, seatsLeft: 3, seatState: 'AVAILABLE', status: 'OPEN', note: null, instructor: null, location: null,
+  capacity: 8, enrolledCount: 5, seatsLeft: 3, seatState: 'AVAILABLE', status: 'OPEN', note: null, instructor: null, location: null, calendar: { total: 0, upcoming: 0 },
 };
 
 describe('seatInfo — dùng seatState() chung với máy chủ', () => {
@@ -63,7 +65,11 @@ describe('chữ hiển thị', () => {
 
   it('quyền: courses.read / courses.write / contracts.write', () => {
     const p = coursePerms((x) => x === 'courses.read');
-    expect(p).toEqual({ read: true, write: false, enroll: false, staff: false, locations: false });
+    expect(p).toEqual({ read: true, write: false, enroll: false, staff: false, locations: false, calendar: false });
+    // Nút "Đưa lên Lịch": cần CẢ courses.write lẫn schedule.write (máy chủ kiểm cả hai).
+    expect(coursePerms((x) => x === 'courses.write').calendar).toBe(false);
+    expect(coursePerms((x) => x === 'schedule.write').calendar).toBe(false);
+    expect(coursePerms((x) => x === 'courses.write' || x === 'schedule.write').calendar).toBe(true);
   });
 });
 
@@ -135,5 +141,30 @@ describe('lỗi máy chủ → đúng ô', () => {
     expect(mapServerErrors(c('CAPACITY_BELOW_ENROLLED', 'x'), 'class', true)).toEqual({ capacity: 'x' });
     expect(mapServerErrors(c('SINGLE_MODE_NEEDS_ONE_CLASS', 'y'), 'course')).toEqual({ mode: 'y' });
     expect(mapServerErrors(c('SINGLE_CLASS', 'z'), 'class')).toEqual({ general: 'z' });
+  });
+});
+
+describe('buổi học trên Lịch (việc tồn 6)', () => {
+  const base = { status: 'OPEN' as const };
+  it('BẮT: chữ trạng thái Lịch trên thẻ lớp', () => {
+    expect(calendarText({ ...base, calendar: { total: 0, upcoming: 0 } })).toEqual({ label: 'Chưa lên Lịch', on: false });
+    expect(calendarText({ ...base, calendar: { total: 8, upcoming: 6 } })).toEqual({ label: 'Đã lên Lịch · 6 buổi sắp tới', on: true });
+    expect(calendarText({ ...base, calendar: { total: 8, upcoming: 0 } }).label).toBe('Đã lên Lịch · 8 buổi đã qua');
+  });
+
+  it('BẮT: dòng xem trước — thêm (khoảng ngày), đổi, huỷ, giữ, huỷ tay; không có gì đổi thì báo đã khớp', () => {
+    const s = { create: 3, update: 1, cancel: 2, keep: 4, past: 1, skippedManual: ['2027-03-08'], firstNewDate: '2027-03-01', lastNewDate: '2027-03-15' };
+    expect(sessionSyncLines(s)).toEqual([
+      'Thêm 3 buổi học (01/03/2027 → 15/03/2027)',
+      'Đổi giờ / giảng viên / nơi học của 1 buổi cho khớp lịch lớp',
+      'Huỷ 2 buổi không còn trong lịch lớp',
+      '4 buổi đã khớp lịch lớp — giữ nguyên',
+      '1 buổi đã diễn ra — giữ nguyên',
+      '1 buổi đã huỷ tay (08/03) — không thêm lại',
+    ]);
+    expect(sessionSyncLines({ ...s, create: 0, update: 0, cancel: 0, skippedManual: [] }).at(-1)).toBe('Lịch đã khớp lịch lớp — không cần cập nhật');
+    expect(sessionSyncLines({ create: 0, update: 0, cancel: 0, keep: 0, past: 0, skippedManual: [], firstNewDate: null, lastNewDate: null })).toEqual([
+      'Không còn buổi học nào từ hôm nay đến ngày kết thúc lớp',
+    ]);
   });
 });

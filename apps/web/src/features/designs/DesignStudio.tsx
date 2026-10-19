@@ -161,7 +161,7 @@ export function DesignStudio({
     setBanner(null);
     setDone(null);
     const cardDraft = { ...input, photoFileIds: draft.photos.map((p) => p.fileId) };
-    const local = checkDraft({ kind, template, contractId, draft: cardDraft });
+    const local = checkDraft({ kind, template, contractId, draft: cardDraft, hasAvatar: !!ready?.anhUrl });
     if (Object.keys(local).length > 0) {
       setErrors(local);
       setBanner('Còn ô chưa điền đúng — xem dòng đỏ ở từng ô.');
