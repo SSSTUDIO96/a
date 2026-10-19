@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { getTravelFeePolicy, listMakeupSubjects, listPackages, listServices, listStudioLocations } from '../../api/catalog';
-import type { MakeupSubject, Page, Service, ServicePackage, StudioLocation, TravelFeePolicy } from '../../api/types';
+import { getTravelFeePolicy, listMakeupSubjects, listOccasions, listPackages, listServices, listStudioLocations, listSurchargeRules } from '../../api/catalog';
+import type { MakeupSubject, OccasionView, Page, Service, ServicePackage, StudioLocation, SurchargeRuleView, TravelFeePolicy } from '../../api/types';
 
 // Dữ liệu bảng giá cho màn hợp đồng: tự đọc src/api/catalog.ts (bản vẽ mục 7: không nhập tệp của gói Bảng giá).
 export interface ContractCatalog {
@@ -9,6 +9,10 @@ export interface ContractCatalog {
   subjects: MakeupSubject[];
   studios: StudioLocation[];
   policy: TravelFeePolicy;
+  // Loại sự kiện ĐANG BẬT (ô Sự kiện của dòng) — bản vẽ D 3.4.
+  occasions: OccasionView[];
+  // Mọi luật phụ phí (cả luật đã tắt): chỉ để gọi tên luật đã bỏ và biết luật tính theo số lượng dòng không; web không áp luật.
+  rules: SurchargeRuleView[];
 }
 
 export type CatalogState =
@@ -27,14 +31,16 @@ async function allPages<T>(load: (page: number) => Promise<Page<T>>): Promise<T[
 }
 
 export async function loadContractCatalog(orgId: string, signal?: AbortSignal): Promise<ContractCatalog> {
-  const [packages, surcharges, subjects, studios, policy] = await Promise.all([
+  const [packages, surcharges, subjects, studios, policy, occasions, rules] = await Promise.all([
     allPages((page) => listPackages(orgId, { isActive: true, page, pageSize: 100 }, signal)),
     allPages((page) => listServices(orgId, { kind: 'SURCHARGE', isActive: true, page, pageSize: 100 }, signal)),
     listMakeupSubjects(orgId, undefined, signal).then((r) => r.items),
     listStudioLocations(orgId, { isActive: true }, signal).then((r) => r.items),
     getTravelFeePolicy(orgId, signal),
+    listOccasions(orgId, { isActive: true }, signal).then((r) => r.items),
+    listSurchargeRules(orgId, undefined, signal).then((r) => r.items),
   ]);
-  return { packages, surcharges, subjects, studios, policy };
+  return { packages, surcharges, subjects, studios, policy, occasions, rules };
 }
 
 export function useContractCatalog(orgId: string, enabled: boolean): CatalogState & { reload: () => void } {

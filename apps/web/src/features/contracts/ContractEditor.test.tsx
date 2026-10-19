@@ -35,6 +35,8 @@ vi.mock('../../api/catalog', () => ({
   listPackages: vi.fn(async () => ({ items: [PKG_ME], page: 1, pageSize: 100, total: 1 })),
   listServices: vi.fn(async () => ({ items: [], page: 1, pageSize: 100, total: 0 })),
   listMakeupSubjects: vi.fn(async () => ({ items: [{ id: 's-me', name: 'Mẹ cô dâu', sortOrder: 1, isActive: true }] })),
+  listOccasions: vi.fn(async () => ({ items: OCCASIONS })),
+  listSurchargeRules: vi.fn(async () => ({ items: RULES })),
   listStudioLocations: vi.fn(async () => ({
     items: [{ id: 'st-1', name: 'Studio Chiến', address: '25 Hoàng Quốc Việt', isDefault: true, isActive: true }],
   })),
@@ -63,6 +65,17 @@ const api = vi.mocked(contractsApi);
 // Quote đợi 300ms rồi mới gọi; khi cả bộ vitest chạy song song, 1 giây chờ mặc định không đủ.
 configure({ asyncUtilTimeout: 5000 });
 const TZ = 'Asia/Ho_Chi_Minh';
+
+const OCCASIONS = [
+  { id: 'oc-vq', name: 'Lễ vu quy', color: 'taupe', sortOrder: 1, isActive: true, lineCount: 0, createdAt: '', updatedAt: '' },
+  { id: 'oc-tiec', name: 'Tiệc', color: 'violet', sortOrder: 2, isActive: true, lineCount: 0, createdAt: '', updatedAt: '' },
+];
+
+// Hai luật: "Ngoài giờ" tính theo số lượng dòng, "Ngày lễ" luôn 1.
+const RULES = [
+  { id: 'r-gio', name: 'Ngoài giờ', serviceId: 'sv-gio', perQuantity: true, isActive: true },
+  { id: 'r-le', name: 'Ngày lễ', serviceId: 'sv-le', perQuantity: false, isActive: true },
+];
 
 const PKG_ME = {
   id: 'p-me',
@@ -113,6 +126,12 @@ function line(over: Record<string, unknown> = {}) {
     travelBreakdown: null,
     addons: [],
     travel: null,
+    occasionId: null,
+    occasionName: null,
+    surchargeRuleId: null,
+    surchargeRuleName: null,
+    dismissedRuleIds: [],
+    surcharges: [],
     ...over,
   };
 }
@@ -151,6 +170,8 @@ function quote(staffWarnings: unknown[]) {
     total: 600_000,
     depositRequired: 0,
     suggestedDeposit: 0,
+    classes: [],
+    autoSurcharge: { applied: [], removed: [], skipped: [] },
   };
 }
 
@@ -1214,5 +1235,367 @@ describe('Lần 4 — N2: thứ tự lớp của mọi kiểu hộp lồng hộp
     await userEvent.click(screen.getByRole('button', { name: 'Mở trong' }));
     const innerDlg = await screen.findByRole('dialog', { name: 'Trong' });
     expect(topOverlay()?.contains(innerDlg)).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// Bản vẽ D 3.4 (gói W3): ô Sự kiện, ngày của dòng, dòng phụ phí tự thêm. Máy chủ giả "tính" phụ phí theo luật Ngoài giờ.
+type BodyLine = { occasionId?: string; dismissedRuleIds?: string[]; surchargeOverrides?: { ruleId: string; quantity?: number; unitPrice?: number; note?: string }[]; scheduledStart?: string; quantity?: number };
+const bodyLine = (call: unknown[] | undefined): BodyLine => ((call?.[1] as { lines: BodyLine[] }).lines[0] ?? {}) as BodyLine;
+const lastBody = () => bodyLine(api.quoteContract.mock.calls.at(-1));
+
+function surRow(over: Record<string, unknown> = {}) {
+  return line({
+    id: null,
+    kind: 'SURCHARGE',
+    name: 'Phụ phí ngoài giờ',
+    serviceId: 'sv-gio',
+    packageId: null,
+    subjectId: null,
+    subjectName: null,
+    priceVersionId: 'pv-gio',
+    surchargeRuleId: 'r-gio',
+    surchargeRuleName: 'Ngoài giờ',
+    unitPrice: 100_000,
+    lineTotal: 100_000,
+    staff: [],
+    scheduledStart: null,
+    scheduledEnd: null,
+    ...over,
+  });
+}
+
+// Máy chủ giả: luật Ngoài giờ khớp mọi dòng, trừ khi dòng đã bỏ luật (dismissedRuleIds). Tiền do máy chủ giả "tính" (giá × số lượng
+// hoặc giá ghi đè) — web chỉ hiện. total cố ý lệch 1.000 so với tổng các dòng để bắt việc web tự cộng.
+function ruleServer(opts: { report?: Partial<ReturnType<typeof emptyReport>>; price?: boolean } = {}) {
+  api.quoteContract.mockImplementation((async (_org: string, body: { lines: BodyLine[] }) => {
+    const l = body.lines[0] ?? {};
+    const off = (l.dismissedRuleIds ?? []).includes('r-gio');
+    const ov = (l.surchargeOverrides ?? []).find((o) => o.ruleId === 'r-gio');
+    const qty = ov?.quantity ?? l.quantity ?? 1;
+    const unit = ov?.unitPrice ?? 100_000;
+    const row = surRow({ quantity: qty, unitPrice: unit, lineTotal: unit * qty, priceVersionId: ov?.unitPrice !== undefined ? null : 'pv-gio', note: ov?.note ?? null });
+    const g = line({ id: null, surcharges: off || opts.price === false ? [] : [row] });
+    return {
+      lines: [g],
+      travelTotal: 0,
+      subtotal: 700_000,
+      discount: 0,
+      total: 701_000,
+      depositRequired: 0,
+      suggestedDeposit: 0,
+      classes: [],
+      autoSurcharge: {
+        applied: off || opts.price === false ? [] : [{ line: 0, ruleId: 'r-gio', ruleName: 'Ngoài giờ', serviceName: 'Phụ phí ngoài giờ', quantity: qty, lineTotal: unit * qty, overridden: Boolean(ov) }],
+        removed: [],
+        skipped: [],
+        ...opts.report,
+      },
+    };
+  }) as never);
+}
+const emptyReport = () => ({ applied: [], removed: [], skipped: [] as { line: number; ruleId: string; ruleName: string; reason: string; by?: string }[] });
+
+describe('D 3.4 — ô Sự kiện', () => {
+  it('chỉ loại đang bật để chọn, mục đầu "Chưa chọn sự kiện"; chọn → thân quote có occasionId; bỏ chọn → không gửi', async () => {
+    api.getContract.mockResolvedValue(detail('DRAFT') as never);
+    api.quoteContract.mockResolvedValue(quote([]) as never);
+    renderEditor(OWNER);
+    const card = await screen.findByRole('region', { name: /Mẹ cô dâu/ });
+    const sel = within(card).getByLabelText('Sự kiện') as HTMLSelectElement;
+    expect([...sel.options].map((o) => o.textContent)).toEqual(['Chưa chọn sự kiện', 'Lễ vu quy', 'Tiệc']);
+    await userEvent.selectOptions(sel, 'Lễ vu quy');
+    await waitFor(() => expect(lastBody().occasionId).toBe('oc-vq'));
+    expect(card.querySelector('.ct-oc__dot')?.getAttribute('data-color')).toBe('taupe');
+    await userEvent.selectOptions(sel, 'Chưa chọn sự kiện');
+    await waitFor(() => expect(lastBody()).not.toHaveProperty('occasionId'));
+  });
+
+  it('"Sửa danh sách" dẫn tới Bảng giá › Loại sự kiện, chỉ khi có catalog.write', async () => {
+    api.getContract.mockResolvedValue(detail('DRAFT') as never);
+    api.quoteContract.mockResolvedValue(quote([]) as never);
+    const { unmount } = renderEditor(OWNER);
+    const link = await screen.findByRole('link', { name: 'Sửa danh sách' });
+    expect(link.getAttribute('href')).toBe('/studio/bang-gia/su-kien');
+    unmount();
+    renderEditor(OWNER.filter((p) => p !== 'catalog.write'));
+    await screen.findByRole('region', { name: /Mẹ cô dâu/ });
+    expect(screen.queryByRole('link', { name: 'Sửa danh sách' })).toBeNull();
+  });
+
+  it('dòng đã lưu mang loại đang ẩn: hiện tên đã chụp "(đang ẩn)" kèm lời báo, không lưu im lặng', async () => {
+    api.getContract.mockResolvedValue(detail('DRAFT', { lines: [line({ occasionId: 'oc-cu', occasionName: 'Ăn hỏi' })] }) as never);
+    api.quoteContract.mockResolvedValue(quote([]) as never);
+    renderEditor(OWNER);
+    const card = await screen.findByRole('region', { name: /Mẹ cô dâu/ });
+    expect(within(card).getByRole('option', { name: 'Ăn hỏi (đang ẩn)' })).toBeTruthy();
+    expect(within(card).getByText(/Loại sự kiện này đang ẩn/)).toBeTruthy();
+  });
+});
+
+describe('D 3.4 — ngày của dòng', () => {
+  it('mặc định "Theo ngày sự kiện"; gõ ngày khác → chip "Khác ngày sự kiện", quote gửi giờ ở ngày đó; "Về ngày sự kiện" trả lại', async () => {
+    api.getContract.mockResolvedValue(detail('DRAFT') as never);
+    api.quoteContract.mockResolvedValue(quote([]) as never);
+    renderEditor(OWNER);
+    const card = await screen.findByRole('region', { name: /Mẹ cô dâu/ });
+    expect(within(card).getByText('Theo ngày sự kiện (24/10/2026)')).toBeTruthy();
+    expect(within(card).getByText('Ngày & giờ')).toBeTruthy();
+    await userEvent.type(within(card).getByLabelText('Ngày của dòng'), '19/10/2026');
+    expect(await within(card).findByText('Khác ngày sự kiện')).toBeTruthy();
+    await waitFor(() => expect(lastBody().scheduledStart).toBe('2026-10-19T05:00:00+07:00'));
+    await userEvent.click(within(card).getByRole('button', { name: 'Về ngày sự kiện' }));
+    await waitFor(() => expect(lastBody().scheduledStart).toBe('2026-10-24T05:00:00+07:00'));
+    expect(within(card).queryByText('Khác ngày sự kiện')).toBeNull();
+  });
+
+  it('đổi ngày sự kiện: dòng theo ngày sự kiện đi theo, dòng có ngày riêng giữ nguyên', async () => {
+    api.getContract.mockResolvedValue(
+      detail('DRAFT', {
+        lines: [
+          line({ id: 'l1', scheduledStart: '2026-10-18T22:00:00.000Z', scheduledEnd: '2026-10-18T22:45:00.000Z' }), // 19/10 05:00 — ngày riêng
+          line({ id: 'l2' }), // 24/10 05:00 — theo ngày sự kiện
+        ],
+      }) as never,
+    );
+    api.quoteContract.mockResolvedValue({ ...quote([]), lines: [line({ id: null }), line({ id: null })] } as never);
+    renderEditor(OWNER);
+    await screen.findAllByRole('region', { name: /Mẹ cô dâu/ });
+    await userEvent.clear(screen.getByLabelText('Ngày sự kiện'));
+    await userEvent.type(screen.getByLabelText('Ngày sự kiện'), '05/11/2026');
+    await waitFor(() => {
+      const lines = (api.quoteContract.mock.calls.at(-1)?.[1] as unknown as { lines: BodyLine[] }).lines;
+      expect(lines[0]?.scheduledStart).toBe('2026-10-19T05:00:00+07:00');
+      expect(lines[1]?.scheduledStart).toBe('2026-11-05T05:00:00+07:00');
+    });
+  });
+});
+
+describe('D 3.4 — dòng phụ phí tự thêm', () => {
+  it('hiện tên × số lượng, tiền máy chủ trả và nhãn "tự thêm theo luật …"; tổng lấy từ máy chủ, web không cộng', async () => {
+    api.getContract.mockResolvedValue(detail('DRAFT') as never);
+    ruleServer();
+    renderEditor(OWNER);
+    const card = await screen.findByRole('region', { name: /Mẹ cô dâu/ });
+    const row = await within(card).findByText('Phụ phí ngoài giờ');
+    const r = row.closest('.ct-sr__r') as HTMLElement;
+    expect(within(r).getByText('100.000 ₫')).toBeTruthy();
+    expect(within(r).getByText('tự thêm theo luật Ngoài giờ')).toBeTruthy();
+    // Cộng dòng = số máy chủ trả (600.000 gói + 100.000 phụ phí), thanh tổng = total của máy chủ (701.000, lệch 1.000 có chủ ý).
+    expect(card.querySelector('.ct-ln__ft b')?.textContent).toBe('700.000 ₫');
+    expect(await screen.findAllByText('701.000 ₫')).not.toHaveLength(0);
+  });
+
+  it('bỏ một dòng (×): gửi dismissedRuleIds; báo giá lại không hiện lại; hiện "Đã bỏ: … · Áp lại"; Áp lại → luật tự thêm lại + thông báo', async () => {
+    api.getContract.mockResolvedValue(detail('DRAFT') as never);
+    ruleServer();
+    renderEditor(OWNER);
+    const card = await screen.findByRole('region', { name: /Mẹ cô dâu/ });
+    await within(card).findByText('Phụ phí ngoài giờ');
+    await userEvent.click(within(card).getByRole('button', { name: 'Bỏ phụ phí Phụ phí ngoài giờ ở dòng này' }));
+    await waitFor(() => expect(lastBody().dismissedRuleIds).toEqual(['r-gio']));
+    await waitFor(() => expect(within(card).queryByText('Phụ phí ngoài giờ')).toBeNull());
+    expect(within(card).getByText('Đã bỏ: Ngoài giờ')).toBeTruthy();
+    // Đổi giờ → báo giá lại: vẫn không hiện lại, vẫn gửi dismissedRuleIds.
+    const calls = api.quoteContract.mock.calls.length;
+    await userEvent.clear(within(card).getByLabelText('Giờ bắt đầu'));
+    await userEvent.type(within(card).getByLabelText('Giờ bắt đầu'), '0530');
+    await waitFor(() => expect(api.quoteContract.mock.calls.length).toBeGreaterThan(calls));
+    expect(lastBody().dismissedRuleIds).toEqual(['r-gio']);
+    expect(within(card).queryByText('Phụ phí ngoài giờ')).toBeNull();
+    // Áp lại.
+    await userEvent.click(within(card).getByRole('button', { name: 'Áp lại' }));
+    await waitFor(() => expect(lastBody()).not.toHaveProperty('dismissedRuleIds'));
+    expect(await within(card).findByText('Phụ phí ngoài giờ')).toBeTruthy();
+    expect(await screen.findByText('Đã tự thêm Phụ phí ngoài giờ cho dòng Mẹ cô dâu · Mẹ – Trang điểm nhẹ nhàng theo luật Ngoài giờ')).toBeTruthy();
+  });
+
+  it('sửa giá bắt buộc ghi lý do: thiếu lý do báo lỗi, không đổi; có lý do → thân gửi surchargeOverrides, dòng ghi "đã sửa giá"; "Về theo luật" bỏ phần sửa', async () => {
+    api.getContract.mockResolvedValue(detail('DRAFT') as never);
+    ruleServer();
+    renderEditor(OWNER);
+    const card = await screen.findByRole('region', { name: /Mẹ cô dâu/ });
+    await within(card).findByText('Phụ phí ngoài giờ');
+    await userEvent.click(within(card).getByRole('button', { name: 'Sửa phụ phí Phụ phí ngoài giờ' }));
+    const dlg = await screen.findByRole('dialog');
+    await userEvent.type(within(dlg).getByLabelText('Giá phụ phí'), '50000');
+    await userEvent.click(within(dlg).getByRole('button', { name: 'Lưu' }));
+    expect(await within(dlg).findByText('Ghi đè giá phải ghi lý do.')).toBeTruthy();
+    expect(lastBody()).not.toHaveProperty('surchargeOverrides');
+    await userEvent.type(within(dlg).getByLabelText('Lý do sửa giá'), 'Khách quen');
+    await userEvent.click(within(dlg).getByRole('button', { name: 'Lưu' }));
+    await waitFor(() => expect(lastBody().surchargeOverrides).toEqual([{ ruleId: 'r-gio', unitPrice: 50_000, note: 'Khách quen' }]));
+    const r = (await within(card).findByText('tự thêm theo luật Ngoài giờ · đã sửa giá')).closest('.ct-sr__r') as HTMLElement;
+    expect(within(r).getByText('50.000 ₫')).toBeTruthy();
+    expect(within(r).getByText('Lý do: Khách quen')).toBeTruthy();
+    await userEvent.click(within(card).getByRole('button', { name: 'Sửa phụ phí Phụ phí ngoài giờ' }));
+    await userEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Về theo luật' }));
+    await waitFor(() => expect(lastBody()).not.toHaveProperty('surchargeOverrides'));
+  });
+
+  it('sửa số lượng không cần lý do; số lượng bằng mặc định của luật thì không gửi', async () => {
+    api.getContract.mockResolvedValue(detail('DRAFT') as never);
+    ruleServer();
+    renderEditor(OWNER);
+    const card = await screen.findByRole('region', { name: /Mẹ cô dâu/ });
+    await within(card).findByText('Phụ phí ngoài giờ');
+    await userEvent.click(within(card).getByRole('button', { name: 'Sửa phụ phí Phụ phí ngoài giờ' }));
+    const dlg = await screen.findByRole('dialog');
+    await userEvent.click(within(dlg).getByRole('button', { name: 'Tăng số lượng phụ phí' }));
+    await userEvent.click(within(dlg).getByRole('button', { name: 'Lưu' }));
+    await waitFor(() => expect(lastBody().surchargeOverrides).toEqual([{ ruleId: 'r-gio', quantity: 2 }]));
+    expect(await within(card).findByText('Phụ phí ngoài giờ × 2')).toBeTruthy();
+  });
+
+  it('luật bị bỏ qua (skipped) hiện lý do tiếng Việt trong thẻ dòng', async () => {
+    api.getContract.mockResolvedValue(detail('DRAFT') as never);
+    ruleServer({
+      price: false,
+      report: {
+        skipped: [
+          { line: 0, ruleId: 'r-gio', ruleName: 'Ngoài giờ', reason: 'NO_PRICE' },
+          { line: 0, ruleId: 'r-le', ruleName: 'Ngày lễ', reason: 'SERVICE_UNAVAILABLE' },
+          { line: 0, ruleId: 'r-3', ruleName: 'Cuối tuần', reason: 'MANUAL_LINE_EXISTS' },
+          { line: 0, ruleId: 'r-4', ruleName: 'Sáng sớm', reason: 'SAME_SERVICE', by: 'Ngoài giờ' },
+        ],
+      },
+    });
+    renderEditor(OWNER);
+    const card = await screen.findByRole('region', { name: /Mẹ cô dâu/ });
+    expect(await within(card).findByText('Luật "Ngoài giờ" khớp nhưng phụ phí chưa có giá — chưa thêm.')).toBeTruthy();
+    expect(within(card).getByText('Luật "Ngày lễ" khớp nhưng phụ phí đang ngừng — chưa thêm.')).toBeTruthy();
+    expect(within(card).getByText(/Luật "Cuối tuần" khớp nhưng đã có dòng phụ phí cùng loại nhập tay/)).toBeTruthy();
+    expect(within(card).getByText(/Luật "Sáng sớm" khớp nhưng cùng phụ phí với luật "Ngoài giờ" đứng trước/)).toBeTruthy();
+  });
+
+  it('phần sửa bị máy chủ bỏ (removed) hiện lý do', async () => {
+    api.getContract.mockResolvedValue(detail('DRAFT') as never);
+    ruleServer({ price: false, report: { removed: [{ line: 0, ruleId: 'r-gio', ruleName: 'Ngoài giờ', reason: 'NO_LONGER_MATCHES' }] } as never });
+    renderEditor(OWNER);
+    const card = await screen.findByRole('region', { name: /Mẹ cô dâu/ });
+    expect(await within(card).findByText('Đã bỏ phần bạn sửa ở luật "Ngoài giờ" vì luật không còn khớp dòng này.')).toBeTruthy();
+  });
+
+  it('nháp cũ vừa mở: luật tự thêm dòng mà bản lưu chưa có → dải xanh "đã thêm 1 dòng — kiểm lại"; không bắn thông báo từng dòng; Lưu xong thì hết', async () => {
+    api.getContract.mockResolvedValue(detail('DRAFT') as never);
+    ruleServer();
+    api.updateContract.mockResolvedValue(detail('DRAFT', { lines: [line({ surcharges: [surRow({ id: 's1' })] })], updatedAt: 'moi' }) as never);
+    renderEditor(OWNER);
+    expect(await screen.findByText('Luật phụ phí đã thêm 1 dòng — kiểm lại trước khi lưu.')).toBeTruthy();
+    expect(screen.queryByText(/^Đã tự thêm/)).toBeNull();
+    await userEvent.click(await screen.findByRole('button', { name: 'Lưu nháp' }));
+    await waitFor(() => expect(api.updateContract).toHaveBeenCalled());
+    await waitFor(() => expect(screen.queryByText(/Luật phụ phí đã thêm/)).toBeNull());
+  });
+
+  it('nháp đã lưu có dòng tự thêm: không có dải xanh, dòng con KHÔNG thành khoản riêng ở thẻ "Phụ phí & khoản khác", mở lại số tiền không đổi', async () => {
+    api.getContract.mockResolvedValue(detail('DRAFT', { lines: [line({ surcharges: [surRow({ id: 's1' })] })] }) as never);
+    ruleServer();
+    renderEditor(OWNER);
+    const card = await screen.findByRole('region', { name: /Mẹ cô dâu/ });
+    await within(card).findByText('Phụ phí ngoài giờ');
+    await waitFor(() => expect(api.quoteContract).toHaveBeenCalled());
+    expect(screen.queryByText(/Luật phụ phí đã thêm/)).toBeNull();
+    expect(within(screen.getByRole('region', { name: 'Phụ phí & khoản khác' })).queryByText(/Phụ phí ngoài giờ/)).toBeNull();
+    expect(screen.getAllByText('Phụ phí ngoài giờ')).toHaveLength(1);
+    expect(lastBody()).not.toHaveProperty('surchargeOverrides');
+    expect(lastBody()).not.toHaveProperty('dismissedRuleIds');
+    expect(card.querySelector('.ct-ln__ft b')?.textContent).toBe('700.000 ₫');
+  });
+
+  it('nháp đã lưu có phần sửa số lượng: mở lại gửi đúng phần sửa (không im lặng đổi tiền)', async () => {
+    // Dòng 2 người, luật Ngoài giờ tính theo số lượng (mặc định 2) nhưng người lập đã sửa còn 1.
+    api.getContract.mockResolvedValue(detail('DRAFT', { lines: [line({ quantity: 2, surcharges: [surRow({ id: 's1', quantity: 1 })] })] }) as never);
+    ruleServer();
+    renderEditor(OWNER);
+    await screen.findByRole('region', { name: /Mẹ cô dâu/ });
+    await waitFor(() => expect(lastBody().surchargeOverrides).toEqual([{ ruleId: 'r-gio', quantity: 1 }]));
+  });
+
+  it('hợp đồng cũ (không sự kiện, không phụ phí): thân gửi KHÔNG có trường mới, số tiền như cũ', async () => {
+    api.getContract.mockResolvedValue(detail('DRAFT') as never);
+    api.quoteContract.mockResolvedValue(quote([]) as never);
+    api.updateContract.mockResolvedValue(detail('DRAFT') as never);
+    renderEditor(OWNER);
+    const card = await screen.findByRole('region', { name: /Mẹ cô dâu/ });
+    await waitFor(() => expect(api.quoteContract).toHaveBeenCalled());
+    for (const k of ['occasionId', 'dismissedRuleIds', 'surchargeOverrides']) expect(lastBody()).not.toHaveProperty(k);
+    expect(within(card).queryByLabelText('Phụ phí tự thêm')).toBeNull();
+    expect(await within(card).findByText('600.000 ₫', { selector: '.ct-ln__ft b' })).toBeTruthy();
+    expect(screen.queryByText(/Luật phụ phí đã thêm/)).toBeNull();
+  });
+});
+
+describe('D 3.4 — hợp đồng đã xác nhận', () => {
+  const confirmed = (extra: Record<string, unknown> = {}) =>
+    detail('CONFIRMED', {
+      total: 700_000,
+      lines: [line({ occasionId: 'oc-vq', occasionName: 'Lễ vu quy', surcharges: [surRow({ id: 's1', lineTotal: 100_000 }), surRow({ id: 's2', name: 'Phụ phí ngày lễ', surchargeRuleId: 'r-le', surchargeRuleName: 'Ngày lễ', voidedAt: '2026-10-21T00:00:00Z', voidReason: 'Khách đổi ý' })] })],
+      ...extra,
+    });
+
+  it('dòng tự thêm hiện như dịch vụ phụ kèm "tự thêm theo luật …"; KHÔNG sửa, KHÔNG bỏ; sự kiện và ngày chỉ là chữ; không báo giá', async () => {
+    api.getContract.mockResolvedValue(confirmed() as never);
+    renderEditor(OWNER);
+    const card = await screen.findByRole('region', { name: /Mẹ cô dâu/ });
+    expect(within(card).getByText('Phụ phí ngoài giờ')).toBeTruthy();
+    expect(within(card).getByText('tự thêm theo luật Ngoài giờ')).toBeTruthy();
+    expect(within(card).queryByRole('button', { name: /^Sửa phụ phí/ })).toBeNull();
+    expect(within(card).queryByRole('button', { name: /^Bỏ phụ phí/ })).toBeNull();
+    expect(within(card).queryByLabelText('Sự kiện')).toBeNull();
+    expect(within(card).getByText('Lễ vu quy')).toBeTruthy();
+    expect((within(card).getByLabelText('Ngày của dòng') as HTMLInputElement).disabled).toBe(true);
+    // Phụ phí đã huỷ hiện gạch kèm lý do; "Cộng" chỉ tính dòng chưa huỷ (số máy chủ trả).
+    expect(within(card).getByText('Đã huỷ: Khách đổi ý')).toBeTruthy();
+    expect(card.querySelector('.ct-ln__ft b')?.textContent).toBe('700.000 ₫');
+    expect(api.quoteContract).not.toHaveBeenCalled();
+  });
+
+  it('huỷ một dòng tự thêm: cần contracts.adjust (lễ tân không có nút), bắt buộc lý do, gọi void đúng mã dòng con', async () => {
+    api.getContract.mockResolvedValue(confirmed() as never);
+    api.voidContractLine.mockResolvedValue({ ...confirmed(), adjustments: [] } as never);
+    const { unmount } = renderEditor(SYSTEM_ROLES.receptionist.permissions);
+    await screen.findByRole('region', { name: /Mẹ cô dâu/ });
+    expect(screen.queryByTitle('Huỷ phụ phí này (bắt buộc ghi lý do)')).toBeNull();
+    unmount();
+    renderEditor(OWNER);
+    const card = await screen.findByRole('region', { name: /Mẹ cô dâu/ });
+    await userEvent.click(within(card).getByTitle('Huỷ phụ phí này (bắt buộc ghi lý do)'));
+    const dlg = await screen.findByRole('dialog');
+    await userEvent.click(within(dlg).getByRole('button', { name: 'Huỷ dòng' }));
+    expect(await within(dlg).findByText('Nhập lý do.')).toBeTruthy();
+    await userEvent.type(within(dlg).getByLabelText(/Lý do/), 'Khách xin bớt');
+    await userEvent.click(within(dlg).getByRole('button', { name: 'Huỷ dòng' }));
+    await waitFor(() => expect(api.voidContractLine).toHaveBeenCalledWith('org-1', 'hd-1', 's1', { reason: 'Khách xin bớt' }));
+  });
+});
+
+describe('D 3.4 — thông báo nhỏ', () => {
+  it('tự tắt sau 5 giây, đóng được bằng nút', async () => {
+    vi.useFakeTimers();
+    const { SurchargeToasts, TOAST_MS } = await import('./AutoSurchargeRows');
+    expect(TOAST_MS).toBe(5000);
+    function Host() {
+      const [items, setItems] = useStateForTest([
+        { id: 1, text: 'Đã tự thêm A' },
+        { id: 2, text: 'Đã tự thêm B' },
+      ]);
+      return <SurchargeToasts items={items} onDone={(id) => setItems((l) => l.filter((x) => x.id !== id))} />;
+    }
+    const { act } = await import('@testing-library/react');
+    render(<Host />);
+    expect(screen.getByText('Đã tự thêm A')).toBeTruthy();
+    act(() => {
+      screen.getAllByRole('button', { name: 'Đóng thông báo' })[0]?.click();
+    });
+    expect(screen.queryByText('Đã tự thêm A')).toBeNull();
+    act(() => {
+      vi.advanceTimersByTime(4900);
+    });
+    expect(screen.getByText('Đã tự thêm B')).toBeTruthy();
+    act(() => {
+      vi.advanceTimersByTime(200);
+    });
+    expect(screen.queryByText('Đã tự thêm B')).toBeNull();
   });
 });

@@ -8,7 +8,7 @@ syncSystemRoles(db)
   .then((r) => {
     console.log(
       `Đồng bộ: ${r.organizations} tổ chức; vai trò tạo ${r.rolesCreated}, cập nhật ${r.rolesUpdated}; ` +
-        `phí di chuyển tạo ${r.travelPoliciesCreated}; bộ nhân vật mẫu ${r.subjectSetsSeeded}`,
+        `phí di chuyển tạo ${r.travelPoliciesCreated}; bộ nhân vật mẫu ${r.subjectSetsSeeded}; bộ loại sự kiện mẫu ${r.occasionSetsSeeded}`,
     );
   })
   .finally(() => db.$disconnect());

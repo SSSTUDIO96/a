@@ -569,6 +569,33 @@ describe('logger không in thẻ, chìa, 4 số, mã, cookie', () => {
     expect(text).toContain('[ẩn]');
     expect(text).toContain('/api/v1/portal/thu-log-e2');
   });
+
+  it('che mã chuyển máy nhưng KHÔNG che err.code: lỗi Prisma P2002 vẫn hiện mã trong log "Lỗi không lường trước"', async () => {
+    const lines: string[] = [];
+    const logger = createLogger('trace', { write: (s: string) => void lines.push(s) });
+    const code = newHandoffCode().code;
+    const boom = defineRoute({
+      method: 'post',
+      path: '/portal/thu-loi-e2',
+      scope: 'portal',
+      summary: 'thử lỗi',
+      tag: 'Thử',
+      body: z.object({ code: z.string() }),
+      handler: async ({ body, deps: dd }) => {
+        dd.logger.info({ body, handoffCode: body.code, device: { handoffCode: body.code } }, 'mã chuyển máy (bài thử)');
+        throw Object.assign(new Error('Unique constraint failed'), { code: 'P2002' });
+      },
+    });
+    const app = createApp({ ...deps, logger }, [boom]);
+    await request(app).post('/api/v1/portal/thu-loi-e2').set('x-client', 'portal').set('cookie', `${PORTAL_COOKIE}=${w.token}`).send({ code }).expect(500);
+    const text = lines.join('\n');
+    const errLine = lines.find((l) => l.includes('Lỗi không lường trước'));
+    expect(errLine, 'phải có dòng log lỗi').toBeDefined();
+    expect(JSON.parse(errLine ?? '{}').err.code).toBe('P2002');
+    expect(text).toContain('mã chuyển máy (bài thử)');
+    expect(text.includes(code) || text.includes(code.replace('-', ''))).toBe(false);
+    console.log(`[khung] log lỗi: err.code = ${JSON.parse(errLine ?? '{}').err.code}; mã chuyển máy lộ: ${text.includes(code) ? 1 : 0}/3 chỗ`);
+  });
 });
 
 // ======================================================================================================================

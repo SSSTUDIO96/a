@@ -23,6 +23,7 @@ import {
   Button,
   Card,
   DateInput,
+  IconCheck,
   IconLock,
   IconPlus,
   SkeletonText,
@@ -32,6 +33,7 @@ import {
   WithTooltip,
   formatVnd,
 } from '../../ui';
+import { SurchargeToasts, type SurchargeToast } from './AutoSurchargeRows';
 import { CatalogPicker } from './CatalogPicker';
 import { CustomerBlock } from './CustomerBlock';
 import { ExtraDialog, type ExtraTarget } from './ExtraDialog';
@@ -40,7 +42,14 @@ import { ExtrasCard, type ExtraRow } from './ExtrasCard';
 import { IconWarn } from './icons';
 import {
   EMPTY_DRAFT,
+  appliedEntries,
+  autoNotesByDraft,
   buildBody,
+  dayOfLine,
+  legacyAddedCount,
+  surchargeToasts,
+  type AppliedEntry,
+  type SurchargeOverrideDraft,
   conflictsForLine,
   confirmBlockedReason,
   addedLabel,
@@ -153,6 +162,8 @@ export function ContractEditor({ orgId, slug, tz, has, contractId, kindSwitch, o
 
   const [load, setLoad] = useState<LoadState>(contractId ? { status: 'loading' } : { status: 'ready' });
   const [detail, setDetail] = useState<ContractDetail | null>(null);
+  // Hợp đồng vừa đọc về, chờ Bảng giá (luật) nạp xong mới dựng nháp — để biết dòng phụ phí nào đã sửa số lượng.
+  const [fetched, setFetched] = useState<ContractDetail | null>(null);
   const [draft, setDraft] = useState<ContractDraft>(EMPTY_DRAFT);
   const [savedSig, setSavedSig] = useState<string | null>(null);
   const [showErrors, setShowErrors] = useState(false);
@@ -180,6 +191,13 @@ export function ContractEditor({ orgId, slug, tz, has, contractId, kindSwitch, o
   // Đổi mỗi lần màn TỰ đặt lại nháp (nạp, tải bản mới, dùng lại bản cũ) → ô tiền/km bỏ chữ lỗi cũ dù số không đổi.
   const [resetKey, setResetKey] = useState(0);
   const idemKey = useRef(newIdempotencyKey());
+  // Phụ phí tự thêm: mốc để so báo thay đổi (null = chưa có mốc: nháp cũ vừa mở), dải xanh "nháp cũ", thông báo 5 giây.
+  const knownApplied = useRef<Map<string, AppliedEntry> | null>(new Map());
+  const legacyChecked = useRef(false);
+  const ruleNames = useRef(new Map<string, string>());
+  const toastSeq = useRef(0);
+  const [legacy, setLegacy] = useState<number | null>(null);
+  const [toasts, setToasts] = useState<SurchargeToast[]>([]);
   const pickRef = useRef<HTMLDivElement>(null);
 
   // ---- Hợp đồng mới chọn sẵn khách: /hop-dong/moi?customerId=… (màn Khách hàng dẫn sang) ----
@@ -209,10 +227,14 @@ export function ContractEditor({ orgId, slug, tz, has, contractId, kindSwitch, o
       // Từ một hợp đồng sang "Lập hợp đồng" mới: bắt đầu trắng, khoá chống gửi trùng mới.
       if (detail !== null) {
         setDetail(null);
+        setFetched(null);
         setDraft(EMPTY_DRAFT);
         setSavedSig(null);
         setShowErrors(false);
         setAlert(null);
+        setLegacy(null);
+        knownApplied.current = new Map();
+        legacyChecked.current = false;
         idemKey.current = newIdempotencyKey();
       }
       setLoad({ status: 'ready' });
@@ -222,21 +244,33 @@ export function ContractEditor({ orgId, slug, tz, has, contractId, kindSwitch, o
     const controller = new AbortController();
     setLoad({ status: 'loading' });
     getContract(orgId, contractId, controller.signal)
-      .then((d) => {
-        const dx = d as ContractDetail;
-        const dr = draftFromDetail(dx, tz);
-        setDetail(dx);
-        setDraft(dr);
-        setSavedSig(sig(dr, tz));
-        setResetKey((k) => k + 1);
-        setLoad({ status: 'ready' });
-      })
+      .then((d) => setFetched(d as ContractDetail))
       .catch((error: unknown) => {
         if (!controller.signal.aborted) setLoad({ status: 'error', error });
       });
     return () => controller.abort();
     // detail?.id đọc để bỏ qua nạp lại; không phải phụ thuộc.
   }, [orgId, contractId, tz]);
+
+  // Dựng nháp từ hợp đồng đã đọc: đợi Bảng giá nạp xong (hoặc không có quyền đọc Bảng giá) để biết luật nào tính theo số lượng dòng.
+  const catalogSettled = !has('catalog.read') || catalogState.status !== 'loading';
+  const rulesRef = useRef<readonly { id: string; perQuantity: boolean; name: string }[]>([]);
+  rulesRef.current = cat?.rules ?? [];
+  const perQuantityOf = useCallback((id: string): boolean | null => rulesRef.current.find((r) => r.id === id)?.perQuantity ?? null, []);
+  useEffect(() => {
+    if (!fetched || !catalogSettled) return;
+    const dr = draftFromDetail(fetched, tz, perQuantityOf);
+    for (const l of fetched.lines) for (const sc of l.surcharges) if (sc.surchargeRuleId && sc.surchargeRuleName) ruleNames.current.set(sc.surchargeRuleId, sc.surchargeRuleName);
+    setDetail(fetched);
+    setDraft(dr);
+    setSavedSig(sig(dr, tz));
+    setResetKey((k) => k + 1);
+    setLegacy(null);
+    knownApplied.current = null;
+    legacyChecked.current = false;
+    setFetched(null);
+    setLoad({ status: 'ready' });
+  }, [fetched, catalogSettled, tz, perQuantityOf]);
 
   const status = detail?.status ?? null;
   const ab = contractAbilities(has, status);
@@ -278,6 +312,46 @@ export function ContractEditor({ orgId, slug, tz, has, contractId, kindSwitch, o
   const totalsQuote = plan.complete ? quoteData : null;
   const pending = quote.loading;
   const quoteErrorLine = quoteBody ? draftIndexOfQuoteLine(plan, quote.errorLine) : null;
+  // Ghi chú của máy chủ về luật phụ phí (bỏ qua / bỏ phần sửa) — chỉ khi bảng tính còn khớp đúng các dòng đang nhập.
+  const autoNotes = useMemo(
+    () => (plan.draft && quoteData && quoteData.lines.length === plan.draft.lines.length ? autoNotesByDraft(plan, quoteData.autoSurcharge) : new Map()),
+    [plan, quoteData],
+  );
+  const ruleName = useCallback(
+    (id: string) => cat?.rules.find((r) => r.id === id)?.name ?? ruleNames.current.get(id) ?? 'một luật phụ phí',
+    [cat],
+  );
+
+  // ---- Báo thay đổi phụ phí tự thêm (mỗi lần máy chủ trả bảng tính mới) ----
+  // Bảng tính về = đúng với thân đang gửi (thay đổi mới thì yêu cầu cũ bị huỷ), nên so với draft / plan hiện tại là an toàn.
+  const latest = useRef({ draft, plan, subjectName, detail, draftMode });
+  latest.current = { draft, plan, subjectName, detail, draftMode };
+  useEffect(() => {
+    const data = quote.data as ContractQuote | null;
+    const L = latest.current;
+    if (!data || !L.draftMode || !L.plan.draft || data.lines.length !== L.plan.draft.lines.length) return;
+    const next = appliedEntries(L.draft, L.plan, data.autoSurcharge, L.subjectName);
+    const prev = knownApplied.current;
+    if (prev) {
+      const texts = surchargeToasts(prev, next, {
+        lineExists: (k) => L.draft.lines.some((l) => l.key === k),
+        dismissed: (k, ruleId) => {
+          const l = L.draft.lines.find((x) => x.key === k);
+          return l !== undefined && isPlaced(l) && l.dismissedRuleIds.includes(ruleId);
+        },
+        report: data.autoSurcharge,
+      });
+      if (texts.length > 0) setToasts((t) => [...t, ...texts.map((text) => ({ id: (toastSeq.current += 1), text }))].slice(-4));
+    }
+    knownApplied.current = next;
+    // Nháp cũ mở lần đầu: luật thêm dòng mà bản đã lưu chưa có → dải xanh (không bắn thông báo từng dòng).
+    if (!legacyChecked.current && L.detail) {
+      legacyChecked.current = true;
+      const n = legacyAddedCount(L.detail.lines, L.draft, next);
+      setLegacy(n > 0 ? n : null);
+    }
+  }, [quote.data]);
+  const closeToast = useCallback((id: number) => setToasts((t) => t.filter((x) => x.id !== id)), []);
 
   // ---- Lỗi hiện dưới ô ----
   const quoteMoneyError = quoteBody && quote.error ? moneyFieldOf(quote.error) : null;
@@ -361,6 +435,20 @@ export function ContractEditor({ orgId, slug, tz, has, contractId, kindSwitch, o
   const patchLine = (key: string, patch: Partial<DraftLine>) =>
     update((d) => ({ ...d, lines: d.lines.map((l) => (l.key === key ? ({ ...l, ...patch } as DraftLine) : l)) }));
   const removeLine = (key: string) => update((d) => ({ ...d, lines: d.lines.filter((l) => l.key !== key) }));
+  const updatePlaced = (key: string, fn: (l: PlacedDraft) => Partial<PlacedDraft>) =>
+    update((d) => ({ ...d, lines: d.lines.map((l) => (l.key === key && isPlaced(l) ? { ...l, ...fn(l) } : l)) }));
+  // Bỏ luật ở dòng này: ghi vào dismissedRuleIds (máy chủ không tự thêm lại, kể cả đổi giờ đi rồi đổi lại); phần sửa của luật đó bỏ theo
+  // (máy chủ từ chối luật vừa bị bỏ vừa được sửa).
+  const dismissRule = (key: string, ruleId: string, name: string) => {
+    ruleNames.current.set(ruleId, name);
+    updatePlaced(key, (l) => ({
+      dismissedRuleIds: [...l.dismissedRuleIds.filter((x) => x !== ruleId), ruleId],
+      surchargeOverrides: l.surchargeOverrides.filter((o) => o.ruleId !== ruleId),
+    }));
+  };
+  const restoreRule = (key: string, ruleId: string) => updatePlaced(key, (l) => ({ dismissedRuleIds: l.dismissedRuleIds.filter((x) => x !== ruleId) }));
+  const overrideRule = (key: string, ruleId: string, o: SurchargeOverrideDraft | null) =>
+    updatePlaced(key, (l) => ({ surchargeOverrides: [...l.surchargeOverrides.filter((x) => x.ruleId !== ruleId), ...(o ? [o] : [])] }));
 
   const addPackage = (pkg: ServicePackage) => {
     setSheetOpen(false);
@@ -370,8 +458,12 @@ export function ContractEditor({ orgId, slug, tz, has, contractId, kindSwitch, o
     }
     if (!cat) return;
     const studio = cat.studios.find((s) => s.isDefault) ?? cat.studios[0] ?? null;
-    const line = newPackageLine(pkg, studio?.id ?? null, cat.policy.defaultMode);
-    update((d) => ({ ...d, lines: [...d.lines.filter(isPlaced), line, ...d.lines.filter((l) => !isPlaced(l))] }));
+    // Dòng mới theo sự kiện và ngày của dòng đặt chỗ ngay trên (bản vẽ D 3.4).
+    update((d) => {
+      const placed = d.lines.filter(isPlaced);
+      const line = newPackageLine(pkg, studio?.id ?? null, cat.policy.defaultMode, placed[placed.length - 1] ?? null);
+      return { ...d, lines: [...placed, line, ...d.lines.filter((l) => !isPlaced(l))] };
+    });
   };
   const addSurcharge = (svc: Service) => {
     setSheetOpen(false);
@@ -461,7 +553,7 @@ export function ContractEditor({ orgId, slug, tz, has, contractId, kindSwitch, o
     setReloading(true);
     try {
       const fresh = (await getContract(orgId, detail.id)) as ContractDetail;
-      const theirs = draftFromDetail(fresh, tz);
+      const theirs = draftFromDetail(fresh, tz, perQuantityOf);
       const mine = draft;
       setDetail(fresh);
       setDraft(theirs);
@@ -514,6 +606,7 @@ export function ContractEditor({ orgId, slug, tz, has, contractId, kindSwitch, o
         setDetail(d);
         setSavedSig(sig(draft, tz));
         setStale(null);
+        setLegacy(null);
       }
       // Máy chủ chỉ giữ ghi chú/khách theo bản đã lưu; giữ nguyên nháp đang nhập.
       return d;
@@ -658,7 +751,7 @@ export function ContractEditor({ orgId, slug, tz, has, contractId, kindSwitch, o
     : (detail?.lines ?? [])
         .map((v, i) => ({ v, i }))
         .filter(({ v }) => v.kind === 'PACKAGE' || v.kind === 'SERVICE')
-        .map(({ v, i }) => ({ l: placedFromView(v, tz), i, view: v as GroupedContractLine<string | null> }));
+        .map(({ v, i }) => ({ l: placedFromView(v, tz, { eventDate: draft.eventDate, perQuantityOf }), i, view: v as GroupedContractLine<string | null> }));
 
   const extraRows: ExtraRow[] = draftMode
     ? draft.lines.flatMap((l, i): ExtraRow[] =>
@@ -894,6 +987,13 @@ export function ContractEditor({ orgId, slug, tz, has, contractId, kindSwitch, o
             </div>
           )}
 
+          {legacy !== null && draftMode && (
+            <div className="ct-okband ct-okband--new" role="status" data-o="luat-da-them">
+              <IconCheck />
+              <span>Luật phụ phí đã thêm {legacy} dòng — kiểm lại trước khi lưu.</span>
+            </div>
+          )}
+
           {status === 'CONFIRMED' && (
             <div className="ct-okband" role="status">
               <IconLock />
@@ -916,8 +1016,9 @@ export function ContractEditor({ orgId, slug, tz, has, contractId, kindSwitch, o
           {placedCards.map(({ l, i, view }) => {
             const pkg = cat?.packages.find((p) => p.id === l.refId) ?? null;
             const appt = !draftMode ? detail?.appointments.find((a) => a.contractLineId === view?.id) : undefined;
-            const pickBlocked = !draft.eventDate
-              ? 'Chọn ngày sự kiện trước.'
+            const lineDay = dayOfLine(l, draft.eventDate);
+            const pickBlocked = !lineDay
+              ? 'Chọn ngày cho dòng hoặc ngày sự kiện trước.'
               : !l.start || !l.end
                 ? 'Nhập giờ trước.'
                 : l.end <= l.start
@@ -950,6 +1051,18 @@ export function ContractEditor({ orgId, slug, tz, has, contractId, kindSwitch, o
                 pickBlockedReason={pickBlocked}
                 scheduleHref={appt ? `/${slug}/lich?ca=${appt.id}` : null}
                 onVoid={ab.canVoidLine && view?.id ? () => setVoidTarget({ id: view.id as string, name: view.name }) : null}
+                eventDate={draft.eventDate}
+                occasions={cat || !draftMode || !ab.canEdit ? { options: cat?.occasions ?? null, listHref: has('catalog.write') ? `/${slug}/bang-gia/su-kien` : null, savedName: l.occasionId ? (detail?.lines.find((x) => x.occasionId === l.occasionId)?.occasionName ?? null) : null } : undefined}
+                surcharge={{
+                  ruleName,
+                  perQuantityOf,
+                  notes: draftMode ? autoNotes.get(i) : undefined,
+                  noteError: (k) => errors[`lines.${i}.surchargeOverrides.${k}.note`],
+                  onDismiss: (ruleId, name) => dismissRule(l.key, ruleId, name),
+                  onRestore: (ruleId) => restoreRule(l.key, ruleId),
+                  onOverride: (ruleId, o) => overrideRule(l.key, ruleId, o),
+                  onVoid: ab.canVoidLine ? (row) => (row.id ? setVoidTarget({ id: row.id, name: row.name }) : undefined) : null,
+                }}
               />
             );
           })}
@@ -1098,16 +1211,16 @@ export function ContractEditor({ orgId, slug, tz, has, contractId, kindSwitch, o
           tz={tz}
           phone={phone}
           query={
-            draft.eventDate && pickerLine.start && pickerLine.end
+            dayOfLine(pickerLine, draft.eventDate) && pickerLine.start && pickerLine.end
               ? {
-                  startsAt: zonedIso(draft.eventDate, pickerLine.start, tz),
-                  endsAt: zonedIso(draft.eventDate, pickerLine.end, tz),
+                  startsAt: zonedIso(dayOfLine(pickerLine, draft.eventDate), pickerLine.start, tz),
+                  endsAt: zonedIso(dayOfLine(pickerLine, draft.eventDate), pickerLine.end, tz),
                   ...(detail ? { excludeContractId: detail.id } : {}),
                 }
               : null
           }
           initial={pickerLine.staff}
-          subtitle={`${subjectName(pickerLine.subjectId) ?? pickerLine.name} · ${pickerLine.start} – ${pickerLine.end} · ${weekdayShort(draft.eventDate)}`}
+          subtitle={`${subjectName(pickerLine.subjectId) ?? pickerLine.name} · ${pickerLine.start} – ${pickerLine.end} · ${weekdayShort(dayOfLine(pickerLine, draft.eventDate))}`}
           localConflicts={conflictsForLine(draft, pickerLine.key, subjectName)}
           naming={naming}
           onConfirm={(staff, ppl) => {
@@ -1204,6 +1317,7 @@ export function ContractEditor({ orgId, slug, tz, has, contractId, kindSwitch, o
           }
         }}
       />
+      <SurchargeToasts items={toasts} onDone={closeToast} />
     </div>
   );
 }

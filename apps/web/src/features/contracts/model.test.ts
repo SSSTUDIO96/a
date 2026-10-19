@@ -1,12 +1,25 @@
 import { describe, expect, it } from 'vitest';
 import { SYSTEM_ROLES, type Permission } from '@makeup/shared';
 import { ApiError } from '../../api/errors';
-import type { AvailabilityShift, StaffMember } from '../../api/types';
+import type { AutoSurchargeReport, AvailabilityShift, StaffMember } from '../../api/types';
 import { pickableStaff } from './useStaffAvailability';
 import {
   EMPTY_DRAFT,
+  appliedEntries,
   autoEndTime,
+  autoNotesByDraft,
   buildBody,
+  conflictsForLine,
+  dateOf,
+  draftFromDetail,
+  groupTotal,
+  legacyAddedCount,
+  lineInput,
+  overridesFromView,
+  placedFromView,
+  removedText,
+  skippedText,
+  surchargeToasts,
   draftIndexesOfLineIds,
   linesWithoutTime,
   noTimeBlockedReason,
@@ -481,5 +494,213 @@ describe('M1 (biên bản nghiệm thu lại): nhân vật đang ẩn', () => {
     expect(viewsByDraft(plan, ['v-cd'])).toEqual([null, 'v-cd']);
     expect(draftIndexOfQuoteLine(plan, 0)).toBe(1);
     expect(remapLineFields({ 'lines.0.travel.amount': 'x', discount: 'y' }, plan)).toEqual({ 'lines.1.travel.amount': 'x', discount: 'y' });
+  });
+});
+
+
+// ---------------------------------------------------------------------------------------------
+// Bản vẽ D 3.4 (gói W3): sự kiện, ngày của dòng, phụ phí tự thêm.
+const view = (over: Record<string, unknown> = {}) =>
+  ({
+    id: 'l1', kind: 'PACKAGE', name: 'Phù dâu', serviceId: null, packageId: 'p-pd', priceVersionId: 'pv', subjectId: 's-pd', subjectName: 'Phù dâu',
+    locationType: 'STUDIO', studioLocationId: 'st-1', address: null, latitude: null, longitude: null,
+    scheduledStart: null, scheduledEnd: null, quantity: 1, unitPrice: 400_000, lineDiscount: 0, lineTotal: 400_000,
+    travelMode: null, distanceKm: null, perKmAmount: null, note: null, courseClassId: null,
+    occasionId: null, occasionName: null, surchargeRuleId: null, surchargeRuleName: null, dismissedRuleIds: [],
+    addedAfterConfirm: false, createdAt: null, voidedAt: null, voidReason: null, staff: [], staffWarnings: [], travelBreakdown: null,
+    addons: [], travel: null, surcharges: [],
+    ...over,
+  }) as never as Parameters<typeof placedFromView>[0];
+
+const sur = (over: Record<string, unknown> = {}) =>
+  view({ id: 's1', kind: 'SURCHARGE', name: 'Phụ phí ngoài giờ', serviceId: 'sv-gio', packageId: null, surchargeRuleId: 'r-gio', surchargeRuleName: 'Ngoài giờ', unitPrice: 100_000, lineTotal: 100_000, ...over });
+
+describe('D 3.4: ngày riêng của dòng', () => {
+  it('dòng có ngày riêng gửi scheduledStart đúng ngày đó; dòng không có thì theo ngày sự kiện', () => {
+    const rieng = pkgLine({ date: '2026-10-19', start: '08:00', end: '09:00' });
+    const theo = pkgLine({ start: '08:00', end: '09:00' });
+    const body = buildBody(draftWith([rieng, theo], { eventDate: '2026-10-22' }), TZ);
+    expect(body?.lines[0]).toMatchObject({ scheduledStart: '2026-10-19T08:00:00+07:00', scheduledEnd: '2026-10-19T09:00:00+07:00' });
+    expect(body?.lines[1]).toMatchObject({ scheduledStart: '2026-10-22T08:00:00+07:00' });
+  });
+
+  it('đổi ngày sự kiện kéo theo dòng date="" và KHÔNG kéo dòng có ngày riêng', () => {
+    const lines = [pkgLine({ date: '2026-10-19', start: '08:00', end: '09:00' }), pkgLine({ start: '08:00', end: '09:00' })];
+    const a = buildBody(draftWith(lines, { eventDate: '2026-10-22' }), TZ);
+    const b = buildBody(draftWith(lines, { eventDate: '2026-11-05' }), TZ);
+    expect(a?.lines[0]).toEqual(b?.lines[0]);
+    expect(a?.lines[1]).toMatchObject({ scheduledStart: '2026-10-22T08:00:00+07:00' });
+    expect(b?.lines[1]).toMatchObject({ scheduledStart: '2026-11-05T08:00:00+07:00' });
+  });
+
+  it('có giờ mà không có ngày nào: không gửi giờ, báo ở ô ngày của dòng, không chặn bảng tính; có ngày riêng thì hết lỗi', () => {
+    const l = pkgLine({ start: '08:00', end: '09:00' });
+    const d = draftWith([l], { eventDate: '' });
+    const errs = validateDraft(d, ctx(0));
+    expect(errs['lines.0.date']).toBe('Chọn ngày cho dòng hoặc ngày sự kiện của hợp đồng');
+    expect(errs.eventDate).toBeUndefined();
+    expect(buildBody(d, TZ)?.lines[0]).not.toHaveProperty('scheduledStart');
+    expect(quotePlan(d, errs).draft).not.toBeNull();
+    expect(validateDraft(draftWith([{ ...l, date: '2026-10-19' }], { eventDate: '' }), ctx(0))).toEqual({});
+  });
+
+  it('thợ trùng giờ chỉ tính khi cùng NGÀY (ngày riêng của dòng)', () => {
+    const staff = [{ membershipId: 'm1', role: 'PRIMARY' as const }];
+    const a = pkgLine({ key: 'a', start: '08:00', end: '09:00' });
+    const sameDay = pkgLine({ key: 'b', start: '08:30', end: '09:30', staff });
+    const otherDay = pkgLine({ key: 'c', date: '2026-10-19', start: '08:30', end: '09:30', staff });
+    expect(conflictsForLine(draftWith([a, sameDay]), 'a', () => null).get('m1')).toHaveLength(1);
+    expect(conflictsForLine(draftWith([a, otherDay]), 'a', () => null).size).toBe(0);
+  });
+
+  it('dòng mới thêm từ Bảng giá lấy sự kiện và ngày của dòng đặt chỗ ngay trên', () => {
+    const above = pkgLine({ occasionId: 'oc-vq', date: '2026-10-19' });
+    const nl = newPackageLine({ id: 'p2', name: 'Mẹ cô dâu', subjectId: null, locationTypes: [] }, 'st-1', 'PER_KM', above);
+    expect(nl).toMatchObject({ occasionId: 'oc-vq', date: '2026-10-19' });
+    expect(newPackageLine({ id: 'p2', name: 'x', subjectId: null, locationTypes: [] }, null, 'PER_KM')).toMatchObject({ occasionId: null, date: '' });
+  });
+
+  it('mở hợp đồng đã lưu: date = ngày của dòng nếu khác ngày sự kiện, bằng thì ""', () => {
+    const o = { eventDate: '2026-10-22' };
+    expect(placedFromView(view({ scheduledStart: '2026-10-19T01:00:00.000Z', scheduledEnd: '2026-10-19T02:00:00.000Z' }), TZ, o).date).toBe('2026-10-19');
+    expect(placedFromView(view({ scheduledStart: '2026-10-22T01:00:00.000Z', scheduledEnd: '2026-10-22T02:00:00.000Z' }), TZ, o).date).toBe('');
+    expect(placedFromView(view(), TZ, o).date).toBe('');
+    // 23:00 UTC ngày 21 = 06:00 ngày 22 theo giờ tổ chức → trùng ngày sự kiện.
+    expect(dateOf('2026-10-21T23:00:00.000Z', TZ)).toBe('2026-10-22');
+    expect(placedFromView(view({ scheduledStart: '2026-10-21T23:00:00.000Z', scheduledEnd: '2026-10-22T00:00:00.000Z' }), TZ, o).date).toBe('');
+  });
+});
+
+describe('D 3.4: sự kiện và phần sửa phụ phí trong thân gửi máy chủ', () => {
+  it('gửi occasionId, surchargeOverrides (chỉ phần tử có sửa), dismissedRuleIds khi khác rỗng; rỗng thì không gửi', () => {
+    const trong = lineInput(pkgLine(), '', TZ);
+    expect(trong).not.toHaveProperty('occasionId');
+    expect(trong).not.toHaveProperty('surchargeOverrides');
+    expect(trong).not.toHaveProperty('dismissedRuleIds');
+    const co = lineInput(
+      pkgLine({
+        occasionId: 'oc-vq',
+        dismissedRuleIds: ['r-le'],
+        surchargeOverrides: [
+          { ruleId: 'r-gio', quantity: 3, unitPrice: 50_000, note: ' khách quen ' },
+          { ruleId: 'r-khong-sua', quantity: null, unitPrice: null, note: '' },
+        ],
+      }),
+      '',
+      TZ,
+    );
+    expect(co).toMatchObject({
+      occasionId: 'oc-vq',
+      dismissedRuleIds: ['r-le'],
+      surchargeOverrides: [{ ruleId: 'r-gio', quantity: 3, unitPrice: 50_000, note: 'khách quen' }],
+    });
+  });
+
+  it('ghi đè giá bắt buộc ghi chú: thiếu thì lỗi ở đúng phần tử, chặn bảng tính; có thì hết', () => {
+    const l = pkgLine({ surchargeOverrides: [{ ruleId: 'r-gio', quantity: null, unitPrice: 50_000, note: '  ' }] });
+    const errs = validateDraft(draftWith([l]), ctx(0));
+    expect(errs['lines.0.surchargeOverrides.0.note']).toBe('Ghi đè giá phải ghi lý do.');
+    expect(quotePlan(draftWith([l]), errs).draft).toBeNull();
+    const ok = pkgLine({ surchargeOverrides: [{ ruleId: 'r-gio', quantity: null, unitPrice: 50_000, note: 'khách quen' }] });
+    expect(validateDraft(draftWith([ok]), ctx(0))).toEqual({});
+  });
+});
+
+describe('D 3.4: dòng phụ phí tự thêm không phải dòng gốc', () => {
+  const detailOf = (lines: unknown[]) =>
+    ({
+      id: 'hd', eventDate: '2026-10-21T17:00:00.000Z',
+      customer: { id: 'c', fullName: 'A', phone: null, email: null },
+      discount: 0, depositRequired: 0, notes: null, lines,
+    }) as never as Parameters<typeof draftFromDetail>[0];
+
+  it('mở hợp đồng đã lưu: dòng con có surchargeRuleId không thành SurchargeDraft; phụ phí nhập tay (gốc) vẫn thành', () => {
+    const goc = view({ surcharges: [sur()] });
+    const tay = view({ id: 'l2', kind: 'SURCHARGE', name: 'Phụ phí tay', serviceId: 'sv-x', packageId: null });
+    // Kể cả khi dòng con bị trả phẳng ở mảng gốc (không bao giờ thành dòng gốc nhập tay).
+    const phang = sur({ id: 's9' });
+    const d = draftFromDetail(detailOf([goc, tay, phang]), TZ);
+    expect(d.lines.map((l) => l.kind)).toEqual(['PACKAGE', 'SURCHARGE']);
+    expect(d.lines[1]).toMatchObject({ serviceId: 'sv-x' });
+  });
+
+  it('cộng dòng = gói + dịch vụ phụ + di chuyển + phụ phí tự thêm CHƯA huỷ — mọi số do máy chủ trả', () => {
+    const l = view({ lineTotal: 400_000, addons: [view({ lineTotal: 50_000 })], surcharges: [sur({ lineTotal: 100_000 }), sur({ id: 's2', lineTotal: 70_000, voidedAt: '2026-10-20T00:00:00Z' })] });
+    expect(groupTotal(l as never)).toBe(550_000);
+  });
+
+  it('phần sửa đọc lại từ dòng đã lưu: giá không trỏ phiên bản = ghi đè; số lượng khác mặc định của luật = sửa', () => {
+    const pq = (id: string) => (id === 'r-gio' ? true : id === 'r-le' ? false : null);
+    const l = view({
+      quantity: 2,
+      surcharges: [
+        sur({ quantity: 2 }), // perQuantity, bằng số lượng dòng → mặc định
+        sur({ id: 's2', surchargeRuleId: 'r-le', surchargeRuleName: 'Ngày lễ', quantity: 1 }), // không perQuantity, 1 → mặc định
+        sur({ id: 's3', surchargeRuleId: 'r-x', quantity: 2, priceVersionId: null, unitPrice: 30_000, note: 'bạn thân' }), // luật lạ + giá ghi đè
+      ],
+    });
+    expect(overridesFromView(l, pq)).toEqual([{ ruleId: 'r-x', quantity: 2, unitPrice: 30_000, note: 'bạn thân' }]);
+    // Số lượng 1 ở luật perQuantity khi dòng có 2 người = đã sửa.
+    expect(overridesFromView(view({ quantity: 2, surcharges: [sur({ quantity: 1 })] }), pq)).toEqual([{ ruleId: 'r-gio', quantity: 1, unitPrice: null, note: '' }]);
+    // Không biết luật mà dòng nhiều người: GIỮ số đã lưu (không đoán, khỏi đổi tiền).
+    expect(overridesFromView(view({ quantity: 2, surcharges: [sur({ quantity: 2 })] }))).toEqual([{ ruleId: 'r-gio', quantity: 2, unitPrice: null, note: '' }]);
+  });
+
+  it('mở lại: sự kiện, luật đã bỏ và phần sửa trở về nháp', () => {
+    const l = view({ occasionId: 'oc-vq', dismissedRuleIds: ['r-le'], surcharges: [sur({ priceVersionId: null, unitPrice: 20_000, note: 'x' })] });
+    const d = draftFromDetail(detailOf([l]), TZ);
+    expect(d.lines[0]).toMatchObject({ occasionId: 'oc-vq', dismissedRuleIds: ['r-le'], surchargeOverrides: [{ ruleId: 'r-gio', unitPrice: 20_000, note: 'x' }] });
+  });
+});
+
+describe('D 3.4: báo của máy chủ', () => {
+  it('lý do bỏ qua (skipped) đủ bốn loại, tiếng Việt', () => {
+    expect(skippedText({ reason: 'NO_PRICE', ruleName: 'Ngoài giờ' })).toBe('Luật "Ngoài giờ" khớp nhưng phụ phí chưa có giá — chưa thêm.');
+    expect(skippedText({ reason: 'SERVICE_UNAVAILABLE', ruleName: 'Ngoài giờ' })).toBe('Luật "Ngoài giờ" khớp nhưng phụ phí đang ngừng — chưa thêm.');
+    expect(skippedText({ reason: 'MANUAL_LINE_EXISTS', ruleName: 'Ngoài giờ' })).toMatch(/đã có dòng phụ phí cùng loại nhập tay/);
+    expect(skippedText({ reason: 'SAME_SERVICE', ruleName: 'Ngày lễ', by: 'Ngoài giờ' })).toMatch(/luật "Ngoài giờ" đứng trước/);
+    expect(removedText({ reason: 'RULE_INACTIVE', ruleName: 'Ngày lễ' })).toMatch(/luật đã tắt/);
+  });
+
+  const report = (over: Partial<AutoSurchargeReport> = {}): AutoSurchargeReport => ({ applied: [], removed: [], skipped: [], ...over });
+  const applied = (line: number, ruleId = 'r-gio', ruleName = 'Ngoài giờ') => ({ line, ruleId, ruleName, serviceName: 'Phụ phí ngoài giờ', quantity: 1, lineTotal: 100_000, overridden: false });
+
+  it('ghi chú theo vị trí dòng NHÁP (dòng bị bỏ khỏi bảng tính thì lệch vị trí đúng chỗ)', () => {
+    const a = pkgLine({ key: 'a', subjectId: 's-hidden' });
+    const b = pkgLine({ key: 'b' });
+    const d = draftWith([a, b]);
+    const plan = quotePlan(d, { 'lines.0.subjectId': 'ẩn' });
+    expect(plan.toQuote).toEqual([null, 0]);
+    const notes = autoNotesByDraft(plan, report({ skipped: [{ line: 0, ruleId: 'r-le', ruleName: 'Ngày lễ', reason: 'NO_PRICE' }] }));
+    expect([...notes.keys()]).toEqual([1]);
+    expect(notes.get(1)?.skipped[0]?.ruleName).toBe('Ngày lễ');
+  });
+
+  it('thông báo: luật mới vào → "Đã tự thêm …"; luật rơi → "Đã bỏ … vì …"; người lập tự bỏ / bỏ cả dòng / bị bỏ qua thì im', () => {
+    const l = pkgLine({ key: 'a', name: 'Phù dâu', subjectId: null });
+    const d = draftWith([l]);
+    const plan = quotePlan(d, {});
+    const none = appliedEntries(d, plan, report(), () => null);
+    const one = appliedEntries(d, plan, report({ applied: [applied(0)] }), () => null);
+    const base = { lineExists: () => true, dismissed: () => false, report: report() };
+    expect(surchargeToasts(none, one, base)).toEqual(['Đã tự thêm Phụ phí ngoài giờ cho dòng Phù dâu theo luật Ngoài giờ']);
+    expect(surchargeToasts(one, one, base)).toEqual([]);
+    expect(surchargeToasts(one, none, base)).toEqual(['Đã bỏ Phụ phí ngoài giờ ở dòng Phù dâu vì không còn khớp luật']);
+    expect(surchargeToasts(one, none, { ...base, report: report({ removed: [{ line: 0, ruleId: 'r-gio', ruleName: 'Ngoài giờ', reason: 'RULE_INACTIVE' }] }) })).toEqual([
+      'Đã bỏ Phụ phí ngoài giờ ở dòng Phù dâu vì luật đã tắt',
+    ]);
+    expect(surchargeToasts(one, none, { ...base, dismissed: () => true })).toEqual([]);
+    expect(surchargeToasts(one, none, { ...base, lineExists: () => false })).toEqual([]);
+    expect(surchargeToasts(one, none, { ...base, report: report({ skipped: [{ line: 0, ruleId: 'r-gio', ruleName: 'Ngoài giờ', reason: 'NO_PRICE' }] }) })).toEqual([]);
+  });
+
+  it('nháp cũ: đếm luật tự thêm mà bản đã lưu chưa có (dải xanh)', () => {
+    const l = pkgLine({ key: 'a' });
+    const d = draftWith([l]);
+    const plan = quotePlan(d, {});
+    const next = appliedEntries(d, plan, report({ applied: [applied(0), applied(0, 'r-le', 'Ngày lễ')] }), () => null);
+    expect(legacyAddedCount([view()], d, next)).toBe(2);
+    expect(legacyAddedCount([view({ surcharges: [sur()] })], d, next)).toBe(1);
+    expect(legacyAddedCount([view({ surcharges: [sur(), sur({ id: 's2', surchargeRuleId: 'r-le' })] })], d, next)).toBe(0);
   });
 });

@@ -1,7 +1,8 @@
-import type { LocationType, MakeupSubject, ServicePackage, StudioLocation, TravelFeePolicy } from '../../api/types';
+import type { LocationType, MakeupSubject, OccasionView, ServicePackage, StudioLocation, TravelFeePolicy } from '../../api/types';
 import {
   Button,
   CheckChip,
+  DateInput,
   IconClose,
   IconLock,
   Qty,
@@ -13,10 +14,13 @@ import {
   Tooltip,
   formatVnd,
 } from '../../ui';
+import { AutoSurchargeRows, type AutoSurchargeRowsProps } from './AutoSurchargeRows';
+import { OccasionPicker, OCCASION_TIP } from './OccasionPicker';
 import {
   LOCATION_LABEL,
   LOCATION_ORDER,
   autoEndTime,
+  displayDate,
   groupTotal,
   lineKey,
   needsTravel,
@@ -63,6 +67,13 @@ export interface PackageLineCardProps {
   scheduleHref: string | null;
   // Đã xác nhận: nút "Huỷ dòng" (quyền contracts.adjust).
   onVoid: (() => void) | null;
+  // Bản vẽ D 3.4 — ba phần mới, chỉ hiện khi nơi dùng truyền vào (hộp "Thêm phát sinh" không truyền thì giữ như cũ).
+  // Ngày sự kiện của hợp đồng ("YYYY-MM-DD", rỗng = chưa chọn): bật hàng "Ngày & giờ" có ô ngày riêng của dòng.
+  eventDate?: string;
+  // Loại sự kiện đang bật: bật hàng "Sự kiện". listHref null = không có quyền sửa danh sách.
+  occasions?: { options: readonly OccasionView[] | null; listHref: string | null; savedName: string | null };
+  // Dòng phụ phí tự thêm (xem AutoSurchargeRows).
+  surcharge?: Pick<AutoSurchargeRowsProps, 'ruleName' | 'perQuantityOf' | 'notes' | 'noteError' | 'onDismiss' | 'onRestore' | 'onOverride' | 'onVoid'>;
 }
 
 export function PackageLineCard(p: PackageLineCardProps) {
@@ -132,9 +143,30 @@ export function PackageLineCard(p: PackageLineCardProps) {
         )}
       </div>
 
+      {p.occasions && (
+        <div className="ct-rw">
+          <span className="ct-rw__l">
+            Sự kiện
+            <Tooltip text={OCCASION_TIP} />
+          </span>
+          <OccasionPicker
+            value={line.occasionId}
+            options={p.occasions.options}
+            savedName={p.occasions.savedName ?? view?.occasionName ?? null}
+            onChange={(occasionId) => p.onChange({ occasionId })}
+            disabled={locked}
+            listHref={locked ? null : p.occasions.listHref}
+            error={errors[lineKey(i, 'occasionId')]}
+          />
+        </div>
+      )}
+
       <div className="ct-rw">
         <span className="ct-rw__l">
-          Giờ
+          {p.eventDate !== undefined ? 'Ngày & giờ' : 'Giờ'}
+          {p.eventDate !== undefined && (
+            <Tooltip text="Mỗi dòng có thể một ngày riêng — ví dụ ăn hỏi 19/11, cưới 22/11 trong cùng hợp đồng." />
+          )}
           {!locked && pkg && pkg.durationMinutes > 0 && (
             <Tooltip
               text={`Gõ giờ bắt đầu, giờ kết thúc tự điền theo thời lượng gói (${pkg.durationMinutes} phút). Đã sửa tay giờ kết thúc thì giữ nguyên giờ bạn gõ.`}
@@ -142,6 +174,34 @@ export function PackageLineCard(p: PackageLineCardProps) {
           )}
         </span>
         <div className="ct-dcr">
+          {p.eventDate !== undefined && (
+            <div className="ct-fl ct-dt">
+              <DateInput
+                size="sm"
+                className="ct-dline"
+                aria-label="Ngày của dòng"
+                value={(locked ? line.date || p.eventDate : line.date) || null}
+                disabled={locked}
+                onChange={(v) => p.onChange({ date: v && v !== p.eventDate ? v : '' })}
+                error={errors[lineKey(i, 'date')]}
+              />
+              {line.date === '' && !locked && (
+                <span className="ct-fx ct-dt__d">
+                  Theo ngày sự kiện{p.eventDate ? ` (${displayDate(`${p.eventDate}T12:00:00Z`, 'UTC')})` : ''}
+                </span>
+              )}
+              {line.date !== '' && (
+                <>
+                  <StatusTag tone="warn">Khác ngày sự kiện</StatusTag>
+                  {!locked && (
+                    <Button variant="ghost" size="sm" onClick={() => p.onChange({ date: '' })}>
+                      Về ngày sự kiện
+                    </Button>
+                  )}
+                </>
+              )}
+            </div>
+          )}
           <div className="ct-fl">
             <TimeInput
               size="sm"
@@ -268,6 +328,23 @@ export function PackageLineCard(p: PackageLineCardProps) {
             }}
           />
         </div>
+      )}
+
+      {p.surcharge && (
+        <AutoSurchargeRows
+          rows={view?.surcharges ?? []}
+          line={line}
+          mode={locked ? 'view' : 'edit'}
+          pending={p.pending}
+          ruleName={p.surcharge.ruleName}
+          perQuantityOf={p.surcharge.perQuantityOf}
+          notes={p.surcharge.notes}
+          noteError={p.surcharge.noteError}
+          onDismiss={p.surcharge.onDismiss}
+          onRestore={p.surcharge.onRestore}
+          onOverride={p.surcharge.onOverride}
+          onVoid={p.surcharge.onVoid}
+        />
       )}
 
       {p.lineError && <div className="ct-ln__err ct-err" role="alert">{p.lineError}</div>}

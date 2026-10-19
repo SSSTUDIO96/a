@@ -8,7 +8,8 @@ import { Select } from '../../ui';
 export interface OccasionPickerProps {
   value: string | null;
   // Loại sự kiện đang bật của tổ chức (GET /occasions?isActive=true).
-  options: readonly OccasionView[];
+  // null = chưa biết danh sách (không có quyền đọc Bảng giá): chỉ hiện tên đã lưu của dòng.
+  options: readonly OccasionView[] | null;
   // Tên loại lưu trên dòng (bản chụp) — dùng khi loại của dòng không còn trong `options` (đã ẩn).
   savedName: string | null;
   onChange: (occasionId: string | null) => void;
@@ -22,9 +23,9 @@ export interface OccasionPickerProps {
 export const OCCASION_TIP = 'Dùng để tô màu ca trên Lịch và để áp luật phụ phí theo sự kiện';
 
 export function OccasionPicker({ value, options, savedName, onChange, disabled, listHref, error }: OccasionPickerProps) {
-  const found = value ? (options.find((o) => o.id === value) ?? null) : null;
-  const hidden = value !== null && found === null;
-  const name = found?.name ?? (hidden ? (savedName ?? 'Sự kiện đã chọn') : null);
+  const found = value && options ? (options.find((o) => o.id === value) ?? null) : null;
+  const hidden = value !== null && found === null && options !== null;
+  const name = found?.name ?? (value !== null ? (savedName ?? 'Sự kiện đã chọn') : null);
   const dot = (
     <span
       className={`ct-oc__dot${found ? ` ct-oc--${found.color}` : ' ct-oc--none'}`}
@@ -42,7 +43,7 @@ export function OccasionPicker({ value, options, savedName, onChange, disabled, 
   }
   const opts = [
     { value: '', label: 'Chưa chọn sự kiện' },
-    ...options.map((o) => ({ value: o.id, label: o.name })),
+    ...(options ?? []).map((o) => ({ value: o.id, label: o.name })),
     ...(hidden && value ? [{ value, label: `${name ?? ''} (đang ẩn)`, disabled: true }] : []),
   ];
   return (
