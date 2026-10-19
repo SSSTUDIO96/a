@@ -25,6 +25,17 @@ describe('danh mục quyền', () => {
       expect(PERMISSIONS[p].length).toBeGreaterThan(0);
     }
   });
+  it('quyền giấy chứng nhận đúng bảng vai trò mẫu (BAN-VE-F mục 3.1)', () => {
+    const holders = (p: Permission) => SYSTEM_ROLE_KEYS.filter((k) => SYSTEM_ROLES[k].permissions.includes(p)).sort();
+    expect(holders('certificates.read')).toEqual(['admin', 'instructor', 'manager', 'owner', 'receptionist']);
+    expect(holders('certificates.issue')).toEqual(['admin', 'manager', 'owner']);
+    expect(PERMISSIONS['certificates.read']).toBe('Xem, in lại giấy chứng nhận');
+    expect(PERMISSIONS['certificates.issue']).toBe('Cấp, cấp lại, thu hồi giấy chứng nhận');
+    // Ai cấp được thì cũng xem được sổ.
+    for (const k of SYSTEM_ROLE_KEYS) {
+      if (SYSTEM_ROLES[k].permissions.includes('certificates.issue')) expect(SYSTEM_ROLES[k].permissions, k).toContain('certificates.read');
+    }
+  });
   it('vai trò mẫu không lặp quyền', () => {
     for (const k of SYSTEM_ROLE_KEYS) {
       const list = SYSTEM_ROLES[k].permissions;

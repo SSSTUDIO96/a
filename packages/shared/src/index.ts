@@ -9,3 +9,4 @@ export * from './greetings';
 export * from './occasions';
 export * from './surcharges';
 export * from './portal';
+export * from './certificates';

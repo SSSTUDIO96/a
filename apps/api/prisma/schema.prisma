@@ -71,6 +71,9 @@ model User {
   portalLinksRevoked    PortalLink[]             @relation("PortalLinkRevokedBy")
   portalDevicesEnded    PortalDevice[]           @relation("PortalDeviceEndedBy")
   portalSettingsUpdated PortalSettings[]         @relation("PortalSettingsUpdatedBy")
+  // Bản vẽ F — giấy chứng nhận (migration 20261019210000_giay_chung_nhan).
+  certificatesIssued    Certificate[]            @relation("CertificateIssuedBy")
+  certificatesRevoked   Certificate[]            @relation("CertificateRevokedBy")
 
   @@map("users")
 }
@@ -178,6 +181,8 @@ model Organization {
   portalDevices  PortalDevice[]
   portalSessions PortalSession[]
   portalSettings PortalSettings?
+  // Bản vẽ F — giấy chứng nhận (migration 20261019210000_giay_chung_nhan).
+  certificates   Certificate[]
 
   @@map("organizations")
 }
@@ -427,6 +432,8 @@ model Customer {
   portalLinks    PortalLink[]
   portalDevices  PortalDevice[]
   portalSessions PortalSession[]
+  // Bản vẽ F — giấy chứng nhận.
+  certificates   Certificate[]
 
   @@unique([id, organizationId])
   @@index([organizationId, phone])
@@ -1075,6 +1082,10 @@ model StoredFile {
   customerAvatars   Customer[]            @relation("CustomerAvatar")
   designCardOutputs DesignCard[]          @relation("DesignCardOutput")
   designCardPhotos  DesignCardPhoto[]
+  // Bản vẽ F — ảnh học viên / logo / ảnh nền CHỤP lúc cấp giấy chứng nhận.
+  certificatePhotos      Certificate[]        @relation("CertificatePhoto")
+  certificateLogos       Certificate[]        @relation("CertificateLogo")
+  certificateBackgrounds Certificate[]        @relation("CertificateBackground")
 
   @@unique([id, organizationId])
   @@index([organizationId, purpose])
@@ -1238,6 +1249,10 @@ model OrganizationProfile {
   isPublished        Boolean   @default(false) @map("is_published")
   publishedAt        DateTime? @map("published_at") @db.Timestamptz(3)
   updatedAt          DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  // Người ký thứ hai trên giấy chứng nhận (chỗ ký 2). Không lộ ra trang công khai, không trả trong GET /profile.
+  certSignerName     String?   @map("cert_signer_name")
+  // Trống = "Giám đốc trung tâm" (DEFAULT_SIGNER_TITLE ở packages/shared).
+  certSignerTitle    String?   @map("cert_signer_title")
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   // Khoá ngoại kép (tệp, tổ chức): database chặn gắn ảnh của tổ chức khác.
@@ -1354,6 +1369,8 @@ model CourseClass {
   designCards    DesignCard[]
   // Buổi học đã đưa lên Lịch (Appointment kind = COURSE_SESSION).
   appointments   Appointment[]
+  // Bản vẽ F — giấy chứng nhận.
+  certificates   Certificate[]
 
   @@unique([id, organizationId])
   @@unique([courseId, name])
@@ -1382,9 +1399,13 @@ model Enrollment {
   // Dòng phải thuộc CHÍNH hợp đồng của ghi danh (database tự chặn).
   contractLineInContract ContractLine @relation("EnrollmentLineOfContract", fields: [contractLineId, contractId], references: [id, contractId], onDelete: Restrict)
   customer               Customer     @relation(fields: [customerId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  // Bản vẽ F — giấy chứng nhận.
+  certificates           Certificate[]
 
   @@unique([contractLineId])
   @@unique([id, organizationId])
+  // Bản vẽ F: đích khoá ngoại 4 cột của certificates (id là khoá chính nên luôn duy nhất).
+  @@unique([id, organizationId, courseClassId, customerId], map: "enrollments_cert_target_key")
   @@index([courseClassId, status])
   @@index([organizationId, status, customerId])
   // Bản vẽ D: trang "Hôm nay" đọc ghi danh theo lúc ghi danh.
@@ -1626,4 +1647,86 @@ model PortalSettings {
   updatedBy    User         @relation("PortalSettingsUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
 
   @@map("portal_settings")
+}
+
+// ==================== GIẤY CHỨNG NHẬN (chỉ tổ chức ACADEMY — máy chủ chặn tổ chức khác) ====================
+// Bản vẽ F (docs/rnd/BAN-VE-F-GIAY-CHUNG-NHAN.md mục 2), migration 20261019210000_giay_chung_nhan.
+
+enum CertificateStatus {
+  ISSUED
+  // Đã thu hồi (sai tên → cấp lại; hoặc cấp nhầm). Dòng giữ nguyên trong sổ, không xoá.
+  REVOKED
+}
+
+// Một bản giấy chứng nhận. Chữ in trên giấy CHỤP lúc cấp (cột *_name) — in lại ra y như cũ.
+// Cấp lại: bản cũ → REVOKED, bản mới cùng (year, seq), reissue_no + 1, replaces_id = bản cũ.
+// Chỉ mục duy nhất MỘT PHẦN và trigger viết tay trong migration 20261019210000_giay_chung_nhan (Prisma không tả được).
+model Certificate {
+  id               String            @id @default(uuid()) @db.Uuid
+  organizationId   String            @map("organization_id") @db.Uuid
+  enrollmentId     String            @map("enrollment_id") @db.Uuid
+  // Chép từ ghi danh để lọc sổ theo lớp / học viên; khoá ngoại kép 4 cột bảo đảm khớp ghi danh.
+  courseClassId    String            @map("course_class_id") @db.Uuid
+  customerId       String            @map("customer_id") @db.Uuid
+  // Số: năm của ngày cấp + số thứ tự trong năm theo tổ chức (org_counters 'certificate:<năm>').
+  year             Int
+  seq              Int
+  // 0 = bản gốc; 1, 2… = bản cấp lại lần thứ mấy.
+  reissueNo        Int               @default(0) @map("reissue_no")
+  // "CC-2026-0007" (CHECK khớp year + seq).
+  code             String
+  issuedOn         DateTime          @map("issued_on") @db.Date
+  // Ngày cấp lại (chỉ bản cấp lại) — in "bản cấp lại dd/mm/yyyy".
+  reissuedOn       DateTime?         @map("reissued_on") @db.Date
+  // Mẫu lúc cấp: cc-01..cc-16 + phiên bản bố cục.
+  templateCode     String            @map("template_code")
+  templateVersion  Int               @map("template_version")
+  // "ky-1".."ky-4" hoặc null = phông theo mẫu.
+  fontOverride     String?           @map("font_override")
+  // CHỜ BẢN VẼ NỀN (R&D-07): kiểu nền / khung / ảnh nền LÚC CẤP. Đợt này máy chủ luôn ghi null.
+  backgroundStyle  String?           @map("background_style")
+  backgroundFileId String?           @map("background_file_id") @db.Uuid
+  frameStyle       String?           @map("frame_style")
+  // Bản chụp chữ lúc cấp.
+  studentName      String            @map("student_name")
+  courseName       String            @map("course_name")
+  className        String            @map("class_name")
+  instructorName   String?           @map("instructor_name")
+  signerName       String?           @map("signer_name")
+  signerTitle      String?           @map("signer_title")
+  brandName        String            @map("brand_name")
+  // Ảnh học viên / logo LÚC CẤP (tệp đã xoá mềm → in chữ cái đầu / bỏ logo).
+  photoFileId      String?           @map("photo_file_id") @db.Uuid
+  logoFileId       String?           @map("logo_file_id") @db.Uuid
+  status           CertificateStatus @default(ISSUED)
+  revokedAt        DateTime?         @map("revoked_at") @db.Timestamptz(3)
+  revokeReason     String?           @map("revoke_reason")
+  revokedById      String?           @map("revoked_by_id") @db.Uuid
+  replacesId       String?           @map("replaces_id") @db.Uuid
+  issuedById       String            @map("issued_by_id") @db.Uuid
+  createdAt        DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Restrict, map: "certificates_org_fkey")
+  // Khoá kép 4 cột: ghi danh thuộc CHÍNH tổ chức, CHÍNH lớp, CHÍNH khách đã chép. Ghi danh không được đổi lớp/khách.
+  enrollment     Enrollment    @relation(fields: [enrollmentId, organizationId, courseClassId, customerId], references: [id, organizationId, courseClassId, customerId], onDelete: Restrict, onUpdate: Restrict, map: "certificates_enrollment_fkey")
+  courseClass    CourseClass   @relation(fields: [courseClassId, organizationId], references: [id, organizationId], onDelete: Restrict, map: "certificates_class_fkey")
+  customer       Customer      @relation(fields: [customerId, organizationId], references: [id, organizationId], onDelete: Restrict, map: "certificates_customer_fkey")
+  photoFile      StoredFile?   @relation("CertificatePhoto", fields: [photoFileId, organizationId], references: [id, organizationId], onDelete: Restrict, map: "certificates_photo_fkey")
+  logoFile       StoredFile?   @relation("CertificateLogo", fields: [logoFileId, organizationId], references: [id, organizationId], onDelete: Restrict, map: "certificates_logo_fkey")
+  backgroundFile StoredFile?   @relation("CertificateBackground", fields: [backgroundFileId, organizationId], references: [id, organizationId], onDelete: Restrict, map: "certificates_background_fkey")
+  // Bản cấp lại trỏ bản cũ CÙNG tổ chức, CÙNG ghi danh, CÙNG số.
+  replaces       Certificate?  @relation("CertificateReissue", fields: [replacesId, organizationId, enrollmentId, year, seq], references: [id, organizationId, enrollmentId, year, seq], onDelete: Restrict, onUpdate: Restrict, map: "certificates_replaces_fkey")
+  replacedBy     Certificate[] @relation("CertificateReissue")
+  issuedBy       User          @relation("CertificateIssuedBy", fields: [issuedById], references: [id], onDelete: Restrict, map: "certificates_issued_by_fkey")
+  revokedBy      User?         @relation("CertificateRevokedBy", fields: [revokedById], references: [id], onDelete: Restrict, map: "certificates_revoked_by_fkey")
+
+  @@unique([id, organizationId], map: "certificates_id_org_key")
+  // Đích của khoá ngoại "cấp lại" (replaces).
+  @@unique([id, organizationId, enrollmentId, year, seq], map: "certificates_reissue_target_key")
+  // Một số + một lần cấp lại = một dòng (số không dùng lại cho người khác: bản mới luôn reissue_no = 0).
+  @@unique([organizationId, year, seq, reissueNo], map: "certificates_number_key")
+  @@index([organizationId, courseClassId], map: "certificates_org_class_idx")
+  @@index([organizationId, customerId], map: "certificates_org_customer_idx")
+  @@index([organizationId, year, seq], map: "certificates_org_number_idx")
+  @@map("certificates")
 }

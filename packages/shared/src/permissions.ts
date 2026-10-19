@@ -38,6 +38,9 @@ export const PERMISSIONS = {
   'designs.write': 'Tạo thẻ, tải ảnh thẻ, sửa câu chúc soạn sẵn',
   // Bản vẽ E (cổng học viên). Tạo đường dẫn còn đòi thêm customers.read, contracts.read, payments.read (kiểm ở máy chủ).
   'portal.manage': 'Gửi, thu hồi đường dẫn cổng học viên; xem, chặn máy đã mở',
+  // Bản vẽ F (giấy chứng nhận). Sau triển khai chạy db:sync-roles để tổ chức cũ có quyền (sổ lỗi 3).
+  'certificates.read': 'Xem, in lại giấy chứng nhận',
+  'certificates.issue': 'Cấp, cấp lại, thu hồi giấy chứng nhận',
 } as const;
 
 export type Permission = keyof typeof PERMISSIONS;
@@ -72,7 +75,7 @@ export const SYSTEM_ROLES: Record<SystemRoleKey, { name: string; permissions: Pe
       'contracts.adjust', 'staff.read', 'staff.write', 'payments.read', 'payments.write', 'payments.void',
       'reports.read', 'files.read', 'files.write',
       'contracts.texts', 'courses.read', 'courses.write', 'designs.read', 'designs.write',
-      'portal.manage',
+      'portal.manage', 'certificates.read', 'certificates.issue',
     ],
   },
   artist: {
@@ -90,7 +93,7 @@ export const SYSTEM_ROLES: Record<SystemRoleKey, { name: string; permissions: Pe
       'schedule.read_own', 'schedule.read_all', 'schedule.write', 'contracts.read', 'contracts.write', 'staff.read',
       'payments.read', 'payments.write', 'files.read', 'files.write',
       'courses.read', 'designs.read', 'designs.write',
-      'portal.manage',
+      'portal.manage', 'certificates.read',
     ],
   },
   accountant: {
@@ -105,7 +108,7 @@ export const SYSTEM_ROLES: Record<SystemRoleKey, { name: string; permissions: Pe
   // Giảng viên xem mọi lớp (courses.read) — KY-DUYET-C3: tách courses.read_own để sau nếu chủ muốn hẹp hơn.
   instructor: {
     name: 'Giảng viên',
-    permissions: ['org.read', 'members.read', 'catalog.read', 'schedule.read_own', 'courses.read', 'designs.read'],
+    permissions: ['org.read', 'members.read', 'catalog.read', 'schedule.read_own', 'courses.read', 'designs.read', 'certificates.read'],
   },
   teaching_assistant: { name: 'Trợ giảng', permissions: ['org.read', 'schedule.read_own'] },
 };
