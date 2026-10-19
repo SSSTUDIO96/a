@@ -1,0 +1,161 @@
+/*
+ * Phần MỚI của bản mẫu R&D 05 (thông báo, loại sự kiện). Chỉ dùng token của apps/web/src/styles/tokens.css
+ * (đã chép trong san-pham.css). Không thêm màu mới; mọi thứ khác lấy nguyên lớp ui-*, sh-*, ws-*, ct-* của sản phẩm.
+ */
+
+/* ---------- Dải ghi chú của bản mẫu (không phải giao diện thật) ---------- */
+.v5-note {
+  display: flex; gap: 8px; align-items: flex-start; flex-wrap: wrap;
+  margin: 0 0 12px; padding: 7px 12px; border-radius: var(--r-ctl);
+  background: var(--soft); border: 1px dashed var(--line-hover); color: var(--muted); font-size: 12px; line-height: 1.4;
+}
+.v5-note b { color: var(--text); font-weight: 600; }
+.v5-note i { font-style: normal; display: inline-block; width: 18px; height: 11px; border: 1.5px dashed var(--warn); border-radius: 3px; vertical-align: -1px; margin-right: 4px; }
+
+/* Ô cần dữ liệu MỚI (chưa có ở máy chủ): viền nâu nét đứt — luôn hiện, để không ảnh nào vẽ như thể đã có. */
+.moi { outline: 1.5px dashed var(--warn); outline-offset: 2px; border-radius: 4px; }
+
+/* ---------- Lớp nhãn "trường dữ liệu" (bật bằng #tên+f) ---------- */
+.v5-f {
+  position: absolute; z-index: 200; pointer-events: none;
+  font: 600 9.5px/1.25 var(--font); padding: 1px 4px; border-radius: 3px; white-space: nowrap;
+  background: var(--kind-event); color: #fff; max-width: 260px; overflow: hidden; text-overflow: ellipsis;
+}
+.v5-f--moi { background: var(--warn); }
+.v5-f-on [data-f] { outline: 1px solid var(--kind-event); outline-offset: 1px; }
+
+/* ---------- Mục lục ---------- */
+.v5-idx { max-width: 860px; margin: 32px auto; padding: 0 16px; }
+.v5-idx h1 { font-size: 22px; margin-bottom: 6px; }
+.v5-idx p { color: var(--muted); margin-bottom: 16px; }
+.v5-idx a { display: block; padding: 9px 14px; border-top: 1px solid var(--line-2); color: var(--text); text-decoration: none; }
+.v5-idx a:hover { background: var(--soft); }
+.v5-idx a b { color: var(--accent); margin-right: 8px; }
+
+/* ---------- Chuông ---------- */
+.v5-bell { position: relative; color: var(--muted); }
+.v5-bell:hover { color: var(--text); }
+.v5-badge {
+  position: absolute; top: 1px; right: 0; min-width: 17px; height: 17px; padding: 0 4px; border-radius: var(--r-pill);
+  background: var(--danger); color: #fff; font-size: 10.5px; font-weight: 700; line-height: 17px; text-align: center;
+  border: 2px solid var(--surface); box-sizing: content-box;
+}
+.sh-brand .v5-bell { margin-left: auto; margin-right: -8px; }
+.sh-top .v5-bell { color: var(--text); }
+
+/* ---------- Ngăn kéo thông báo (phương án A) ---------- */
+.v5-dr-ov { position: fixed; inset: 0; z-index: 50; background: var(--overlay-dialog); }
+.v5-dr {
+  position: absolute; top: 0; right: 0; bottom: 0; width: 420px; max-width: 100%;
+  background: var(--surface); display: flex; flex-direction: column; border-left: 1px solid var(--line);
+}
+.v5-dr__head { display: flex; align-items: center; gap: 8px; padding: 14px 16px 12px 20px; border-bottom: 1px solid var(--line); }
+.v5-dr__title { font-size: 18px; font-weight: 700; flex: 1; }
+.v5-dr__chips { display: flex; gap: 6px; padding: 10px 20px; border-bottom: 1px solid var(--line-2); overflow-x: auto; scrollbar-width: none; }
+.v5-dr__body { flex: 1; overflow: auto; }
+.v5-dr__foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 16px 10px 20px; border-top: 1px solid var(--line); font-size: 13px; color: var(--muted); }
+
+.v5-nt {
+  display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 2px 12px; align-items: start;
+  padding: 12px 16px 12px 20px; border-bottom: 1px solid var(--line-2); text-decoration: none; color: var(--text); position: relative;
+}
+.v5-nt:hover { background: var(--soft); }
+.v5-nt.is-new { background: var(--dashed-bg); }
+.v5-nt.is-new::before { content: ''; position: absolute; left: 8px; top: 24px; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+.v5-nt__ic { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: var(--b, var(--line-2)); color: var(--c, var(--muted)); }
+.v5-nt__ic .ui-ico { width: 17px; height: 17px; }
+.v5-nt__t { font-weight: 600; overflow-wrap: anywhere; }
+.v5-nt__s { grid-column: 2; font-size: 12.5px; color: var(--muted); overflow-wrap: anywhere; }
+.v5-nt__go { grid-column: 2; font-size: 12.5px; color: var(--accent); font-weight: 600; margin-top: 2px; }
+.v5-nt__tm { font-size: 11.5px; color: var(--faint); white-space: nowrap; }
+
+/* Màu biểu tượng theo nhóm thông báo — lấy lại màu loại ca / trạng thái có sẵn */
+.v5-k-lich { --c: var(--kind-event); --b: var(--kind-event-bg); }
+.v5-k-tien { --c: var(--warn); --b: var(--warn-bg); }
+.v5-k-tien-x { --c: var(--danger); --b: var(--danger-bg); }
+.v5-k-hd { --c: var(--ok); --b: var(--ok-bg); }
+.v5-k-hoc { --c: var(--av-5); --b: color-mix(in srgb, var(--av-5) 10%, var(--surface)); }
+.v5-k-tho { --c: var(--kind-engagement); --b: var(--kind-engagement-bg); }
+
+/* ---------- Bảng cài đặt thông báo ---------- */
+.v5-pref { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.v5-pref th { text-align: left; font-size: var(--fs-tag); font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; padding: 10px 12px; background: var(--soft); border-bottom: 1px solid var(--line-2); white-space: nowrap; }
+.v5-pref th.c, .v5-pref td.c { text-align: center; width: 92px; }
+.v5-pref td { padding: 11px 12px; border-bottom: 1px solid var(--line-2); vertical-align: middle; }
+.v5-pref td:first-child { min-width: 0; }
+.v5-pref__n { font-weight: 600; display: block; }
+.v5-pref__s { font-size: 12.5px; color: var(--muted); display: block; }
+.v5-pref .ui-switch { vertical-align: middle; }
+.v5-off { color: var(--faint); font-size: 12px; }
+.v5-cost { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 600; color: var(--warn); background: var(--warn-bg); border-radius: var(--r-pill); padding: 1px 8px; white-space: nowrap; }
+
+/* ---------- Trang "Hôm nay" (phương án B) ---------- */
+.v5-home { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 16px; align-items: start; margin-top: 16px; }
+.v5-home__col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.v5-act { display: flex; gap: 6px; align-items: center; }
+.v5-cnt { font-size: 12px; font-weight: 600; color: var(--muted); }
+.v5-hide { font-size: 12.5px; color: var(--muted); font-weight: 500; }
+.v5-ln-ic { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: var(--b, var(--line-2)); color: var(--c, var(--muted)); }
+.v5-ln-ic .ui-ico { width: 16px; height: 16px; }
+.v5-sw { display: inline-block; width: 10px; height: 10px; border-radius: 3px; background: var(--c); margin-right: 6px; vertical-align: 0; }
+.v5-done { display: flex; align-items: center; gap: 8px; padding: 12px 16px; color: var(--muted); font-size: 13px; }
+
+/* ---------- Bản tin hằng ngày (phương án C) ---------- */
+.v5-bt { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; padding: 12px 16px; border-radius: var(--r-card); background: var(--accent-soft); border: 1px solid var(--accent-line); margin-bottom: 14px; }
+.v5-bt__t { flex: 1 1 260px; min-width: 0; }
+.v5-bt__t b { display: block; color: var(--accent); }
+.v5-bt__t span { font-size: 13px; color: var(--text); }
+.v5-dg { max-width: 760px; }
+.v5-dg__sec { padding: 4px 0 8px; }
+.v5-dg__h { display: flex; align-items: baseline; gap: 8px; font-weight: 700; font-size: 15px; padding: 14px 18px 6px; }
+.v5-dg__h span { font-weight: 400; font-size: 12.5px; color: var(--muted); }
+.v5-dg__row { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: 10px; padding: 7px 18px; align-items: baseline; border-top: 1px solid var(--line-2); font-size: 13.5px; }
+.v5-dg__row b { font-variant-numeric: tabular-nums; }
+.v5-dg__row small { color: var(--muted); font-size: 12.5px; }
+.v5-dg__row--2 { grid-template-columns: minmax(0, 1fr) auto; }
+
+.v5-ch { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; align-items: start; }
+.v5-ch__lbl { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-weight: 700; flex-wrap: wrap; }
+.v5-mail { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); overflow: hidden; font-size: 13px; }
+.v5-mail__hd { padding: 10px 14px; border-bottom: 1px solid var(--line-2); background: var(--soft); font-size: 12px; color: var(--muted); line-height: 1.6; }
+.v5-mail__hd b { color: var(--text); }
+.v5-mail__bd { padding: 12px 14px; line-height: 1.55; }
+.v5-mail__bd p { margin: 0 0 8px; }
+.v5-mail__bd ul { margin: 0 0 8px 18px; }
+.v5-mail__btn { display: inline-block; margin-top: 4px; padding: 7px 12px; border-radius: var(--r-ctl); background: var(--accent); color: #fff; font-weight: 600; text-decoration: none; }
+.v5-phone { background: var(--bg); border: 1px solid var(--line); border-radius: 18px; padding: 12px 10px 16px; }
+.v5-phone__top { text-align: center; font-size: 12px; color: var(--muted); margin-bottom: 10px; }
+.v5-bub { background: var(--surface); border: 1px solid var(--line); border-radius: 14px 14px 14px 4px; padding: 10px 12px; font-size: 13px; line-height: 1.5; max-width: 92%; white-space: pre-line; }
+.v5-bub__btn { display: block; margin-top: 8px; padding: 7px 0; border-top: 1px solid var(--line-2); text-align: center; color: var(--av-5); font-weight: 600; }
+.v5-sms { font-family: var(--font); }
+.v5-meter { font-size: 11.5px; color: var(--faint); margin-top: 6px; text-align: right; }
+
+/* ---------- Loại sự kiện (đề tài 2) ---------- */
+.v5-evsel { display: flex; flex-wrap: wrap; gap: 6px; }
+.v5-evsel .ui-chip { padding: 4px 10px; }
+.v5-evsel .ui-chip i { display: inline-block; width: 9px; height: 9px; border-radius: 3px; background: var(--c); }
+.v5-evtag { display: inline-flex; align-items: center; gap: 5px; font-size: var(--fs-tag); font-weight: 600; padding: 2px 8px; border-radius: var(--r-pill); background: var(--b); color: var(--c); white-space: nowrap; }
+.v5-evtag::before { content: ''; width: 7px; height: 7px; border-radius: 2px; background: var(--c); }
+.v5-colorby { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--muted); }
+.v5-palette { display: inline-flex; gap: 6px; }
+.v5-palette span { width: 22px; height: 22px; border-radius: 6px; background: var(--c); border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--line); }
+.v5-palette span.on { box-shadow: 0 0 0 2px var(--text); }
+.v5-grip { color: var(--faint); cursor: grab; font-size: 16px; line-height: 1; }
+
+@media (max-width: 1180px) {
+  .v5-home { grid-template-columns: minmax(0, 1fr); }
+  .v5-ch { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 640px) {
+  .v5-note { margin: 0 0 10px; }
+  .v5-dr { width: 100%; border-left: 0; }
+  .v5-home { margin-top: 12px; gap: 12px; }
+  .v5-home__col { gap: 12px; }
+  .v5-pref th.c, .v5-pref td.c { width: 58px; padding-left: 4px; padding-right: 4px; }
+  .v5-pref td { padding: 10px 8px; }
+  .v5-pref th { padding: 8px; }
+  .v5-dg__row { grid-template-columns: 52px minmax(0, 1fr); }
+  .v5-dg__row > :nth-child(3) { grid-column: 2; }
+  .v5-dg__h { padding: 12px 14px 6px; }
+  .v5-dg__row { padding: 7px 14px; }
+}

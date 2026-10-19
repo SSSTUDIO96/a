@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=1080">
+<title>R&D 07 · shd-01 Thư mời kem · nền hoa văn chìm</title>
+<!-- Makeup Pro · R&D 07 (19/10/2026) · Bản thử của mẫu shd-01 "Thư mời kem" (apps/web/public/mau/shd-01.html):
+     giữ nguyên chữ, màu, phông, viền hai đường; THÊM ô ảnh học viên khung tròn (anh Chiến dặn 19/10: "khung ảnh mặc định
+     để hình tròn", "mẫu nào cũng phải có ảnh") và lớp nền/viền thay thế của R&D 07 (chung/nen.js, chung/hoa-van.js).
+     Đây là bản R&D để chụp ảnh, KHÔNG phải tệp vẽ chính thức (thợ K3 đang sửa mẫu thật trong public/mau).
+     Ô dữ liệu như shd-01 + anh (Ảnh học viên). Tham số: xem đầu tệp chung/nen.js. ?mauchu=goc = giữ màu chữ nhỏ cũ. -->
+<link rel="stylesheet" href="../v3-mau-chao-mung/phong/phong.css"><link rel="stylesheet" href="chung/mau.css">
+<style>
+#c{background:#F5EFE4;color:#2A2420}
+.b1{position:absolute;inset:44px;border:1.5px solid #B8975A}
+.b2{position:absolute;inset:58px;border:.75px solid #B8975A}
+.w{position:absolute;inset:58px;display:flex;flex-direction:column;align-items:center;text-align:center;padding:52px 90px 50px}
+.lg{width:72px;height:72px}
+.th{font:500 21px var(--f-sans);letter-spacing:.32em;color:#7A6340;margin-top:12px;text-transform:uppercase}
+/* Ảnh học viên: khung tròn mặc định, viền vàng mảnh cách 8 px (nhắc lại hai đường viền của thẻ) */
+.anh{margin-top:30px;padding:8px;border:1.5px solid #B8975A;border-radius:50%;flex-shrink:0;background:#F5EFE4}
+.anh img{width:264px;height:264px;border-radius:50%;object-fit:cover;object-position:50% 38%}
+.anh-vien-thuoc .anh{border-radius:999px}.anh-vien-thuoc .anh img{width:214px;height:318px;border-radius:999px;object-position:50% 40%}
+.k1{font:500 18px var(--f-sans);letter-spacing:.42em;color:#7A6340;text-transform:uppercase;margin-top:34px}
+.chu-goc .k1{color:#8C7A5B}
+.kh{font:600 60px/1.08 var(--f-chan);text-transform:uppercase;letter-spacing:.04em;margin-top:14px;width:100%}
+.lo{font:italic 400 30px var(--f-chan);color:#5C4E3E;margin-top:10px}
+.or{display:flex;align-items:center;gap:16px;margin:24px 0 14px;color:#B8975A}
+.or i{width:120px;height:1px;background:#B8975A}.or b{width:10px;height:10px;transform:rotate(45deg);border:1px solid #B8975A}
+.dg{font:italic 400 34px var(--f-chan);color:#5C4E3E}
+.ten{font-family:var(--f-tay-1);font-size:calc(112px*var(--tay-co-1));line-height:1.16;width:100%;margin-top:2px;padding:0 10px}
+.by{font:italic 400 28px var(--f-chan);color:#5C4E3E;margin-top:10px}
+.ft{font:500 18px var(--f-sans);letter-spacing:.32em;text-transform:uppercase;color:#7A6340}
+.dc{font:400 26px var(--f-chan);color:#5C4E3E;margin-top:8px}
+.vuong .w{padding:36px 80px 34px}.vuong .lg{width:56px;height:56px}.vuong .anh{margin-top:16px}.vuong .anh img{width:170px;height:170px}
+.vuong .k1{margin-top:18px}.vuong .kh{font-size:48px}.vuong .ten{font-size:calc(88px*var(--tay-co-1))}.vuong .or{margin:12px 0 6px}
+.vuong.anh-vien-thuoc .anh img{width:140px;height:200px}
+</style></head><body><div id="c"><div class="b1"></div><div class="b2"></div><div class="w">
+<img class="lg" data-f="logo" alt=""><div class="th" data-f="th" data-fitw data-do></div>
+<div class="anh" data-an-toan="34"><img data-f="anh" alt=""></div>
+<div class="k1" data-do>Chào mừng đến với lớp</div>
+<div class="kh" data-f="khoa" data-fit="2" data-do></div>
+<div class="lo" data-do>Lớp <span data-f="lop"></span> · khai giảng <span data-f="ngayCham"></span></div>
+<div class="or"><i></i><b></b><i></i></div>
+<div class="dg" data-do>Thân gửi</div>
+<div class="ten" data-f="ten" data-fit="2" data-an-toan="30" data-do></div>
+<div class="by" data-do>Thân ái, <span data-f="th"></span></div>
+<div class="sp"></div>
+<div class="ft" data-f="thangNam" data-do></div><div class="dc" data-f="diachi" data-fitw style="max-width:100%;white-space:nowrap" data-do></div>
+</div></div>
+<script>window.MAC_DINH={};if(new URLSearchParams(location.search).get('mauchu')==='goc')document.body.classList.add('chu-goc');</script>
+<script src="chung/qrcode.js"></script><script src="chung/mau.js"></script><script src="chung/hoa-van.js"></script><script src="chung/nen.js"></script><script src="chung/html-to-image.js"></script><script src="chung/xuat.js"></script></body></html>

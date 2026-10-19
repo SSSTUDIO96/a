@@ -1,0 +1,30 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>R&D 07 · vẽ ảnh giả lập "studio tải lên"</title>
+<!-- Dựng 2 ảnh GIẢ LẬP thay cho ảnh studio sẽ tự tải lên (R&D tự vẽ bằng SVG, không lấy ảnh mạng):
+     ?a=hoa  : tranh màu nước hoa mẫu đơn nhiều màu (kiểu ảnh khó: rực, nhiều chi tiết)
+     ?a=ren  : ảnh chụp vải ren trắng trên nền vải be có bóng sáng (kiểu ảnh khó: tương phản cao, cần đảo chiều)
+     Chụp màn hình trang này ra JPG 1600×2000 = "ảnh tải lên". -->
+<style>html,body{margin:0}svg{display:block}</style></head><body>
+<script src="../chung/hoa-van.js"></script>
+<script>
+const a=new URLSearchParams(location.search).get('a')||'hoa';const W=1600,H=2000;let s='';
+function rnd(n){let x=Math.sin(n*9301+49297)*233280;return x-Math.floor(x);}
+if(a==='hoa'){
+  s+=`<defs><filter id="giay"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" seed="3"/><feColorMatrix values="0 0 0 0 .5  0 0 0 0 .45  0 0 0 0 .4  0 0 0 .18 0"/></filter>
+  <filter id="nuoc" x="-30%" y="-30%" width="160%" height="160%"><feTurbulence type="fractalNoise" baseFrequency=".012" numOctaves="3" seed="7" result="t"/><feDisplacementMap in="SourceGraphic" in2="t" scale="60"/><feGaussianBlur stdDeviation="3"/></filter></defs>
+  <rect width="${W}" height="${H}" fill="#FBF4EA"/>`;
+  const mau=['#E07A8B','#F2A7B5','#C94F6D','#F6C6A8','#E9967A','#B85C7A'];
+  for(let i=0;i<34;i++){const x=rnd(i)*W,y=rnd(i+50)*H,r=60+rnd(i+90)*120;const m=mau[i%mau.length];
+    s+=`<g filter="url(#nuoc)" opacity=".85"><g transform="translate(${x},${y}) rotate(${rnd(i+7)*360})">`;
+    for(let k=0;k<7;k++)s+=`<ellipse cx="0" cy="${-r*.55}" rx="${r*.42}" ry="${r*.6}" transform="rotate(${k*51})" fill="${m}" opacity=".55"/>`;
+    s+=`<circle r="${r*.28}" fill="#F7D774" opacity=".8"/></g></g>`;
+    const lx=x+r*1.1,ly=y+r*.4;s+=`<g filter="url(#nuoc)" opacity=".7"><ellipse cx="${lx}" cy="${ly}" rx="${r*.7}" ry="${r*.25}" transform="rotate(${rnd(i+3)*180} ${lx} ${ly})" fill="${i%2?'#7FA36B':'#5E8A5A'}"/></g>`;}
+  s+=`<rect width="${W}" height="${H}" filter="url(#giay)"/>`;
+}else{
+  s+=`<defs><radialGradient id="sang" cx=".35" cy=".3" r=".9"><stop offset="0" stop-color="#E8DCCB"/><stop offset="1" stop-color="#9C8B78"/></radialGradient>
+  <pattern id="ren" width="96" height="84" patternUnits="userSpaceOnUse" patternTransform="scale(2.2) rotate(8)">${HOA_VAN.ren.ve('#FFFFFF').split('#F5EFE4').join('#C9B9A4')}</pattern>
+  <filter id="soi"><feTurbulence type="fractalNoise" baseFrequency="1.4" numOctaves="2" seed="5"/><feColorMatrix values="0 0 0 0 .3  0 0 0 0 .25  0 0 0 0 .2  0 0 0 .22 0"/></filter>
+  <filter id="bong"><feDropShadow dx="3" dy="4" stdDeviation="2.5" flood-color="#3a2a1a" flood-opacity=".45"/></filter></defs>
+  <rect width="${W}" height="${H}" fill="url(#sang)"/><rect width="${W}" height="${H}" fill="url(#ren)" filter="url(#bong)" opacity=".92"/><rect width="${W}" height="${H}" filter="url(#soi)"/>`;
+}
+document.body.innerHTML=`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${s}</svg>`;
+</script></body></html>
