@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=1123">
+<title>Giấy chứng nhận cc-12 – Hồng phấn vòng hoa</title>
+<link rel="stylesheet" href="phong/phong.css"><link rel="stylesheet" href="phong/ss-album/ss-album.css"><link rel="stylesheet" href="chung/cc.css">
+<!-- Mẫu 12 — mẫu thêm (ý riêng): hồng phấn dịu, VƯỜN HOA vẽ SVG ở hai góc chéo (trên trái, dưới phải), ảnh học viên nằm trong VÒNG HOA nhỏ
+     giữa mép trên, huy hiệu vàng hồng giữa đáy, khung bo vàng hồng. Tiêu đề vàng hồng nổi khối 3D (bản đậm cho nền sáng). Hợp makeup cô dâu.
+     Ô ảnh học viên (tròn, nhỏ ~26 mm): giữa mép trên, trong vòng hoa. Logo + tên trung tâm góc trên phải. ?anh=an để ẩn. -->
+<style>
+.c12{--f-ten:var(--f-ky-3);--ten-co:var(--ky-co-3);background:#FFF4F1;color:#4A2A33}
+.c12 .nen{inset:0}
+.c12 .anh{left:511px;top:52px;width:100px;height:100px;box-shadow:0 0 0 3px #FFF4F1,0 0 0 5px #C98E73}
+.c12 .o-logo{left:905px;top:56px;width:38px;height:38px}
+.c12 .thg{left:845px;width:158px;top:100px;text-align:center;font-size:9px;color:#7A4A44;white-space:normal;line-height:1.35}
+.c12 .t1{left:241px;top:198px;width:640px;height:62px}
+.c12 .t2{left:0;width:1123px;top:270px;text-align:center;font-family:var(--f-sans);font-weight:500;font-size:14px;letter-spacing:.38em;text-transform:uppercase;color:#8A4A36}
+.c12 .tag{left:0;width:1123px;top:300px;text-align:center;color:#7A5560;font-size:12px;letter-spacing:.32em}
+.c12 .ten{left:221px;top:314px;width:680px;height:150px;font-size:calc(118px * var(--ten-co));color:#6E2A48}
+.c12 .dong{left:0;width:1123px;top:474px;text-align:center}
+.c12 .ngay{left:0;width:1123px;top:510px;text-align:center;color:#7A5560}
+.c12 .huy{left:471px;top:546px;width:180px}
+.c12 .ky1{left:205px;top:574px;width:230px}
+.c12 .ky2{left:687px;top:574px;width:230px}
+.c12 .so{left:0;width:1123px;top:732px;text-align:center;color:#7A5560}
+</style></head>
+<body class="xem"><main>
+<section class="cc c12">
+  <svg class="nen" viewBox="0 0 1123 794" aria-hidden="true" id="nen12">
+    <defs>
+      <radialGradient id="bg12" cx="561" cy="397" r="700" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#FFF9F6"/><stop offset="1" stop-color="#FBE3E3"/></radialGradient>
+      <linearGradient id="rg12" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#A8674F"/><stop offset=".3" stop-color="#F2CDB8"/><stop offset=".55" stop-color="#C98E73"/><stop offset=".8" stop-color="#F7DCCB"/><stop offset="1" stop-color="#A8674F"/></linearGradient>
+    </defs>
+    <rect width="1123" height="794" fill="url(#bg12)"/>
+    <g id="hoa12"></g>
+    <rect x="26" y="26" width="1071" height="742" rx="26" fill="none" stroke="url(#rg12)" stroke-width="2"/>
+    <rect x="36" y="36" width="1051" height="722" rx="20" fill="none" stroke="#D9A58C" stroke-width=".8" stroke-dasharray="1 5" stroke-linecap="round"/>
+  </svg>
+  <div class="anh"><img data-f="anh" alt=""></div>
+  <div class="o-logo"><img data-f="logo" alt=""></div>
+  <div class="thg" data-f="th"></div>
+  <div class="tt sv t1" data-gold="hongdam" data-al="center" data-max="56">Giấy chứng nhận</div>
+  <div class="t2">Hoàn thành khoá học</div>
+  <div class="tag caps">Trân trọng trao cho</div>
+  <div class="ten sv" data-f="ten" data-al="center" data-line="1" data-line-inset="110" data-line-h="1.4" data-line-color="#C98E73"></div>
+  <div class="dong" data-f="dong"></div>
+  <div class="ngay" data-f="ngayChu"></div>
+  <div class="huy" data-huy-hieu data-kieu="hoa" data-kim="hong" data-nen="#5A1830"></div>
+  <div class="ky ky1"><div class="cv">Giảng viên</div><div class="dl"></div><div class="nm" data-f="gv"></div></div>
+  <div class="ky ky2"><div class="cv" data-f="gdcv">Giám đốc trung tâm</div><div class="dl"></div><div class="nm" data-f="gd"></div></div>
+  <div class="so meta"><span class="nh">Số </span><b data-f="so"></b><i class="lai" data-f="lai"></i></div>
+</section>
+</main>
+<script>
+// Vườn hoa tự sinh (hạt giống cố định → luôn ra đúng một hình). Hoa = các cánh elip quanh tâm; lá = elip dài.
+(function(){
+  let seed=20261019;const rnd=()=>{seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};
+  const HONG=['#F6BCC8','#F1A3B5','#F9D3DA','#E88DA5','#FBE0E4'],LA=['#9DB59A','#86A184','#B4C7AE'],f=(n)=>n.toFixed(1);
+  function la(x,y,len,ang,mau){return `<ellipse cx="${f(x)}" cy="${f(y)}" rx="${f(len*0.28)}" ry="${f(len)}" transform="rotate(${f(ang)} ${f(x)} ${f(y)})" fill="${mau}" opacity=".95"/><path d="M${f(x)} ${f(y-len)} L${f(x)} ${f(y+len)}" stroke="#fff" stroke-opacity=".35" stroke-width=".8" transform="rotate(${f(ang)} ${f(x)} ${f(y)})"/>`;}
+  function hoa(x,y,r,mau,mau2){let s='';const n=r>30?8:6,rot=rnd()*360;
+    for(let i=0;i<n;i++){const a=rot+i*360/n;s+=`<ellipse cx="${f(x)}" cy="${f(y-r*.5)}" rx="${f(r*.34)}" ry="${f(r*.56)}" transform="rotate(${f(a)} ${f(x)} ${f(y)})" fill="${mau}" stroke="#D77B93" stroke-opacity=".45" stroke-width=".7"/>`;}
+    s+=`<circle cx="${f(x)}" cy="${f(y)}" r="${f(r*.3)}" fill="${mau2}" opacity=".85"/><circle cx="${f(x)}" cy="${f(y)}" r="${f(r*.14)}" fill="#E2B76B"/>`;return s;}
+  function goc(cx,cy,sx,sy,rmax,N,rb){ // (cx,cy) là góc; sx,sy = ±1 hướng vào trong trang
+    const items=[];
+    for(let i=0;i<N;i++){const rho=Math.pow(rnd(),0.75)*rmax,th=rnd()*Math.PI/2;
+      const x=cx+sx*rho*Math.cos(th),y=cy+sy*rho*Math.sin(th);items.push({x,y,rho,th});}
+    let out='';
+    for(const it of items){ // lá trước
+      const ang=Math.atan2(it.y-cy,it.x-cx)*180/Math.PI+90+(rnd()-.5)*50;
+      out+=la(it.x+sx*8,it.y+sy*8,30+rnd()*26-it.rho*0.05,ang,LA[Math.floor(rnd()*3)]);}
+    items.sort((a,b)=>b.rho-a.rho);
+    for(const it of items){const r=Math.max(11,rb-it.rho*0.13+(rnd()-.5)*10);out+=hoa(it.x,it.y,r,HONG[Math.floor(rnd()*5)],HONG[Math.floor(rnd()*5)]);}
+    return out;}
+  let s='';
+  s+=goc(0,0,1,1,240,26,58)+goc(1123,794,-1,-1,215,22,54)+goc(1123,0,-1,1,110,7,34)+goc(0,794,1,-1,110,7,34);
+  // vòng hoa quanh ảnh (tâm 561,102)
+  const cx=561,cy=102;for(let i=0;i<14;i++){const a=i*2*Math.PI/14;s+=la(cx+78*Math.cos(a),cy+78*Math.sin(a),20,a*180/Math.PI+90+25,LA[i%3]);}
+  for(let i=0;i<14;i++){const a=(i+.5)*2*Math.PI/14;s+=hoa(cx+70*Math.cos(a),cy+70*Math.sin(a),i%2?15:19,HONG[(i*2)%5],HONG[(i*3+1)%5]);}
+  document.getElementById('hoa12').innerHTML=s;})();
+</script>
+<script src="chung/html-to-image.js"></script><script src="chung/cc.js"></script><script src="chung/cc-xuat.js"></script></body></html>

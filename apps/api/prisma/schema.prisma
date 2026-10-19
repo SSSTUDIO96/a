@@ -1501,6 +1501,9 @@ model DesignCard {
   size            String
   snapshot        Json
   outputFileId    String?        @map("output_file_id") @db.Uuid
+  // Cổng học viên (ký duyệt E câu 2, migration 20261019215000_the_hien_tren_cong): trung tâm ẩn được TỪNG thẻ khỏi trang
+  // của học viên. Mặc định hiện; GET /portal/me chỉ trả thẻ portalVisible = true.
+  portalVisible   Boolean        @default(true) @map("portal_visible")
   createdById     String         @map("created_by_id") @db.Uuid
   createdAt       DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt       DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)

@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=1123">
+<title>Giấy chứng nhận cc-03 – Trắng sóng đỏ vàng</title>
+<link rel="stylesheet" href="phong/phong.css"><link rel="stylesheet" href="phong/ss-album/ss-album.css"><link rel="stylesheet" href="chung/cc.css">
+<!-- Mẫu 03 — dựng sát ảnh anh Chiến gửi số 3: nền trắng, khung mảnh, dải đỏ + hai sợi vàng cong ở góc TRÊN PHẢI và góc DƯỚI TRÁI,
+     tiêu đề giữa trang với dòng phụ kẹp hai đường kẻ, "trân trọng trao cho" chữ to xám, tên chữ ký TO, huy hiệu vàng viền hoa ở góc dưới trái
+     (đè lên dải đỏ-vàng), hai chỗ ký. Tự vẽ SVG.
+     Ô ảnh học viên (tròn, nhỏ ~26 mm): góc TRÊN TRÁI trong khung (chỗ trắng trống ở ảnh gốc), không đụng tiêu đề/tên/huy hiệu. ?anh=an để ẩn. -->
+<style>
+.c3{background:#FFFFFF;color:#1E1A18}
+.c3 .song{inset:0}
+.c3 .anh{left:92px;top:70px;width:100px;height:100px;box-shadow:0 0 0 3px #fff,0 0 0 5px #B88A35,0 0 0 6px #fff}
+.c3 .huy{left:80px;top:512px;width:210px}
+.c3 .o-logo{left:524px;top:50px;width:34px;height:34px}
+.c3 .thg{left:0;width:1123px;top:90px;text-align:center;font-size:10.5px;color:#3A3431}
+.c3 .t1{left:262px;top:106px;width:600px;height:78px}
+.c3 .t2{left:0;width:1123px;top:194px;text-align:center;font-family:var(--f-sans);font-weight:500;font-size:16px;letter-spacing:.3em;text-transform:uppercase;color:#2A2522;display:flex;justify-content:center;align-items:center;gap:18px;white-space:nowrap}
+.c3 .t2::before,.c3 .t2::after{content:"";width:70px;height:1px;background:#3A3431}
+.c3 .tag{left:0;width:1123px;top:262px;text-align:center;font-family:var(--f-sans);font-weight:400;font-size:27px;letter-spacing:.06em;color:#555;text-transform:uppercase}
+.c3 .ten{left:232px;top:316px;width:660px;height:158px;font-size:calc(118px * var(--ten-co));color:#171414}
+.c3 .dong{left:0;width:1123px;top:488px;text-align:center}
+.c3 .ngay{left:0;width:1123px;top:526px;text-align:center;color:#5A524C}
+.c3 .ky1{left:392px;top:574px;width:230px}
+.c3 .ky2{left:760px;top:574px;width:230px}
+.c3 .so{left:0;width:1123px;top:724px;text-align:center;color:#6B625C}
+</style></head>
+<body class="xem"><main>
+<section class="cc c3">
+  <svg class="song" viewBox="0 0 1123 794" aria-hidden="true">
+    <defs>
+      <linearGradient id="do3" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5E0C10"/><stop offset=".5" stop-color="#A81E22"/><stop offset="1" stop-color="#6E0E12"/></linearGradient>
+      <linearGradient id="vg3" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8A6420"/><stop offset=".35" stop-color="#F3DE9C"/><stop offset=".65" stop-color="#B88A35"/><stop offset="1" stop-color="#E9CF86"/></linearGradient>
+      <linearGradient id="gr3" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#ECECEE"/></linearGradient>
+    </defs>
+    <rect width="1123" height="794" fill="url(#gr3)"/>
+    <!-- khung mảnh (nằm dưới các dải) -->
+    <rect x="39" y="38" width="1045" height="718" fill="none" stroke="#3A3431" stroke-width="1.5"/>
+    <!-- góc trên phải -->
+    <path d="M551 0 H1123 V415 C1100 360 1060 290 990 205 C900 100 740 25 551 0Z" fill="url(#do3)"/>
+    <path d="M551 0 H1123 V415 C1100 360 1060 290 990 205 C900 100 740 25 551 0Z" fill="#000" opacity=".12" transform="translate(30 -4)"/>
+    <path d="M610 0 C800 40 960 140 1060 290 C1090 335 1112 380 1123 430" fill="none" stroke="url(#vg3)" stroke-width="9"/>
+    <path d="M668 0 C840 40 980 120 1085 270 C1105 300 1118 330 1123 360" fill="none" stroke="url(#vg3)" stroke-width="3"/>
+    <path d="M520 0 C760 20 960 120 1060 280 C1100 345 1118 400 1123 470" fill="none" stroke="#fff" stroke-width="20" opacity="0"/>
+    <!-- góc dưới trái -->
+    <path d="M0 258 C20 420 120 610 300 710 C390 755 470 780 533 794 H0Z" fill="url(#do3)"/>
+    <path d="M0 330 C34 490 130 640 290 735 C370 778 450 794 480 794" fill="none" stroke="url(#vg3)" stroke-width="9"/>
+    <path d="M0 400 C40 540 140 670 270 750 C330 786 390 794 410 794" fill="none" stroke="url(#vg3)" stroke-width="3"/>
+    <!-- vệt sáng nhẹ trong vùng trắng -->
+    <path d="M1123 794 L760 794 L1123 560Z" fill="#E2E2E6" opacity=".55"/>
+  </svg>
+  <div class="anh"><img data-f="anh" alt=""></div>
+  <div class="huy" data-huy-hieu data-kieu="hoa" data-nen="#2A1414"></div>
+  <div class="o-logo"><img data-f="logo" alt=""></div>
+  <div class="thg" data-f="th"></div>
+  <div class="tt sv t1" data-gold="dam" data-al="center" data-max="68">Giấy chứng nhận</div>
+  <div class="t2">Hoàn thành khoá học</div>
+  <div class="tag">Trân trọng trao cho</div>
+  <div class="ten sv" data-f="ten" data-al="center" data-line="1" data-line-inset="90" data-line-h="1.5" data-line-color="#8A6420"></div>
+  <div class="dong" data-f="dong"></div>
+  <div class="ngay" data-f="ngayChu"></div>
+  <div class="ky ky1"><div class="cv">Giảng viên</div><div class="dl"></div><div class="nm" data-f="gv"></div></div>
+  <div class="ky ky2"><div class="cv" data-f="gdcv">Giám đốc trung tâm</div><div class="dl"></div><div class="nm" data-f="gd"></div></div>
+  <div class="so meta"><span class="nh">Số </span><b data-f="so"></b><i class="lai" data-f="lai"></i></div>
+</section>
+</main><script src="chung/html-to-image.js"></script><script src="chung/cc.js"></script><script src="chung/cc-xuat.js"></script></body></html>

@@ -318,7 +318,7 @@
 .ct-sr__skip--info { border-color: var(--line); background: var(--soft); color: var(--muted); }
 
 /* Thông báo nhỏ 5 giây */
-.ct-toasts { position: fixed; right: 20px; bottom: 96px; z-index: 40; display: flex; flex-direction: column; gap: 8px; width: min(380px, calc(100vw - 32px)); pointer-events: none; }
+.ct-toasts { position: fixed; right: 20px; bottom: 9.5rem; z-index: 40; display: flex; flex-direction: column; gap: 8px; width: min(380px, calc(100vw - 32px)); pointer-events: none; }
 .ct-toast { pointer-events: auto; display: flex; gap: 8px; align-items: flex-start; justify-content: space-between; padding: 10px 12px; background: var(--text); color: #fff; border-radius: 10px; font-size: 13px; box-shadow: 0 6px 20px rgba(0, 0, 0, .18); }
 .ct-toast__x { flex: none; border: 0; background: none; color: inherit; padding: 2px; cursor: pointer; line-height: 0; }
 .ct-toast__x .ui-ico { width: 14px; height: 14px; }
@@ -353,7 +353,7 @@
   .ct-oc__ed { flex: 1 1 100%; }
   .ct-dt { flex-wrap: wrap; }
   .ct-sr { padding-left: 20px; padding-right: 14px; }
-  .ct-toasts { left: 16px; right: 16px; width: auto; bottom: calc(var(--h-bottomnav) + 76px); }
+  .ct-toasts { left: 16px; right: 16px; width: auto; bottom: calc(var(--h-bottomnav) + 130px); }
   .ct-tot .ct-trow { grid-template-columns: minmax(0, 1fr) 150px; }
   .ct-tot .ct-trow--note { grid-template-columns: 1fr; gap: 6px; }
   .ct-pr { padding: 10px 14px; }

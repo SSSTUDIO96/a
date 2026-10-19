@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=1123">
+<title>Giấy chứng nhận cc-14 – Trắng hình học champagne</title>
+<link rel="stylesheet" href="phong/phong.css"><link rel="stylesheet" href="phong/ss-album/ss-album.css"><link rel="stylesheet" href="chung/cc.css">
+<!-- Mẫu 14 — mẫu thêm (ý riêng): nền trắng, HAI KHỐI TAM GIÁC ĐA MẶT (low-poly) vàng champagne ở góc trên trái và dưới phải — hiện đại, gọn.
+     Mặt tam giác sinh bằng SVG (hạt giống cố định). Huy hiệu TO nằm trên khối dưới phải; tiêu đề vàng đậm nổi khối 3D, tên mực nâu đậm.
+     Ô ảnh học viên (tròn, nhỏ ~26 mm): nằm trên khối tam giác góc TRÊN TRÁI. Logo + tên trung tâm góc trên phải. ?anh=an để ẩn. -->
+<style>
+.c14{--f-ten:var(--f-ky-1);--ten-co:var(--ky-co-1);background:#FFFFFF;color:#2A2118}
+.c14 .nen{inset:0}
+.c14 .anh{left:76px;top:84px;width:104px;height:104px;box-shadow:0 0 0 3px #F4E6BE,0 0 0 5px #fff,0 0 0 6px #A57A2A}
+.c14 .huy{left:894px;top:540px;width:216px}
+.c14 .o-logo{left:905px;top:56px;width:40px;height:40px}
+.c14 .thg{left:845px;width:160px;top:102px;text-align:center;font-size:9.5px;color:#5A4630;white-space:normal;line-height:1.35}
+.c14 .t1{left:231px;top:96px;width:660px;height:70px}
+.c14 .t2{left:0;width:1123px;top:178px;text-align:center;font-family:var(--f-sans);font-weight:500;font-size:15px;letter-spacing:.36em;text-transform:uppercase;color:#6B5536}
+.c14 .tag{left:0;width:1123px;top:250px;text-align:center;color:#6B5536;font-size:12.5px;letter-spacing:.32em}
+.c14 .ten{left:181px;top:268px;width:760px;height:158px;font-size:calc(118px * var(--ten-co));color:#2A2118}
+.c14 .dong{left:0;width:1123px;top:442px;text-align:center}
+.c14 .ngay{left:0;width:1123px;top:480px;text-align:center;color:#6B5536}
+.c14 .ky1{left:196px;top:574px;width:230px}
+.c14 .ky2{left:536px;top:574px;width:230px}
+.c14 .so{left:196px;top:730px;color:#6B5536}
+</style></head>
+<body class="xem"><main>
+<section class="cc c14">
+  <svg class="nen" viewBox="0 0 1123 794" aria-hidden="true" id="nen14">
+    <defs>
+      <linearGradient id="v14" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8A6420"/><stop offset=".3" stop-color="#F3DE9C"/><stop offset=".55" stop-color="#B88A35"/><stop offset=".8" stop-color="#F0D587"/><stop offset="1" stop-color="#8A6420"/></linearGradient>
+      <clipPath id="tl14"><path d="M0 0 H430 L280 92 L150 262 L0 382Z"/></clipPath>
+      <clipPath id="br14"><path d="M1123 794 H700 L840 702 L970 532 L1123 412Z"/></clipPath>
+    </defs>
+    <rect x="26" y="26" width="1071" height="742" fill="none" stroke="#C9A961" stroke-width="1"/>
+    <g clip-path="url(#tl14)" id="tl14g"></g>
+    <g clip-path="url(#br14)" id="br14g"></g>
+    <path d="M430 0 L280 92 L150 262 L0 382" fill="none" stroke="url(#v14)" stroke-width="2.4" transform="translate(6 8)"/>
+    <path d="M700 794 L840 702 L970 532 L1123 412" fill="none" stroke="url(#v14)" stroke-width="2.4" transform="translate(-6 -8)"/>
+  </svg>
+  <div class="anh"><img data-f="anh" alt=""></div>
+  <div class="huy" data-huy-hieu data-kieu="rang" data-nen="#2A2014"></div>
+  <div class="o-logo"><img data-f="logo" alt=""></div>
+  <div class="thg" data-f="th"></div>
+  <div class="tt sv t1" data-gold="dam" data-al="center" data-max="62">Giấy chứng nhận</div>
+  <div class="t2">Hoàn thành khoá học</div>
+  <div class="tag caps">Trân trọng trao cho</div>
+  <div class="ten sv" data-f="ten" data-al="center" data-line="1" data-line-inset="100" data-line-h="1.5" data-line-color="#A57A2A"></div>
+  <div class="dong" data-f="dong"></div>
+  <div class="ngay" data-f="ngayChu"></div>
+  <div class="ky ky1"><div class="cv">Giảng viên</div><div class="dl"></div><div class="nm" data-f="gv"></div></div>
+  <div class="ky ky2"><div class="cv" data-f="gdcv">Giám đốc trung tâm</div><div class="dl"></div><div class="nm" data-f="gd"></div></div>
+  <div class="so meta"><span class="nh">Số </span><b data-f="so"></b><i class="lai" data-f="lai"></i></div>
+</section>
+</main>
+<script>
+// Khối tam giác đa mặt: lưới điểm lệch ngẫu nhiên (hạt giống cố định), mỗi ô chia hai tam giác, màu champagne theo vị trí.
+(function(){
+  let seed=14;const rnd=()=>{seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};
+  const PAL=['#B38A33','#C9A961','#D9BB6A','#E4CB8A','#EBD9A0','#F4E8C4','#FAF1D8'];
+  function luoi(x0,y0,w,h,n,dao){const cw=w/n,ch=h/n;const P=[];
+    for(let j=0;j<=n;j++){P.push([]);for(let i=0;i<=n;i++){const e=(i==0||j==0||i==n||j==n)?0.15:1;P[j].push([x0+i*cw+(rnd()-.5)*cw*.8*e,y0+j*ch+(rnd()-.5)*ch*.8*e]);}}
+    let s='';
+    const mau=(x,y)=>{let t=((x-x0)/w+(y-y0)/h)/2;if(dao)t=1-t;t=Math.min(.999,Math.max(0,t+(rnd()-.5)*.35));return PAL[Math.floor(t*PAL.length)];};
+    const tri=(a,b,c)=>{const cx=(a[0]+b[0]+c[0])/3,cy=(a[1]+b[1]+c[1])/3;s+=`<path d="M${a[0].toFixed(1)} ${a[1].toFixed(1)}L${b[0].toFixed(1)} ${b[1].toFixed(1)}L${c[0].toFixed(1)} ${c[1].toFixed(1)}Z" fill="${mau(cx,cy)}" stroke="#fff" stroke-opacity=".55" stroke-width=".8"/>`;};
+    for(let j=0;j<n;j++)for(let i=0;i<n;i++){const a=P[j][i],b=P[j][i+1],c=P[j+1][i],d=P[j+1][i+1];
+      if(rnd()<.5){tri(a,b,c);tri(b,d,c);}else{tri(a,b,d);tri(a,d,c);}}
+    return s;}
+  document.getElementById('tl14g').innerHTML=luoi(-20,-20,480,420,9,false);
+  document.getElementById('br14g').innerHTML=luoi(680,390,460,420,9,true);
+})();
+</script>
+<script src="chung/html-to-image.js"></script><script src="chung/cc.js"></script><script src="chung/cc-xuat.js"></script></body></html>

