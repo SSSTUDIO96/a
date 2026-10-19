@@ -37,8 +37,17 @@ describe('phông SS-Album nhóm A', () => {
     expect(total).toBeLessThan(15 * 1024 * 1024);
   });
 
-  it('BẮT: phong.css nạp ss-album.css; mỗi chữ ký ky-N có biến --f-ky-N, hệ số --ky-co-N và được mau.js nạp trước khi vẽ', () => {
-    expect(readFileSync(new URL('phong.css', PHONG), 'utf8')).toMatch(/@import url\(ss-album\/ss-album\.css\)/);
+  it('BẮT: mọi mẫu nạp ss-album.css bằng thẻ <link> (không @import — bộ xuất PNG không nhúng được phông qua @import)', () => {
+    const mau = readdirSync(new URL('../', PHONG)).filter((n) => n.endsWith('.html'));
+    expect(mau.length).toBeGreaterThanOrEqual(27);
+    for (const f of mau) {
+      const src = readFileSync(new URL(`../${f}`, PHONG), 'utf8');
+      expect(src, f).toContain('<link rel="stylesheet" href="phong/ss-album/ss-album.css">');
+    }
+    expect(readFileSync(new URL('phong.css', PHONG), 'utf8')).not.toMatch(/@import/);
+  });
+
+  it('BẮT: mỗi chữ ký ky-N có biến --f-ky-N, hệ số --ky-co-N và được mau.js nạp trước khi vẽ', () => {
     const main = readFileSync(new URL('phong.css', PHONG), 'utf8') + css;
     const mauJs = readFileSync(new URL('../chung/mau.js', PHONG), 'utf8');
     for (const f of FONT_OVERRIDES) {

@@ -59,10 +59,6 @@ const BAR_FILES = [
   'layout/layout.css',
 ];
 
-// NỢ ĐÃ BIẾT (đã lập phiếu, chưa sửa): contracts.css `.ct-page:has(.ct-totbar--note)` 124px và `--block` 156px
-// vẫn là 64px + đệm viết cứng. Khi sửa xong thì XOÁ hai mục này, bài thử sẽ tự canh.
-const KNOWN_DEBT = new Set(['features/contracts/contracts.css|padding-bottom|124px', 'features/contracts/contracts.css|padding-bottom|156px']);
-
 describe('không còn số cứng chiều cao thanh dưới ngoài layout.css', () => {
   it('schedule.css: .ws-a trừ thanh dưới bằng biến', () => {
     expect(noComment(src('features/schedule/schedule.css'))).toMatch(
@@ -90,14 +86,14 @@ describe('không còn số cứng chiều cao thanh dưới ngoài layout.css', 
     );
   });
 
-  it.each(BAR_FILES)('%s: không có bottom / padding-bottom ≥ 48px viết cứng (trừ nợ đã biết)', (rel) => {
+  it.each(BAR_FILES)('%s: không có bottom / padding-bottom ≥ 48px viết cứng (không ngoại lệ)', (rel) => {
     const text = noComment(src(rel));
     const bad: string[] = [];
     for (const m of text.matchAll(/(?<![-\w])(bottom|padding-bottom)\s*:\s*([^;}]+)/g)) {
       const value = (m[2] ?? '').trim();
       if (value.includes('var(--h-bottomnav')) continue;
       for (const px of value.matchAll(/(\d+(?:\.\d+)?)px/g)) {
-        if (Number(px[1]) >= 48 && !KNOWN_DEBT.has(`${rel}|${m[1]}|${px[0]}`)) bad.push(`${m[1]}: ${value}`);
+        if (Number(px[1]) >= 48) bad.push(`${m[1]}: ${value}`);
       }
     }
     expect(bad).toEqual([]);

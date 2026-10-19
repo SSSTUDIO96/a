@@ -3,7 +3,7 @@
    Tất cả là phông tệp tự ghi giấy phép mở (SIL OFL 1.1; riêng Roboto Slab là Apache 2.0),
    đủ 186/186 ký tự tiếng Việt, không cấm nhúng (fsType = 0). Đã chuyển sang WOFF2 (không sửa hình chữ).
    Giấy phép từng họ: <thư mục họ>/OFL.txt (hoặc LICENSE.txt). Bảng kê cho chủ studio: docs/GHI-CHEP-MON-CUA-NGUOI-KHAC.md.
-   Tệp này được phong.css nạp bằng @import — mọi mẫu đã nạp phong.css thì có sẵn các phông dưới đây.
+   Tệp này được mỗi mẫu nạp bằng thẻ <link> ngay sau phong.css (KHÔNG dùng @import: bộ xuất PNG của app không nhúng được phông qua @import) — mẫu mới cũng phải có thẻ này.
 
    Tên family: 'SSA <Tên họ>' (dùng cho phông tiêu đề/chữ thường).
    NHÓM CHỮ KÝ nét mảnh đều ('MP Chữ ký 5..7') = lựa chọn "Chữ ký 5..7" trên màn Mẫu thiết kế (?ky=5..7):

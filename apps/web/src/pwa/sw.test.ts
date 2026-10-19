@@ -57,10 +57,10 @@ function setup(online = true) {
 
   /** Bắn sự kiện fetch; trả null nếu service worker KHÔNG gọi respondWith (trình duyệt tự xử lý như bình thường). */
   async function fire(path: string, init: { method?: string; mode?: string; origin?: string } = {}) {
-    let responded: Promise<FakeResponse> | null = null;
+    const holder: { p: Promise<FakeResponse> | null } = { p: null };
     const request = { url: new URL(path, init.origin ?? ORIGIN).href, method: init.method ?? 'GET', mode: init.mode ?? 'cors' };
-    handlers.fetch!({ request, respondWith: (p: Promise<FakeResponse>) => { responded = Promise.resolve(p); } });
-    return responded ? await responded : null;
+    handlers.fetch!({ request, respondWith: (p: Promise<FakeResponse>) => { holder.p = Promise.resolve(p); } });
+    return holder.p ? await holder.p : null;
   }
   async function lifecycle(type: 'install' | 'activate') {
     const waits: Promise<unknown>[] = [];

@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 // Đăng ký service worker (public/sw.js). Chỉ ở bản build chạy thật: lúc dev (vite) service worker làm khó việc sửa mã.
 // Lỗi đăng ký không được làm hỏng app: nuốt và ghi cảnh báo.
 export function registerServiceWorker(): void {

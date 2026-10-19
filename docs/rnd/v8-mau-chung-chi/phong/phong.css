@@ -12,6 +12,14 @@
 @font-face{font-family:'MP Chữ đậm có chân';src:url(PlayfairDisplay-VF.ttf) format('truetype');font-weight:400 900;font-display:block}
 @font-face{font-family:'MP Chữ đậm có chân';src:url(PlayfairDisplay-Italic-VF.ttf) format('truetype');font-weight:400 900;font-style:italic;font-display:block}
 @font-face{font-family:'MP Chữ không chân';src:url(Montserrat-VF.ttf) format('truetype');font-weight:100 900;font-display:block}
+/* Nhóm TIÊU ĐỀ (phông chữ hoa trang trọng, đủ dấu tiếng Việt, SIL OFL 1.1; tệp lấy từ kho SS-Album nhóm A, mục kiểm kê 291 tệp):
+     MP Tiêu đề 1 = Prata · 2 = Abril Fatface · 3 = Noto Serif Display (đổi độ đậm được) · 4 = Cormorant Garamond đậm (đã có ở trên)
+     MP Tiêu đề viết tay = Great Vibes (cho mẫu có tiêu đề viết tay như ảnh 4) */
+@font-face{font-family:'MP Tiêu đề 1';src:url(Prata-Regular.ttf) format('truetype');font-display:block}
+@font-face{font-family:'MP Tiêu đề 2';src:url(AbrilFatface-Regular.ttf) format('truetype');font-display:block}
+@font-face{font-family:'MP Tiêu đề 3';src:url(NotoSerifDisplay-VF.ttf) format('truetype');font-weight:100 900;font-stretch:62.5% 100%;font-display:block}
+@font-face{font-family:'MP Tiêu đề viết tay';src:url(GreatVibes-Regular.ttf) format('truetype');font-display:block}
+@font-face{font-family:'MP Tiêu đề viết tay 2';src:url(PinyonScript-Regular.ttf) format('truetype');font-display:block}
 :root{
   --f-ky-1:'MP Chữ ký 1',cursive; --ky-co-1:1.05;
   --f-ky-2:'MP Chữ ký 2',cursive; --ky-co-2:1.12;
