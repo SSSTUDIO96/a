@@ -9,6 +9,9 @@ import { fullDate, scheduleText, sessionSyncLines } from './logic';
 // "Đưa buổi học lên Lịch" (việc tồn 6). Mở ra là XEM TRƯỚC (dryRun) — sẽ thêm / đổi / huỷ bao nhiêu buổi, trùng giờ với
 // lịch nào của giảng viên — rồi mới ghi. Bấm lại bao nhiêu lần cũng không sinh trùng (máy chủ so với buổi đang có).
 
+// Danh sách trùng dài (lớp cả học kỳ trùng một lớp khác) chỉ hiện vài dòng đầu.
+const MAX_CONFLICTS = 5;
+
 type State =
   | { status: 'loading' }
   | { status: 'error'; message: string }
@@ -111,11 +114,12 @@ export function SessionSyncDialog({
               <div className="kc-sync__conf" role="alert">
                 <b>Trùng giờ với lịch khác của giảng viên — chưa đưa buổi nào lên Lịch.</b>
                 <ul>
-                  {conflicts.map((c) => (
+                  {conflicts.slice(0, MAX_CONFLICTS).map((c) => (
                     <li key={`${c.appointmentId}-${c.membershipId}`}>
                       <span className="num">{c.code}</span> · {c.staffName} · <span className="num">{conflictTime(c.startsAt, c.endsAt)}</span>
                     </li>
                   ))}
+                  {conflicts.length > MAX_CONFLICTS && <li>… và {conflicts.length - MAX_CONFLICTS} lịch trùng khác</li>}
                 </ul>
                 <p>Đổi giờ / huỷ lịch trùng trên Lịch, hoặc đổi giảng viên / giờ học của lớp, rồi mở lại.</p>
               </div>

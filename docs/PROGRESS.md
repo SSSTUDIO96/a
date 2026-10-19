@@ -40,6 +40,8 @@ Cập nhật: 19/10/2026 (giờ Việt Nam). **Đã đối chiếu với commit 
 | Thao tác thật | tràn ngang 0/90 (30 màn × 3 khổ); 111 nút bấm, 0 nút chết; tiền khớp giữa màn, báo cáo và database |
 | Sau lần chấm | `0802ee0`: lệnh chạy thử tự đọc `.env` — máy chủ 601/601 (thợ Z2, chưa chấm độc lập) |
 
+Trang duyệt mẫu (riêng tư, anh Chiến xem và gửi yêu cầu sửa/ảnh dựng mẫu): https://claude.ai/artifact/EkhMNmWsCnwcERXNhoB6zn — yêu cầu lưu trong collection `yeu-cau`, điều phối đọc bằng ArtifactData trước khi giao thợ mẫu.
+
 Module chưa làm: thông báo, cổng học viên tự đăng nhập, app iPhone, buổi học lên lịch (`docs/VIEC-TON.md`).
 
 ### 3. Cấu hình còn thiếu

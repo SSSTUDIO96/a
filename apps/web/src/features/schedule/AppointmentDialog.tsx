@@ -514,7 +514,7 @@ function ViewBody({
           </span>
         </InfoRow>
         {(appt.locationType || appt.address) && (
-          <InfoRow label="Nơi làm">
+          <InfoRow label={appt.courseClass ? 'Nơi học' : 'Nơi làm'}>
             {appt.locationType ? LOCATION_LABELS[appt.locationType] : ''}
             {appt.address && <span className="ws-pre">{appt.locationType ? ' – ' : ''}{appt.address}</span>}
           </InfoRow>

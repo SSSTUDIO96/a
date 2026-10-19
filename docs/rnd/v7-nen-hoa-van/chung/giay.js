@@ -155,11 +155,11 @@ function khungBaTu(m){const kem='#F3E9D6',o=28,B=64;let s=`<rect width="${W}" he
   s+=`<rect x="${o+B}" y="${o+B}" width="${L1}" height="${L2}" fill="${kem}"/>`;
   for(const k of [6,12,18])s+=`<rect x="${o+B+k}" y="${o+B+k}" width="${L1-2*k}" height="${L2-2*k}" fill="none" stroke="${m}" stroke-width="${k===12?1.6:.8}"/>`;
   // Medallion kem trên kem, nổi nhẹ: một đường sáng lệch lên trên-trái, một đường sẫm lệch xuống dưới-phải.
-  const cx=W/2,cy=H/2,rx=W*.36,ry=H*.36;
-  s+=medallion(cx+2,cy+3,rx,ry,16,'none','#D9C7A4')+medallion(cx-1.5,cy-2,rx,ry,16,'none','#FFFBF1')+medallion(cx,cy,rx,ry,16,'#EFE3CB','#DCCBA9');
-  s+=medallion(cx,cy,rx*.82,ry*.82,12,'none','#E2D3B4');
-  for(const sg of [-1,1])s+=`<path d="M${cx-30},${cy+sg*ry*1.04} L${cx},${cy+sg*(ry*1.04+46)} L${cx+30},${cy+sg*ry*1.04}Z" fill="#EFE3CB" stroke="#DCCBA9" stroke-width="2"/>`;
-  const q=(x,y,sx,sy)=>`<g transform="translate(${x},${y}) scale(${sx},${sy})"><path d="M0,0 H170 C150,40 110,70 60,90 C30,100 10,130 0,170Z" fill="#EFE3CB" stroke="#DCCBA9" stroke-width="2"/></g>`;
+  const cx=W/2,cy=H/2,rx=W*.33,ry=H*.35;
+  s+=medallion(cx+2,cy+3,rx,ry,12,'none','#D9C7A4')+medallion(cx-1.5,cy-2,rx,ry,12,'none','#FFFBF1')+medallion(cx,cy,rx,ry,12,'#EFE3CB','#DCCBA9');
+  s+=medallion(cx,cy,rx*.84,ry*.84,12,'none','#E3D5B8');
+  for(const sg of [-1,1]){const y=cy+sg*(ry*1.06+20);s+=`<path d="M${cx},${cy+sg*ry*1.02} V${y}" stroke="#DCCBA9" stroke-width="2"/><circle cx="${cx}" cy="${y+sg*10}" r="14" fill="#EFE3CB" stroke="#DCCBA9" stroke-width="2"/><circle cx="${cx}" cy="${y+sg*10}" r="5" fill="#E3D5B8"/>`;}
+  const q=(x,y,sx,sy)=>`<g transform="translate(${x},${y}) scale(${sx},${sy})"><path d="M0,0 H120 C112,30 92,44 66,52 C40,60 18,82 0,120Z" fill="#EFE3CB" stroke="#DCCBA9" stroke-width="2"/><path d="M0,0 H70 C62,30 30,54 0,70Z" fill="none" stroke="#E3D5B8" stroke-width="1.5"/></g>`;
   const a=o+B+20;s+=q(a,a,1,1)+q(W-a,a,-1,1)+q(a,H-a,1,-1)+q(W-a,H-a,-1,-1);
   return s;}
 
@@ -220,13 +220,15 @@ function ghep(img){if(GIAY==='trong-anh'&&P.get('xoay')!=='0'&&((img.height>img.
   const sc=Math.max(W/sw,H/sh);x.fillStyle=GIAY_MAU;x.fillRect(0,0,W,H);x.filter='blur(28px) brightness(.92)';
   x.drawImage(img,sx,sy,sw,sh,(W-sw*sc)/2,(H-sh*sc)/2,sw*sc,sh*sc);x.filter='none';
   if(vungCard){x.fillStyle=GIAY_MAU;x.fillRect(vungCard.x,vungCard.y,vungCard.w,vungCard.h);} // ô trong suốt → giấy kem
-  x.drawImage(img,sx,sy,sw,sh,ox,oy,sw*s,sh*s);
+  // Ảnh bị phóng > 1,3 lần (ảnh nhỏ / JPEG) và dùng làm nền tràn: làm mềm nhẹ cho hết ô vuông JPEG, vân giấy không sạn.
+  const mem=GIAY!=='trong-anh'&&s>1.3?Math.min(1.2,(s-1)*1.5):0;if(mem)x.filter=`blur(${mem.toFixed(2)}px)`;
+  x.drawImage(img,sx,sy,sw,sh,ox,oy,sw*s,sh*s);x.filter='none';document.body.dataset.mem=mem.toFixed(2);
   Object.assign(document.body.dataset,{phong:s.toFixed(2),mo:s>1.6?'1':'0',cat:[ox,oy,sw*s,sh*s].map(Math.round).join(',')});
   if(vungCard){const pad=Math.min(vungCard.w,vungCard.h)*.07,tren=+(P.get('vungtren')||0)*vungCard.h;datKhung(inset(vungCard,pad,pad+tren,pad,pad));}
   const im=document.createElement('img');im.className='lop-nen';im.style.cssText='position:absolute;left:0;top:0;width:100%;height:100%';
   im.src=cv.toDataURL('image/png');c.insertBefore(im,c.firstChild);
   // Chữ nằm trên tấm giấy của app (chu-nhat/panel/tem) → nền dưới chữ là giấy app, không phải ảnh: không đo ảnh.
-  if(['chu-nhat','panel','tem'].includes(GIAY)){im.decode().then(xong);c.insertBefore(im,c.firstChild);return;}
+  if(['chu-nhat','panel','tem'].includes(GIAY)){im.decode().then(xong);return;}
   window.GIAY_DO=()=>{// đo chữ trên chính canvas nền; dòng nào < 4,5:1 thì đậm màu chữ dần về #2A2420
     const d=x.getImageData(0,0,W,H).data;const cr=c.getBoundingClientRect();let doi=0;
     c.querySelectorAll('.w [data-do]').forEach(el=>{const r=document.createRange();r.selectNodeContents(el);const hop=[...r.getClientRects()];
