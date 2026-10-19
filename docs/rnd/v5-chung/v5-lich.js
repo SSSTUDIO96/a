@@ -153,7 +153,8 @@
     DAYS.forEach((d, i) => (h += `<button type="button" class="ws-day${i >= 5 ? ' is-we' : ''}${d === day ? ' is-on' : ''}"><span class="ws-day__w">${WDS[i]}</span><span class="ws-day__n num">${+d.slice(8)}</span><span class="ws-day__c">${AP.filter((a) => a.d === d).length} ca</span></button>`));
     h += `</div><div class="ws-filters"><button type="button" class="ui-chip" aria-pressed="true">Tất cả <span class="ui-chip__count">${dl.length}</span></button>`;
     STAFF.forEach((s) => (h += `<button type="button" class="ui-chip">${av(s.ini, s.c, 'xs')} ${s.name} <span class="ui-chip__count">${dl.filter((a) => a.st.includes(s.id)).length}</span></button>`));
-    if (STAFF.length > 1) h += `<button type="button" class="ui-chip"><span class="ws-av-na ws-av-na--xs">?</span> Chưa có thợ <span class="ui-chip__count">${dl.filter((a) => !a.st.length).length}</span></button></div>`;
+    if (STAFF.length > 1) h += `<button type="button" class="ui-chip"><span class="ws-av-na ws-av-na--xs">?</span> Chưa có thợ <span class="ui-chip__count">${dl.filter((a) => !a.st.length).length}</span></button>`;
+    h += `</div>`;
     const na = dl.filter((a) => !a.st.length);
     if (na.length) h += `<section class="ws-b__sec"><h3 class="ws-caps">Cần xử lý</h3><div class="ws-todo">${na.map((a) => `<div class="ws-task">${ico('person')}<button type="button" class="ws-task__t"><b>Chưa có thợ</b><span>${a.s} · ${kind(a, color)} · ${a.kh}</span></button><button type="button" class="ui-btn ui-btn--sm">Phân thợ</button></div>`).join('')}</div></section>`;
     const parts = [['SÁNG SỚM', 0, 420], ['BUỔI SÁNG', 420, 720], ['BUỔI CHIỀU', 720, 1080], ['BUỔI TỐI', 1080, 1440]];
