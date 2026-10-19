@@ -457,7 +457,7 @@ export function overridesFromView(l: GroupedContractLine<string | null>, perQuan
   for (const s of l.surcharges ?? []) {
     if (s.voidedAt || !s.surchargeRuleId) continue;
     const pq = perQuantityOf?.(s.surchargeRuleId) ?? null;
-    const dflt = l.quantity;
+    const dflt = pq === null ? (l.quantity === 1 ? 1 : null) : pq ? l.quantity : 1;
     const quantity = dflt !== null && s.quantity === dflt ? null : s.quantity;
     const unitPrice = s.priceVersionId === null ? s.unitPrice : null;
     if (quantity === null && unitPrice === null) continue;
