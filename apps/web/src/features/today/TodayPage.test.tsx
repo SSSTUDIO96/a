@@ -286,6 +286,40 @@ describe('không có quyền xem lịch (máy chủ trả ca = null)', () => {
   });
 });
 
+describe('sổ thợ chung (một người một tên, một màu)', () => {
+  it('có staff.read: tải sổ thợ GET /staff; hai thợ cùng tên ngắn được tách tên và tách màu như ở Lịch', async () => {
+    const v = fullView();
+    const hai = (id: string, full: string) => ({ membershipId: id, displayName: full, fullName: full, initials: null });
+    // Hai thợ cùng tên cuối "Hà": sổ thợ đầy đủ có cả người KHÔNG hiện trên màn.
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        calls.push(url);
+        if (url.includes('/staff')) return json(200, { items: [hai('m-ha', 'Thu Hà'), hai('m-ha2', 'Lan Hà'), hai('m-linh', 'Linh Trần'), hai('m-mai', 'Mai')] });
+        return json(200, v);
+      }),
+    );
+    calls = [];
+    renderToday({ ...ALL, staffRead: true });
+    await loaded();
+    await waitFor(() => expect(calls.some((u) => u.includes('/orgs/org-1/staff'))).toBe(true));
+    expect(calls.filter((u) => u.endsWith('/today'))).toHaveLength(1);
+    // Sổ thợ biết họ tên "Linh Trần" (trùng tên hiển thị) → rút gọn tiếng cuối như Lịch / Hợp đồng.
+    expect(screen.getByText('Trần · 2 ca')).toBeTruthy();
+    expect(screen.queryByText('Linh Trần · 2 ca')).toBeNull();
+  });
+
+  it('không có staff.read: không gọi /staff', async () => {
+    serve(fullView());
+    renderToday({ ...ALL, staffRead: false });
+    await loaded();
+    expect(calls.some((u) => u.includes('/staff'))).toBe(false);
+    // Không biết họ tên → không đoán: dùng nguyên tên hiển thị máy chủ trả.
+    expect(screen.getByText('Linh Trần · 2 ca')).toBeTruthy();
+  });
+});
+
 describe('Thu gọn nhớ trên máy', () => {
   it('thu gọn rồi mở lại trang vẫn thu gọn; khoá hom-nay:thu-gon:can-lam', async () => {
     serve(fullView());

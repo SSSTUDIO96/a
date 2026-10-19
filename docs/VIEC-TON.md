@@ -84,4 +84,4 @@ Danh sách việc các thợ, thợ chấm và R&D đã nêu nhưng **chưa làm
 | 64 | (L6) 5 tệp .bat hiện "đã sửa" ngay sau khi lấy mã (chỉ khác CRLF) — xem lại .gitattributes | chấm lần 5 |
 | 65 | apps/api/src/scripts/run-sync-system-roles.ts:11 chưa in `occasionSetsSeeded` (giá trị đã có trong báo cáo, chỉ thiếu dòng in) | thợ M3 → giao M7/D1 |
 | 66 | Màu "xanh lá" mặc định của nhân vật (#2F7D72, ví dụ "Mẹ chú rể") trên nền nhạt của chính nó chỉ đạt tương phản 4,29:1 (ngưỡng 4,5). Đang bị khoá "6 màu đầu giữ nguyên". Khi tô theo Sự kiện đã chỉnh chữ thành #2C786A (4,61). Đổi màu mặc định cần anh quyết | thợ W4 |
-| 67 | 12 màu sự kiện đang nằm 2 chỗ (schedule.css và pricing.css .pr-sw--*), có bài thử so khớp nhưng vẫn là bản sao — đưa vào tokens.css dùng chung (luật 6: cấm bản sao) | thợ W2 |
+| 67 | 12 màu sự kiện đang nằm 3 chỗ (schedule.css, pricing.css .pr-sw--*, today.css), có bài thử so khớp nhưng vẫn là bản sao — đưa vào tokens.css dùng chung (luật 6: cấm bản sao) | thợ W2 |
