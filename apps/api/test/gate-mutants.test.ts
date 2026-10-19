@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { ALL_ROUTES } from '../src/app';
 import { defineRoute, mustOrg, type AnyRoute } from '../src/http/route';
 import { AppError } from '../src/lib/errors';
-import { buildGateFixture, runIsolationGate, type GateReport } from './gate';
+import { buildGateFixture, runIsolationGate, type GateFixture, type GateReport } from './gate';
 import { makeApp, makeDeps } from './helpers';
 import { PARTIAL_SAMPLES, REF_SAMPLES, REF_VARIANTS, SAMPLES } from './gate-samples';
 import { createApp } from '../src/app';
@@ -25,10 +25,34 @@ function replace(m: AnyRoute): AnyRoute[] {
   return ALL_ROUTES.map((r) => (r.method === m.method && r.path === m.path ? m : r));
 }
 
-async function gateOn(routes: AnyRoute[]): Promise<GateReport> {
+// prepare: chỉnh dữ liệu fixture (bằng app THẬT, chưa cài lỗi) trước khi cửa gác chạy trên bảng route đã cài lỗi.
+async function gateOn(routes: AnyRoute[], prepare?: (fx: GateFixture) => Promise<void>): Promise<GateReport> {
   const app = createApp(deps, routes);
   const fx = await buildGateFixture(makeApp(deps), deps.db);
+  await prepare?.(fx);
   return runIsolationGate(app, routes, fx, SAMPLES, REF_SAMPLES, REF_VARIANTS);
+}
+
+// Đột biến "quên lọc tổ chức ở câu tra cứu": giữ nguyên xử lý của route thật, chỉ chạy nó trên một client database đã bị
+// `$extends` gỡ điều kiện tổ chức khỏi đúng những câu được chọn (kể cả câu trong $transaction của client đó).
+function onDb(method: AnyRoute['method'], path: string, wrap: (db: Db) => Db): AnyRoute {
+  const original = ALL_ROUTES.find((r) => r.method === method && r.path === path);
+  if (!original) throw new Error(`Không có route ${method} ${path} để cài lỗi`);
+  return { ...original, handler: async (ctx: Parameters<typeof original.handler>[0]) =>
+    original.handler({ ...ctx, deps: { ...ctx.deps, db: wrap(ctx.deps.db) } }) } as AnyRoute;
+}
+
+function replaceMany(mutants: AnyRoute[]): AnyRoute[] {
+  let routes = ALL_ROUTES;
+  for (const m of mutants) {
+    if (!routes.some((r) => r.method === m.method && r.path === m.path)) throw new Error(`Không có route ${m.method} ${m.path} để thay`);
+    routes = routes.map((r) => (r.method === m.method && r.path === m.path ? m : r));
+  }
+  return routes;
+}
+
+function dropOrg(where: unknown): void {
+  if (where && typeof where === 'object') delete (where as { organizationId?: unknown }).organizationId;
 }
 
 describe('cửa gác chuyển đỏ với từng kiểu lỗi', () => {
@@ -283,5 +307,114 @@ describe('cửa gác chuyển đỏ với từng kiểu lỗi', () => {
     console.log(`[đột biến 14] crossRef vi phạm: ${r.crossRef.violations.length}/${r.crossRef.total}: ${hit.join('; ')}`);
     expect(hit.length).toBeGreaterThan(0);
     expect(hit[0]).toContain('KHÁC phản hồi mã bịa');
+  });
+
+  // Ba đột biến bản vẽ D mục 4.3 (gói M7): loại sự kiện, luật phụ phí ở dòng hợp đồng, trang Hôm nay.
+  it('Đột biến D1 — GET /occasions quên organizationId trong where (trả loại sự kiện của mọi tổ chức) → phép leak đỏ', async () => {
+    const mutant = onDb('get', '/orgs/:orgId/occasions', (db) =>
+      db.$extends({
+        query: {
+          occasion: {
+            findMany({ args, query }) {
+              dropOrg(args.where);
+              return query(args);
+            },
+          },
+        },
+      }) as unknown as Db,
+    );
+    const r = await gateOn(replace(mutant));
+    const hit = r.leak.violations.filter((v) => v.startsWith('GET /orgs/:orgId/occasions '));
+    console.log(`[đột biến D1] leak vi phạm: ${r.leak.violations.length}/${r.leak.total} (đạt ${r.leak.passed}/${r.leak.total}): ${hit.join('; ')}`);
+    expect(hit.length).toBe(1);
+    // Lộ đủ 7 mã loại sự kiện của A (6 loại cài sẵn + 1 loại fixture tạo), không chỉ "có lộ".
+    expect(Number(/lộ (\d+) giá trị/.exec(hit[0] ?? '')?.[1] ?? 0)).toBeGreaterThanOrEqual(7);
+  });
+
+  it('Đột biến D2 — kiểm dismissedRuleIds / surchargeOverrides bằng findMany({ id: { in } }) không lọc tổ chức → phép crossRef đỏ', async () => {
+    // Tái hiện lỗi ở checkLineRuleRefs (contracts/autoSurcharge.ts — chốt DUY NHẤT vì mảng dismissed không có khoá ngoại):
+    // gỡ điều kiện tổ chức khỏi câu tra luật theo danh sách mã, ở MỌI đường nhận dòng đặt chỗ. Câu nạp luật đang bật
+    // (where không có id.in) giữ nguyên.
+    const wrap = (db: Db) =>
+      db.$extends({
+        query: {
+          surchargeRule: {
+            findMany({ args, query }) {
+              const id = (args.where as { id?: unknown } | undefined)?.id;
+              if (id && typeof id === 'object' && 'in' in id) dropOrg(args.where);
+              return query(args);
+            },
+          },
+        },
+      }) as unknown as Db;
+    const targets = [
+      ['post', '/orgs/:orgId/contracts/quote'],
+      ['post', '/orgs/:orgId/contracts'],
+      ['patch', '/orgs/:orgId/contracts/:contractId'],
+      ['post', '/orgs/:orgId/contracts/:contractId/lines'],
+    ] as const;
+    const r = await gateOn(replaceMany(targets.map(([m, p]) => onDb(m, p, wrap))));
+    const hit = r.crossRef.violations.filter((v) => /dismissedRuleIds\[\]=mã của A\]/.test(v));
+    console.log(`[đột biến D2] crossRef vi phạm: ${r.crossRef.violations.length}/${r.crossRef.total} (đạt ${r.crossRef.passed}/${r.crossRef.total}): ${hit.join('; ')}`);
+    // Mỗi đường nhận dòng đặt chỗ đỏ ở đúng trường dismissedRuleIds[]: mã luật của A lọt → 2xx, mã bịa → 404.
+    for (const [m, p] of targets) {
+      const k = `${m.toUpperCase()} ${p} [`;
+      expect(hit.some((v) => v.startsWith(k) && v.includes('KHÁC phản hồi mã bịa')), k).toBe(true);
+    }
+  });
+
+  it('Đột biến D3 — GET /today đọc đợt thu không lọc tổ chức (đợt quá hạn của studio khác hiện ở thẻ Thu tiền) → phép leak đỏ', async () => {
+    // Gỡ điều kiện tổ chức khỏi CẢ BA câu đọc đợt thu (groupBy đợt → hợp đồng theo danh sách mã → mọi đợt của các hợp đồng
+    // đó) và câu cộng phiếu: chỉ phá câu groupBy thì mã ném lỗi "không đọc được hợp đồng" chứ không lộ (ghi chú thợ M6).
+    // Câu đọc hợp đồng mới 24 giờ qua (where không có id.in) GIỮ lọc tổ chức — để chỗ lộ chỉ có thể là thẻ Thu tiền.
+    const mutant = onDb('get', '/orgs/:orgId/today', (db) =>
+      db.$extends({
+        query: {
+          paymentInstallment: {
+            groupBy({ args, query }) {
+              dropOrg(args.where);
+              dropOrg((args.where as { contract?: unknown } | undefined)?.contract);
+              return query(args);
+            },
+            findMany({ args, query }) {
+              dropOrg(args.where);
+              return query(args);
+            },
+          },
+          contract: {
+            findMany({ args, query }) {
+              const id = (args.where as { id?: unknown } | undefined)?.id;
+              if (id && typeof id === 'object' && 'in' in id) dropOrg(args.where);
+              return query(args);
+            },
+          },
+          payment: {
+            groupBy({ args, query }) {
+              dropOrg(args.where);
+              return query(args);
+            },
+          },
+        },
+      }) as unknown as Db,
+    );
+    // Thẻ Thu tiền có trần (500 hợp đồng, 50 đợt mỗi danh sách, sắp theo hạn sớm nhất): database thử dùng lâu có thể có
+    // hàng trăm đợt quá hạn của tổ chức khác xếp trước A. Dời đợt quá hạn của A về TRƯỚC mọi đợt đang có để phép đo không
+    // phụ thuộc lượng dữ liệu cũ (đợt vẫn là đợt quá hạn thật của một hợp đồng đã xác nhận).
+    const prepare = async (fx: GateFixture) => {
+      const min = await deps.db.paymentInstallment.aggregate({ _min: { dueDate: true } });
+      const earliest = min._min.dueDate;
+      if (!earliest) throw new Error('Đột biến D3: database thử không có đợt thu nào — fixture chưa lập tiến độ');
+      const first = await deps.db.paymentInstallment.findFirst({
+        where: { organizationId: fx.a.orgId, contractId: fx.a.ids.todayContractId },
+        orderBy: { dueDate: 'asc' },
+        select: { id: true },
+      });
+      if (!first) throw new Error('Đột biến D3: hợp đồng Hôm nay của A không có đợt thu');
+      await deps.db.paymentInstallment.update({ where: { id: first.id }, data: { dueDate: new Date(earliest.getTime() - 86_400_000) } });
+    };
+    const r = await gateOn(replace(mutant), prepare);
+    const hit = r.leak.violations.filter((v) => v.startsWith('GET /orgs/:orgId/today '));
+    console.log(`[đột biến D3] leak vi phạm: ${r.leak.violations.length}/${r.leak.total} (đạt ${r.leak.passed}/${r.leak.total}): ${hit.join('; ')}`);
+    expect(hit.length).toBe(1);
   });
 });

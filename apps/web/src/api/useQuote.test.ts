@@ -18,6 +18,7 @@ const quote = (total: number): ContractQuote => ({
   total,
   depositRequired: 0,
   suggestedDeposit: 0,
+  autoSurcharge: { applied: [], removed: [], skipped: [] },
 });
 
 interface Call {

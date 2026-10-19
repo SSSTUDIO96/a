@@ -58,6 +58,9 @@ export const SAMPLES: Samples = {
   'PATCH /orgs/:orgId/greeting-phrases/:phraseId': () => ({ title: 'Đổi tiêu đề thử' }),
   'PATCH /orgs/:orgId/design-cards/:cardId': () => ({ title: 'Đổi tiêu đề thử' }),
   'PUT /orgs/:orgId/design-cards/:cardId/output': (o) => ({ fileId: o.ids.designCardFileId }),
+  // Loại sự kiện, luật phụ phí (bản vẽ D, gói M7)
+  'PATCH /orgs/:orgId/occasions/:occasionId': () => ({ name: 'Đổi tên thử' }),
+  'PATCH /orgs/:orgId/surcharge-rules/:surchargeRuleId': () => ({ note: 'Sửa thử' }),
 };
 
 // Mẫu HỢP LỆ dùng toàn mã của chính tổ chức — cửa gác tự thay TỪNG trường mã bằng mã của tổ chức khác.
@@ -77,6 +80,24 @@ const packageLine = (o: GateOrg) => ({
 });
 const serviceLine = (o: GateOrg) => ({ kind: 'SERVICE', serviceId: o.ids.serviceId, quantity: 1 });
 const customLine = { kind: 'CUSTOM', name: 'Giáo trình', unitPrice: 100_000, quantity: 1 };
+// Dòng đặt chỗ có loại sự kiện + sửa phụ phí của luật 1 + bỏ luật 2 (bản vẽ D 4.2): đo lines[].occasionId,
+// lines[].surchargeOverrides[].ruleId, lines[].dismissedRuleIds[] (mảng không có khoá ngoại — chốt duy nhất là checkLineRuleRefs).
+const placedWithRules = (o: GateOrg) => ({
+  ...packageLine(o),
+  occasionId: o.ids.occasionId,
+  surchargeOverrides: [{ ruleId: o.ids.surchargeRuleId, quantity: 1 }],
+  dismissedRuleIds: [o.ids.surchargeRule2Id],
+});
+// Mọi loại sự kiện của tổ chức (loại cài sẵn đọc từ GET /occasions lúc dựng fixture + loại fixture tạo) — PUT …/order
+// phải gửi đủ. Thiếu loại cài sẵn thì buildGateFixture đã ném lỗi, không tự bù.
+const allOccasionIds = (o: GateOrg) => {
+  const seeds = Object.keys(o.ids)
+    .filter((k) => /^occasionSeed\d+$/.test(k))
+    .sort((x, y) => Number(x.slice(12)) - Number(y.slice(12)))
+    .map((k) => o.ids[k]!);
+  if (seeds.length === 0 || !o.ids.occasionId) throw new Error('Mẫu PUT /occasions/order: fixture chưa có loại sự kiện');
+  return [...seeds, o.ids.occasionId];
+};
 export const REF_SAMPLES: RefSamples = {
   'GET /orgs/:orgId/services': [(o) => ({ categoryId: o.ids.categoryId })],
   'POST /orgs/:orgId/services': [
@@ -133,6 +154,7 @@ export const REF_SAMPLES: RefSamples = {
       excludeContractId: o.ids.courseContractId,
       lines: [{ kind: 'COURSE', courseClassId: o.ids.classId }, customLine],
     }),
+    (o) => ({ customerId: o.ids.customerId, lines: [placedWithRules(o)] }),
   ],
   'POST /orgs/:orgId/contracts': [
     (o) => ({ customerId: o.ids.customerId, lines: [packageLine(o), serviceLine(o)] }),
@@ -145,6 +167,7 @@ export const REF_SAMPLES: RefSamples = {
       rulesTemplateId: o.ids.rulesTextId,
       lines: [{ kind: 'COURSE', courseClassId: o.ids.classId }, customLine],
     }),
+    (o) => ({ customerId: o.ids.customerId, lines: [placedWithRules(o)] }),
   ],
   'GET /orgs/:orgId/contracts': [(o) => ({ customerId: o.ids.customerId })],
   // Hợp đồng DỊCH VỤ của fixture; trường chỉ hợp lệ với hợp đồng khoá học (lines[].courseClassId, rulesTemplateId) đo ở
@@ -154,8 +177,9 @@ export const REF_SAMPLES: RefSamples = {
     async (o, req) => ({ expectedUpdatedAt: await req.currentVersion(), termsTemplateId: o.ids.textId }),
     // Đổi khách của hợp đồng nháp (thợ U): mẫu gốc gửi lại đúng khách hiện tại; khách của A / mã bịa → 404 giống hệt.
     async (o, req) => ({ expectedUpdatedAt: await req.currentVersion(), customerId: o.ids.customerId }),
+    async (o, req) => ({ expectedUpdatedAt: await req.currentVersion(), lines: [placedWithRules(o)] }),
   ],
-  'POST /orgs/:orgId/contracts/:contractId/lines': [packageLine, serviceLine],
+  'POST /orgs/:orgId/contracts/:contractId/lines': [packageLine, serviceLine, placedWithRules],
   'GET /orgs/:orgId/staff': [(o) => ({ tierId: o.ids.tierId })],
   'GET /orgs/:orgId/staff/availability': [
     (o) => ({
@@ -224,6 +248,28 @@ export const REF_SAMPLES: RefSamples = {
   ],
   'PATCH /orgs/:orgId/design-cards/:cardId': [(o) => ({ courseClassId: o.ids.classId }), (o) => ({ photoFileIds: [o.ids.designPhotoId] })],
   'PUT /orgs/:orgId/design-cards/:cardId/output': [(o) => ({ fileId: o.ids.designCardFileId })],
+  // Loại sự kiện, luật phụ phí (bản vẽ D, gói M7). Luật tạo ở trạng thái TẮT: cửa gác chạy nhiều lần không chạm trần 50 luật bật.
+  'POST /orgs/:orgId/surcharge-rules': [
+    (o) => ({
+      name: `Luật ${code()}`,
+      serviceId: o.ids.surchargeServiceId,
+      startTime: '04:00',
+      endTime: '06:00',
+      occasionIds: [o.ids.occasionId],
+      packageIds: [o.ids.packageId],
+      subjectIds: [o.ids.subjectId],
+      isActive: false,
+    }),
+  ],
+  'PATCH /orgs/:orgId/surcharge-rules/:surchargeRuleId': [
+    (o) => ({
+      serviceId: o.ids.surchargeServiceId,
+      occasionIds: [o.ids.occasionId],
+      packageIds: [o.ids.packageId],
+      subjectIds: [o.ids.subjectId],
+    }),
+  ],
+  'PUT /orgs/:orgId/occasions/order': [(o) => ({ occasionIds: allOccasionIds(o) })],
 };
 
 // Mẫu tham chiếu chéo trên HỢP ĐỒNG KHOÁ HỌC nháp của fixture (:contractId = courseContractId).
@@ -426,6 +472,29 @@ export const PARTIAL_SAMPLES: PartialSamples = {
     one: () => ({ displayName: 'Thợ đổi tên' }),
     derived: { initials: 'chữ viết tắt suy ra từ tên hiển thị' },
     skip: { avatarUrl: 'trường chỉ để báo lỗi "không nhận avatarUrl" — không bao giờ hợp lệ' },
+  },
+  // Loại sự kiện, luật phụ phí (bản vẽ D, gói M7)
+  'PATCH /orgs/:orgId/occasions/:occasionId': {
+    full: () => ({ name: 'Sự kiện đủ', color: 'plum', sortOrder: 7, isActive: false }),
+    one: () => ({ name: 'Sự kiện đổi tên' }),
+  },
+  'PATCH /orgs/:orgId/surcharge-rules/:surchargeRuleId': {
+    full: (c) => ({
+      name: 'Luật đủ',
+      serviceId: c.o.ids.surchargeServiceId,
+      startTime: '22:00',
+      endTime: '04:00',
+      weekdays: [6, 7],
+      dates: ['2027-01-01'],
+      occasionIds: [c.o.ids.occasionId],
+      packageIds: [c.o.ids.packageId],
+      subjectIds: [c.o.ids.subjectId],
+      perQuantity: false,
+      note: 'Ghi chú đủ',
+      sortOrder: 9,
+      isActive: false,
+    }),
+    one: () => ({ note: 'Ghi chú đổi' }),
   },
   'PATCH /platform/organizations/:organizationId': {
     full: () => ({ status: 'ACTIVE', reason: 'Mở lại' }),

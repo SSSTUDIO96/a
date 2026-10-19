@@ -5,6 +5,9 @@ import { ApiError } from '../../api/errors';
 import type {
   AppointmentConflict,
   AvailabilityShift,
+  AutoSurchargeRemoved,
+  AutoSurchargeReport,
+  AutoSurchargeSkipped,
   ContractBody,
   ContractDetail,
   ContractLineInput,
@@ -12,6 +15,7 @@ import type {
   ContractQuote,
   GroupedContractLine,
   StaffWarning,
+  SurchargeOverrideInput,
   ContractStatus,
   ContractUpdateInput,
   DraftHold,
@@ -54,6 +58,14 @@ export interface TravelDraft {
   amount: Vnd | null;
 }
 
+// Phần người lập sửa ở MỘT dòng phụ phí tự thêm (bản vẽ D 3.4). null = theo luật + bảng giá. Đơn giá có thì ghi chú bắt buộc.
+export interface SurchargeOverrideDraft {
+  ruleId: string;
+  quantity: number | null;
+  unitPrice: Vnd | null;
+  note: string;
+}
+
 export interface PlacedDraft {
   key: string;
   kind: 'PACKAGE' | 'SERVICE';
@@ -62,6 +74,10 @@ export interface PlacedDraft {
   name: string;
   subjectId: string | null;
   quantity: number;
+  // "YYYY-MM-DD" ngày riêng của dòng; rỗng = theo ngày sự kiện của hợp đồng (bản vẽ D 3.4).
+  date: string;
+  // Loại sự kiện của dòng (Bảng giá → Loại sự kiện); null = chưa chọn.
+  occasionId: string | null;
   // "HH:mm" theo múi giờ tổ chức; rỗng = chưa đặt.
   start: string;
   end: string;
@@ -72,6 +88,9 @@ export interface PlacedDraft {
   studioLocationId: string | null;
   address: string;
   travel: TravelDraft;
+  // Dòng phụ phí máy chủ tự thêm theo luật: phần người lập sửa, và luật đã bỏ ở dòng này (không tự thêm lại).
+  surchargeOverrides: SurchargeOverrideDraft[];
+  dismissedRuleIds: string[];
 }
 
 export interface SurchargeDraft {
@@ -165,6 +184,11 @@ export function displayDateTime(iso: string, tz: string): string {
   return `${displayDate(iso, tz)} ${timeOf(iso, tz)}`;
 }
 
+/** Ngày dùng cho giờ của dòng: ngày riêng, không có thì ngày sự kiện (có thể rỗng). */
+export function dayOfLine(l: Pick<PlacedDraft, 'date'>, eventDate: string): string {
+  return l.date || eventDate;
+}
+
 function minutes(hhmm: string): number {
   const [h, m] = hhmm.split(':').map(Number);
   return (h ?? 0) * 60 + (m ?? 0);
@@ -184,6 +208,8 @@ export interface ValidateContext {
 export function hiddenSubjectText(name: string): string {
   return `Nhân vật "${name}" đang ẩn ở Bảng giá → Nhân vật nên dòng này chưa tính được tiền và hợp đồng chưa lưu được. Bật lại nhân vật hoặc bỏ dòng này.`;
 }
+
+export const DATE_NEEDED_TEXT = 'Chọn ngày cho dòng hoặc ngày sự kiện của hợp đồng';
 
 export function lineKey(i: number, field: string): string {
   return `lines.${i}.${field}`;
@@ -212,7 +238,10 @@ export function validateDraft(draft: ContractDraft, ctx: ValidateContext): Recor
       } else if (l.start !== '' && minutes(l.end) <= minutes(l.start)) {
         e[lineKey(i, 'scheduledEnd')] = 'Giờ kết thúc phải sau giờ bắt đầu.';
       }
-      if (l.start !== '' && draft.eventDate === '') e.eventDate = 'Chọn ngày sự kiện để đặt giờ.';
+      if (l.start !== '' && dayOfLine(l, draft.eventDate) === '') e[lineKey(i, 'date')] = DATE_NEEDED_TEXT;
+      l.surchargeOverrides.forEach((o, k) => {
+        if (o.unitPrice !== null && o.note.trim() === '') e[lineKey(i, `surchargeOverrides.${k}.note`)] = 'Ghi đè giá phải ghi lý do.';
+      });
       if (l.staff.length > 0 && (l.start === '' || l.end === '')) e[lineKey(i, 'staff')] = 'Nhập giờ trước khi chọn thợ.';
     } else if (l.kind === 'SURCHARGE') {
       if (l.unitPrice !== null && l.note.trim() === '') e[lineKey(i, 'note')] = 'Ghi đè giá phải ghi lý do.';
@@ -267,10 +296,10 @@ export interface QuotePlan {
   complete: boolean;
 }
 
-const TIME_ONLY_FIELDS = new Set(['scheduledStart', 'scheduledEnd', 'staff']);
+const TIME_ONLY_FIELDS = new Set(['scheduledStart', 'scheduledEnd', 'staff', 'date']);
 
 function timeUsable(l: PlacedDraft, eventDate: string): boolean {
-  return eventDate !== '' && l.start !== '' && l.end !== '' && minutes(l.end) > minutes(l.start);
+  return dayOfLine(l, eventDate) !== '' && l.start !== '' && l.end !== '' && minutes(l.end) > minutes(l.start);
 }
 
 export function quotePlan(draft: ContractDraft, errors: Record<string, string>): QuotePlan {
@@ -334,6 +363,16 @@ export function travelInput(t: TravelDraft): TravelInput {
   return { mode: t.mode, ...(t.distanceKm !== null ? { distanceKm: t.distanceKm } : {}) };
 }
 
+function overrideInput(o: SurchargeOverrideDraft): SurchargeOverrideInput {
+  const note = o.note.trim();
+  return {
+    ruleId: o.ruleId,
+    ...(o.quantity !== null ? { quantity: o.quantity } : {}),
+    ...(o.unitPrice !== null ? { unitPrice: o.unitPrice } : {}),
+    ...(note ? { note } : {}),
+  };
+}
+
 export function lineInput(l: DraftLine, eventDate: string, tz: string): ContractLineInput {
   if (l.kind === 'SURCHARGE') {
     const note = l.note.trim();
@@ -350,18 +389,23 @@ export function lineInput(l: DraftLine, eventDate: string, tz: string): Contract
     return { kind: 'CUSTOM', name: l.name.trim(), unitPrice: l.unitPrice ?? 0, quantity: l.quantity, ...(note ? { note } : {}) };
   }
   const address = l.address.trim();
+  const day = dayOfLine(l, eventDate);
+  const overrides = l.surchargeOverrides.filter((o) => o.quantity !== null || o.unitPrice !== null);
   const base = {
     quantity: l.quantity,
     ...(l.subjectId ? { subjectId: l.subjectId } : {}),
     ...(l.locationType ? { locationType: l.locationType } : {}),
     ...(l.locationType === 'STUDIO' && l.studioLocationId ? { studioLocationId: l.studioLocationId } : {}),
     ...(needsTravel(l.locationType) && address ? { address } : {}),
-    ...(l.start && l.end && eventDate
-      ? { scheduledStart: zonedIso(eventDate, l.start, tz), scheduledEnd: zonedIso(eventDate, l.end, tz) }
+    ...(l.occasionId ? { occasionId: l.occasionId } : {}),
+    ...(l.start && l.end && day
+      ? { scheduledStart: zonedIso(day, l.start, tz), scheduledEnd: zonedIso(day, l.end, tz) }
       : {}),
     ...(l.addonIds.length > 0 ? { addons: l.addonIds.map((serviceId) => ({ serviceId, quantity: l.quantity })) } : {}),
     ...(needsTravel(l.locationType) ? { travel: travelInput(l.travel) } : {}),
     ...(l.staff.length > 0 ? { staff: l.staff.map((s) => ({ membershipId: s.membershipId, role: s.role })) } : {}),
+    ...(overrides.length > 0 ? { surchargeOverrides: overrides.map(overrideInput) } : {}),
+    ...(l.dismissedRuleIds.length > 0 ? { dismissedRuleIds: l.dismissedRuleIds } : {}),
   };
   const input: PlacedInput = l.kind === 'PACKAGE' ? { kind: 'PACKAGE', packageId: l.refId, ...base } : { kind: 'SERVICE', serviceId: l.refId, ...base };
   return input;
@@ -398,8 +442,33 @@ export function patchBody(draft: ContractDraft, tz: string): ContractPatchFields
 
 // ---------------------------------------------------------------------------------------------
 // Hợp đồng đã lưu → nháp đang sửa.
-export function placedFromView(l: GroupedContractLine<string | null>, tz: string): PlacedDraft {
+// perQuantityOf(ruleId): luật tính theo số lượng dòng không; null = không biết luật (không có quyền đọc Bảng giá).
+export interface PlacedFromViewOpts {
+  // "YYYY-MM-DD" ngày sự kiện của hợp đồng; rỗng = chưa có.
+  eventDate: string;
+  perQuantityOf?: (ruleId: string) => boolean | null;
+}
+
+// Phần người lập đã sửa ở các dòng phụ phí tự thêm đã lưu: giá không trỏ phiên bản bảng giá = đã ghi đè; số lượng khác số
+// mặc định của luật (perQuantity ? số lượng dòng : 1) = đã sửa. Không biết luật (Q ≠ 1) thì GIỮ số đã lưu như một phần sửa —
+// không đoán số mặc định để khỏi đổi tiền lúc lưu lại.
+export function overridesFromView(l: GroupedContractLine<string | null>, perQuantityOf?: (ruleId: string) => boolean | null): SurchargeOverrideDraft[] {
+  const out: SurchargeOverrideDraft[] = [];
+  for (const s of l.surcharges ?? []) {
+    if (s.voidedAt || !s.surchargeRuleId) continue;
+    const pq = perQuantityOf?.(s.surchargeRuleId) ?? null;
+    const dflt = pq === null ? (l.quantity === 1 ? 1 : null) : pq ? l.quantity : 1;
+    const quantity = dflt !== null && s.quantity === dflt ? null : s.quantity;
+    const unitPrice = s.priceVersionId === null ? s.unitPrice : null;
+    if (quantity === null && unitPrice === null) continue;
+    out.push({ ruleId: s.surchargeRuleId, quantity, unitPrice, note: s.note ?? '' });
+  }
+  return out;
+}
+
+export function placedFromView(l: GroupedContractLine<string | null>, tz: string, opts: PlacedFromViewOpts): PlacedDraft {
   const t = l.travel;
+  const day = l.scheduledStart ? dateOf(l.scheduledStart, tz) : '';
   return {
     key: l.id ?? newLineKey(),
     kind: l.kind === 'SERVICE' ? 'SERVICE' : 'PACKAGE',
@@ -407,6 +476,8 @@ export function placedFromView(l: GroupedContractLine<string | null>, tz: string
     name: l.name,
     subjectId: l.subjectId,
     quantity: l.quantity,
+    date: day !== '' && day !== opts.eventDate ? day : '',
+    occasionId: l.occasionId,
     start: l.scheduledStart ? timeOf(l.scheduledStart, tz) : '',
     end: l.scheduledEnd ? timeOf(l.scheduledEnd, tz) : '',
     staff: (l.staff ?? []).map((s) => ({ membershipId: s.membershipId, role: s.role })),
@@ -417,16 +488,20 @@ export function placedFromView(l: GroupedContractLine<string | null>, tz: string
     travel: t
       ? { mode: t.travelMode ?? 'MANUAL', distanceKm: t.distanceKm, amount: t.travelMode === 'MANUAL' ? t.unitPrice : null }
       : { mode: 'PER_KM', distanceKm: null, amount: null },
+    surchargeOverrides: overridesFromView(l, opts.perQuantityOf),
+    dismissedRuleIds: [...l.dismissedRuleIds],
   };
 }
 
-export function draftFromDetail(d: ContractDetail, tz: string): ContractDraft {
+export function draftFromDetail(d: ContractDetail, tz: string, perQuantityOf?: (ruleId: string) => boolean | null): ContractDraft {
   const lines: DraftLine[] = [];
+  const eventDate = d.eventDate ? dateOf(d.eventDate, tz) : '';
   for (const l of d.lines) {
     if (l.voidedAt) continue;
     if (l.kind === 'PACKAGE' || l.kind === 'SERVICE') {
-      lines.push({ ...placedFromView(l, tz), key: newLineKey() });
-    } else if (l.kind === 'SURCHARGE' && l.serviceId) {
+      lines.push({ ...placedFromView(l, tz, { eventDate, perQuantityOf }), key: newLineKey() });
+    } else if (l.kind === 'SURCHARGE' && l.serviceId && !l.surchargeRuleId) {
+      // Dòng phụ phí TỰ THÊM (có surchargeRuleId) là dòng con của dòng gói — không bao giờ thành dòng gốc nhập tay.
       lines.push({
         key: newLineKey(),
         kind: 'SURCHARGE',
@@ -443,7 +518,7 @@ export function draftFromDetail(d: ContractDetail, tz: string): ContractDraft {
   }
   return {
     customer: { kind: 'existing', id: d.customer.id, fullName: d.customer.fullName, phone: d.customer.phone, email: d.customer.email },
-    eventDate: d.eventDate ? dateOf(d.eventDate, tz) : '',
+    eventDate,
     discount: d.discount,
     depositRequired: d.depositRequired,
     notes: d.notes ?? '',
@@ -470,7 +545,7 @@ export function matchQuote(draft: ContractDraft, quote: ContractQuote | null): (
 // Cộng dòng (gói + dịch vụ phụ + phí di chuyển) — bản vẽ: "tổng lineTotal của dòng gói + addons + travel lấy từ quote".
 export function groupTotal(l: GroupedContractLine<string | null>): Vnd {
   const live = (x: ContractLineView<string | null>) => (x.voidedAt ? 0 : x.lineTotal);
-  return live(l) + l.addons.reduce((s, a) => s + live(a), 0) + (l.travel ? live(l.travel) : 0);
+  return live(l) + l.addons.reduce((s, a) => s + live(a), 0) + (l.travel ? live(l.travel) : 0) + l.surcharges.reduce((s, a) => s + live(a), 0);
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -935,6 +1010,8 @@ export function newPackageLine(
   pkg: { id: string; name: string; subjectId: string | null; locationTypes: readonly LocationType[] },
   defaultStudioId: string | null,
   defaultTravelMode: TravelFeeMode,
+  // Dòng đặt chỗ ngay trên: dòng mới theo sự kiện và ngày của dòng đó (bản vẽ D 3.4).
+  above?: Pick<PlacedDraft, 'occasionId' | 'date'> | null,
 ): PlacedDraft {
   const loc = LOCATION_ORDER.find((l) => pkg.locationTypes.length === 0 || pkg.locationTypes.includes(l)) ?? null;
   return {
@@ -944,6 +1021,8 @@ export function newPackageLine(
     name: pkg.name,
     subjectId: pkg.subjectId,
     quantity: 1,
+    date: above?.date ?? '',
+    occasionId: above?.occasionId ?? null,
     start: '',
     end: '',
     staff: [],
@@ -952,6 +1031,8 @@ export function newPackageLine(
     studioLocationId: loc === 'STUDIO' ? defaultStudioId : null,
     address: '',
     travel: { mode: defaultTravelMode, distanceKm: null, amount: null },
+    surchargeOverrides: [],
+    dismissedRuleIds: [],
   };
 }
 
@@ -964,8 +1045,10 @@ export function conflictsForLine(
   const out = new Map<string, WarnRange[]>();
   const me = draft.lines.find((l): l is PlacedDraft => isPlaced(l) && l.key === key);
   if (!me || !me.start || !me.end) return out;
+  const day = dayOfLine(me, draft.eventDate);
   for (const o of draft.lines) {
     if (!isPlaced(o) || o.key === key || !o.start || !o.end) continue;
+    if (dayOfLine(o, draft.eventDate) !== day) continue;
     if (!(minutes(me.start) < minutes(o.end) && minutes(o.start) < minutes(me.end))) continue;
     for (const s of o.staff) {
       const list = out.get(s.membershipId) ?? [];
@@ -974,4 +1057,119 @@ export function conflictsForLine(
     }
   }
   return out;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Phụ phí tự thêm theo luật (bản vẽ D 3.4). Máy chủ là nơi DUY NHẤT tính: web chỉ đọc `autoSurcharge` của quote và các
+// dòng con `surcharges` của dòng — không cộng, không nhân tiền phụ phí.
+
+/** Lý do luật khớp mà không sinh dòng (quote.autoSurcharge.skipped). */
+export function skippedText(s: Pick<AutoSurchargeSkipped, 'reason' | 'ruleName' | 'by'>): string {
+  switch (s.reason) {
+    case 'NO_PRICE':
+      return `Luật "${s.ruleName}" khớp nhưng phụ phí chưa có giá — chưa thêm.`;
+    case 'SERVICE_UNAVAILABLE':
+      return `Luật "${s.ruleName}" khớp nhưng phụ phí đang ngừng — chưa thêm.`;
+    case 'MANUAL_LINE_EXISTS':
+      return `Luật "${s.ruleName}" khớp nhưng đã có dòng phụ phí cùng loại nhập tay — không tự thêm để khỏi thu hai lần.`;
+    case 'SAME_SERVICE':
+      return `Luật "${s.ruleName}" khớp nhưng cùng phụ phí với luật "${s.by ?? ''}" đứng trước — chỉ luật đứng đầu được thêm.`;
+  }
+}
+
+/** Phần người lập sửa bị máy chủ bỏ (quote.autoSurcharge.removed). */
+export function removedText(r: Pick<AutoSurchargeRemoved, 'reason' | 'ruleName'>): string {
+  const why = r.reason === 'RULE_INACTIVE' ? 'luật đã tắt' : r.reason === 'SAME_SERVICE' ? 'luật khác cùng phụ phí đứng trước' : 'luật không còn khớp dòng này';
+  return `Đã bỏ phần bạn sửa ở luật "${r.ruleName}" vì ${why}.`;
+}
+
+export interface AutoNotes {
+  skipped: AutoSurchargeSkipped[];
+  removed: AutoSurchargeRemoved[];
+}
+
+/** Ghi chú của máy chủ theo vị trí dòng NHÁP (quote.line là vị trí trong bảng tính). */
+export function autoNotesByDraft(plan: QuotePlan, report: AutoSurchargeReport | null | undefined): Map<number, AutoNotes> {
+  const out = new Map<number, AutoNotes>();
+  if (!report) return out;
+  const at = (q: number) => {
+    const i = draftIndexOfQuoteLine(plan, q);
+    if (i === null) return null;
+    let n = out.get(i);
+    if (!n) {
+      n = { skipped: [], removed: [] };
+      out.set(i, n);
+    }
+    return n;
+  };
+  for (const s of report.skipped) at(s.line)?.skipped.push(s);
+  for (const r of report.removed) at(r.line)?.removed.push(r);
+  return out;
+}
+
+/** "Cô dâu · Cô dâu cao cấp" — tên dòng trong thông báo. */
+export function placedLineLabel(l: Pick<PlacedDraft, 'name'>, subject: string | null): string {
+  return subject && subject !== l.name ? `${subject} · ${l.name}` : l.name;
+}
+
+export interface AppliedEntry {
+  lineKey: string;
+  ruleId: string;
+  ruleName: string;
+  serviceName: string;
+  label: string;
+}
+
+/** Các luật máy chủ đã áp ở lần tính này, khoá "{khoá dòng nháp}|{mã luật}". */
+export function appliedEntries(
+  draft: ContractDraft,
+  plan: QuotePlan,
+  report: AutoSurchargeReport | null | undefined,
+  subjectName: (id: string | null) => string | null,
+): Map<string, AppliedEntry> {
+  const out = new Map<string, AppliedEntry>();
+  for (const a of report?.applied ?? []) {
+    const i = draftIndexOfQuoteLine(plan, a.line);
+    const l = i === null ? undefined : draft.lines[i];
+    if (!l || !isPlaced(l)) continue;
+    out.set(`${l.key}|${a.ruleId}`, { lineKey: l.key, ruleId: a.ruleId, ruleName: a.ruleName, serviceName: a.serviceName, label: placedLineLabel(l, subjectName(l.subjectId)) });
+  }
+  return out;
+}
+
+export interface ToastContext {
+  // Dòng còn trong nháp không (người lập bỏ cả dòng thì không báo).
+  lineExists: (lineKey: string) => boolean;
+  // Người lập vừa bỏ luật này ở dòng (bấm ×) thì không báo lại điều họ tự làm.
+  dismissed: (lineKey: string, ruleId: string) => boolean;
+  report: AutoSurchargeReport | null | undefined;
+}
+
+/** So lần tính trước với lần này → câu thông báo (bản vẽ D 3.4 "Báo thay đổi"). Luật rơi vì bị bỏ qua (skipped) đã có dải vàng ở thẻ dòng. */
+export function surchargeToasts(prev: ReadonlyMap<string, AppliedEntry>, next: ReadonlyMap<string, AppliedEntry>, ctx: ToastContext): string[] {
+  const out: string[] = [];
+  for (const [k, e] of next) {
+    if (!prev.has(k)) out.push(`Đã tự thêm ${e.serviceName} cho dòng ${e.label} theo luật ${e.ruleName}`);
+  }
+  for (const [k, e] of prev) {
+    if (next.has(k) || !ctx.lineExists(e.lineKey) || ctx.dismissed(e.lineKey, e.ruleId)) continue;
+    const skipped = (ctx.report?.skipped ?? []).some((s) => s.ruleId === e.ruleId);
+    if (skipped) continue;
+    const inactive = (ctx.report?.removed ?? []).some((r) => r.ruleId === e.ruleId && r.reason === 'RULE_INACTIVE');
+    out.push(`Đã bỏ ${e.serviceName} ở dòng ${e.label} vì ${inactive ? 'luật đã tắt' : 'không còn khớp luật'}`);
+  }
+  return out;
+}
+
+/** Số luật tự thêm trong bảng tính mà bản đã lưu chưa có (dải xanh khi mở nháp cũ). Bản lưu so theo mã luật của từng dòng gói. */
+export function legacyAddedCount(saved: readonly GroupedContractLine<string | null>[], draft: ContractDraft, applied: ReadonlyMap<string, AppliedEntry>): number {
+  const placedSaved = saved.filter((l) => !l.voidedAt && (l.kind === 'PACKAGE' || l.kind === 'SERVICE'));
+  const placedDraft = draft.lines.filter(isPlaced);
+  let n = 0;
+  for (const e of applied.values()) {
+    const k = placedDraft.findIndex((l) => l.key === e.lineKey);
+    const had = k >= 0 && (placedSaved[k]?.surcharges ?? []).some((s) => !s.voidedAt && s.surchargeRuleId === e.ruleId);
+    if (!had) n += 1;
+  }
+  return n;
 }

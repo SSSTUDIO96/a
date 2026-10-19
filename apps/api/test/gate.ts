@@ -3,6 +3,7 @@
 import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import { z } from 'zod';
+import { DEFAULT_OCCASIONS } from '@makeup/shared';
 import type { AnyRoute } from '../src/http/route';
 import type { Db } from '../src/lib/prisma';
 import { addMember, bearer, createAcademyOrg, grantUnlimitedPlan, makeDeps, registerUser, type App, type TestUser } from './helpers';
@@ -294,6 +295,64 @@ async function setupOrg(app: App, db: Db, label: string): Promise<GateOrg> {
     size: '1080x1350',
   });
   const phraseId = await post(app, owner, `${o}/greeting-phrases`, { name: `Câu ${label}`, appliesTo: [], title: 'Tiêu đề mẫu', body: 'Câu chúc mẫu' });
+  // ---- Bản vẽ D (gói M7): loại sự kiện, luật phụ phí, trang Hôm nay. Tạo SAU hợp đồng mẫu ở trên — luật đang bật không
+  //      chạm dòng của các hợp đồng đã lưu.
+  const surchargeServiceId = await post(app, owner, `${o}/services`, {
+    code: `PP${label}`,
+    name: `Phụ phí ${label}`,
+    kind: 'SURCHARGE',
+    listPrice: 200000,
+  });
+  const occasionId = await post(app, owner, `${o}/occasions`, { name: `Sự kiện ${label}`, color: 'brick' });
+  // Loại cài sẵn khi tạo tổ chức: đọc THẬT từ GET /occasions (không mã cứng). Mẫu PUT /occasions/order phải gửi đủ mọi loại
+  // của tổ chức, và cửa gác chỉ thay được giá trị là mã có trong `ids` → ghi từng loại vào occasionSeed1…N.
+  const occ = await request(app).get(`/api/v1${o}/occasions`).set(bearer(owner));
+  const occItems = (occ.body as { items?: { id: string }[] }).items;
+  if (occ.status !== 200 || !occItems) throw new Error(`Cửa gác: đọc loại sự kiện thất bại ${occ.status}: ${JSON.stringify(occ.body)}`);
+  const seedIds = occItems.map((x) => x.id).filter((id) => id !== occasionId);
+  if (seedIds.length !== DEFAULT_OCCASIONS.length || occItems.length !== seedIds.length + 1) {
+    throw new Error(
+      `Cửa gác: tổ chức thử có ${occItems.length} loại sự kiện — cần ${DEFAULT_OCCASIONS.length} loại cài sẵn + 1 loại vừa tạo`,
+    );
+  }
+  const occasionSeeds = Object.fromEntries(seedIds.map((id, i) => [`occasionSeed${i + 1}`, id]));
+  const surchargeRuleId = await post(app, owner, `${o}/surcharge-rules`, {
+    name: `Ca sớm ${label}`,
+    serviceId: surchargeServiceId,
+    startTime: '04:00',
+    endTime: '06:00',
+  });
+  const surchargeRule2Id = await post(app, owner, `${o}/surcharge-rules`, {
+    name: `Theo sự kiện ${label}`,
+    serviceId: surchargeServiceId,
+    occasionIds: [occasionId],
+  });
+  // Dữ liệu THẬT cho GET /today (phép leak đo được): hợp đồng đã xác nhận có một đợt quá hạn + một đợt sắp tới hạn,
+  // và một ca chờ xác nhận chưa có thợ ngày mai.
+  const DAY_MS = 86_400_000;
+  const now = Date.now();
+  const todayContractId = await post(app, owner, `${o}/contracts`, {
+    customerId,
+    lines: [{ kind: 'CUSTOM', name: `Hôm nay ${label}`, unitPrice: 300000, quantity: 1 }],
+  });
+  await postBody(app, owner, `${o}/contracts/${todayContractId}/status`, { to: 'CONFIRMED' });
+  const plan = await request(app)
+    .put(`/api/v1${o}/contracts/${todayContractId}/installments`)
+    .set(bearer(owner))
+    .send({
+      installments: [
+        { name: 'Đợt 1', dueDate: new Date(now - 2 * DAY_MS).toISOString(), amount: 100000, isDeposit: false },
+        { name: 'Đợt 2', dueDate: new Date(now + 3 * DAY_MS).toISOString(), amount: 200000, isDeposit: false },
+      ],
+    });
+  if (plan.status !== 200) throw new Error(`Cửa gác: lập tiến độ hợp đồng Hôm nay thất bại ${plan.status}: ${JSON.stringify(plan.body)}`);
+  const todayAppointmentId = await post(app, owner, `${o}/appointments`, {
+    customerId,
+    startsAt: new Date(now + DAY_MS).toISOString(),
+    endsAt: new Date(now + DAY_MS + 3_600_000).toISOString(),
+    status: 'PENDING_CONFIRMATION',
+    staff: [],
+  });
   return {
     orgId,
     owner,
@@ -334,6 +393,13 @@ async function setupOrg(app: App, db: Db, label: string): Promise<GateOrg> {
       designCardFileId,
       cardId,
       phraseId,
+      surchargeServiceId,
+      occasionId,
+      ...occasionSeeds,
+      surchargeRuleId,
+      surchargeRule2Id,
+      todayContractId,
+      todayAppointmentId,
     },
   };
 }
