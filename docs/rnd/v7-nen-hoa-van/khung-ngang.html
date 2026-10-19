@@ -1,0 +1,23 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=1414">
+<title>R&D 07 · Khung toàn trang khổ ngang (phác cho R&D-08)</title>
+<!-- Phác minh hoạ: ba khung (e) cổ điển, (f) tiền giấy, (g) Ba Tư vẽ lại ở khổ ngang 1414×1000 (tỉ lệ A4 ngang) để R&D-08 xem
+     khung có co giãn được cho chứng chỉ không. KHÔNG phải mẫu chứng chỉ — chữ chỉ để thấy bố cục. ?k=co-dien|tien-giay|ba-tu -->
+<link rel="stylesheet" href="../v3-mau-chao-mung/phong/phong.css">
+<style>*{margin:0;padding:0;box-sizing:border-box}body{background:#ddd}
+#c{position:relative;width:1414px;height:1000px;overflow:hidden}#c svg{position:absolute;left:0;top:0}
+.w{position:absolute;inset:150px 190px 140px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:#2A2420}
+.t1{font:500 20px 'MP Chữ không chân';letter-spacing:.4em;text-transform:uppercase;color:var(--n)}
+.t2{font:600 64px/1.1 'MP Chữ có chân';letter-spacing:.06em;text-transform:uppercase;margin-top:14px}
+.t3{font:italic 400 30px 'MP Chữ có chân';color:#5C4E3E;margin-top:18px}
+.t4{font-family:'MP Viết tay 1';font-size:104px;line-height:1.2;margin-top:4px}
+.t5{font:400 26px 'MP Chữ có chân';color:#5C4E3E;margin-top:6px}
+.ky{display:flex;gap:220px;margin-top:44px;font:500 17px 'MP Chữ không chân';letter-spacing:.2em;text-transform:uppercase;color:var(--n)}
+.ky div{border-top:1px solid var(--n);padding-top:10px;width:240px}</style></head><body data-chi-khung="1">
+<div id="c"><div class="w"><div class="t1">Chiến Makeup Academy</div><div class="t2">Giấy chứng nhận</div><div class="t3">Trân trọng chứng nhận học viên</div>
+<div class="t4">Tôn Nữ Hoàng Bảo Ngọc Phương Thảo</div><div class="t5">đã hoàn thành khoá Makeup chuyên nghiệp · Lớp K12 · 20.12.2026</div>
+<div class="ky"><div>Giảng viên</div><div>Giám đốc học viện</div></div></div></div>
+<script src="chung/giay.js"></script>
+<script>const k=new URLSearchParams(location.search).get('k')||'co-dien';const N={'co-dien':'#7E4A14','tien-giay':'#1F4E8C','ba-tu':'#22407A'};
+document.documentElement.style.setProperty('--n',N[k]);const c=document.getElementById('c');
+c.insertAdjacentHTML('afterbegin',`<svg width="1414" height="1000" viewBox="0 0 1414 1000">${VE_KHUNG(k,1414,1000)}</svg>`);
+document.fonts.ready.then(()=>document.body.dataset.ready='1');</script></body></html>

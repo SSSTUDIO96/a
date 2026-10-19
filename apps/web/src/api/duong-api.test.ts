@@ -408,6 +408,7 @@ describe('courses.ts: mỗi hàm gọi đúng đường API', () => {
     { name: 'cancelClass', call: () => courses.cancelClass(ORG, 'c1', 'Không đủ học viên'), method: 'POST', url: `${P}/classes/c1/cancel`, body: { reason: 'Không đủ học viên' } },
     { name: 'listClasses', call: () => courses.listClasses(ORG, { courseId: 'k1', hasSeats: true }), method: 'GET', url: `${P}/classes?courseId=k1&hasSeats=true` },
     { name: 'listEnrollments', call: () => courses.listEnrollments(ORG, 'c1'), method: 'GET', url: `${P}/classes/c1/enrollments` },
+    { name: 'syncClassSessions', call: () => courses.syncClassSessions(ORG, 'c1', true), method: 'POST', url: `${P}/classes/c1/sessions/sync`, body: { dryRun: true } },
   ];
 
   it.each(courseCases.map((c) => [c.name, c] as const))('%s', async (_name, c) => {

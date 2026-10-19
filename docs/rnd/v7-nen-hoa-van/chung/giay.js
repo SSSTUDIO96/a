@@ -19,13 +19,16 @@
 const P=new URLSearchParams(location.search);
 const c=document.getElementById('c');
 const VUONG=P.get('kho')==='vuong';
-const W=1080,H=VUONG?1080:1350;
+let W=1080,H=VUONG?1080:1350;
 const GIAY=P.get('giay')||'chu-nhat';
 const NEN=P.get('nen')||'khac-lam';
 const ANH=P.get('anhnen');
 const DAU=P.get('dau')||'';
 const NS='http://www.w3.org/2000/svg';
 const f=(n)=>Math.round(n*10)/10;
+// Dùng lại khung toàn trang ở khổ bất kỳ (ví dụ chứng chỉ khổ ngang của R&D-08): VE_KHUNG('co-dien'|'tien-giay'|'ba-tu', w, h)
+window.VE_KHUNG=(id,w,h)=>{const o=[W,H];W=w;H=h;try{return id==='co-dien'?khungCoDien('#A0601E','#FFFDF8'):id==='tien-giay'?khungTienGiay('#1F4E8C'):khungBaTu('#1E3A6E');}finally{[W,H]=o;}};
+if(!c||document.body.dataset.chiKhung)return; // trang chỉ mượn hàm vẽ khung
 document.body.classList.add('giay-'+GIAY);
 if(DAU||P.get('anlogo')==='1')document.body.classList.add('an-logo');
 let rs=7;const rnd=()=>{rs=(rs*16807)%2147483647;return (rs-1)/2147483646;};
