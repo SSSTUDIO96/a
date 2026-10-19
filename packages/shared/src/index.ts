@@ -6,3 +6,5 @@ export * from './payments';
 export * from './courses';
 export * from './design-templates';
 export * from './greetings';
+export * from './occasions';
+export * from './surcharges';
