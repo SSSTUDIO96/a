@@ -6,8 +6,8 @@
    Tệp này được mỗi mẫu nạp bằng thẻ <link> ngay sau phong.css (KHÔNG dùng @import: bộ xuất PNG của app không nhúng được phông qua @import) — mẫu mới cũng phải có thẻ này.
 
    Tên family: 'SSA <Tên họ>' (dùng cho phông tiêu đề/chữ thường).
-   NHÓM CHỮ KÝ nét mảnh đều ('MP Chữ ký 5..7') = lựa chọn "Chữ ký 5..7" trên màn Mẫu thiết kế (?ky=5..7):
-     5 MonteCarlo · 6 Ephesis · 7 WindSong.
+   NHÓM CHỮ KÝ nét mảnh đều ('MP Chữ ký 5, 6') = lựa chọn "Chữ ký 5, 6" trên màn Mẫu thiết kế (?ky=5, 6):
+     5 MonteCarlo · 6 Ephesis. (Khoá 7 = WindSong đã gỡ 19/10/2026 — dấu mũ "Tôn" chạm nét chữ T; không đánh số lại.)
    NHÓM CHỮ VIẾT TAY (thư pháp, nét thanh-đậm, KHÔNG phải nét đều): 'MP Chữ ký 8' = Pinyon Script (?ky=8).
    Hệ số cỡ --ky-co-N chỉnh theo độ rộng/cao chữ của từng phông (mặc định 1).
    ===================================================================== */
@@ -15,7 +15,6 @@
 /* ---- Chữ ký / chữ viết tay: tên MP Chữ ký N (dùng cho ?ky=N) ---- */
 @font-face{font-family:'MP Chữ ký 5';src:url(montecarlo/MonteCarlo-Regular.woff2) format('woff2');font-weight:100 900;font-display:block}
 @font-face{font-family:'MP Chữ ký 6';src:url(ephesis/Ephesis-Regular.woff2) format('woff2');font-weight:100 900;font-display:block}
-@font-face{font-family:'MP Chữ ký 7';src:url(windsong/WindSong-Regular.woff2) format('woff2');font-weight:100 900;font-display:block}
 @font-face{font-family:'MP Chữ ký 8';src:url(pinyon-script/PinyonScript-Regular.woff2) format('woff2');font-weight:100 900;font-display:block}
 
 /* ---- Toàn bộ phông nhóm A: tên SSA <Họ> ---- */
@@ -79,9 +78,6 @@
 @font-face{font-family:'SSA SVN-Abril Fatface';src:url(svn-abril-fatface/SVN-AbrilFatface.woff2) format('woff2');font-weight:400;font-display:block}
 /* SVN-Bebas Neue · SIL OFL 1.1 · svn-bebas-neue/ */
 @font-face{font-family:'SSA SVN-Bebas Neue';src:url(svn-bebas-neue/SVN-Bebas-Neue-Bold.woff2) format('woff2');font-weight:700;font-display:block}
-/* WindSong · SIL OFL 1.1 · windsong/ */
-@font-face{font-family:'SSA WindSong';src:url(windsong/WindSong-Regular.woff2) format('woff2');font-weight:400;font-display:block}
-@font-face{font-family:'SSA WindSong';src:url(windsong/WindSong-Medium.woff2) format('woff2');font-weight:500;font-display:block}
 /* Hai họ đã có sẵn trong app (tệp giống byte với kho) — đặt thêm tên SSA để dùng thống nhất, không chép lại tệp */
 @font-face{font-family:'SSA Cormorant Garamond';src:url(../CormorantGaramond-VF.ttf) format('truetype');font-weight:300 700;font-display:block}
 @font-face{font-family:'SSA Cormorant Garamond';src:url(../CormorantGaramond-Italic-VF.ttf) format('truetype');font-weight:300 700;font-style:italic;font-display:block}
@@ -91,6 +87,5 @@
 :root{
   --f-ky-5:'MP Chữ ký 5',cursive; --ky-co-5:1;  /* MonteCarlo */
   --f-ky-6:'MP Chữ ký 6',cursive; --ky-co-6:1;  /* Ephesis */
-  --f-ky-7:'MP Chữ ký 7',cursive; --ky-co-7:1;  /* WindSong */
   --f-ky-8:'MP Chữ ký 8',cursive; --ky-co-8:1;  /* Pinyon Script */
 }

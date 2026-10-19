@@ -323,6 +323,18 @@ describe('tạo thẻ — kiểm mẫu, ảnh, hợp đồng (POST /design-cards
     expect(issuePaths(wrongKind)).toEqual(['templateCode']);
   });
 
+  it('BẮT: chữ ký ky-7 (WindSong, đã gỡ 19/10/2026) → 400 VALIDATION_FAILED ở fontOverride bằng lời tiếng Việt; ky-8 vẫn tạo được', async () => {
+    const res = await createCard(A.owner, A.orgId, feedback(A, { fontOverride: 'ky-7' }));
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_FAILED');
+    expect(issuePaths(res)).toEqual(['fontOverride']);
+    expect(res.body.error.message).toBe('Dữ liệu gửi lên không hợp lệ');
+    expect(res.body.error.details.issues[0].message).toBe('Tùy chọn không hợp lệ: mong đợi một trong các giá trị "ky-1"|"ky-2"|"ky-3"|"ky-4"|"ky-5"|"ky-6"|"ky-8"');
+    const ok = await createCard(A.owner, A.orgId, feedback(A, { fontOverride: 'ky-8' }));
+    expect(ok.status).toBe(201);
+    expect(ok.body.fontOverride).toBe('ky-8');
+  });
+
   it('quá 3 ảnh → 400 ở photoFileIds; số ảnh khác số ô của mẫu → 400 ở photoFileIds', async () => {
     const four = await createCard(A.owner, A.orgId, feedback(A, { templateCode: 'fb-04', photoFileIds: A.photos }));
     expect(four.status).toBe(400);
@@ -478,6 +490,15 @@ describe('snapshot, sửa thẻ, ảnh đã xuất, danh sách, xoá', () => {
     // Sửa một trường của thẻ cũng không kéo hồ sơ mới vào snapshot.
     const patched = await request(app).patch(url(A.orgId, `/design-cards/${greetingId}`)).set(bearer(A.owner)).send({ fontOverride: 'ky-3' }).expect(200);
     expect(patched.body.snapshot.th).toBe('Thương hiệu a');
+  });
+
+  it('BẮT: sửa thẻ sang ky-7 (WindSong, đã gỡ) → 400 ở fontOverride, thẻ giữ nguyên phông cũ', async () => {
+    const before = await getCard(greetingId);
+    const res = await request(app).patch(url(A.orgId, `/design-cards/${greetingId}`)).set(bearer(A.owner)).send({ fontOverride: 'ky-7' });
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_FAILED');
+    expect(issuePaths(res)).toEqual(['fontOverride']);
+    expect((await getCard(greetingId))?.fontOverride).toBe(before?.fontOverride);
   });
 
   it('PATCH một trường (title) không đổi trường khác; ô td trong snapshot theo title', async () => {

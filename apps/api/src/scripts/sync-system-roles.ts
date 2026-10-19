@@ -1,5 +1,6 @@
 import type { PrismaClient } from '@prisma/client';
 import { DEFAULT_MAKEUP_SUBJECTS, SYSTEM_ROLE_KEYS, SYSTEM_ROLES } from '@makeup/shared';
+import { seedDefaultOccasions } from '../modules/catalog/occasions';
 
 export interface SyncReport {
   organizations: number;
@@ -7,6 +8,8 @@ export interface SyncReport {
   rolesUpdated: number;
   travelPoliciesCreated: number;
   subjectSetsSeeded: number;
+  // Bản vẽ D 2.2: tổ chức chưa có loại sự kiện nào được cài 6 loại mặc định.
+  occasionSetsSeeded: number;
 }
 
 // Đồng bộ dữ liệu mặc định của mọi tổ chức theo mã nguồn hiện hành.
@@ -19,6 +22,7 @@ export async function syncSystemRoles(db: PrismaClient): Promise<SyncReport> {
     rolesUpdated: 0,
     travelPoliciesCreated: 0,
     subjectSetsSeeded: 0,
+    occasionSetsSeeded: 0,
   };
   const orgs = await db.organization.findMany({ select: { id: true } });
   for (const org of orgs) {
@@ -58,6 +62,12 @@ export async function syncSystemRoles(db: PrismaClient): Promise<SyncReport> {
         });
         report.subjectSetsSeeded++;
         changes.push('+makeup_subjects');
+      }
+      // Bộ 6 loại sự kiện mặc định — chỉ khi tổ chức chưa có loại nào (không thêm lại loại chủ đã đổi tên / ẩn).
+      if ((await tx.occasion.count({ where: { organizationId: org.id } })) === 0) {
+        await seedDefaultOccasions(tx, org.id);
+        report.occasionSetsSeeded++;
+        changes.push('+occasions');
       }
       if (changes.length > 0) {
         await tx.auditLog.create({

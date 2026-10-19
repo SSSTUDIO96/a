@@ -50,7 +50,6 @@ const FONT_OPTIONS = [
   { value: 'ky-4', label: 'Chữ ký 4' },
   { value: 'ky-5', label: 'Chữ ký 5 · MonteCarlo' },
   { value: 'ky-6', label: 'Chữ ký 6 · Ephesis' },
-  { value: 'ky-7', label: 'Chữ ký 7 · WindSong' },
   // Thư pháp nét thanh-đậm: thuộc nhóm chữ viết tay, không phải chữ ký nét mảnh đều.
   { value: 'ky-8', label: 'Chữ viết tay · Pinyon Script' },
 ];

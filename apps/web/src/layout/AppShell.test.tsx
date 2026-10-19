@@ -3,7 +3,7 @@ import { createMemoryRouter, matchRoutes, RouterProvider } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SYSTEM_ROLES, type Permission } from '@makeup/shared';
 import { routes } from '../app/routes';
-import { activeBottomKey, activeNavChild, activeNavItem, bottomNav, NAV_ITEMS, navEntryAllowed, visibleNav, type VisibleNavItem } from './nav';
+import { activeBottomKey, activeNavChild, activeNavItem, bottomNav, homeNavItem, NAV_ITEMS, navEntryAllowed, PENDING_BANG_GIA_CHILDREN, visibleNav, type VisibleNavItem } from './nav';
 
 // Chạy cả bộ thử song song thì máy bận: hạn chờ 1 giây mặc định không đủ cho chuỗi phiên → quyền → chuyển đường.
 configure({ asyncUtilTimeout: 5000 });
@@ -337,6 +337,7 @@ describe('trạng thái lỗi của khung (bản vẽ C mục 5)', () => {
 describe('nav.ts', () => {
   it('quyền của mục và mục con đúng bản vẽ C mục 6 + C2 mục 1.1, 3.1, 4.1', () => {
     expect(NAV_ITEMS.map((i) => [i.key, i.permission, (i.children ?? []).map((c) => [c.path, c.permission ?? i.permission])])).toEqual([
+      ['hom-nay', 'org.read', []],
       ['lich', 'schedule.read_own', []],
       [
         'hop-dong',
@@ -382,7 +383,8 @@ describe('nav.ts', () => {
   });
 
   it('bày ra được thì phải dùng được: mọi mục và mục con đều có đường thật (không rơi vào 404)', () => {
-    const paths = NAV_ITEMS.flatMap((i) => [i.path, ...(i.children ?? []).map((c) => c.path)]);
+    // Mục chờ màn (pending) chưa bày ra nên chưa phải có đường; hết chờ (xoá cờ) thì bài này tự kiểm đường của nó.
+    const paths = NAV_ITEMS.filter((i) => i.pending !== true).flatMap((i) => [i.path, ...(i.children ?? []).map((c) => c.path)]);
     for (const p of paths) {
       const leaf = matchRoutes(routes, `/hoa-dao/${p}`)?.at(-1);
       expect(leaf?.route.path, p).not.toBe('*');
@@ -427,5 +429,116 @@ describe('nav.ts', () => {
     expect(academy.rest.map((i) => i.key)).toEqual(['bang-gia', 'khach-hang', 'nhan-su', 'bao-cao', 'mau-thiet-ke', 'cai-dat']);
     expect(activeBottomKey(academy.main, activeNavItem('thu-tien'), activeNavChild(activeNavItem('thu-tien'), 'thu-tien'))).toBe('thu-tien');
     expect(bottomNav(visibleNav(() => true, 'INDIVIDUAL'), 'INDIVIDUAL').main.map((m) => m.shortLabel)).toEqual(['Lịch', 'Hợp đồng', 'Bảng giá', 'Khách']);
+  });
+});
+
+// ---- Mục "Hôm nay" (bản vẽ D mục 3.0 + ký duyệt D câu 1) ----
+// Màn /hom-nay thuộc gói W1 (routes.tsx) nên mục đang `pending` (ẩn, tránh nút chết). Các ca dưới đây kiểm hình dạng
+// KHI mục đã bày ra: pure function dùng includePending; ca vẽ khung thật gỡ cờ `pending` tạm thời rồi khôi phục.
+describe('mục Hôm nay', () => {
+  const hom = NAV_ITEMS.find((i) => i.key === 'hom-nay') as { pending?: true } | undefined;
+  const savedPending = hom?.pending;
+  afterEach(() => {
+    if (hom) {
+      if (savedPending) hom.pending = savedPending;
+      else delete hom.pending;
+    }
+  });
+  const reveal = () => {
+    if (!hom) throw new Error('Thiếu mục hom-nay trong NAV_ITEMS');
+    delete hom.pending;
+  };
+
+  it('là MỤC ĐẦU TIÊN của bảng, quyền org.read, đường hom-nay, không làm trang mở đầu', () => {
+    expect(NAV_ITEMS[0]).toEqual({ key: 'hom-nay', path: 'hom-nay', label: 'Hôm nay', shortLabel: 'Hôm nay', icon: 'hom-nay', permission: 'org.read', notHome: true, pending: true });
+  });
+
+  it('chưa có màn (pending): ẩn khỏi mọi thanh, nhưng chặn đường theo quyền vẫn cho người có org.read', () => {
+    const has = (p: Permission) => OWNER.includes(p);
+    expect(visibleNav(has, 'TEAM').map((i) => i.key)).not.toContain('hom-nay');
+    expect(visibleNav(has, 'TEAM', { includePending: true })[0]?.key).toBe('hom-nay');
+    expect(navEntryAllowed('hom-nay', has, 'TEAM')).toBe(true);
+    expect(navEntryAllowed('hom-nay', () => false, 'TEAM')).toBe(false);
+  });
+
+  it('thanh dưới điện thoại GIỮ NGUYÊN (không có ô Hôm nay); Hôm nay đứng đầu ngăn "Thêm", ở mọi loại tổ chức', () => {
+    const has = (p: Permission) => OWNER.includes(p);
+    for (const kind of ['TEAM', 'INDIVIDUAL'] as const) {
+      const shown = bottomNav(visibleNav(has, kind, { includePending: true }), kind);
+      expect(shown.main.map((m) => m.shortLabel), kind).toEqual(['Lịch', 'Hợp đồng', 'Bảng giá', 'Khách']);
+      expect(shown.rest[0]?.key, kind).toBe('hom-nay');
+      // Y hệt bản chưa có Hôm nay (thanh dưới không đổi so với trước).
+      expect(shown.main).toEqual(bottomNav(visibleNav(has, kind), kind).main);
+    }
+    const academy = bottomNav(visibleNav(has, 'ACADEMY', { includePending: true }), 'ACADEMY');
+    expect(academy.main.map((m) => m.shortLabel)).toEqual(['Lịch', 'Hợp đồng', 'Thu tiền', 'Khoá học']);
+    expect(academy.rest[0]?.key).toBe('hom-nay');
+  });
+
+  it('thợ (chỉ org.read + lịch của mình): thanh dưới Lịch · Thêm; Hôm nay nằm trong "Thêm"', () => {
+    const has = (p: Permission) => SCHEDULE_ONLY.includes(p);
+    const items = visibleNav(has, 'TEAM', { includePending: true });
+    expect(items.map((i) => i.key)).toEqual(['hom-nay', 'lich']);
+    const { main, rest } = bottomNav(items, 'TEAM');
+    expect(main.map((m) => m.shortLabel)).toEqual(['Lịch']);
+    expect(rest.map((i) => i.label)).toEqual(['Hôm nay']);
+  });
+
+  it('Lịch vẫn là trang mở đầu (ký duyệt D câu 1); chỉ có org.read thì /:orgSlug mới vào Hôm nay', () => {
+    expect(homeNavItem((p) => OWNER.includes(p), 'TEAM', { includePending: true })?.key).toBe('lich');
+    expect(homeNavItem((p) => SCHEDULE_ONLY.includes(p), 'TEAM', { includePending: true })?.key).toBe('lich');
+    expect(homeNavItem((p) => p === 'org.read', 'TEAM', { includePending: true })?.key).toBe('hom-nay');
+    expect(homeNavItem((p) => p === 'org.read', 'TEAM')).toBeUndefined();
+    expect(homeNavItem(() => false, 'TEAM', { includePending: true })).toBeUndefined();
+  });
+
+  it('hai mục con Bảng giá của bản vẽ D chờ W2 (chưa vào NAV_ITEMS vì logic.ts của W2 ném lỗi với nhóm lạ); cùng quyền catalog.read', () => {
+    expect(PENDING_BANG_GIA_CHILDREN.map((c) => [c.key, c.path, c.label, c.permission])).toEqual([
+      ['bang-gia-su-kien', 'bang-gia/su-kien', 'Loại sự kiện', undefined],
+      ['bang-gia-luat-phu-phi', 'bang-gia/luat-phu-phi', 'Luật phụ phí', undefined],
+    ]);
+    const has = (p: Permission) => p === 'catalog.read';
+    expect(visibleNav(has, 'TEAM').find((i) => i.key === 'bang-gia')?.children.map((c) => c.path)).toEqual(['bang-gia/goi', 'bang-gia/dich-vu', 'bang-gia/di-chuyen', 'bang-gia/nhan-vat']);
+    expect(visibleNav(has, 'TEAM', { includePending: true }).find((i) => i.key === 'bang-gia')?.children.map((c) => c.path)).toEqual([
+      'bang-gia/goi',
+      'bang-gia/dich-vu',
+      'bang-gia/di-chuyen',
+      'bang-gia/nhan-vat',
+      'bang-gia/su-kien',
+      'bang-gia/luat-phu-phi',
+    ]);
+  });
+
+  it('khung thật, máy tính: Hôm nay là mục ĐẦU thanh bên (trỏ /hom-nay); thanh dưới điện thoại không đổi; "Thêm" bắt đầu bằng Hôm nay', async () => {
+    reveal();
+    setupServer(OWNER);
+    renderAt('/hoa-dao/lich');
+    expect(await mainMenuLinks()).toEqual(['Hôm nay', 'Lịch makeup', 'Hợp đồng', 'Bảng giá', 'Khách hàng', 'Thợ makeup', 'Báo cáo', 'Mẫu thiết kế', 'Cài đặt']);
+    expect(menuLink('Hôm nay').getAttribute('href')).toBe('/hoa-dao/hom-nay');
+    expect(activeMenu()).toEqual(['Lịch makeup']);
+    expect(phoneNavItems()).toEqual(['Lịch', 'Hợp đồng', 'Bảng giá', 'Khách', 'Thêm']);
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'Mục chính (điện thoại)' })).getByRole('button', { name: 'Thêm' }));
+    const sheet = await screen.findByRole('dialog', { name: 'Thêm' });
+    const links = [...(sheet.querySelector('.sh-more__list')?.querySelectorAll('a') ?? [])];
+    expect(links.map((a) => a.textContent)).toEqual(['Hôm nay', 'Thợ makeup', 'Báo cáo', 'Mẫu thiết kế', 'Cài đặt']);
+  });
+
+  it('khung thật: /:orgSlug vẫn chuyển tới Lịch dù Hôm nay đứng đầu', async () => {
+    reveal();
+    setupServer(SCHEDULE_ONLY);
+    const router = renderAt('/hoa-dao');
+    expect(await mainMenuLinks()).toEqual(['Hôm nay', 'Lịch makeup']);
+    await waitFor(() => expect(router.state.location.pathname).toBe('/hoa-dao/lich'));
+  });
+
+  it('khung thật: thợ thấy Hôm nay + Lịch ở thanh bên; thanh dưới Lịch · Thêm; "Thêm" có Hôm nay', async () => {
+    reveal();
+    setupServer(SCHEDULE_ONLY);
+    renderAt('/hoa-dao/lich');
+    expect(await mainMenuLinks()).toEqual(['Hôm nay', 'Lịch makeup']);
+    expect(phoneNavItems()).toEqual(['Lịch', 'Thêm']);
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'Mục chính (điện thoại)' })).getByRole('button', { name: 'Thêm' }));
+    const sheet = await screen.findByRole('dialog', { name: 'Thêm' });
+    expect([...(sheet.querySelector('.sh-more__list')?.querySelectorAll('a') ?? [])].map((a) => a.textContent)).toEqual(['Hôm nay']);
   });
 });

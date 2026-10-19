@@ -11,6 +11,7 @@ import * as platform from './platform';
 import * as profile from './profile';
 import * as schedule from './schedule';
 import * as staff from './staff';
+import * as today from './today';
 import type { ContractBody } from './types';
 
 // Kiểm từng hàm gọi đúng đường, phương thức, thân, query và header (Idempotency-Key chỉ ở POST tạo dữ liệu).
@@ -118,6 +119,24 @@ const cases: Case[] = [
   { name: 'updatePackage', call: () => catalog.updatePackage(ORG, 'p1', { items: [], includedKm: 5 }), method: 'PATCH', url: `${P}/packages/p1`, body: { items: [], includedKm: 5 } },
   { name: 'listPackagePrices', call: () => catalog.listPackagePrices(ORG, 'p1'), method: 'GET', url: `${P}/packages/p1/prices` },
   { name: 'addPackagePrice', call: () => catalog.addPackagePrice(ORG, 'p1', { listPrice: 3_000_000, effectiveFrom: '2026-12-01T00:00:00+07:00' }, KEY), method: 'POST', url: `${P}/packages/p1/prices`, body: { listPrice: 3_000_000, effectiveFrom: '2026-12-01T00:00:00+07:00' }, idem: true },
+  // ---- catalog: loại sự kiện, luật phụ phí (bản vẽ D 2.2, 2.3) ----
+  { name: 'listOccasions', call: () => catalog.listOccasions(ORG, { isActive: true }), method: 'GET', url: `${P}/occasions?isActive=true` },
+  { name: 'createOccasion', call: () => catalog.createOccasion(ORG, { name: 'Lễ cưới', color: 'rose', sortOrder: 3 }, KEY), method: 'POST', url: `${P}/occasions`, body: { name: 'Lễ cưới', color: 'rose', sortOrder: 3 }, idem: true },
+  { name: 'updateOccasion', call: () => catalog.updateOccasion(ORG, 'o1', { color: 'amber', isActive: false }), method: 'PATCH', url: `${P}/occasions/o1`, body: { color: 'amber', isActive: false } },
+  { name: 'reorderOccasions', call: () => catalog.reorderOccasions(ORG, { occasionIds: ['o2', 'o1'] }), method: 'PUT', url: `${P}/occasions/order`, body: { occasionIds: ['o2', 'o1'] } },
+  { name: 'listSurchargeRules', call: () => catalog.listSurchargeRules(ORG, { isActive: false }), method: 'GET', url: `${P}/surcharge-rules?isActive=false` },
+  {
+    name: 'createSurchargeRule',
+    call: () => catalog.createSurchargeRule(ORG, { name: 'Trước 6 giờ sáng', serviceId: 'sv9', startTime: '00:00', endTime: '06:00', weekdays: [6, 7], perQuantity: true }, KEY),
+    method: 'POST',
+    url: `${P}/surcharge-rules`,
+    body: { name: 'Trước 6 giờ sáng', serviceId: 'sv9', startTime: '00:00', endTime: '06:00', weekdays: [6, 7], perQuantity: true },
+    idem: true,
+  },
+  // PATCH: null ở giờ = bỏ khung giờ; mảng thay toàn bộ.
+  { name: 'updateSurchargeRule', call: () => catalog.updateSurchargeRule(ORG, 'r1', { startTime: null, endTime: null, occasionIds: ['o1'] }), method: 'PATCH', url: `${P}/surcharge-rules/r1`, body: { startTime: null, endTime: null, occasionIds: ['o1'] } },
+  // ---- today (bản vẽ D 2.6) ----
+  { name: 'getToday', call: () => today.getToday(ORG), method: 'GET', url: `${P}/today` },
   // ---- schedule ----
   { name: 'listCustomers', call: () => schedule.listCustomers(ORG, { q: '0912' }), method: 'GET', url: `${P}/customers?q=0912` },
   { name: 'getCustomer', call: () => schedule.getCustomer(ORG, 'k1'), method: 'GET', url: `${P}/customers/k1` },
@@ -324,8 +343,8 @@ describe('mỗi hàm gọi đúng đường API', () => {
     else expect(s?.headers['Idempotency-Key']).toBeUndefined();
   });
 
-  it('đủ mọi hàm xuất ra của catalog/contracts/schedule/staff/payments/files/profile/platform đều có bài thử', () => {
-    const exported = [catalog, contracts, schedule, staff, payments, files, profile, platform].flatMap((m) => Object.keys(m)).sort();
+  it('đủ mọi hàm xuất ra của catalog/contracts/schedule/staff/payments/files/profile/platform/today đều có bài thử', () => {
+    const exported = [catalog, contracts, schedule, staff, payments, files, profile, platform, today].flatMap((m) => Object.keys(m)).sort();
     expect(cases.map((c) => c.name).sort()).toEqual(exported);
   });
 
@@ -461,5 +480,43 @@ describe('designs.ts: mẫu thiết kế, câu chúc, thẻ', () => {
 
   it('đủ mọi hàm xuất ra của designs.ts đều có bài thử', () => {
     expect(designCases.map((c) => c.name).sort()).toEqual(Object.keys(designs).sort());
+  });
+});
+
+// Bản vẽ D 2.4: thân dòng đặt chỗ nhận thêm occasionId, surchargeOverrides, dismissedRuleIds — đi nguyên vẹn qua quote / tạo / sửa / thêm dòng.
+describe('phụ phí tự động: trường mới của dòng đặt chỗ đi đúng đường, đúng phương thức', () => {
+  const line = {
+    kind: 'PACKAGE' as const,
+    packageId: 'p1',
+    quantity: 2,
+    occasionId: 'o1',
+    scheduledStart: '2026-11-21T04:30:00+07:00',
+    scheduledEnd: '2026-11-21T06:30:00+07:00',
+    surchargeOverrides: [{ ruleId: 'r1', quantity: 1 }, { ruleId: 'r2', unitPrice: 150_000, note: 'Khách quen' }],
+    dismissedRuleIds: ['r3'],
+  };
+  const body: ContractBody = { customerId: 'k1', eventDate: '2026-11-21T00:00:00+07:00', lines: [line] };
+
+  const extra: Case[] = [
+    { name: 'quoteContract', call: () => contracts.quoteContract(ORG, body), method: 'POST', url: `${P}/contracts/quote`, body },
+    { name: 'createContract', call: () => contracts.createContract(ORG, body, KEY), method: 'POST', url: `${P}/contracts`, body, idem: true },
+    {
+      name: 'updateContract',
+      call: () => contracts.updateContract(ORG, 'hd1', { expectedUpdatedAt: '2026-10-19T00:00:00.000Z', lines: [line] }),
+      method: 'PATCH',
+      url: `${P}/contracts/hd1`,
+      body: { expectedUpdatedAt: '2026-10-19T00:00:00.000Z', lines: [line] },
+    },
+    { name: 'addContractLine', call: () => contracts.addContractLine(ORG, 'hd1', line, KEY), method: 'POST', url: `${P}/contracts/hd1/lines`, body: line, idem: true },
+  ];
+
+  it.each(extra.map((c) => [c.name, c] as const))('%s', async (_name, c) => {
+    await c.call();
+    expect(seen).toHaveLength(1);
+    expect(seen[0]?.method).toBe(c.method);
+    expect(seen[0]?.url).toBe(c.url);
+    expect(seen[0]?.body).toEqual(c.body);
+    if (c.idem) expect(seen[0]?.headers['Idempotency-Key']).toBe(KEY);
+    else expect(seen[0]?.headers['Idempotency-Key']).toBeUndefined();
   });
 });

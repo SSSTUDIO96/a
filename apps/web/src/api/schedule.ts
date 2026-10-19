@@ -35,6 +35,7 @@ export function updateCustomer(orgId: string, customerId: string, input: Custome
 
 // ---- Lịch ----
 // Bắt buộc from/to (tối đa 62 ngày). Người chỉ có schedule.read_own nhận lịch của mình.
+// Mỗi ca có occasion { id, name, color } | null (bản vẽ D 2.5): màu Lịch "Tô theo sự kiện" lấy từ đây.
 export function listAppointments(orgId: string, query: AppointmentListQuery, signal?: AbortSignal) {
   return api.get<AppointmentList>(withQuery(orgPath(orgId, '/appointments'), query), signal);
 }

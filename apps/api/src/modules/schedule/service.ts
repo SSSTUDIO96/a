@@ -61,7 +61,11 @@ export const appointmentInclude = {
   // Nhân vật makeup của ca = bản chụp tên nhân vật trên dòng hợp đồng gắn với ca (giống hợp đồng hiển thị); số lượng
   // của dòng (phù dâu 2 người → 2) để màn Lịch ghi "× 2". Quan hệ đi theo khoá ngoại kép (contract_line_id,
   // organization_id) nên chỉ đọc được dòng của CHÍNH tổ chức của ca.
-  contractLine: { select: { subjectName: true, quantity: true } },
+  // Sự kiện (bản vẽ D mục 2.5): tên = bản chụp trên dòng, màu = màu HIỆN TẠI của loại; quan hệ `occasion` cũng đi theo
+  // khoá ngoại kép (occasion_id, organization_id) nên chỉ đọc được loại của CHÍNH tổ chức.
+  contractLine: {
+    select: { subjectName: true, quantity: true, occasionName: true, occasion: { select: { id: true, color: true } } },
+  },
   // Buổi học sinh từ lớp: tên lớp + khoá. Khoá ngoại kép (course_class_id, organization_id) → chỉ đọc được lớp của CHÍNH
   // tổ chức của ca.
   courseClass: { select: { id: true, name: true, course: { select: { id: true, name: true } } } },
@@ -129,6 +133,12 @@ export function presentAppointment(a: AppointmentRow, avatarOf: AvatarOf, histor
     subjectName: a.contractLine?.subjectName ?? null,
     // Số lượng của dòng hợp đồng gắn với ca (≥ 1); ca không gắn dòng → null.
     quantity: a.contractLine?.quantity ?? null,
+    // Sự kiện của dòng hợp đồng gắn với ca: name = bản chụp trên dòng, color = màu hiện tại của loại. Ca không gắn dòng /
+    // dòng chưa chọn sự kiện → null (ca lẻ trên Lịch chưa chọn được sự kiện).
+    occasion:
+      a.contractLine?.occasion && a.contractLine.occasionName !== null
+        ? { id: a.contractLine.occasion.id, name: a.contractLine.occasionName, color: a.contractLine.occasion.color }
+        : null,
     // Buổi học sinh từ lớp (kind = COURSE_SESSION); ca khác → null.
     courseClass: a.courseClass
       ? { id: a.courseClass.id, name: a.courseClass.name, courseId: a.courseClass.course.id, courseName: a.courseClass.course.name }

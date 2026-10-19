@@ -18,7 +18,7 @@ describe('phông SS-Album nhóm A', () => {
   });
 
   it('BẮT: mỗi thư mục họ phông có WOFF2 và tệp giấy phép có toàn văn (OFL 1.1 hoặc Apache 2.0)', () => {
-    expect(dirs.length).toBe(26);
+    expect(dirs.length).toBe(25);
     for (const d of dirs) {
       const files = readdirSync(new URL(`${d}/`, SS));
       expect(files.some((f) => f.endsWith('.woff2')), d).toBe(true);
@@ -59,17 +59,50 @@ describe('phông SS-Album nhóm A', () => {
     }
   });
 
-  it('BẮT: chữ ký 5-7 là MonteCarlo/Ephesis/WindSong, chữ ký 8 là Pinyon Script (thư pháp, nhóm viết tay)', () => {
+  it('BẮT: chữ ký 5-6 là MonteCarlo/Ephesis, chữ ký 8 là Pinyon Script (thư pháp, nhóm viết tay)', () => {
     expect(css).toMatch(/'MP Chữ ký 5';src:url\(montecarlo\/MonteCarlo-Regular\.woff2\)/);
     expect(css).toMatch(/'MP Chữ ký 6';src:url\(ephesis\/Ephesis-Regular\.woff2\)/);
-    expect(css).toMatch(/'MP Chữ ký 7';src:url\(windsong\/WindSong-Regular\.woff2\)/);
     expect(css).toMatch(/'MP Chữ ký 8';src:url\(pinyon-script\/PinyonScript-Regular\.woff2\)/);
   });
 
   it('BẮT: tham số đường dẫn ?ky=N đi đúng cho chữ ký mới', () => {
-    expect(FONT_OVERRIDES).toHaveLength(8);
+    expect(FONT_OVERRIDES).toHaveLength(7);
     // frameQuery cần cả mẫu + dữ liệu; chỉ kiểm phần ky bằng cách dựng tối thiểu qua model.test.ts đã có — ở đây kiểm quy ước tên.
     expect(typeof frameQuery).toBe('function');
     for (const f of FONT_OVERRIDES) expect(f.replace('ky-', '')).toMatch(/^[1-8]$/);
+  });
+
+  // Cửa gác (anh Chiến quyết 19/10/2026): WindSong làm dấu mũ chữ "Tôn" chạm nét chữ T, đọc thành "Tồn" → gỡ khỏi ô chọn và danh mục.
+  // Khoá ky-7 bỏ trống vĩnh viễn (không đánh số lại ky-8).
+  describe('WindSong đã gỡ (cửa gác)', () => {
+    const studio = readFileSync(new URL('../../../src/features/designs/DesignStudio.tsx', import.meta.url), 'utf8');
+    const mauJs = readFileSync(new URL('../chung/mau.js', PHONG), 'utf8');
+    const phongCss = readFileSync(new URL('phong.css', PHONG), 'utf8');
+    const optionValues = [...studio.matchAll(/\{ value: '(ky-\d+)'/g)].map((m) => m[1]);
+
+    it('BẮT: danh mục FONT_OVERRIDES không còn ky-7 và không đánh số lại ky-8', () => {
+      expect([...FONT_OVERRIDES]).toEqual(['ky-1', 'ky-2', 'ky-3', 'ky-4', 'ky-5', 'ky-6', 'ky-8']);
+      expect(FONT_OVERRIDES as readonly string[]).not.toContain('ky-7');
+    });
+
+    it('BẮT: ô chọn phông trong DesignStudio khớp danh mục, không có WindSong / ky-7', () => {
+      expect(optionValues.length).toBeGreaterThan(0);
+      expect([...optionValues].sort()).toEqual([...FONT_OVERRIDES].sort());
+      expect(studio).not.toMatch(/WindSong|ky-7|Chữ ký 7/);
+    });
+
+    it('BẮT: ss-album.css, phong.css, mau.js không còn khai WindSong / chữ ký 7; thư mục phông đã xoá', () => {
+      for (const [ten, noiDung] of [['ss-album.css', css], ['phong.css', phongCss], ['mau.js', mauJs]] as const) {
+        expect(noiDung, ten).not.toMatch(/--f-ky-7|--ky-co-7|MP Chữ ký 7|SSA WindSong/);
+        expect(noiDung, ten).not.toMatch(/url\([^)]*windsong/i);
+      }
+      expect(existsSync(new URL('windsong/', SS))).toBe(false);
+      expect(dirs).not.toContain('windsong');
+    });
+
+    it('BẮT: không mẫu nào trong public/mau gọi WindSong', () => {
+      const mau = readdirSync(new URL('../', PHONG)).filter((n) => n.endsWith('.html'));
+      for (const f of mau) expect(readFileSync(new URL(`../${f}`, PHONG), 'utf8'), f).not.toMatch(/WindSong|--f-ky-7/i);
+    });
   });
 });

@@ -25,6 +25,9 @@ import type {
 
 // Xem trước bảng tính, không ghi gì. Cùng thân với lệnh tạo (+ excludeContractId khi sửa hợp đồng đã lưu).
 // Huỷ được bằng signal (useQuote dùng).
+// Phản hồi có autoSurcharge: phụ phí máy chủ tự thêm theo luật (applied), phần sửa bị bỏ (removed), luật khớp mà không
+// sinh dòng (skipped). Dòng tự thêm nằm ở GroupedContractLine.surcharges. Thân dòng đặt chỗ nhận thêm occasionId,
+// surchargeOverrides, dismissedRuleIds (types.ts PlacedLineFields); web không tự cộng tiền phụ phí.
 export function quoteContract(orgId: string, body: ContractQuoteBody, signal?: AbortSignal) {
   return api.post<ContractQuote>(orgPath(orgId, '/contracts/quote'), body, { signal });
 }
@@ -42,11 +45,12 @@ export function getContract(orgId: string, contractId: string, signal?: AbortSig
 }
 
 // Nháp: gửi lại toàn bộ lines; đã xác nhận: chỉ notes.
+// Gửi lines → luật phụ phí chạy lại cho mọi dòng; không gửi lines → dòng giữ nguyên.
 export function updateContract(orgId: string, contractId: string, input: ContractUpdateInput) {
   return api.patch<ContractDetail>(orgPath(orgId, `/contracts/${idSeg(contractId)}`), input);
 }
 
-// Thêm MỘT dòng; hợp đồng đã xác nhận thì là dòng phát sinh (dòng có thợ dự kiến → lịch tạo ngay, xem createdAppointments).
+// Thêm MỘT dòng (luật phụ phí chạy cho dòng mới); hợp đồng đã xác nhận thì là dòng phát sinh (dòng có thợ dự kiến → lịch tạo ngay, xem createdAppointments).
 export function addContractLine(orgId: string, contractId: string, line: ContractLineInput, idempotencyKey: string) {
   return api.create<ContractAddLineResult>(orgPath(orgId, `/contracts/${idSeg(contractId)}/lines`), line, idempotencyKey);
 }

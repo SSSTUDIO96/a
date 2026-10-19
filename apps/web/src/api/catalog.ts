@@ -7,6 +7,10 @@ import type {
   NamedCreateInput,
   NamedUpdateInput,
   NewPriceInput,
+  OccasionCreateInput,
+  OccasionOrderInput,
+  OccasionUpdateInput,
+  OccasionView,
   Page,
   PackageCreateInput,
   PackageListQuery,
@@ -23,6 +27,9 @@ import type {
   StudioLocation,
   StudioLocationCreateInput,
   StudioLocationUpdateInput,
+  SurchargeRuleCreateInput,
+  SurchargeRuleUpdateInput,
+  SurchargeRuleView,
   TravelFeePolicy,
   TravelFeePolicyInput,
 } from './types';
@@ -128,4 +135,38 @@ export function listPackagePrices(orgId: string, packageId: string, query?: Pagi
 
 export function addPackagePrice(orgId: string, packageId: string, input: NewPriceInput, idempotencyKey: string) {
   return api.create<PriceVersion>(orgPath(orgId, `/packages/${idSeg(packageId)}/prices`), input, idempotencyKey);
+}
+
+// ---- Loại sự kiện (bản vẽ D 2.2; catalog/occasions.ts) ----
+// Đọc: catalog.read. Thêm / sửa / ẩn / đổi thứ tự: catalog.write. Không có đường xoá — ẩn bằng isActive: false.
+export function listOccasions(orgId: string, query?: ActiveFilterQuery, signal?: AbortSignal) {
+  return api.get<Items<OccasionView>>(withQuery(orgPath(orgId, '/occasions'), query), signal);
+}
+
+export function createOccasion(orgId: string, input: OccasionCreateInput, idempotencyKey: string) {
+  return api.create<OccasionView>(orgPath(orgId, '/occasions'), input, idempotencyKey);
+}
+
+export function updateOccasion(orgId: string, occasionId: string, input: OccasionUpdateInput) {
+  return api.patch<OccasionView>(orgPath(orgId, `/occasions/${idSeg(occasionId)}`), input);
+}
+
+// Gửi ĐỦ mọi loại sự kiện của tổ chức, mỗi loại một lần; thiếu / trùng / mã lạ → 400 cùng một lời.
+export function reorderOccasions(orgId: string, input: OccasionOrderInput) {
+  return api.put<Items<OccasionView>>(orgPath(orgId, '/occasions/order'), input);
+}
+
+// ---- Luật phụ phí tự động (bản vẽ D 2.3; catalog/surcharge-rules.ts) ----
+// Đọc: catalog.read. Thêm / sửa / tắt: prices.write (luật sinh tiền trên hợp đồng). Không có đường xoá — tắt bằng isActive: false.
+export function listSurchargeRules(orgId: string, query?: ActiveFilterQuery, signal?: AbortSignal) {
+  return api.get<Items<SurchargeRuleView>>(withQuery(orgPath(orgId, '/surcharge-rules'), query), signal);
+}
+
+export function createSurchargeRule(orgId: string, input: SurchargeRuleCreateInput, idempotencyKey: string) {
+  return api.create<SurchargeRuleView>(orgPath(orgId, '/surcharge-rules'), input, idempotencyKey);
+}
+
+// Sửa / tắt luật không đổi hợp đồng đã lưu. Mảng gửi lên thay toàn bộ mảng cũ.
+export function updateSurchargeRule(orgId: string, ruleId: string, input: SurchargeRuleUpdateInput) {
+  return api.patch<SurchargeRuleView>(orgPath(orgId, `/surcharge-rules/${idSeg(ruleId)}`), input);
 }

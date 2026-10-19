@@ -1,6 +1,8 @@
 # Ghi chép: đồ của người khác trong bản bán
 
 Viết cho chủ studio (anh Chiến). Cập nhật 19/10/2026.
+
+> **WindSong — ĐÃ GỠ 19/10/2026 theo quyết định anh Chiến** (chọn "Bỏ khỏi ô chọn"). Lý do: trên ảnh xuất thật, tên "Tôn" in bằng WindSong bị dấu mũ chạm vào nét chữ T nên đọc thành "Tồn". Đã xoá khỏi app: ô chọn "Chữ ký 7 · WindSong", khai báo trong `ss-album.css`/`mau.js`, thư mục `apps/web/public/mau/phong/ss-album/windsong/` (2 tệp WOFF2 + giấy phép). Khoá `ky-7` bỏ trống, KHÔNG đánh số lại `ky-8` (giữ khoá ổn định); máy chủ trả lỗi 400 tiếng Việt nếu ai gửi `ky-7`. Các đoạn nhắc WindSong bên dưới là lịch sử, giữ để anh đối chiếu.
 Bản này nói rõ: trong app có những thứ không do mình làm ra (phông chữ), mỗi thứ cho dùng theo giấy phép nào, lấy ở đâu, và những phông trong kho của anh mà em KHÔNG đưa vào cùng lý do.
 
 ## 1. Quyết định của anh và em đã làm gì
@@ -29,7 +31,7 @@ Lọc bằng chương trình (đọc lại từng tệp phông, không chép tay
 Nơi để: `apps/web/public/mau/phong/ss-album/<tên họ>/` — mỗi thư mục có tệp WOFF2 và tệp giấy phép (`OFL.txt`, riêng Roboto Slab là `LICENSE.txt`). Khai báo trong `apps/web/public/mau/phong/ss-album/ss-album.css`.
 
 ### Dùng ở đâu trong app
-- **Chữ ký nét mảnh đều** — 3 phông mới thành lựa chọn trên màn Mẫu thiết kế: **Chữ ký 5 · MonteCarlo, Chữ ký 6 · Ephesis, Chữ ký 7 · WindSong**.
+- **Chữ ký nét mảnh đều** — 3 phông mới thành lựa chọn trên màn Mẫu thiết kế: **Chữ ký 5 · MonteCarlo, Chữ ký 6 · Ephesis** (Chữ ký 7 · WindSong đã gỡ 19/10/2026 theo quyết định anh Chiến: tên "Tôn" bị dấu mũ chạm nét chữ T, đọc thành "Tồn").
 - **Pinyon Script** là thư pháp nét thanh-đậm, KHÔNG phải nét đều, nên ô chọn ghi là **"Chữ viết tay · Pinyon Script"** (nhóm chữ viết tay), không gọi là chữ ký.
 - Các phông còn lại (tiêu đề, chữ thường, trang trí) đã nạp sẵn trong `ss-album.css` dưới tên "SSA <tên họ>" để R&D/thợ mẫu dùng khi làm mẫu; chưa có ô chọn trên màn hình.
 
@@ -64,7 +66,7 @@ Cột "Giấy phép" là câu ghi trong tệp phông (name ID13), chép nguyên 
 | **Roboto Slab** | `RobotoSlab-Variable.ttf` → `RobotoSlab-VF.woff2` (116 KB) | Google | "Licensed under the Apache License, Version 2.0." | https://github.com/googlefonts/robotoslab | ✔ |
 | **SVN-Abril Fatface** | `SVN-Abril Fatface.ttf` → `SVN-AbrilFatface.woff2` (40 KB) | TypeTogether / Veronika Burian, Jos? Scaglione | "This Font Software is licensed under the SIL Open Font License, Version 1.1." | https://www.type-together.com | ✔ |
 | **SVN-Bebas Neue** | `SVN-Bebas-Neue-Bold.ttf` → `SVN-Bebas-Neue-Bold.woff2` (26 KB) | Ryoichi Tsunekawa | "This Font Software is licensed under the SIL Open Font License, Version 1.1" (Dharma Type ghi thêm: dùng cho sản phẩm thương mại — Yes; dùng web @font-face — Yes) | http://dharmatype.com | ✔ |
-| **WindSong** | `WindSong-Medium.ttf` → `WindSong-Medium.woff2` (124 KB)<br>`WindSong-Regular.ttf` → `WindSong-Regular.woff2` (111 KB) | Robert E. Leuschke | "This Font Software is licensed under the SIL Open Font License, Version 1.1." | https://github.com/googlefonts/windsong | ✔ |
+| ~~**WindSong**~~ — **ĐÃ GỠ 19/10/2026** theo quyết định anh Chiến (dấu mũ "Tôn" chạm nét chữ T → đọc "Tồn"); tệp đã xoá khỏi app | `WindSong-Medium.ttf` → `WindSong-Medium.woff2` (124 KB)<br>`WindSong-Regular.ttf` → `WindSong-Regular.woff2` (111 KB) | Robert E. Leuschke | "This Font Software is licensed under the SIL Open Font License, Version 1.1." | https://github.com/googlefonts/windsong | ✔ |
 | **Cormorant Garamond** (đứng + nghiêng) | `CormorantGaramond-VF.ttf`, `CormorantGaramond-Italic-VF.ttf` — đã có sẵn trong app từ trước, giống từng byte với kho | Christian Thalmann (Catharsis Fonts) | "This Font Software is licensed under the SIL Open Font License, Version 1.1." | github.com/CatharsisFonts/Cormorant | giữ TTF (không đổi) — giấy phép `phong/OFL-cormorantgaramond.txt` |
 | **Playfair Display** (đứng + nghiêng) | `PlayfairDisplay-VF.ttf`, `PlayfairDisplay-Italic-VF.ttf` — đã có sẵn, giống từng byte | Claus Eggers Sørensen | SIL OFL 1.1 | https://github.com/clauseggers/Playfair-Display | giữ TTF — `phong/OFL-playfairdisplay.txt` |
 | **Montserrat** (chữ đứng) | `Montserrat.ttf` = `Montserrat-VF.ttf` đã có sẵn, giống từng byte (chữ nghiêng 3 bản ở dòng Montserrat phía trên là mới thêm) | Julieta Ulanovsky | SIL OFL 1.1 | https://github.com/JulietaUla/Montserrat | giữ TTF — `phong/OFL-montserrat.txt` |
@@ -79,7 +81,7 @@ Cột "Giấy phép" là câu ghi trong tệp phông (name ID13), chép nguyên 
 
 ## 3. Hai điều kỹ thuật làm khi đưa vào
 - Nạp phông bằng thẻ `<link>` trong từng mẫu (27 tệp mẫu), **không dùng `@import`**, vì bộ xuất PNG của app (html-to-image) không nhúng được phông nạp qua `@import` — lần thử đầu ảnh xuất ra bị rơi về phông dự phòng. Đã sửa và xuất lại, ảnh đúng phông.
-- Các phông mảnh (WindSong) rộng nên chữ tự thu nhỏ khi tên dài (ví dụ 81 px so với 128 px của MonteCarlo). Đó là đặc tính của phông, không phải lỗi.
+- ~~Các phông mảnh (WindSong) rộng~~ (WindSong đã gỡ 19/10/2026) — các phông mảnh còn lại rộng nên chữ tự thu nhỏ khi tên dài (ví dụ 81 px so với 128 px của MonteCarlo). Đó là đặc tính của phông, không phải lỗi.
 
 ## 4. Tệp trùng đã bỏ (chỉ giữ một bản)
 **Giống từng byte (giữ bản đầu):** `CormorantGaramond.ttf` = `CormorantGaramond-Variable.ttf`; `DancingScript.ttf` = `DancingScript-Variable.ttf`; `Montserrat-SemiBold.ttf` = `Montserrat-SemiBold 3.ttf`; `Oswald.ttf` = `Oswald-Variable.ttf`; `PlayfairDisplay-Italic.ttf` = `PlayfairDisplay-Italic-Variable.ttf`; `PlayfairDisplay.ttf` = `PlayfairDisplay-Variable.ttf`.

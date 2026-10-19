@@ -14,6 +14,13 @@ function Svg({ children, ...rest }: IconProps & { children: ReactNode }) {
 }
 
 const PATHS: Record<NavIconName | 'brand' | 'more' | 'logout' | 'swap' | 'down', ReactNode> = {
+  // Ngôi nhà (bản vẽ D mục 3.0), nét 1.5 như các biểu tượng khác.
+  'hom-nay': (
+    <>
+      <path d="M3 11l9-7.5 9 7.5" />
+      <path d="M5.5 9.5V20h13V9.5M10 20v-5.5h4V20" />
+    </>
+  ),
   lich: (
     <>
       <rect x="3" y="5" width="18" height="16" rx="2" />

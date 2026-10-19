@@ -8,7 +8,7 @@ import type { OrgKind } from '../api/auth';
 //   { key: 'dao-tao', path: 'dao-tao', label: 'Đào tạo', shortLabel: 'Khoá học', icon: 'khoa-hoc', permission: 'courses.read', orgKinds: ['ACADEMY'] },
 //   { key: 'mau-thiet-ke', path: 'mau-thiet-ke', label: 'Mẫu thiết kế', shortLabel: 'Mẫu', icon: 'mau', permission: 'designs.read' },
 
-export type NavIconName = 'lich' | 'hd' | 'thu-tien' | 'gia' | 'khach' | 'tho' | 'bao-cao' | 'khoa-hoc' | 'mau' | 'cai-dat';
+export type NavIconName = 'hom-nay' | 'lich' | 'hd' | 'thu-tien' | 'gia' | 'khach' | 'tho' | 'bao-cao' | 'khoa-hoc' | 'mau' | 'cai-dat';
 
 export interface NavChild {
   key: string;
@@ -37,9 +37,18 @@ export interface NavItem {
   orgKinds?: readonly OrgKind[];
   // Menu con — chỉ hiện dưới mục đang chọn (máy tính).
   children?: readonly NavChild[];
+  // Mục đã vào bảng nhưng màn CHƯA có (gói khác đang làm): ẩn khỏi mọi thanh điều hướng — bày ra mà bấm vào 404 là nút chết.
+  // Chặn đường theo quyền (navEntryAllowed) vẫn tính mục này, nên màn mới chỉ cần thêm đường. Có màn → xoá cờ (một dòng).
+  pending?: true;
+  // Không làm trang mở đầu của /:orgSlug (ký duyệt D câu 1: Lịch vẫn là trang mở đầu). Bỏ cờ này = Hôm nay thành trang
+  // mở đầu (lùi bằng một dòng). Vẫn là mục đầu thanh bên và nằm trong ngăn "Thêm" ở điện thoại.
+  notHome?: true;
 }
 
 export const NAV_ITEMS: readonly NavItem[] = [
+  // Bản vẽ D mục 3.0 + ký duyệt D câu 1: MỤC ĐẦU thanh bên máy tính; ở điện thoại nằm trong ngăn "Thêm" (BOTTOM_NAV không đổi).
+  // pending: màn /hom-nay thuộc gói W1 (app/routes.tsx) — W1 xong thì xoá `pending: true`.
+  { key: 'hom-nay', path: 'hom-nay', label: 'Hôm nay', shortLabel: 'Hôm nay', icon: 'hom-nay', permission: 'org.read', notHome: true, pending: true },
   { key: 'lich', path: 'lich', label: 'Lịch makeup', shortLabel: 'Lịch', icon: 'lich', permission: 'schedule.read_own' },
   {
     key: 'hop-dong',
@@ -107,6 +116,15 @@ export const NAV_ITEMS: readonly NavItem[] = [
   },
 ];
 
+// Hai mục con Bảng giá của bản vẽ D mục 3.0 (đặt cạnh "Nhân vật" và "Dịch vụ phụ & phụ phí": cùng loại dữ liệu, cùng quyền
+// catalog.*). CHƯA nằm trong NAV_ITEMS: features/pricing/logic.ts (gói W2) dựng PRICING_GROUPS từ children của 'bang-gia' và
+// NÉM LỖI khi gặp nhóm lạ — thêm vào đây trước khi W2 sửa logic.ts + index.tsx là làm sập cả ứng dụng. W2 xong thì chuyển
+// hai dòng này vào children của 'bang-gia' (và xoá hằng này).
+export const PENDING_BANG_GIA_CHILDREN: readonly NavChild[] = [
+  { key: 'bang-gia-su-kien', path: 'bang-gia/su-kien', label: 'Loại sự kiện' },
+  { key: 'bang-gia-luat-phu-phi', path: 'bang-gia/luat-phu-phi', label: 'Luật phụ phí' },
+];
+
 // Thanh dưới điện thoại theo loại tổ chức (C3 mục 1.0; nhật ký quyết định 19:42). Mỗi ô trỏ tới khoá của một mục
 // hoặc một mục con; ô trỏ tới mục chưa có trong NAV_ITEMS (chưa có màn) hoặc người xem không được thấy thì không hiện.
 // Ô cuối luôn là "Thêm" (mục còn lại, đổi tổ chức, đăng xuất).
@@ -134,6 +152,13 @@ export const BOTTOM_NAV: Record<'ACADEMY' | 'DEFAULT', readonly BottomSlot[]> = 
 
 type Has = (p: Permission) => boolean;
 
+// Bảng điều hướng sau khi đã (hoặc chưa) tính các mục chờ màn. includePending chỉ dành cho bài thử / kiểm tra "sau khi
+// các gói web xong": thêm mục `pending` và hai mục con Bảng giá chờ.
+function navSource(includePending: boolean): readonly NavItem[] {
+  if (!includePending) return NAV_ITEMS.filter((i) => i.pending !== true);
+  return NAV_ITEMS.map((i) => (i.key === 'bang-gia' ? { ...i, children: [...(i.children ?? []), ...PENDING_BANG_GIA_CHILDREN] } : i));
+}
+
 // Mục đã lọc theo quyền: chỉ còn mục con được thấy; href = đường mặc định (mục con đầu tiên được thấy nếu thiếu quyền mục).
 export interface VisibleNavItem extends NavItem {
   href: string;
@@ -149,9 +174,9 @@ function kindAllowed(item: NavItem, kind: OrgKind | undefined): boolean {
   return item.orgKinds === undefined || (kind !== undefined && item.orgKinds.includes(kind));
 }
 
-export function visibleNav(has: Has, kind?: OrgKind): VisibleNavItem[] {
+export function visibleNav(has: Has, kind?: OrgKind, opts: { includePending?: boolean } = {}): VisibleNavItem[] {
   const out: VisibleNavItem[] = [];
-  for (const item of NAV_ITEMS) {
+  for (const item of navSource(opts.includePending === true)) {
     if (!kindAllowed(item, kind)) continue;
     const children = (item.children ?? []).filter((c) => childAllowed(item, c, has));
     const own = item.permission !== undefined && has(item.permission);
@@ -196,11 +221,12 @@ export function findNavEntry(key: string): { item: NavItem; child?: NavChild } |
 }
 
 // Người xem có được vào mục/mục con này không (mục: có quyền mục hoặc có mục con được thấy).
+// Chặn đường chỉ xét QUYỀN: mục chờ màn (pending) vẫn được tính để màn mới vào là chạy, không cần sửa lại chỗ này.
 export function navEntryAllowed(key: string, has: Has, kind?: OrgKind): boolean {
   const e = findNavEntry(key);
   if (!e || !kindAllowed(e.item, kind)) return false;
   if (e.child) return childAllowed(e.item, e.child, has);
-  return visibleNav(has, kind).some((i) => i.key === e.item.key);
+  return visibleNav(has, kind, { includePending: true }).some((i) => i.key === e.item.key);
 }
 
 export interface BottomNavEntry {
@@ -251,7 +277,9 @@ export function activeBottomKey(main: readonly BottomNavEntry[], active: NavItem
   return main.find((m) => m.childKey === undefined && m.itemKey === active.key)?.key;
 }
 
-// Mục mặc định khi vào /:orgSlug: mục đầu tiên người dùng được xem.
-export function homeNavItem(has: Has, kind?: OrgKind): VisibleNavItem | undefined {
-  return visibleNav(has, kind)[0];
+// Mục mặc định khi vào /:orgSlug: mục đầu tiên người dùng được xem, trừ mục `notHome` (Hôm nay — Lịch vẫn là trang mở
+// đầu, ký duyệt D câu 1). Chỉ còn mục `notHome` thì dùng nó (người chỉ có org.read vẫn vào được Hôm nay).
+export function homeNavItem(has: Has, kind?: OrgKind, opts: { includePending?: boolean } = {}): VisibleNavItem | undefined {
+  const items = visibleNav(has, kind, opts);
+  return items.find((i) => i.notHome !== true) ?? items[0];
 }

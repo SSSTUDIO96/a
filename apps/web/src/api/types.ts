@@ -11,6 +11,7 @@ import type {
   ContractStatus,
   INITIAL_STATUSES,
   InstallmentStatus,
+  OccasionColor,
   PaymentKind,
   PaymentMethod,
   PaymentSummary,
@@ -20,7 +21,7 @@ import type {
   WorkStatus,
 } from '@makeup/shared';
 
-export type { ContractStatus, InstallmentStatus, PaymentKind, PaymentMethod, PaymentSummary, TravelFeeMode, Vnd, WorkStatus };
+export type { ContractStatus, InstallmentStatus, OccasionColor, PaymentKind, PaymentMethod, PaymentSummary, TravelFeeMode, Vnd, WorkStatus };
 export type IsoDateTime = string;
 // Loại hợp đồng (BAN-VE-C3 mục 1.1): dịch vụ makeup hoặc khoá học. Đặt lúc tạo, không đổi được sau đó.
 export type ContractKind = ContractKindKey;
@@ -315,6 +316,90 @@ export interface PackageCreateInput extends PackageUpdateInput {
   salePrice?: Vnd | null;
 }
 
+// ---- Loại sự kiện (bản vẽ D 2.2) — catalog/occasions.ts ----
+
+// GET/POST/PATCH /occasions và phần tử của PUT /occasions/order. `lineCount` = số dòng hợp đồng CHƯA HUỶ đang dùng loại này.
+export interface OccasionView {
+  id: string;
+  name: string;
+  color: OccasionColor;
+  sortOrder: number;
+  isActive: boolean;
+  lineCount: number;
+  createdAt: IsoDateTime;
+  updatedAt: IsoDateTime;
+}
+
+// POST /occasions (tên ≤ 60 ký tự; tối đa 50 loại → 409).
+export interface OccasionCreateInput {
+  name: string;
+  color: OccasionColor;
+  sortOrder?: number;
+  isActive?: boolean;
+}
+
+// PATCH /occasions/:id — chỉ gửi trường đổi; thân rỗng → 400 "Không có gì để sửa".
+export type OccasionUpdateInput = Partial<OccasionCreateInput>;
+
+// PUT /occasions/order — phải gồm ĐỦ mọi loại sự kiện của tổ chức, mỗi loại một lần (sai → 400 cùng một lời).
+export interface OccasionOrderInput {
+  occasionIds: string[];
+}
+
+// ---- Luật phụ phí tự động (bản vẽ D 2.3) — catalog/surcharge-rules.ts ----
+
+// Vì sao luật đang không sinh dòng (tính lúc đọc).
+export type SurchargeRuleStatus = 'OK' | 'SERVICE_INACTIVE' | 'SERVICE_NOT_SURCHARGE' | 'NO_PRICE';
+
+export interface SurchargeRuleView {
+  id: string;
+  name: string;
+  serviceId: string;
+  service: { id: string; name: string; kind: ServiceKind; isActive: boolean; currentPrice: Vnd | null };
+  // "HH:MM"; cả hai null = không xét giờ. Khung NỬA MỞ [bắt đầu, kết thúc). "24:00" chỉ hợp lệ ở endTime.
+  startTime: string | null;
+  endTime: string | null;
+  // 1 = Thứ Hai … 7 = Chủ nhật.
+  weekdays: number[];
+  // "YYYY-MM-DD", tăng dần.
+  dates: string[];
+  occasionIds: string[];
+  packageIds: string[];
+  subjectIds: string[];
+  // true: số lượng phụ phí = số lượng dòng đặt chỗ (phù dâu × 2 → phụ phí × 2); false: luôn 1.
+  perQuantity: boolean;
+  note: string | null;
+  sortOrder: number;
+  isActive: boolean;
+  status: SurchargeRuleStatus;
+  // Số dòng tự thêm chưa huỷ đang trỏ về luật.
+  usedLineCount: number;
+  createdAt: IsoDateTime;
+  updatedAt: IsoDateTime;
+}
+
+// POST /surcharge-rules (quyền prices.write). Ít nhất một điều kiện kích hoạt: khung giờ, thứ, ngày hoặc loại sự kiện.
+// Chỉ gói / nhân vật thì 400 (đó là giá, không phải phụ phí). Mảng không trùng phần tử.
+export interface SurchargeRuleCreateInput {
+  name: string;
+  serviceId: string;
+  // Có cả hai hoặc không có cả hai.
+  startTime?: string | null;
+  endTime?: string | null;
+  weekdays?: number[];
+  dates?: string[];
+  occasionIds?: string[];
+  packageIds?: string[];
+  subjectIds?: string[];
+  perQuantity?: boolean;
+  note?: string | null;
+  sortOrder?: number;
+  isActive?: boolean;
+}
+
+// PATCH /surcharge-rules/:id — mảng gửi lên THAY toàn bộ mảng cũ, không gửi = giữ; null ở startTime/endTime = bỏ khung giờ.
+export type SurchargeRuleUpdateInput = Partial<SurchargeRuleCreateInput>;
+
 // ======================= Khách hàng, lịch (schedule) =======================
 
 // schedule/customers.ts — customerSelect.
@@ -373,6 +458,9 @@ export interface Appointment {
   subjectName: string | null;
   // Số lượng của dòng hợp đồng gắn với ca (phù dâu 2 người → 2; luôn ≥ 1); ca không gắn dòng hợp đồng → null.
   quantity: number | null;
+  // Sự kiện của dòng hợp đồng gắn với ca (bản vẽ D 2.5): name = bản chụp trên dòng, color = màu HIỆN TẠI của loại.
+  // Ca không gắn dòng hoặc dòng chưa chọn sự kiện → null.
+  occasion: { id: string; name: string; color: OccasionColor } | null;
   // Buổi học sinh từ lớp (kind COURSE_SESSION, nút "Đưa buổi học lên Lịch" ở Khoá & lớp); ca khác → null.
   courseClass: AppointmentCourseClass | null;
   // Ngày học "YYYY-MM-DD" (theo múi giờ tổ chức) của buổi học sinh từ lớp; ca khác → null.
@@ -501,8 +589,23 @@ export interface AddonInput {
   quantity: number;
 }
 
+// Phần người lập sửa ở MỘT dòng phụ phí tự thêm (chỉ gửi khi đã sửa; không gửi = theo luật + bảng giá).
+// unitPrice kèm note bắt buộc (400 "Ghi đè giá phụ phí phải kèm ghi chú lý do").
+export interface SurchargeOverrideInput {
+  ruleId: string;
+  quantity?: number;
+  unitPrice?: Vnd;
+  note?: string;
+}
+
 interface PlacedLineFields {
   subjectId?: string;
+  // Loại sự kiện của dòng (bản vẽ D 2.4): đang ẩn → 400, mã lạ → 404.
+  occasionId?: string;
+  // Dòng phụ phí tự thêm đã sửa (tối đa 20). Luật không còn khớp thì máy chủ bỏ phần sửa (quote: autoSurcharge.removed).
+  surchargeOverrides?: SurchargeOverrideInput[];
+  // Luật người lập đã bỏ ở dòng này (tối đa 50) — không tự thêm lại, kể cả khi đổi giờ đi rồi đổi lại.
+  dismissedRuleIds?: string[];
   quantity: number;
   locationType?: LocationType;
   studioLocationId?: string;
@@ -659,6 +762,14 @@ export interface ContractLineView<Id extends string | null = string> {
   note: string | null;
   // Lớp của dòng khoá học (chỉ dòng COURSE; dòng khác null).
   courseClassId: string | null;
+  // Sự kiện của dòng đặt chỗ: occasionName là bản chụp lúc lưu (đổi tên loại không đổi dòng đã lưu).
+  occasionId: string | null;
+  occasionName: string | null;
+  // Dòng phụ phí TỰ THÊM theo luật: id và tên luật lúc tính. Dòng phụ phí nhập tay → null.
+  surchargeRuleId: string | null;
+  surchargeRuleName: string | null;
+  // Luật người lập đã bỏ ở dòng đặt chỗ này (dòng khác → []).
+  dismissedRuleIds: string[];
   addedAfterConfirm: boolean;
   // Lúc thêm dòng (dòng đã lưu); bảng tính xem trước (quote) chưa ghi nên null.
   createdAt: IsoDateTime | null;
@@ -726,10 +837,52 @@ export interface TravelBreakdown {
   tier: TravelFeeTier | null;
 }
 
-// Dịch vụ phụ và phí di chuyển gom dưới dòng cha.
+// Dịch vụ phụ, phí di chuyển và phụ phí tự thêm gom dưới dòng cha.
 export interface GroupedContractLine<Id extends string | null = string> extends ContractLineView<Id> {
   addons: ContractLineView<Id>[];
   travel: ContractLineView<Id> | null;
+  // Dòng phụ phí (kind SURCHARGE) có parentLineId = dòng này — theo thứ tự luật.
+  surcharges: ContractLineView<Id>[];
+}
+
+// Kết quả chạy luật phụ phí của MỘT lần xem trước (chỉ POST /contracts/quote trả). `line` = vị trí dòng đặt chỗ
+// trong mảng `lines` gửi lên (từ 0, giống details.line của lỗi).
+export interface AutoSurchargeApplied {
+  line: number;
+  ruleId: string;
+  ruleName: string;
+  serviceName: string;
+  quantity: number;
+  lineTotal: Vnd;
+  // Người lập có sửa số lượng hoặc giá.
+  overridden: boolean;
+}
+
+export type AutoSurchargeRemovedReason = 'NO_LONGER_MATCHES' | 'RULE_INACTIVE' | 'SAME_SERVICE';
+
+// Phần người lập đã sửa nhưng bị bỏ vì luật không còn áp cho dòng.
+export interface AutoSurchargeRemoved {
+  line: number;
+  ruleId: string;
+  ruleName: string;
+  reason: AutoSurchargeRemovedReason;
+}
+
+export type AutoSurchargeSkippedReason = 'SERVICE_UNAVAILABLE' | 'MANUAL_LINE_EXISTS' | 'NO_PRICE' | 'SAME_SERVICE';
+
+// Luật khớp nhưng không sinh dòng. `by` = tên luật thắng (chỉ khi SAME_SERVICE).
+export interface AutoSurchargeSkipped {
+  line: number;
+  ruleId: string;
+  ruleName: string;
+  reason: AutoSurchargeSkippedReason;
+  by?: string;
+}
+
+export interface AutoSurchargeReport {
+  applied: AutoSurchargeApplied[];
+  removed: AutoSurchargeRemoved[];
+  skipped: AutoSurchargeSkipped[];
 }
 
 // contracts/present.ts — presentSheet: bảng tính xem trước (POST /contracts/quote).
@@ -744,6 +897,8 @@ export interface ContractQuote {
   suggestedDeposit: Vnd;
   // Tình trạng chỗ của các lớp trong dòng khoá học (xem trước không chặn lớp đầy — web báo; chốt ở bước xác nhận).
   classes: ContractClassSeats[];
+  // Phụ phí máy chủ tự thêm / bỏ / bỏ qua theo luật (bản vẽ D 2.4). Web không tự cộng tiền phụ phí — tổng ở trên đã gồm.
+  autoSurcharge: AutoSurchargeReport;
 }
 
 // contracts/enroll.ts — ClassSeats. seatState theo seatState() của @makeup/shared.
@@ -880,6 +1035,103 @@ export interface ContractAddLineResult extends ContractDetail {
 export interface ContractStatusResult extends ContractDetail {
   cancelledAppointments: ContractDetail['appointments'];
   createdAppointments: ContractDetail['appointments'];
+}
+
+// ======================= Hôm nay (today) =======================
+
+// today/present.ts (bản vẽ D 2.6) — GET /orgs/:orgId/today. Trường `null` = người xem không có quyền của thẻ đó (web ẨN thẻ);
+// mảng rỗng = có quyền mà không có gì (web hiện câu "Không có …").
+export interface TodayAppointment {
+  id: string;
+  code: string;
+  kind: EventKind;
+  status: WorkStatus;
+  title: string | null;
+  startsAt: IsoDateTime;
+  endsAt: IsoDateTime;
+  travelBeforeMin: number;
+  customer: { id: string; fullName: string } | null;
+  subjectName: string | null;
+  quantity: number | null;
+  occasion: { id: string; name: string; color: OccasionColor } | null;
+  locationType: LocationType | null;
+  address: string | null;
+  contract: { id: string; code: string } | null;
+  courseClass: { id: string; name: string; courseId: string } | null;
+  staff: { membershipId: string; displayName: string; role: StaffRole }[];
+}
+
+export type TodayInstallmentStatus = 'OVERDUE' | 'DUE' | 'PARTIAL';
+
+export interface TodayInstallment {
+  installmentId: string;
+  name: string;
+  dueDate: IsoDateTime;
+  amount: Vnd;
+  outstanding: Vnd;
+  status: TodayInstallmentStatus;
+  // Số ngày lịch (múi giờ tổ chức) đã quá hạn; 0 khi chưa quá hạn.
+  overdueDays: number;
+  isDeposit: boolean;
+  contract: { id: string; code: string; eventDate: IsoDateTime | null };
+  // Không có customers.read: phone = null, phoneHidden = true.
+  customer: { id: string; fullName: string; phone: string | null; phoneHidden: boolean };
+  owner: { membershipId: string; displayName: string } | null;
+}
+
+export interface TodayContract {
+  id: string;
+  code: string;
+  kind: ContractKind;
+  customerName: string;
+  total: Vnd;
+  eventDate: IsoDateTime | null;
+  confirmedAt: IsoDateTime;
+  confirmedBy: { userId: string; fullName: string } | null;
+}
+
+export interface TodayEnrollment {
+  id: string;
+  enrolledAt: IsoDateTime;
+  customer: { id: string; fullName: string };
+  courseClass: { id: string; name: string };
+  course: { id: string; name: string };
+  enrolledCount: number;
+  capacity: number;
+}
+
+export interface TodayClass {
+  id: string;
+  name: string;
+  course: { id: string; name: string };
+  // "YYYY-MM-DD"
+  startDate: string;
+  enrolledCount: number;
+  capacity: number;
+  seatsLeft: number;
+}
+
+export interface TodayView {
+  generatedAt: IsoDateTime;
+  timezone: string;
+  // "YYYY-MM-DD" theo múi giờ tổ chức (không theo đồng hồ máy).
+  today: string;
+  tomorrow: string;
+  // ALL: schedule.read_all (mọi ca); OWN: chỉ schedule.read_own (chỉ ca có mình).
+  scheduleScope: 'ALL' | 'OWN';
+  counts: {
+    appointmentsToday: number;
+    appointmentsTomorrow: number;
+    unassignedSoon: number | null;
+    overdue: { count: number; amount: Vnd } | null;
+    dueSoon: { count: number; amount: Vnd } | null;
+  };
+  appointments: { today: TodayAppointment[]; tomorrow: TodayAppointment[]; later: TodayAppointment[]; truncated: boolean };
+  unassigned: TodayAppointment[] | null;
+  installments: { overdue: TodayInstallment[]; dueSoon: TodayInstallment[]; truncated: boolean } | null;
+  newContracts: TodayContract[] | null;
+  newEnrollments: TodayEnrollment[] | null;
+  almostFullClasses: TodayClass[] | null;
 }
 
 // ======================= Nhân sự, tiền công (staff) =======================

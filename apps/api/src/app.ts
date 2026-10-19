@@ -20,6 +20,7 @@ import { platformRoutes } from './modules/platform/routes';
 import { profileRoutes } from './modules/profile/routes';
 import { courseRoutes } from './modules/courses/routes';
 import { designRoutes } from './modules/designs/routes';
+import { todayRoutes } from './modules/today/routes';
 import { createHash, type Hash } from 'node:crypto';
 import { RAW_ROUTE, rawFileHandler } from './modules/files/raw';
 import { hasPresentedRefreshToken } from './modules/auth/transport';
@@ -42,6 +43,8 @@ export const ALL_ROUTES: AnyRoute[] = [
   // Khoá & lớp (thợ gói M3), mẫu thiết kế + thẻ (thợ gói M6) — đăng ký một lần ở đây, mỗi thợ điền mảng của mình.
   ...courseRoutes,
   ...designRoutes,
+  // Trang Hôm nay (bản vẽ D, gói M6).
+  ...todayRoutes,
 ];
 
 export function createApp(deps: Deps, routes: AnyRoute[] = ALL_ROUTES) {

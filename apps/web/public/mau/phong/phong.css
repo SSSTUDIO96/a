@@ -8,7 +8,7 @@
    khối "MP Viết tay N" tương ứng. Không sửa tên font-family — mọi mẫu
    gọi phông qua tên này (biến --f-tay-1..4 ở cuối tệp).
    Nếu phông mới to/nhỏ hơn, chỉnh --tay-co-N (hệ số cỡ chữ, mặc định 1).
-   Có thêm nhóm "chữ ký" (--f-ky-1..4; 5..8 khai ở ss-album/ss-album.css — mỗi mẫu nạp thêm tệp này bằng thẻ <link>; KHÔNG dùng @import vì bộ xuất PNG html-to-image không nhúng được phông qua @import). Mẫu nào cũng đổi được sang chữ ký bằng tham số ?ky=1..8
+   Có thêm nhóm "chữ ký" (--f-ky-1..4; 5, 6, 8 khai ở ss-album/ss-album.css — mỗi mẫu nạp thêm tệp này bằng thẻ <link>; KHÔNG dùng @import vì bộ xuất PNG html-to-image không nhúng được phông qua @import). Mẫu nào cũng đổi được sang chữ ký bằng tham số ?ky=1..8
    (mọi chỗ viết tay của mẫu dùng phông chữ ký số đó).
    ===================================================================== */
 @font-face{font-family:'MP Viết tay 1';src:url(ImperialScript-Regular.ttf) format('truetype');font-display:block}  /* tạm: Imperial Script */

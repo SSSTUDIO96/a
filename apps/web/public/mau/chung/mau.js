@@ -6,7 +6,7 @@
    - dòng phụ `dv` ghép từ đúng các ô có giá trị (khoá học: khoa · Lớp lop; dịch vụ: nv · goi · nsk);
    - ngày trống thì các ô ngày suy ra (thứ, tháng, năm…) cũng trống.
    Không có ?that=1 thì chạy y như bản R&D (chữ mẫu) — trang bày mẫu vẫn dùng được.
-   Khổ: mặc định 1080×1350, ?kho=vuong ra 1080×1080. Phông chữ ký: ?ky=1..8 (5 MonteCarlo, 6 Ephesis, 7 WindSong, 8 Pinyon Script — xem phong/ss-album/ss-album.css). */
+   Khổ: mặc định 1080×1350, ?kho=vuong ra 1080×1080. Phông chữ ký: ?ky=1..8 (5 MonteCarlo, 6 Ephesis, 8 Pinyon Script; không có 7 — WindSong đã gỡ 19/10/2026 — xem phong/ss-album/ss-album.css). */
 (function(){
 const P=new URLSearchParams(location.search);
 const THAT=P.get('that')==='1';
@@ -88,7 +88,7 @@ function fit(){
   document.querySelectorAll('[data-fitc]').forEach(el=>{el.style.fontSize=el.dataset.fitc?(+el.dataset.fitc*(document.body.classList.contains('vuong')?.86:1))+'px':'';let s=parseFloat(getComputedStyle(el).fontSize);for(let i=0;i<90&&el.scrollHeight>el.clientHeight+1;i++){s-=1;el.style.fontSize=s+'px';}});
   document.body.dataset.ready='1';xong();}
 const imgs=[...document.images].map(i=>i.complete?0:new Promise(r=>{i.onload=i.onerror=r}));
-const FONTS=['MP Viết tay 1','MP Viết tay 2','MP Viết tay 3','MP Viết tay 4','MP Chữ ký 1','MP Chữ ký 2','MP Chữ ký 3','MP Chữ ký 4','MP Chữ ký 5','MP Chữ ký 6','MP Chữ ký 7','MP Chữ ký 8','MP Chữ có chân','MP Chữ đậm có chân','MP Chữ không chân'].map(f=>document.fonts.load(`40px "${f}"`,'Ấỳ').catch(()=>0));
+const FONTS=['MP Viết tay 1','MP Viết tay 2','MP Viết tay 3','MP Viết tay 4','MP Chữ ký 1','MP Chữ ký 2','MP Chữ ký 3','MP Chữ ký 4','MP Chữ ký 5','MP Chữ ký 6','MP Chữ ký 8','MP Chữ có chân','MP Chữ đậm có chân','MP Chữ không chân'].map(f=>document.fonts.load(`40px "${f}"`,'Ấỳ').catch(()=>0));
 Promise.all([...FONTS,document.fonts.ready,...imgs]).then(()=>requestAnimationFrame(fit));
 window.MAU_DU_LIEU=D;
 // App chờ lời hứa này trước khi xuất ảnh (chung/xuat.js).
