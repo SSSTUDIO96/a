@@ -68,7 +68,7 @@ async function replayRegistration(
     }),
   );
   const presented = { id: user.id, email: user.email, fullName: user.fullName };
-  return { status: 201, ...deliverTokens(req, deps, await issueTokens(deps, user.id), { user: presented }) };
+  return { status: 201, ...deliverTokens(req, deps, await issueTokens(deps, user), { user: presented }) };
 }
 
 export const authRoutes = [
@@ -90,12 +90,12 @@ export const authRoutes = [
         throw new AppError('CONFLICT', 'Email này đã được đăng ký');
       }
       const passwordHash = await hashPassword(body.password);
-      let user: { id: string; email: string; fullName: string };
+      let user: { id: string; email: string; fullName: string; passwordChangedAt: Date | null };
       try {
         user = await deps.db.$transaction(async (tx) => {
           const created = await tx.user.create({
             data: { email: body.email, passwordHash, fullName: body.fullName },
-            select: { id: true, email: true, fullName: true },
+            select: { id: true, email: true, fullName: true, passwordChangedAt: true },
           });
           await writeAudit(tx, {
             organizationId: null,
@@ -115,7 +115,8 @@ export const authRoutes = [
         if (again) return again;
         throw new AppError('CONFLICT', 'Email này đã được đăng ký');
       }
-      return { status: 201, ...deliverTokens(req, deps, await issueTokens(deps, user.id), { user }) };
+      const presented = { id: user.id, email: user.email, fullName: user.fullName };
+      return { status: 201, ...deliverTokens(req, deps, await issueTokens(deps, user), { user: presented }) };
     },
   }),
 
@@ -155,7 +156,8 @@ export const authRoutes = [
           requestId,
         }),
       );
-      return deliverTokens(req, deps, await issueTokens(deps, user.id), {
+      // Mốc đổi mật khẩu của CHÍNH dòng vừa so mật khẩu: lần đặt lại chen vào lúc chờ bcrypt → issueTokens từ chối.
+      return deliverTokens(req, deps, await issueTokens(deps, user), {
         user: { id: user.id, email: user.email, fullName: user.fullName },
       });
     },

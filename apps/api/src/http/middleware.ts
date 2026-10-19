@@ -4,7 +4,7 @@ import { Prisma } from '@prisma/client';
 import { isPermission, type Permission } from '@makeup/shared';
 import { z } from 'zod';
 import { AppError } from '../lib/errors';
-import { verifyAccessToken } from '../lib/tokens';
+import { PASSWORD_CHANGED_MESSAGE, tokenSurvivesPasswordChange, verifyAccessToken } from '../modules/auth/access-token';
 import type { Deps, IdempotencyCtx, OrgContext } from './route';
 
 export function requestId(req: Request, res: Response, next: NextFunction): void {
@@ -20,10 +20,18 @@ export async function authenticate(req: Request, deps: Deps): Promise<string> {
   if (!header?.startsWith('Bearer ')) {
     throw new AppError('UNAUTHENTICATED', 'Chưa đăng nhập');
   }
-  const { sub } = verifyAccessToken(header.slice(7), deps.env.JWT_ACCESS_SECRET);
-  const user = await deps.db.user.findUnique({ where: { id: sub }, select: { id: true, status: true } });
+  const claims = verifyAccessToken(header.slice(7), deps.env.JWT_ACCESS_SECRET);
+  // Mốc đổi mật khẩu lấy KÈM câu tra user sẵn có (không thêm truy vấn) — xem modules/auth/access-token.ts.
+  const user = await deps.db.user.findUnique({
+    where: { id: claims.sub },
+    select: { id: true, status: true, passwordChangedAt: true },
+  });
   if (!user || user.status !== 'ACTIVE') {
     throw new AppError('UNAUTHENTICATED', 'Tài khoản không còn hoạt động');
+  }
+  // Thẻ cấp trước lần đổi / đặt lại mật khẩu gần nhất: chết ngay, không chờ hết hạn.
+  if (!tokenSurvivesPasswordChange(claims, user.passwordChangedAt)) {
+    throw new AppError('UNAUTHENTICATED', PASSWORD_CHANGED_MESSAGE);
   }
   return user.id;
 }
