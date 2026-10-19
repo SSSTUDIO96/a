@@ -116,7 +116,7 @@
       <circle cx="100" cy="100" r="78" fill="url(#${id}h)"/>
       <circle cx="100" cy="100" r="74" fill="${nen}"/>
       <circle cx="100" cy="100" r="69.5" fill="none" stroke="url(#${id}g)" stroke-width="1.5"/>
-      <ellipse cx="100" cy="58" rx="50" ry="26" fill="#fff" opacity=".06"/>
+      <ellipse cx="100" cy="56" rx="46" ry="20" fill="#fff" opacity=".035"/>
       <g>${nguyetQue(100, 100, 49, lq, 166, 102, 7, 0.78)}${nguyetQue(100, 100, 49, lq, 14, 78, 7, 0.78)}</g>
       <text font-family="MP Chữ không chân" font-weight="700" font-size="9.4" letter-spacing="2" fill="${chu}"><textPath href="#${id}a" startOffset="50%" text-anchor="middle">${d.vong || '★ GIẤY CHỨNG NHẬN ★'}</textPath></text>
       <text x="100" y="95" text-anchor="middle" font-family="MP Chữ không chân" font-weight="700" font-size="11" letter-spacing="1.1" fill="${chu}">${dong1}</text>
@@ -257,7 +257,7 @@
     const W = box.clientWidth, H = box.clientHeight;
     let lines = [goc];
     if (ten) {
-      const minS = Math.max(50, o.max * 0.52);
+      const minS = 54; // dưới 54 px (≈ 40 pt khi in) mới chuyển sang 2 dòng cân
       const b1 = boCuc([goc], o, W, H);
       if (b1.S < minS && goc.includes(' ')) {
         const L2 = chiaHai(goc, o, W, H);

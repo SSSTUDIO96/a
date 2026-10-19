@@ -17,7 +17,7 @@ function chuVang(el){
   const cs=getComputedStyle(el);const stops=(el.dataset.vang||'#8A5A14,#B88A2E,#8A5A14').split(',');
   const raw=el.dataset.goc||el.textContent.trim();el.dataset.goc=raw;
   const txt=cs.textTransform==='uppercase'?raw.toLocaleUpperCase('vi'):raw;
-  const fs=parseFloat(cs.fontSize),ls=parseFloat(cs.letterSpacing)||0,lh=parseFloat(cs.lineHeight)||fs*1.2;
+  const ff=cs.fontFamily.replace(/"/g,"'");const fs=parseFloat(cs.fontSize),ls=parseFloat(cs.letterSpacing)||0,lh=parseFloat(cs.lineHeight)||fs*1.2;
   const W=el.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight);
   cv.font=`${cs.fontStyle} ${cs.fontWeight} ${fs}px ${cs.fontFamily}`;cv.letterSpacing=ls+'px';
   const words=txt.split(/\s+/);const lines=[];let cur='';
@@ -30,7 +30,7 @@ function chuVang(el){
   let s=`<svg xmlns="${NS}" width="${W}" height="${f1(lines.length*lh)}" viewBox="0 0 ${W} ${f1(lines.length*lh)}"><defs><linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="${al==='middle'?(W-gw)/2:al==='start'?0:W-gw}" y1="0" x2="${al==='middle'?(W+gw)/2:al==='start'?gw:W}" y2="${f1(lines.length*lh*.8)}">`+
     stops.map((c,i)=>`<stop offset="${f1(i/(stops.length-1)*100)}%" stop-color="${c}"/>`).join('')+`</linearGradient></defs>`;
   lines.forEach((l,i)=>{const x=al==='middle'?W/2+ls/2:al==='start'?0:W;
-    s+=`<text x="${f1(x)}" y="${f1(i*lh+lh/2)}" dominant-baseline="central" text-anchor="${al}" fill="url(#${id})" style="font:${cs.fontStyle} ${cs.fontWeight} ${fs}px ${cs.fontFamily};letter-spacing:${ls}px">${l.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</text>`;});
+    s+=`<text x="${f1(x)}" y="${f1(i*lh+lh/2)}" dominant-baseline="central" text-anchor="${al}" fill="url(#${id})" style="font:${cs.fontStyle} ${cs.fontWeight} ${fs}px ${ff};letter-spacing:${ls}px">${l.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</text>`;});
   el.innerHTML=s+'</svg>';el.setAttribute('aria-label',raw);el.style.color='transparent';
 }
 const f1=(n)=>Math.round(n*10)/10;
@@ -48,5 +48,6 @@ window.CM_DO=function(){
 window.VE_MOUNT=function(inner){const c=document.getElementById('c');const s=document.createElementNS(NS,'svg');const W=c.offsetWidth,H=c.offsetHeight;
   s.setAttribute('width',W);s.setAttribute('height',H);s.setAttribute('viewBox',`0 0 ${W} ${H}`);s.style.cssText='position:absolute;left:0;top:0;pointer-events:none';s.innerHTML=inner;c.insertBefore(s,c.firstChild);return s;};
 const goc=window.MAU_SAN_SANG||Promise.resolve();
-window.MAU_SAN_SANG=goc.then(()=>{document.querySelectorAll('.vang').forEach(chuVang);document.body.dataset.cmXong='1';});
+window.CM_SAU=[];// việc mẫu cần làm sau khi mau.js co chữ xong và chữ vàng đã dựng (ví dụ đặt ô theo vị trí ảnh)
+window.MAU_SAN_SANG=goc.then(()=>{document.querySelectorAll('.vang').forEach(chuVang);window.CM_SAU.forEach(fn=>fn());document.body.dataset.cmXong='1';});
 })();
