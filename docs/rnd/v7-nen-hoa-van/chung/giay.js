@@ -40,7 +40,7 @@ let rs=7;const rnd=()=>{rs=(rs*16807)%2147483647;return (rs-1)/2147483646;};
 const BANG={'tien-giay':{nhan:'#1F4E8C',vien:'#1F4E8C',phu:'#2C3E5C'},'ba-tu':{nhan:'#22407A',vien:'#22407A',phu:'#3A3550'},
   'co-dien':{nhan:'#7E4A14',vien:'#A0601E',phu:'#5C4632'}};
 // Giấy vân R&D vẽ có đốm sẫm: chữ nhỏ vàng nâu #7A6340 chỉ còn ~4,05:1 → đậm hơn một nấc (đo lại đạt ≥ 4,5).
-for(const g of ['chu-nhat','panel','tem','tran'])if(!ANH)BANG[g]={nhan:'#6B5535'};
+for(const g of ['chu-nhat','panel','tem'])BANG[g]={nhan:'#6B5535'};if(!ANH)BANG.tran={nhan:'#6B5535'};
 if(BANG[GIAY])for(const [k,v] of Object.entries(BANG[GIAY]))document.documentElement.style.setProperty('--'+k,v);
 
 /* ---------------- Nền hoa lá nét khắc (đậm) ---------------- */
@@ -225,6 +225,8 @@ function ghep(img){if(GIAY==='trong-anh'&&P.get('xoay')!=='0'&&((img.height>img.
   if(vungCard){const pad=Math.min(vungCard.w,vungCard.h)*.07,tren=+(P.get('vungtren')||0)*vungCard.h;datKhung(inset(vungCard,pad,pad+tren,pad,pad));}
   const im=document.createElement('img');im.className='lop-nen';im.style.cssText='position:absolute;left:0;top:0;width:100%;height:100%';
   im.src=cv.toDataURL('image/png');c.insertBefore(im,c.firstChild);
+  // Chữ nằm trên tấm giấy của app (chu-nhat/panel/tem) → nền dưới chữ là giấy app, không phải ảnh: không đo ảnh.
+  if(['chu-nhat','panel','tem'].includes(GIAY)){im.decode().then(xong);c.insertBefore(im,c.firstChild);return;}
   window.GIAY_DO=()=>{// đo chữ trên chính canvas nền; dòng nào < 4,5:1 thì đậm màu chữ dần về #2A2420
     const d=x.getImageData(0,0,W,H).data;const cr=c.getBoundingClientRect();let doi=0;
     c.querySelectorAll('.w [data-do]').forEach(el=>{const r=document.createRange();r.selectNodeContents(el);const hop=[...r.getClientRects()];
