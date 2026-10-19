@@ -35,3 +35,6 @@ body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .ky .nm{font-family:var(--f-chan);font-size:17px;font-weight:600;margin-top:2px}
 .meta{font-family:var(--f-sans);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;font-weight:500}
 .meta b{font-weight:700;letter-spacing:.08em}
+
+/* Logo đặt trên nền tối: lót đế tròn sáng để logo màu nào cũng đọc được (logo là tệp trung tâm tải lên, không đổi màu được). */
+.o-logo.de-sang{background:#FFF9F0;border-radius:50%;padding:5px}
