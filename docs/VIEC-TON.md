@@ -88,3 +88,4 @@ Danh sách việc các thợ, thợ chấm và R&D đã nêu nhưng **chưa làm
 | 68 | Bài hom-nay.test.ts ca "số câu truy vấn không tăng" chập chờn (lần 1: 24/24 câu, lần 2: 22/25) khi chạy cùng bộ lớn — tìm gốc, đừng nới ngưỡng | thợ M4 báo |
 | 69 | Giấy chứng nhận: học viên đã huỷ ghi danh (hoặc lớp đã huỷ) sau khi được cấp thì KHÔNG cấp lại được để sửa tên (trigger đòi ghi danh ACTIVE cả với bản cấp lại). Muốn cho cấp lại thì nới trigger bằng migration sau — anh quyết | thợ F-S1a |
 | 70 | Trigger giấy chứng nhận có `COALESCE(tz, 'Asia/Ho_Chi_Minh')` — giá trị mặc định im lặng (luật 4); hiện không chạy tới được nhưng nên đổi thành ném lỗi ở migration kế | thợ F-S1a |
+| 71 | docs/API_SPEC.md mục 1–8 và docs/DATABASE_SCHEMA.md mục 1–5 còn là hiện trạng 18/10 (35 bảng, 77 đường; nay 53 model, 125 đường): thiếu đào tạo, buổi học, đặt lại mật khẩu, cổng học viên, giấy chứng nhận — cần một gói viết lại theo mã | thợ D-D1 |
