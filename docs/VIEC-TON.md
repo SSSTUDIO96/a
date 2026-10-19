@@ -75,3 +75,10 @@ Danh sách việc các thợ, thợ chấm và R&D đã nêu nhưng **chưa làm
 | 55 | Mã số trên thẻ chào mừng (anh 19/10): lưu mã ở học viên trong lớp, tự cấp theo thứ tự ghi danh (01, 02…), sửa tay được, không trùng trong một lớp; thẻ chào mừng hiện mã; sau này màn sắp ghế/vị trí dùng mã này | bản vẽ mới sau D-M1 (đụng schema.prisma, xếp hàng sau G-M1) |
 | 56 | Cài lên màn hình iPhone (chế độ toàn màn hình): khung app chưa chừa tai thỏ ở đỉnh (`env(safe-area-inset-top)`); trang ngoại tuyến đã chừa. Chưa thử iPhone thật | thợ E-W1 báo, làm cùng W3 |
 | 57 | Biểu tượng app: nhân viên = cây bút trắng nền đỏ mận, học viên = mũ cử nhân nền xanh ngọc (lệch bản vẽ E ghi chữ "M"/"HV") — anh xem lại | thợ E-W1 |
+| 58 | (Chấm lần 5 T2) Dữ liệu cũ của lỗi N1: ca của dòng đã huỷ TRƯỚC bản sửa F1 vẫn "Đã xác nhận" và Lịch còn nhắc "Phân thợ". Bản sửa không có bước dọn dữ liệu cũ. Trước khi dùng dữ liệu thật phải chạy câu đếm chỉ-đọc trong docs/nghiem-thu/BIEN-BAN-NGHIEM-THU-LAN-5.md; có dòng thì cần anh cho phép dọn | chấm lần 5 |
+| 59 | (Chấm lần 5 L1) Bài thử chống dò quên mật khẩu cho chênh 100 ms nên không canh được mức sàn 300 ms (apps/api/test/dat-lai-mat-khau.test.ts:100-120) | chấm lần 5 |
+| 60 | (L2) Buổi học 18:00/18:30 bị xếp nhóm "Buổi chiều" (apps/web/src/features/schedule/model.ts:463-470) | chấm lần 5 |
+| 61 | (L3) Lớp chưa có giảng viên mà hộp vẫn ghi "giữ giờ của giảng viên" (SessionSyncDialog.tsx:128) | chấm lần 5 |
+| 62 | (L4) Hộp báo trùng giờ chỉ ghi mã lịch, không nói buổi học của lớp nào | chấm lần 5 |
+| 63 | (L5) 390px: chữ "2 giờ" trong chi tiết buổi học bị tách dòng | chấm lần 5 |
+| 64 | (L6) 5 tệp .bat hiện "đã sửa" ngay sau khi lấy mã (chỉ khác CRLF) — xem lại .gitattributes | chấm lần 5 |
