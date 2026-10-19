@@ -5,7 +5,8 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { SWATCHES, subjectSwatches, swatchOf, type Swatch } from './model';
+import { DEFAULT_OCCASIONS, OCCASION_COLORS } from '@makeup/shared';
+import { apptSwatch, occasionSwatch, SWATCHES, subjectSwatches, swatchOf, type Swatch } from './model';
 
 const HERE = fileURLToPath(new URL('.', import.meta.url));
 const SRC = fileURLToPath(new URL('../../', import.meta.url));
@@ -185,19 +186,85 @@ describe('mọi chỗ tô màu theo nhân vật dùng chung một bảng', () =>
   }
   const code = files(SRC).map((p) => ({ p: p.slice(SRC.length), s: readFileSync(p, 'utf8') }));
 
-  it('BẮT: lớp màu ws-sw-* chỉ dựng từ swatchOf (qua useSwatchOf / apptClasses); không nơi nào khác giữ bảng tên nhân vật → màu', () => {
+  it('BẮT: lớp màu ws-sw-* chỉ dựng từ apptSwatch (qua useApptSwatch / apptClasses), swatchOf (chú thích nhân vật) hoặc occasionSwatch; không nơi nào khác giữ bảng tên nhân vật → màu', () => {
     const sites = code.flatMap(({ p, s }) => [...s.matchAll(/ws-sw-\$\{([^}]+)\}/g)].map((m) => ({ p, arg: (m[1] ?? '').trim() })));
     expect(sites.length).toBeGreaterThan(0);
-    for (const x of sites) expect(x.arg, x.p).toMatch(/^(swatch|swatchOfName\([^)]*\))$/);
-    // Mỗi lời gọi apptClasses truyền màu lấy từ swatchOfName(...) (= useSwatchOf → swatchOf với danh sách nhân vật của tổ chức).
+    for (const x of sites) expect(x.arg, x.p).toMatch(/^(swatch|o\.swatch|swatchOfName\([^)]*\)|swatchOfAppt\([^)]*\)|occasionSwatch\([^)]*\)|noOccasion)$/);
+    // Mỗi lời gọi apptClasses truyền màu lấy từ swatchOfAppt(...) (= useApptSwatch → apptSwatch theo công tắc "Tô màu").
     const calls = code.flatMap(({ p, s }) => [...s.matchAll(/(?<!function )apptClasses\(([^\n]*)/g)].map((m) => ({ p, a: m[1] ?? '' })));
     expect(calls.length).toBeGreaterThan(0);
-    for (const c of calls) expect(c.a, c.p).toMatch(/swatchOfName\([^)]*\)\)/);
-    const usesHook = code.filter(({ s }) => /swatchOfName\(/.test(s));
-    for (const f of usesHook) expect(f.s, f.p).toMatch(/const swatchOfName = useSwatchOf\(\)/);
+    for (const c of calls) expect(c.a, c.p).toMatch(/swatchOfAppt\([^)]*\)\)/);
+    const usesHook = code.filter(({ s }) => /swatchOfAppt\(/.test(s));
+    for (const f of usesHook) expect(f.s, f.p).toMatch(/const swatchOfAppt = useApptSwatch\(\)/);
     // Bảng tên nhân vật cài sẵn → màu chỉ có ở model.ts của Lịch.
     const tables = code.filter(({ s }) => /'mẹ cô dâu':\s*'/.test(s)).map((f) => f.p);
     expect(tables).toEqual([join('features', 'schedule', 'model.ts')]);
     if (process.env.IN_BANG_MAU) console.log(`Chỗ tô màu theo nhân vật: ${sites.length} lớp ws-sw-\${…} + ${calls.length} lời gọi apptClasses, tất cả qua swatchOf`);
+  });
+});
+
+// ---------------- Công tắc "Tô màu: Sự kiện" (bản vẽ D 3.5) ----------------
+// Màu loại sự kiện = đúng 12 tên OCCASION_COLORS của shared, vẽ bằng cùng bảng .ws-sw-*. Riêng khi công tắc ở "Sự kiện",
+// green được thay bằng xanh ngọc đậm hơn một nấc (khối .ws[data-color-by="occasion"]) để chữ đạt ≥ 4,5:1.
+const occasionOverride = (name: Swatch): Rgb | null => {
+  const m = new RegExp(`\\.ws\\[data-color-by="occasion"\\]\\s+\\.ws-sw-${name}\\s*\\{([^}]*)\\}`).exec(scheduleCss);
+  const c = m ? /--c:\s*([^;]+);/.exec(m[1] ?? '') : null;
+  return c ? resolve(c[1] ?? '') : null;
+};
+
+describe('tô màu theo sự kiện — màu từ hằng của shared, chữ đủ tương phản', () => {
+  const base = new Map(SWATCHES.map((s) => [s, swatchRule(s)!] as const));
+  // Bảng màu hiệu lực khi công tắc ở "Sự kiện": --c có thể bị khối override thay; --b giữ nguyên.
+  const ev = new Map(SWATCHES.map((s) => [s, { c: occasionOverride(s) ?? base.get(s)!.c, b: base.get(s)!.b }] as const));
+
+  it('GIỮ: SWATCHES chính là OCCASION_COLORS của shared (một nguồn, 12 tên đúng thứ tự); mọi màu cài sẵn của loại sự kiện có luật màu', () => {
+    expect(SWATCHES).toBe(OCCASION_COLORS);
+    expect([...SWATCHES]).toEqual(['rose', 'violet', 'amber', 'green', 'blue', 'taupe', 'brick', 'petrol', 'olive', 'plum', 'forest', 'brown']);
+    for (const d of DEFAULT_OCCASIONS) expect(swatchRule(d.color), d.name).not.toBeNull();
+    expect(readFileSync(join(HERE, 'model.ts'), 'utf8')).toMatch(/export const SWATCHES = OCCASION_COLORS;/);
+  });
+
+  it('BẮT: chỉ có đúng MỘT màu bị đổi khi tô theo Sự kiện (green), các màu khác y nguyên; công tắc "Nhân vật" vẫn dùng #2F7D72', () => {
+    const changed = SWATCHES.filter((s) => occasionOverride(s) !== null);
+    expect(changed).toEqual(['green']);
+    expect(rgbHex(base.get('green')!.c)).toBe('#2F7D72');
+    expect(rgbHex(ev.get('green')!.c)).toBe('#2C786A');
+  });
+
+  it('BẮT: chữ trên ô ca (--c trên --b của chính màu) ≥ 4,5:1 cho cả 12 màu và "Chưa chọn sự kiện" (other); nền trắng cũng ≥ 4,5', () => {
+    const rows = [...SWATCHES, 'other' as const].map((s) => {
+      const r = s === 'other' ? swatchRule('other')! : ev.get(s)!;
+      return { s, hex: rgbHex(r.c), bg: rgbHex(r.b), onBg: contrast(r.c, r.b), onWhite: contrast(r.c, WHITE) };
+    });
+    if (process.env.IN_BANG_MAU) {
+      console.log('Tô theo Sự kiện — tương phản chữ:\n' + rows.map((r) => `  ${r.s.padEnd(7)} ${r.hex} trên ${r.bg} ${r.onBg.toFixed(2)} · trên trắng ${r.onWhite.toFixed(2)}`).join('\n'));
+    }
+    for (const r of rows) {
+      expect(r.onBg, `${r.s} trên nền của chính nó`).toBeGreaterThanOrEqual(4.5);
+      expect(r.onWhite, `${r.s} trên trắng`).toBeGreaterThanOrEqual(4.5);
+    }
+    // Mốc phá thử: màu green hôm nay (#2F7D72) trên nền nhạt CHỈ 4,29 — vì vậy mới có khối override.
+    expect(contrast(base.get('green')!.c, base.get('green')!.b)).toBeLessThan(4.5);
+  });
+
+  it('BẮT: 12 màu loại sự kiện vẫn phân biệt được khi green đổi — ΔE2000 mọi cặp ≥ 14', () => {
+    const pairs: { a: string; b: string; d: number }[] = [];
+    SWATCHES.forEach((a, i) => SWATCHES.slice(i + 1).forEach((b) => pairs.push({ a, b, d: de2000(ev.get(a)!.c, ev.get(b)!.c) })));
+    pairs.sort((x, y) => x.d - y.d);
+    if (process.env.IN_BANG_MAU) console.log('Tô theo Sự kiện — cặp gần nhất: ' + pairs.slice(0, 3).map((p) => `${p.a}–${p.b} ${p.d.toFixed(1)}`).join(', '));
+    for (const p of pairs) expect(p.d, `${p.a} – ${p.b}`).toBeGreaterThanOrEqual(14);
+  });
+
+  it('BẮT: ca không có sự kiện → "other" (trắng viền, màu riêng), KHÔNG phải màu đầu danh sách hay màu nào trong 12', () => {
+    const none = { occasion: null, subjectName: 'Cô dâu' };
+    expect(occasionSwatch(none)).toBe('other');
+    expect(occasionSwatch(none)).not.toBe(SWATCHES[0]);
+    expect(apptSwatch(none, 'occasion')).toBe('other');
+    expect(apptSwatch(none, 'subject')).toBe('rose'); // công tắc "Nhân vật": màu nhân vật như cũ
+    const o = swatchRule('other')!;
+    for (const s of SWATCHES) expect(rgbHex(o.b), s).not.toBe(rgbHex(base.get(s)!.b));
+    expect(rgbHex(o.b)).toBe('#FFFFFF');
+    // Màu lạ máy chủ gửi (ngoài 12 tên) cũng ra "other", không đoán.
+    expect(occasionSwatch({ occasion: { id: 'x', name: 'Lạ', color: 'magenta' as never } })).toBe('other');
   });
 });

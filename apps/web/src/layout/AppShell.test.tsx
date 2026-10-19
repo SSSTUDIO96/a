@@ -100,26 +100,26 @@ afterEach(() => {
 });
 
 describe('ẩn mục điều hướng theo quyền (bản vẽ C mục 6, C2 mục 3.1)', () => {
-  it('chủ tổ chức thấy đủ 8 mục, thanh dưới có Lịch · Hợp đồng · Bảng giá · Khách · Thêm; vùng nội dung có màn, không có dải 403', async () => {
+  it('chủ tổ chức thấy đủ 9 mục, thanh dưới có Lịch · Hợp đồng · Bảng giá · Khách · Thêm; vùng nội dung có màn, không có dải 403', async () => {
     setupServer(OWNER);
     renderAt('/hoa-dao/lich');
-    expect(await mainMenuLinks()).toEqual(['Lịch makeup', 'Hợp đồng', 'Bảng giá', 'Khách hàng', 'Thợ makeup', 'Báo cáo', 'Mẫu thiết kế', 'Cài đặt']);
+    expect(await mainMenuLinks()).toEqual(['Hôm nay', 'Lịch makeup', 'Hợp đồng', 'Bảng giá', 'Khách hàng', 'Thợ makeup', 'Báo cáo', 'Mẫu thiết kế', 'Cài đặt']);
     expect(phoneNavItems()).toEqual(['Lịch', 'Hợp đồng', 'Bảng giá', 'Khách', 'Thêm']);
     expect(activeMenu()).toEqual(['Lịch makeup']);
     expect(within(shellMain()).queryByRole('alert', { name: /không có quyền/ })).toBeNull();
   });
 
-  it('thợ chỉ có quyền xem lịch của mình → chỉ thấy Lịch (thanh dưới: Lịch · Thêm)', async () => {
+  it('thợ chỉ có quyền xem lịch của mình → thấy Hôm nay và Lịch (thanh dưới: Lịch · Thêm)', async () => {
     setupServer(SCHEDULE_ONLY);
     renderAt('/hoa-dao/lich');
-    expect(await mainMenuLinks()).toEqual(['Lịch makeup']);
+    expect(await mainMenuLinks()).toEqual(['Hôm nay', 'Lịch makeup']);
     expect(phoneNavItems()).toEqual(['Lịch', 'Thêm']);
   });
 
   it('vai trò hệ thống "Thợ makeup" (artist) có catalog.read và staff.read nên thấy thêm Bảng giá và Thợ makeup', async () => {
     setupServer(ARTIST);
     renderAt('/hoa-dao/lich');
-    expect(await mainMenuLinks()).toEqual(['Lịch makeup', 'Bảng giá', 'Thợ makeup']);
+    expect(await mainMenuLinks()).toEqual(['Hôm nay', 'Lịch makeup', 'Bảng giá', 'Thợ makeup']);
   });
 
   it('vào thẳng đường không có quyền → dải 403 là thứ duy nhất trong vùng nội dung', async () => {
@@ -141,7 +141,7 @@ describe('ẩn mục điều hướng theo quyền (bản vẽ C mục 6, C2 m�
     expect(within(nav).queryAllByRole('link')).toHaveLength(0);
     expect(within(nav).getByRole('status', { name: 'Đang tải mục' })).toBeTruthy();
     await act(async () => release());
-    expect(await mainMenuLinks()).toEqual(['Lịch makeup']);
+    expect(await mainMenuLinks()).toEqual(['Hôm nay', 'Lịch makeup']);
   });
 
   it('/:orgSlug chuyển tới mục đầu tiên được xem', async () => {
@@ -171,7 +171,7 @@ describe('menu con theo quyền (C2 mục 1.1, 3.1, 4.1)', () => {
   it('chỉ có payroll.read (không staff.read): vẫn thấy "Thợ makeup", trỏ tới Tiền công; vào /nhan-su → 403', async () => {
     setupServer(['org.read', 'schedule.read_own', 'payroll.read']);
     renderAt('/hoa-dao/nhan-su');
-    expect(await mainMenuLinks()).toEqual(['Lịch makeup', 'Thợ makeup']);
+    expect(await mainMenuLinks()).toEqual(['Hôm nay', 'Lịch makeup', 'Thợ makeup']);
     expect(menuLink('Thợ makeup').getAttribute('href')).toBe('/hoa-dao/nhan-su/tien-cong');
     expect((await screen.findByRole('alert')).textContent).toBe('Bạn không có quyền xem thợ makeup.');
   });
@@ -250,7 +250,7 @@ describe('thanh dưới điện thoại theo loại tổ chức (C3 mục 1.0)',
     expect(phoneActive()).toEqual(['Thu tiền']);
   });
 
-  it('ACADEMY: ngăn "Thêm" có Bảng giá, Khách hàng, Thợ makeup, Báo cáo, Mẫu thiết kế, Cài đặt', async () => {
+  it('ACADEMY: ngăn "Thêm" có Hôm nay, Bảng giá, Khách hàng, Thợ makeup, Báo cáo, Mẫu thiết kế, Cài đặt', async () => {
     setupServer(OWNER, { kind: 'ACADEMY' });
     renderAt('/hoa-dao/hop-dong');
     await mainMenuLinks();
@@ -258,7 +258,7 @@ describe('thanh dưới điện thoại theo loại tổ chức (C3 mục 1.0)',
     fireEvent.click(within(screen.getByRole('navigation', { name: 'Mục chính (điện thoại)' })).getByRole('button', { name: 'Thêm' }));
     const sheet = await screen.findByRole('dialog', { name: 'Thêm' });
     const list = sheet.querySelector('.sh-more__list');
-    expect([...(list?.querySelectorAll('a') ?? [])].map((a) => a.textContent)).toEqual(['Bảng giá', 'Khách hàng', 'Thợ makeup', 'Báo cáo', 'Mẫu thiết kế', 'Cài đặt']);
+    expect([...(list?.querySelectorAll('a') ?? [])].map((a) => a.textContent)).toEqual(['Hôm nay', 'Bảng giá', 'Khách hàng', 'Thợ makeup', 'Báo cáo', 'Mẫu thiết kế', 'Cài đặt']);
   });
 
   it('INDIVIDUAL: Lịch · Hợp đồng · Bảng giá · Khách · Thêm; ở /thu-tien ô "Hợp đồng" đang chọn', async () => {
@@ -426,37 +426,23 @@ describe('nav.ts', () => {
     const items = [...visibleNav(() => true, 'ACADEMY'), daoTao];
     const academy = bottomNav(items, 'ACADEMY');
     expect(academy.main.map((m) => m.shortLabel)).toEqual(['Lịch', 'Hợp đồng', 'Thu tiền', 'Khoá học']);
-    expect(academy.rest.map((i) => i.key)).toEqual(['bang-gia', 'khach-hang', 'nhan-su', 'bao-cao', 'mau-thiet-ke', 'cai-dat']);
+    expect(academy.rest.map((i) => i.key)).toEqual(['hom-nay', 'bang-gia', 'khach-hang', 'nhan-su', 'bao-cao', 'mau-thiet-ke', 'cai-dat']);
     expect(activeBottomKey(academy.main, activeNavItem('thu-tien'), activeNavChild(activeNavItem('thu-tien'), 'thu-tien'))).toBe('thu-tien');
     expect(bottomNav(visibleNav(() => true, 'INDIVIDUAL'), 'INDIVIDUAL').main.map((m) => m.shortLabel)).toEqual(['Lịch', 'Hợp đồng', 'Bảng giá', 'Khách']);
   });
 });
 
 // ---- Mục "Hôm nay" (bản vẽ D mục 3.0 + ký duyệt D câu 1) ----
-// Màn /hom-nay thuộc gói W1 (routes.tsx) nên mục đang `pending` (ẩn, tránh nút chết). Các ca dưới đây kiểm hình dạng
-// KHI mục đã bày ra: pure function dùng includePending; ca vẽ khung thật gỡ cờ `pending` tạm thời rồi khôi phục.
+// Màn /hom-nay đã có (gói W1, features/today) nên mục hiện ở thanh bên và ngăn "Thêm" như mọi mục khác (đã gỡ cờ `pending`).
 describe('mục Hôm nay', () => {
-  const hom = NAV_ITEMS.find((i) => i.key === 'hom-nay') as { pending?: true } | undefined;
-  const savedPending = hom?.pending;
-  afterEach(() => {
-    if (hom) {
-      if (savedPending) hom.pending = savedPending;
-      else delete hom.pending;
-    }
-  });
-  const reveal = () => {
-    if (!hom) throw new Error('Thiếu mục hom-nay trong NAV_ITEMS');
-    delete hom.pending;
-  };
-
-  it('là MỤC ĐẦU TIÊN của bảng, quyền org.read, đường hom-nay, không làm trang mở đầu', () => {
-    expect(NAV_ITEMS[0]).toEqual({ key: 'hom-nay', path: 'hom-nay', label: 'Hôm nay', shortLabel: 'Hôm nay', icon: 'hom-nay', permission: 'org.read', notHome: true, pending: true });
+  it('là MỤC ĐẦU TIÊN của bảng, quyền org.read, đường hom-nay, không làm trang mở đầu, không còn cờ pending', () => {
+    expect(NAV_ITEMS[0]).toEqual({ key: 'hom-nay', path: 'hom-nay', label: 'Hôm nay', shortLabel: 'Hôm nay', icon: 'hom-nay', permission: 'org.read', notHome: true });
   });
 
-  it('chưa có màn (pending): ẩn khỏi mọi thanh, nhưng chặn đường theo quyền vẫn cho người có org.read', () => {
+  it('có màn: hiện ở thanh bên cho người có org.read, ẩn với người không có quyền; chặn đường theo quyền như cũ', () => {
     const has = (p: Permission) => OWNER.includes(p);
-    expect(visibleNav(has, 'TEAM').map((i) => i.key)).not.toContain('hom-nay');
-    expect(visibleNav(has, 'TEAM', { includePending: true })[0]?.key).toBe('hom-nay');
+    expect(visibleNav(has, 'TEAM')[0]?.key).toBe('hom-nay');
+    expect(visibleNav(() => false, 'TEAM').map((i) => i.key)).not.toContain('hom-nay');
     expect(navEntryAllowed('hom-nay', has, 'TEAM')).toBe(true);
     expect(navEntryAllowed('hom-nay', () => false, 'TEAM')).toBe(false);
   });
@@ -488,7 +474,7 @@ describe('mục Hôm nay', () => {
     expect(homeNavItem((p) => OWNER.includes(p), 'TEAM', { includePending: true })?.key).toBe('lich');
     expect(homeNavItem((p) => SCHEDULE_ONLY.includes(p), 'TEAM', { includePending: true })?.key).toBe('lich');
     expect(homeNavItem((p) => p === 'org.read', 'TEAM', { includePending: true })?.key).toBe('hom-nay');
-    expect(homeNavItem((p) => p === 'org.read', 'TEAM')).toBeUndefined();
+    expect(homeNavItem((p) => p === 'org.read', 'TEAM')?.key).toBe('hom-nay');
     expect(homeNavItem(() => false, 'TEAM', { includePending: true })).toBeUndefined();
   });
 
@@ -510,7 +496,6 @@ describe('mục Hôm nay', () => {
   });
 
   it('khung thật, máy tính: Hôm nay là mục ĐẦU thanh bên (trỏ /hom-nay); thanh dưới điện thoại không đổi; "Thêm" bắt đầu bằng Hôm nay', async () => {
-    reveal();
     setupServer(OWNER);
     renderAt('/hoa-dao/lich');
     expect(await mainMenuLinks()).toEqual(['Hôm nay', 'Lịch makeup', 'Hợp đồng', 'Bảng giá', 'Khách hàng', 'Thợ makeup', 'Báo cáo', 'Mẫu thiết kế', 'Cài đặt']);
@@ -524,7 +509,6 @@ describe('mục Hôm nay', () => {
   });
 
   it('khung thật: /:orgSlug vẫn chuyển tới Lịch dù Hôm nay đứng đầu', async () => {
-    reveal();
     setupServer(SCHEDULE_ONLY);
     const router = renderAt('/hoa-dao');
     expect(await mainMenuLinks()).toEqual(['Hôm nay', 'Lịch makeup']);
@@ -532,7 +516,6 @@ describe('mục Hôm nay', () => {
   });
 
   it('khung thật: thợ thấy Hôm nay + Lịch ở thanh bên; thanh dưới Lịch · Thêm; "Thêm" có Hôm nay', async () => {
-    reveal();
     setupServer(SCHEDULE_ONLY);
     renderAt('/hoa-dao/lich');
     expect(await mainMenuLinks()).toEqual(['Hôm nay', 'Lịch makeup']);

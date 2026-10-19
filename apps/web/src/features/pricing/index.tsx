@@ -2,9 +2,11 @@
 import { Navigate, useParams } from 'react-router';
 import { NotFoundView } from '../../layout/ErrorStates';
 import { resolveGroup } from './logic';
+import { OccasionsPage } from './OccasionsPage';
 import { PackagesPage } from './PackagesPage';
 import { ServicesPage } from './ServicesPage';
 import { SubjectsPage } from './SubjectsPage';
+import { SurchargeRulesPage } from './SurchargeRulesPage';
 import { TravelPage } from './TravelPage';
 import './pricing.css';
 
@@ -22,6 +24,10 @@ export function PricingPage() {
       return <TravelPage />;
     case 'nhan-vat':
       return <SubjectsPage />;
+    case 'su-kien':
+      return <OccasionsPage />;
+    case 'luat-phu-phi':
+      return <SurchargeRulesPage />;
     default:
       return <NotFoundView message="Không có mục bảng giá này." />;
   }

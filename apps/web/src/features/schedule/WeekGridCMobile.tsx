@@ -4,8 +4,8 @@
 import { useState, type CSSProperties } from 'react';
 import type { Appointment } from '../../api/types';
 import { StatusTag } from '../../ui';
-import { appointmentsOfDay, cellKey, countByDay, countLive, indexByCell, kindText, needsStaff, UNASSIGNED, whoText, type ConflictMarks, type StaffLane } from './model';
-import { apptClasses, apptTip, cx, LaneAvatar, StaffAvatars, startLabel, useSwatchOf, laneShort, useStaffNaming } from './parts';
+import { appointmentsOfDay, cellKey, countByDay, countLive, indexByCell, kindTextBy, needsStaff, UNASSIGNED, whoText, type ConflictMarks, type StaffLane } from './model';
+import { apptClasses, apptTip, cx, LaneAvatar, StaffAvatars, startLabel, useApptSwatch, useColorBy, laneShort, useStaffNaming } from './parts';
 import { dayKeyOf, dayNumber, ddmm, hhmm, isWeekend, weekDays, weekdayLong, weekdayShort, type DayKey } from './time';
 
 const MAX_TIMES = 3;
@@ -33,7 +33,8 @@ export function WeekGridCMobile({
   onOpen: (a: Appointment) => void;
 }) {
   const [expandedDay, setExpandedDay] = useState<DayKey | null>(null);
-  const swatchOfName = useSwatchOf();
+  const swatchOfAppt = useApptSwatch();
+  const colorBy = useColorBy();
   const days = weekDays(day);
   const cells = indexByCell(appointments);
   const naming = useStaffNaming(lanes);
@@ -86,9 +87,9 @@ export function WeekGridCMobile({
                     <button
                       type="button"
                       key={a.id}
-                      className={cx('ws-pt', apptClasses(a, marks.appointmentIds.has(a.id), swatchOfName(a.subjectName)))}
-                      title={apptTip(a)}
-                      aria-label={apptTip(a)}
+                      className={cx('ws-pt', apptClasses(a, marks.appointmentIds.has(a.id), swatchOfAppt(a)))}
+                      title={apptTip(a, colorBy)}
+                      aria-label={apptTip(a, colorBy)}
                       onClick={() => onOpen(a)}
                     >
                       <span className="num">{dayKeyOf(a.startsAt) === d ? hhmm(a.startsAt) : '…'}</span>
@@ -145,16 +146,17 @@ function MobileAgendaRow({
   conflict: boolean;
   onOpen: (a: Appointment) => void;
 }) {
-  const swatchOfName = useSwatchOf();
+  const swatchOfAppt = useApptSwatch();
+  const colorBy = useColorBy();
   return (
-    <button type="button" className={cx('ws-ag', apptClasses(a, conflict, swatchOfName(a.subjectName)))} onClick={() => onOpen(a)}>
+    <button type="button" className={cx('ws-ag', apptClasses(a, conflict, swatchOfAppt(a)))} onClick={() => onOpen(a)}>
       <span className="ws-ag__tm num">
         {startLabel(a, day)}
         <small>{hhmm(a.endsAt)}</small>
       </span>
       <span className="ws-ag__main">
         <span className="ws-ag__kind">
-          {kindText(a)}
+          {kindTextBy(a, colorBy)}
           {conflict && <StatusTag tone="danger">Trùng giờ</StatusTag>}
         </span>
         <span className="ws-ag__kh">{whoText(a) ?? (a.staff.length === 0 ? 'Chưa có thợ' : '')}</span>

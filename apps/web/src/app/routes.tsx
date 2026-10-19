@@ -31,6 +31,7 @@ const RevenuePage = screen(() => import('../features/reports'), (m) => m.Revenue
 const CashbookPage = screen(() => import('../features/reports'), (m) => m.CashbookPage);
 const SchedulePage = screen(() => import('../features/schedule'), (m) => m.SchedulePage);
 const StaffPage = screen(() => import('../features/staff'), (m) => m.StaffPage);
+const TodayPage = screen(() => import('../features/today'), (m) => m.TodayPage);
 
 // /hop-dong/moi cần contracts.write (mục con "Lập hợp đồng"); /hop-dong/:id cần contracts.read. Cùng một phần tử
 // ContractEditorPage ở cùng chỗ → đổi "moi" → id sau lần lưu đầu KHÔNG dựng lại màn (giữ dữ liệu đang nhập).
@@ -75,6 +76,7 @@ function guarded(navKey: string, element: ReactNode) {
 
 const orgChildren: RouteObject[] = [
   { index: true, element: <OrgHome /> },
+  { path: 'hom-nay', element: guarded('hom-nay', <TodayPage />) },
   { path: 'lich', element: guarded('lich', <SchedulePage />) },
   { path: 'bang-gia', element: guarded('bang-gia', <PricingPage />) },
   { path: 'bang-gia/:nhom', element: guarded('bang-gia', <PricingPage />) },

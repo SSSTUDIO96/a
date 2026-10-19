@@ -14,8 +14,8 @@ import { Button, EmptyState, IconPlus, Skeleton } from '../../ui';
 import { AppointmentDialog, type DialogTarget } from './AppointmentDialog';
 import { DayListB } from './DayListB';
 import { FilterDialog } from './FilterDialog';
-import { accessFrom, buildStaffLanes, conflictMarks, isCourseSession, lanesRoster, DEFAULT_MODE, legendSubjects, type ScheduleAccess, type ScheduleMode } from './model';
-import { cx, Legend, OrgSubjectsContext, StaffNamingContext } from './parts';
+import { accessFrom, buildStaffLanes, conflictMarks, isCourseSession, lanesRoster, DEFAULT_COLOR_BY, DEFAULT_MODE, legendOccasions, legendSubjects, type ColorBy, type ScheduleAccess, type ScheduleMode } from './model';
+import { ColorByContext, cx, Legend, OrgSubjectsContext, StaffNamingContext } from './parts';
 import { staffNaming } from '../../ui/staffName';
 import { StaffColumnsA } from './StaffColumnsA';
 import { addDays, dayKeyOf, dayLabel, isDayKey, todayKey, weekLabel, type DayKey } from './time';
@@ -54,6 +54,8 @@ export function ScheduleScreen({
   const phone = bp === 'phone';
   // Mặc định C mỗi lần mở màn — không nhớ lựa chọn lần trước (quyết định của anh Chiến, đè lên chữ "lưu localStorage" ở bản vẽ).
   const [mode, setMode] = useState<ScheduleMode>(DEFAULT_MODE);
+  // Công tắc "Tô màu" (bản vẽ D 3.5, ký duyệt D mục 7 câu 2): mặc định Nhân vật (đúng màu hôm nay); KHÔNG nhớ lựa chọn lần trước.
+  const [colorBy, setColorBy] = useState<ColorBy>(DEFAULT_COLOR_BY);
   const [day, setDay] = useState<DayKey>(() => {
     const q = params.get('ngay');
     return isDayKey(q) ? q : todayKey();
@@ -163,8 +165,9 @@ export function ScheduleScreen({
 
   return (
     <OrgSubjectsContext.Provider value={orgSubjects}>
+      <ColorByContext.Provider value={colorBy}>
       <StaffNamingContext.Provider value={naming}>
-      <div className={cx('ws', `ws--${mode}`)} data-mode={mode}>
+      <div className={cx('ws', `ws--${mode}`)} data-mode={mode} data-color-by={colorBy}>
         <PageHeader title="Lịch makeup" phoneAction={phoneAction} />
         {deepLinkError && (
           <div className="ws-err" role="alert">
@@ -186,6 +189,8 @@ export function ScheduleScreen({
           <Toolbar
             mode={mode}
             onMode={setMode}
+            colorBy={colorBy}
+            onColorBy={setColorBy}
             label={navLabel}
             prevLabel={mode === 'A' ? 'Ngày trước' : 'Tuần trước'}
             nextLabel={mode === 'A' ? 'Ngày sau' : 'Tuần sau'}
@@ -200,7 +205,16 @@ export function ScheduleScreen({
             phone={phone}
           />
           <div className="ws-body">{body}</div>
-          {mode === 'C' && !phone && state.status === 'ready' && <Legend subjects={legendSubjects(appointments, orgSubjects)} showUnassigned={showUnassigned} showCourse={appointments.some(isCourseSession)} />}
+          {/* Chú thích: máy tính như cũ; điện thoại chỉ khi tô theo Sự kiện (ô trên điện thoại chỉ có giờ, màu cần chú thích). */}
+          {mode === 'C' && (!phone || colorBy === 'occasion') && state.status === 'ready' && (
+            <Legend
+              subjects={legendSubjects(appointments, orgSubjects)}
+              occasions={legendOccasions(appointments).occasions}
+              colorBy={colorBy}
+              showUnassigned={showUnassigned}
+              showCourse={appointments.some(isCourseSession)}
+            />
+          )}
         </section>
 
         {filterOpen && (
@@ -229,6 +243,7 @@ export function ScheduleScreen({
         )}
       </div>
       </StaffNamingContext.Provider>
+      </ColorByContext.Provider>
     </OrgSubjectsContext.Provider>
   );
 }

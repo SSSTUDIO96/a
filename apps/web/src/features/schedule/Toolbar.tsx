@@ -1,14 +1,18 @@
 // Thanh công cụ lịch (bản vẽ C 4.1), từ trái sang: nhóm tuần "‹ 19 – 25/10/2026 › Hôm nay" · "+ Thêm lịch" ·
-// nhãn đỏ "n ca trùng lịch" (chỉ khi đang có dải trùng lịch) · khoảng trống · nút chuyển chế độ · "Bộ lọc".
+// nhãn đỏ "n ca trùng lịch" (chỉ khi đang có dải trùng lịch) · khoảng trống · "Tô màu: Sự kiện | Nhân vật" (bản vẽ D 3.5) ·
+// nút chuyển chế độ · "Bộ lọc".
 // Điện thoại (bản mẫu v2-lich-C-mobile): nút chuyển chế độ chia đều cả hàng ở trên; "+ Lịch" nằm ở thanh trên.
 import { Button, IconBack, IconFilter, IconNext, IconPlus, IconWarn } from '../../ui';
+import { ColorBySwitch } from './ColorBySwitch';
 import { ModeSwitch } from './ModeSwitch';
-import type { ScheduleMode } from './model';
+import type { ColorBy, ScheduleMode } from './model';
 import { cx } from './parts';
 
 export function Toolbar({
   mode,
   onMode,
+  colorBy,
+  onColorBy,
   label,
   prevLabel,
   nextLabel,
@@ -24,6 +28,8 @@ export function Toolbar({
 }: {
   mode: ScheduleMode;
   onMode: (m: ScheduleMode) => void;
+  colorBy: ColorBy;
+  onColorBy: (c: ColorBy) => void;
   label: string;
   prevLabel: string;
   nextLabel: string;
@@ -76,6 +82,7 @@ export function Toolbar({
           {nav}
           {conflict}
           <span className="ws-sp" />
+          <ColorBySwitch value={colorBy} onChange={onColorBy} phone />
           {filter}
         </div>
       </div>
@@ -91,6 +98,7 @@ export function Toolbar({
       )}
       {conflict}
       <span className="ws-sp" />
+      <ColorBySwitch value={colorBy} onChange={onColorBy} phone={false} />
       <ModeSwitch mode={mode} onMode={onMode} phone={false} />
       {filter}
     </div>

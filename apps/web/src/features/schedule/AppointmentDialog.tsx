@@ -33,7 +33,7 @@ import {
   WorkStatusTag,
 } from '../../ui';
 import { ConflictBanner } from './ConflictBanner';
-import { conflictsOf, isMakeupStaff, kindText, whoText, type ScheduleAccess, type StaffLane } from './model';
+import { conflictsOf, isMakeupStaff, kindText, occasionSwatch, whoText, type ScheduleAccess, type StaffLane } from './model';
 import { cx, LOCATION_LABELS, StaffAvatars, staffNames } from './parts';
 import { StatusActions } from './StatusActions';
 import { addDays, dayKeyOf, dayLabel, ddmm, formatDuration, hhmm, vnIso, weekdayLong, type DayKey } from './time';
@@ -517,6 +517,14 @@ function ViewBody({
           <InfoRow label={appt.courseClass ? 'Nơi học' : 'Nơi làm'}>
             {appt.locationType ? LOCATION_LABELS[appt.locationType] : ''}
             {appt.address && <span className="ws-pre">{appt.locationType ? ' – ' : ''}{appt.address}</span>}
+          </InfoRow>
+        )}
+        {appt.occasion && (
+          <InfoRow label="Sự kiện">
+            <span className="ws-info__occ">
+              <i className={cx('ws-info__dot', `ws-sw-${occasionSwatch(appt)}`)} aria-hidden="true" />
+              {appt.occasion.name}
+            </span>
           </InfoRow>
         )}
         {appt.contract && (

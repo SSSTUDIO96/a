@@ -247,3 +247,159 @@ span.pr-subrow__name { padding-left: 8px; }
 }
 .pr-nopkg__btn:hover { text-decoration: underline; }
 .pr-nopkg__btn:focus-visible { outline: var(--focus-ring); outline-offset: var(--focus-offset); border-radius: 4px; }
+
+/* ---------- Loại sự kiện, Luật phụ phí (bản vẽ D mục 3.2, 3.3) ---------- */
+
+/* 12 màu của Lịch. Cùng giá trị với .ws-sw-* ở features/schedule/schedule.css (bài thử logic.test.ts so hai khối với nhau):
+   schedule.css chỉ tải cùng màn Lịch nên không dùng chung lớp được. Ba màu đầu từ token --kind-*, ba màu sau từ --ok, --av-*. */
+.pr-sw--rose { --c: var(--kind-bride); }
+.pr-sw--violet { --c: var(--kind-event); }
+.pr-sw--amber { --c: var(--kind-engagement); }
+.pr-sw--green { --c: var(--ok); }
+.pr-sw--blue { --c: var(--av-5); }
+.pr-sw--taupe { --c: var(--av-4); }
+.pr-sw--brick { --c: #AE3D2C; }
+.pr-sw--petrol { --c: #046273; }
+.pr-sw--olive { --c: #6E6A12; }
+.pr-sw--plum { --c: #841276; }
+.pr-sw--forest { --c: #2F6E2C; }
+.pr-sw--brown { --c: #5A3620; }
+
+.pr-sws { display: inline-flex; flex-wrap: wrap; gap: 8px; }
+.pr-sw {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--c);
+  cursor: pointer;
+}
+.pr-sw[aria-pressed='true'] { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--text); }
+.pr-sw:disabled { cursor: default; }
+.pr-sw:focus-visible { outline: var(--focus-ring); outline-offset: 3px; }
+.pr-sw-field { display: flex; flex-direction: column; gap: 6px; padding: 4px 0 2px 2px; }
+
+.pr-occcard .ui-card__sub { white-space: normal; }
+.pr-occ, .pr-rule {
+  display: grid;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px 10px 8px;
+  background: var(--surface);
+}
+.pr-occ { grid-template-columns: auto minmax(0, 1fr) auto auto; grid-template-areas: 'h m s t'; }
+.pr-occ--drag { background: var(--accent-soft); box-shadow: var(--sel-row); }
+.pr-occ > .pr-grip, .pr-occ > .pr-occ__arrows, .pr-rule > .pr-occ__arrows { grid-area: h; }
+.pr-occ__main { grid-area: m; display: flex; flex-direction: column; min-width: 0; padding-left: 8px; }
+.pr-occ__sw { grid-area: s; }
+.pr-occ__sv { grid-area: t; }
+.pr-occ__name { padding: 2px 0; font-weight: 600; text-align: left; }
+.pr-occ__name--ro { font-weight: 600; overflow-wrap: anywhere; }
+.pr-occ__sub { font-size: 12.5px; color: var(--muted); }
+.pr-occ__arrows { display: inline-flex; flex-direction: column; flex: none; }
+.pr-arrow {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 22px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+.pr-arrow:hover:not(:disabled) { background: var(--soft); color: var(--text); }
+.pr-arrow:disabled { opacity: .35; cursor: default; }
+.pr-arrow:focus-visible { outline: var(--focus-ring); outline-offset: -2px; }
+.pr-arrow .ui-ico { width: 16px; height: 16px; }
+
+.pr-rule { grid-template-columns: auto minmax(0, 1fr) auto auto; grid-template-areas: 'h m v t'; }
+.pr-rule--off .pr-rule__name, .pr-rule--off .pr-rule__sum, .pr-rule--off .pr-rule__svc { opacity: .55; }
+.pr-rule__main { grid-area: m; display: flex; flex-direction: column; align-items: flex-start; gap: 3px; min-width: 0; padding-left: 8px; }
+.pr-rule__name { padding: 2px 0; text-align: left; font-weight: 600; }
+.pr-rule__name--ro { font-weight: 600; overflow-wrap: anywhere; }
+.pr-rule__sum { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+.pr-rule__used { font-size: 12px; color: var(--faint); }
+.pr-rule__svc { grid-area: v; text-align: right; font-size: 13px; color: var(--muted); }
+.pr-rule__svc b { color: var(--text); font-weight: 700; }
+.pr-rule__svc .pr-rule__svcname::after { content: ' · '; }
+.pr-rule__sv { grid-area: t; }
+
+/* Nút tròn nổi (điện thoại): góc dưới phải, trên thanh dưới */
+.pr-fab.ui-btn { display: none; }
+
+/* Hộp luật */
+.pr-cond { padding: 6px 0; border-top: 1px solid var(--line-2); }
+.pr-cond:first-of-type { border-top: 0; }
+.pr-cond__body { display: flex; flex-direction: column; gap: 8px; padding: 6px 0 4px 24px; min-width: 0; }
+.pr-time { flex-direction: row; flex-wrap: wrap; align-items: flex-start; gap: 8px; }
+.pr-time .ui-field { width: 120px; }
+.pr-time__lbl { line-height: var(--h-ctl, 36px); color: var(--muted); }
+.pr-chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; min-width: 0; }
+.pr-adddate { display: flex; gap: 8px; align-items: flex-start; flex-wrap: wrap; }
+.pr-adddate .ui-field { width: 170px; }
+.pr-datechip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 4px 3px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  font-size: 13px;
+}
+.pr-datechip button {
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+.pr-datechip button:hover { background: var(--soft); color: var(--text); }
+.pr-datechip button:focus-visible { outline: var(--focus-ring); }
+.pr-nosvc { padding: 0; text-align: right; }
+.pr-dlg-rule .ui-seg { max-width: 100%; }
+.pr-dlg-rule .ui-seg__opt { white-space: normal; padding: 6px 12px; height: auto; min-height: 34px; }
+@media (min-width: 641px) {
+  .ui-dialog.pr-dlg-rule { width: min(640px, 100%); }
+}
+
+@media (max-width: 640px) {
+  .pr-occ {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas: 'h m t' 'h s s';
+    gap: 6px 10px;
+    padding: 10px 14px 12px 4px;
+  }
+  .pr-occ__sw { padding-left: 8px; }
+  .pr-sws { gap: 10px; width: calc(6 * 28px + 5 * 10px); }
+  .pr-sw { width: 28px; height: 28px; }
+  .pr-rule {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas: 'h m t' 'h v v';
+    gap: 4px 10px;
+    padding: 10px 14px 12px 4px;
+  }
+  .pr-rule__svc { text-align: left; padding-left: 8px; }
+  .pr-fab.ui-btn {
+    display: inline-flex;
+    position: fixed;
+    right: 16px;
+    bottom: calc(var(--h-bottomnav) + 16px);
+    z-index: 20;
+    width: 52px;
+    height: 52px;
+    padding: 0;
+    border-radius: 50%;
+    box-shadow: 0 4px 14px color-mix(in srgb, var(--text) 25%, transparent);
+  }
+  .pr-occcard { margin-bottom: 76px; }
+  .pr-cond__body { padding-left: 4px; }
+  .pr-nosvc { text-align: left; }
+}

@@ -48,7 +48,7 @@ export interface NavItem {
 export const NAV_ITEMS: readonly NavItem[] = [
   // Bản vẽ D mục 3.0 + ký duyệt D câu 1: MỤC ĐẦU thanh bên máy tính; ở điện thoại nằm trong ngăn "Thêm" (BOTTOM_NAV không đổi).
   // pending: màn /hom-nay thuộc gói W1 (app/routes.tsx) — W1 xong thì xoá `pending: true`.
-  { key: 'hom-nay', path: 'hom-nay', label: 'Hôm nay', shortLabel: 'Hôm nay', icon: 'hom-nay', permission: 'org.read', notHome: true, pending: true },
+  { key: 'hom-nay', path: 'hom-nay', label: 'Hôm nay', shortLabel: 'Hôm nay', icon: 'hom-nay', permission: 'org.read', notHome: true },
   { key: 'lich', path: 'lich', label: 'Lịch makeup', shortLabel: 'Lịch', icon: 'lich', permission: 'schedule.read_own' },
   {
     key: 'hop-dong',

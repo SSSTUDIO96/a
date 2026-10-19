@@ -22,6 +22,10 @@
 .ws-sw-forest { --c: #2F6E2C; --b: color-mix(in srgb, #2F6E2C 10%, var(--surface)); }
 .ws-sw-brown { --c: #5A3620; --b: color-mix(in srgb, #5A3620 10%, var(--surface)); }
 .ws-sw-other { --c: var(--muted); --b: var(--surface); }
+/* Tô theo SỰ KIỆN (bản vẽ D 3.5): chữ "Pre-wedding" (màu green) trên nền nhạt của chính nó chỉ đạt 4,29:1 (< 4,5 cho chữ nhỏ).
+   Chỉ khi công tắc ở "Sự kiện" mới dùng xanh ngọc đậm hơn một nấc (4,61:1, vẫn cách mọi màu khác ΔE2000 ≥ 15,6); công tắc ở "Nhân vật" GIỮ NGUYÊN #2F7D72 như hôm
+   nay (bài thử subjectColors.test.ts đọc đúng hai khối này và đo cả hai). Nền --b không đổi. */
+.ws[data-color-by="occasion"] .ws-sw-green { --c: #2C786A; }
 /* "Khác" (ca không có nhân vật): nền trắng có viền, để không lẫn với ca mờ "Không chặn lịch" và màu Khách mời. */
 .ws-chip.ws-sw-other, .ws-pt.ws-sw-other { border: 1px solid var(--line); border-left: 3px solid var(--muted); }
 .ws-legend__i.ws-sw-other i { background: var(--surface); border: 1px solid var(--muted); }
@@ -71,6 +75,19 @@
 .ws-confl .ui-ico { width: 16px; height: 16px; }
 .ws-filter-on { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
 .ws-modes { flex: none; }
+/* Công tắc "Tô màu" (bản vẽ D 3.5): nhãn + nhóm nút nhỏ, đứng trước nhóm chế độ. */
+.ws-colorby { display: inline-flex; align-items: center; gap: 8px; flex: none; }
+.ws-colorby__lbl { font-size: 13px; color: var(--muted); white-space: nowrap; }
+.ws-colorby-sheet { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px 16px; }
+.ws-colorby-sheet__opt {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; width: 100%;
+  padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--r-card); background: var(--surface); color: var(--text); cursor: pointer;
+}
+.ws-colorby-sheet__opt b { font-size: 15px; }
+.ws-colorby-sheet__opt span { font-size: 13px; color: var(--muted); }
+.ws-colorby-sheet__opt.is-on { border-color: var(--accent); background: var(--accent-soft); }
+.ws-colorby-sheet__opt.is-on b { color: var(--accent); }
+.ws-colorby-sheet__opt:focus-visible { outline: var(--focus-ring); outline-offset: var(--focus-offset); }
 
 /* ---------- Chế độ C: lưới tuần thợ × ngày ---------- */
 .ws-c { overflow: auto; max-height: calc(100vh - 210px); }
@@ -331,6 +348,9 @@
 .ws-info__row:first-child { border-top: 0; }
 .ws-info__row dt { color: var(--muted); font-size: 13px; display: flex; align-items: center; }
 .ws-info__row dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.ws-info__occ { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; }
+/* Chấm màu sự kiện (hộp chi tiết): lấy --c của .ws-sw-<màu>; ca không sự kiện không vẽ dòng này. */
+.ws-info__dot { display: inline-block; width: 10px; height: 10px; border-radius: 3px; background: var(--c); flex: none; }
 .ws-info__staff, .ws-info__contract { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .ws-view__status { border-top: 1px solid var(--line); margin-top: 6px; padding-top: 12px; }
 .ws-status { display: flex; flex-direction: column; gap: 10px; }

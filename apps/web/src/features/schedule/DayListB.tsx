@@ -12,7 +12,7 @@ import {
   DAY_PART_LABELS,
   dayLoad,
   dayPartOf,
-  kindText,
+  kindTextBy,
   whoText,
   laneIdsOf,
   loadAxisHours,
@@ -22,7 +22,7 @@ import {
   type DayPart,
   type StaffLane,
 } from './model';
-import { apptClasses, cx, LaneAvatar, placeText, StaffAvatars, staffNames, startLabel, timeRange, useSwatchOf } from './parts';
+import { apptClasses, cx, LaneAvatar, placeText, StaffAvatars, staffNames, startLabel, timeRange, useApptSwatch, useColorBy } from './parts';
 import { dayKeyOf, dayNumber, ddmm, formatHours, hhmm, isWeekend, weekDays, weekdayLong, weekdayShort, type DayKey } from './time';
 
 export function DayListB({
@@ -49,7 +49,8 @@ export function DayListB({
   onAssign: (a: Appointment) => void;
 }) {
   const [laneFilter, setLaneFilter] = useState<string | null>(null);
-  const swatchOfName = useSwatchOf();
+  const swatchOfAppt = useApptSwatch();
+  const colorBy = useColorBy();
   const days = weekDays(day);
   const perDay = countByDay(appointments, days);
   const all = appointmentsOfDay(appointments, day);
@@ -119,7 +120,7 @@ export function DayListB({
                   <IconPerson />
                   <button type="button" className="ws-task__t" onClick={() => onOpen(a)}>
                     <b>Chưa có thợ</b>
-                    <span>{[startLabel(a, day), kindText(a), whoText(a)].filter(Boolean).join(' · ')}</span>
+                    <span>{[startLabel(a, day), kindTextBy(a, colorBy), whoText(a)].filter(Boolean).join(' · ')}</span>
                   </button>
                   {/* Buổi học chưa có giảng viên: gán giảng viên ở lớp (Khoá & lớp), không phân tay trên buổi. */}
                   {canWrite && !a.courseClass && (
@@ -145,14 +146,14 @@ export function DayListB({
                 {g.items.map((a) => {
                   const conflict = marks.appointmentIds.has(a.id);
                   return (
-                    <button type="button" key={a.id} className={cx('ws-item', apptClasses(a, conflict, swatchOfName(a.subjectName)))} onClick={() => onOpen(a)}>
+                    <button type="button" key={a.id} className={cx('ws-item', apptClasses(a, conflict, swatchOfAppt(a)))} onClick={() => onOpen(a)}>
                       <span className="ws-item__tm num">
                         {startLabel(a, day)}
                         <small>{hhmm(a.endsAt)}</small>
                       </span>
                       <span className="ws-item__main">
                         <span className="ws-item__sv">
-                          {kindText(a)} <WorkStatusTag status={a.status} />
+                          {kindTextBy(a, colorBy)} <WorkStatusTag status={a.status} />
                         </span>
                         {whoText(a) && <span className="ws-item__kh">{whoText(a)}</span>}
                         {placeText(a) && <span className="ws-item__nc">{placeText(a)}</span>}
@@ -200,7 +201,7 @@ export function DayListB({
                     return (
                       <i
                         key={b.id}
-                        className={cx(`ws-sw-${swatchOfName(b.subjectName)}`, !b.blocking && 'is-off', b.course && 'is-course', marks.appointmentIds.has(b.id) && 'is-x')}
+                        className={cx(`ws-sw-${swatchOfAppt(b)}`, !b.blocking && 'is-off', b.course && 'is-course', marks.appointmentIds.has(b.id) && 'is-x')}
                         style={{ left: `${((from - axisFrom * 60) / axisSpan) * 100}%`, width: `${((to - from) / axisSpan) * 100}%` }}
                       />
                     );

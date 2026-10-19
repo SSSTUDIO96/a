@@ -4,7 +4,26 @@ import { WORK_STATUS_LABELS } from '@makeup/shared';
 import type { Appointment } from '../../api/types';
 import { Avatar, Tooltip, WithTooltip } from '../../ui';
 import { staffNaming, type StaffNaming } from '../../ui/staffName';
-import { COURSE_SESSION_LABEL, isBlocking, isCourseSession, kindLabel, kindText, lanesRoster, quantityText, swatchOf, UNASSIGNED, whoText, type StaffLane, type Swatch } from './model';
+import {
+  apptSwatch,
+  COURSE_SESSION_LABEL,
+  DEFAULT_COLOR_BY,
+  isBlocking,
+  isCourseSession,
+  kindLabel,
+  kindLabelBy,
+  kindTextBy,
+  lanesRoster,
+  NO_OCCASION_LABEL,
+  occasionSwatch,
+  quantityText,
+  swatchOf,
+  UNASSIGNED,
+  whoText,
+  type ColorBy,
+  type StaffLane,
+  type Swatch,
+} from './model';
 
 // Danh sách nhân vật của tổ chức (thứ tự cố định) — để nhân vật tự thêm có màu ổn định. Màn cung cấp qua ngữ cảnh này.
 export const OrgSubjectsContext = createContext<readonly string[]>([]);
@@ -12,6 +31,17 @@ export const OrgSubjectsContext = createContext<readonly string[]>([]);
 export function useSwatchOf(): (subjectName: string | null) => Swatch {
   const subjects = useContext(OrgSubjectsContext);
   return (name) => swatchOf(name, subjects);
+}
+
+// Công tắc "Tô màu" (bản vẽ D 3.5): màn Lịch cung cấp qua ngữ cảnh này; không có ngữ cảnh → 'subject' (màu nhân vật như trước).
+export const ColorByContext = createContext<ColorBy>(DEFAULT_COLOR_BY);
+export const useColorBy = (): ColorBy => useContext(ColorByContext);
+
+// MỘT cửa chọn màu ca cho mọi chế độ lịch: theo công tắc (Nhân vật → swatchOf với danh sách nhân vật của tổ chức; Sự kiện → màu loại).
+export function useApptSwatch(): (a: Pick<Appointment, 'subjectName' | 'occasion'>) => Swatch {
+  const subjects = useContext(OrgSubjectsContext);
+  const colorBy = useColorBy();
+  return (a) => apptSwatch(a, colorBy, subjects);
 }
 
 // R2 + R4: tên ngắn và màu ảnh đại diện của thợ, tính MỘT lần trên sổ thợ của màn (index.tsx: danh sách thợ của tổ chức
@@ -44,11 +74,12 @@ export function timeRange(a: Pick<Appointment, 'startsAt' | 'endsAt'>): string {
 }
 
 // Chữ tooltip đầy đủ của một ca (tên khách đầy đủ khi trên ô bị cắt "…").
-export function apptTip(a: Appointment): string {
-  const parts = [timeRange(a), kindText(a)];
+export function apptTip(a: Appointment, colorBy: ColorBy = DEFAULT_COLOR_BY): string {
+  const parts = [timeRange(a), kindTextBy(a, colorBy)];
   if (a.customer) parts.push(a.customer.fullName);
   if (a.courseClass) parts.push(`Lớp ${a.courseClass.name}`);
-  if (a.subjectName) parts.push(a.subjectName);
+  // Tô theo Sự kiện: tên sự kiện + nhân vật đã nằm trong chữ loại ở trên, không lặp nhân vật.
+  if (a.subjectName && !(colorBy === 'occasion' && a.occasion)) parts.push(a.subjectName);
   if (a.staff.length === 0) parts.push('Chưa có thợ');
   parts.push(WORK_STATUS_LABELS[a.status]);
   return parts.join(' · ');
@@ -68,9 +99,11 @@ export function apptClasses(a: Appointment, conflict: boolean, swatch: Swatch): 
 
 // Chữ loại trên ô lưới C (ô hẹp, bản mẫu ghi "Tiệc", "Ăn hỏi"): bỏ chữ "Makeup" đứng đầu tên ca — app chỉ có ca makeup.
 // Tên ca đầy đủ vẫn nằm trong tooltip và hộp chi tiết. KHÔNG kèm "× n": số lượng là thẻ riêng (ws-chip__qty) để không bị cắt.
-export function chipKind(a: Pick<Appointment, 'title' | 'kind'>): string {
+export function chipKind(a: Pick<Appointment, 'title' | 'kind' | 'subjectName' | 'occasion'>, colorBy: ColorBy = DEFAULT_COLOR_BY): string {
   const t = kindLabel(a).replace(/^makeup\s+/iu, '');
-  return t.charAt(0).toLocaleUpperCase('vi') + t.slice(1);
+  const plain = t.charAt(0).toLocaleUpperCase('vi') + t.slice(1);
+  // Tô theo Sự kiện: ca có sự kiện ghi "Lễ cưới · Cô dâu"; ca chưa có sự kiện giữ chữ hôm nay.
+  return kindLabelBy(a, colorBy, plain);
 }
 
 // Ô ca của lưới C (máy tính, máy tính bảng): giờ bắt đầu đậm · loại · tên khách một dòng.
@@ -85,15 +118,16 @@ export function ApptChip({
   conflict: boolean;
   onOpen: (a: Appointment) => void;
 }) {
-  const swatchOfName = useSwatchOf();
+  const swatchOfAppt = useApptSwatch();
+  const colorBy = useColorBy();
   const qty = quantityText(a);
   const who = whoText(a);
   return (
-    <WithTooltip text={apptTip(a)} className="ws-chip-wrap">
-      <button type="button" className={cx('ws-chip', apptClasses(a, conflict, swatchOfName(a.subjectName)))} onClick={() => onOpen(a)} data-appt={a.id}>
+    <WithTooltip text={apptTip(a, colorBy)} className="ws-chip-wrap">
+      <button type="button" className={cx('ws-chip', apptClasses(a, conflict, swatchOfAppt(a)))} onClick={() => onOpen(a)} data-appt={a.id}>
         <span className="ws-chip__top">
           <b className="num">{startLabel(a, day)}</b>
-          <span className="ws-chip__kind">{chipKind(a)}</span>
+          <span className="ws-chip__kind">{chipKind(a, colorBy)}</span>
           {qty && <span className="ws-chip__qty num">{qty}</span>}
         </span>
         {who && <span className="ws-chip__who">{who}</span>}
@@ -120,23 +154,44 @@ function LaneAvatarOf({ lane, size }: { lane: StaffLane; size: 'md' | 'sm' | 'xs
 
 export function Legend({
   subjects,
+  occasions = [],
+  colorBy = DEFAULT_COLOR_BY,
   showUnassigned,
   showCourse = false,
 }: {
   subjects: { name: string | null; label: string }[];
+  // Chú thích tô theo Sự kiện: loại có ca trong khoảng xem (legendOccasions). Dùng khi colorBy = 'occasion'.
+  occasions?: { id: string; name: string; swatch: Swatch }[];
+  colorBy?: ColorBy;
   showUnassigned: boolean;
   // Có buổi học trong khoảng xem → thêm mục "Buổi học".
   showCourse?: boolean;
 }) {
   const swatchOfName = useSwatchOf();
+  const byOccasion = colorBy === 'occasion';
+  const noOccasion = occasionSwatch({ occasion: null });
   return (
-    <div className="ws-legend" aria-label="Chú thích màu">
-      {subjects.map((s) => (
-        <span key={s.label} className={cx('ws-legend__i', `ws-sw-${swatchOfName(s.name)}`)}>
+    <div className="ws-legend" aria-label="Chú thích màu" data-color-by={colorBy}>
+      {byOccasion
+        ? occasions.map((o) => (
+            <span key={o.id} className={cx('ws-legend__i', `ws-sw-${o.swatch}`)}>
+              <i aria-hidden="true" />
+              {o.name}
+            </span>
+          ))
+        : subjects.map((s) => (
+            <span key={s.label} className={cx('ws-legend__i', `ws-sw-${swatchOfName(s.name)}`)}>
+              <i aria-hidden="true" />
+              {s.label}
+            </span>
+          ))}
+      {/* Ô trắng viền: cùng màu trung tính "other" với "Khác" của chú thích nhân vật. */}
+      {byOccasion && (
+        <span className={cx('ws-legend__i', `ws-sw-${noOccasion}`)}>
           <i aria-hidden="true" />
-          {s.label}
+          {NO_OCCASION_LABEL}
         </span>
-      ))}
+      )}
       {showCourse && (
         <span className="ws-legend__i is-course">
           <i aria-hidden="true" />
@@ -154,7 +209,11 @@ export function Legend({
         Không chặn lịch
       </span>
       <Tooltip
-        text="Màu theo nhân vật trên dòng hợp đồng gắn với ca. Ca không gắn nhân vật tô màu Khác. Buổi học của lớp (đưa lên từ Khoá & lớp) có màu kẻ sọc riêng. Ca nháp, đã huỷ, khách không đến không giữ giờ của thợ nên vẽ mờ."
+        text={
+          byOccasion
+            ? 'Màu theo loại sự kiện của dòng hợp đồng gắn với ca (studio đặt ở Bảng giá › Loại sự kiện). Ca chưa chọn sự kiện tô trắng có viền. Buổi học của lớp có màu kẻ sọc riêng. Ca nháp, đã huỷ, khách không đến không giữ giờ của thợ nên vẽ mờ.'
+            : 'Màu theo nhân vật trên dòng hợp đồng gắn với ca. Ca không gắn nhân vật tô màu Khác. Buổi học của lớp (đưa lên từ Khoá & lớp) có màu kẻ sọc riêng. Ca nháp, đã huỷ, khách không đến không giữ giờ của thợ nên vẽ mờ.'
+        }
         label="Giải thích màu ca"
       />
     </div>

@@ -1,11 +1,14 @@
 // Logic thuần của màn Bảng giá (bản vẽ C mục 4.2): chia nhóm, chữ hiển thị, dựng thân gửi máy chủ, ánh xạ lỗi về ô.
 // Không gọi mạng ở đây — bài thử logic.test.ts kiểm từng hàm.
-import type { Permission } from '@makeup/shared';
+import { OCCASION_COLORS, type OccasionColor, type Permission } from '@makeup/shared';
 import { ApiError, conflictFields, errorKind, fieldErrors, userMessage } from '../../api/errors';
 import type {
   LocationType,
   MakeupSubject,
   NewPriceInput,
+  OccasionCreateInput,
+  OccasionUpdateInput,
+  OccasionView,
   Page,
   PackageCreateInput,
   PackageItemInput,
@@ -17,6 +20,10 @@ import type {
   ServiceKind,
   ServicePackage,
   ServiceUpdateInput,
+  SurchargeRuleCreateInput,
+  SurchargeRuleStatus,
+  SurchargeRuleUpdateInput,
+  SurchargeRuleView,
   TravelFeeMode,
   TravelFeePolicy,
   TravelFeePolicyInput,
@@ -26,7 +33,7 @@ import { NAV_ITEMS } from '../../layout/nav';
 
 // ======================= Nhóm (mục con) =======================
 
-export type GroupKey = 'goi' | 'dich-vu' | 'di-chuyen' | 'nhan-vat';
+export type GroupKey = 'goi' | 'dich-vu' | 'di-chuyen' | 'nhan-vat' | 'su-kien' | 'luat-phu-phi';
 
 export interface PricingGroup {
   key: GroupKey;
@@ -36,13 +43,32 @@ export interface PricingGroup {
   short: string;
 }
 
-const SHORT: Record<GroupKey, string> = { goi: 'Gói', 'dich-vu': 'Dịch vụ phụ', 'di-chuyen': 'Di chuyển', 'nhan-vat': 'Nhân vật' };
+const SHORT: Record<GroupKey, string> = {
+  goi: 'Gói',
+  'dich-vu': 'Dịch vụ phụ',
+  'di-chuyen': 'Di chuyển',
+  'nhan-vat': 'Nhân vật',
+  'su-kien': 'Sự kiện',
+  'luat-phu-phi': 'Luật phí',
+};
 
-export const PRICING_GROUPS: readonly PricingGroup[] = (NAV_ITEMS.find((i) => i.key === 'bang-gia')?.children ?? []).map((c) => {
+// Hai nhóm của bản vẽ D mục 3.0. Khi nav.ts đã có hai mục con này (children của 'bang-gia') thì nav.ts thắng; chưa có
+// (còn nằm ở PENDING_BANG_GIA_CHILDREN) thì màn vẫn mở được bằng đường /bang-gia/su-kien, /bang-gia/luat-phu-phi.
+const NEW_GROUPS: readonly { key: GroupKey; label: string }[] = [
+  { key: 'su-kien', label: 'Loại sự kiện' },
+  { key: 'luat-phu-phi', label: 'Luật phụ phí' },
+];
+
+const fromNav: PricingGroup[] = (NAV_ITEMS.find((i) => i.key === 'bang-gia')?.children ?? []).map((c) => {
   const key = c.path.replace(/^bang-gia\//, '') as GroupKey;
   if (!(key in SHORT)) throw new Error(`Mục con Bảng giá lạ trong nav.ts: ${c.path}`);
   return { key, label: c.label, short: SHORT[key] };
 });
+
+export const PRICING_GROUPS: readonly PricingGroup[] = [
+  ...fromNav,
+  ...NEW_GROUPS.filter((g) => !fromNav.some((f) => f.key === g.key)).map((g) => ({ key: g.key, label: g.label, short: SHORT[g.key] })),
+];
 
 // Đường /bang-gia (không có nhóm) → null để trang chuyển sang nhóm đầu; nhóm lạ → 'unknown'.
 export function resolveGroup(nhom: string | undefined): GroupKey | null | 'unknown' {
@@ -525,7 +551,7 @@ export function moveItem<T>(list: readonly T[], from: number, to: number): T[] {
 }
 
 // sortOrder mới = vị trí trong danh sách; chỉ trả nhân vật có sortOrder đổi.
-export function sortOrderPatches(list: readonly MakeupSubject[]): { id: string; sortOrder: number }[] {
+export function sortOrderPatches(list: readonly { id: string; sortOrder: number }[]): { id: string; sortOrder: number }[] {
   return list.flatMap((s, i) => (s.sortOrder === i ? [] : [{ id: s.id, sortOrder: i }]));
 }
 
@@ -614,4 +640,303 @@ export function buildServiceCreate(f: ServiceForm): ServiceCreateInput {
     listPrice: f.listPrice,
     salePrice: f.salePrice,
   };
+}
+
+// ======================= Loại sự kiện (bản vẽ D mục 3.2) =======================
+
+// Tên tiếng Việt của 12 màu (tooltip mỗi ô màu) — đúng thứ tự OCCASION_COLORS.
+export const OCCASION_COLOR_LABEL: Record<OccasionColor, string> = {
+  rose: 'Hồng',
+  violet: 'Tím',
+  amber: 'Hổ phách',
+  green: 'Xanh lá',
+  blue: 'Xanh dương',
+  taupe: 'Nâu xám',
+  brick: 'Đỏ gạch',
+  petrol: 'Xanh dầu',
+  olive: 'Ô liu',
+  plum: 'Mận',
+  forest: 'Xanh rừng',
+  brown: 'Nâu',
+};
+
+export const OCCASION_COLOR_LIST: readonly OccasionColor[] = OCCASION_COLORS;
+export const OCCASION_NAME_MAX = 60;
+
+export const occasionSubtitle = (count: number) => `${count} loại · màu dùng chung 12 màu của Lịch`;
+
+// Số dòng hợp đồng CHƯA HUỶ đang dùng loại (lineCount do máy chủ đếm).
+export const occasionUsage = (lineCount: number) => (lineCount === 0 ? 'Chưa có dòng hợp đồng nào dùng' : `${lineCount} dòng hợp đồng đang dùng`);
+
+export function sortOccasions(list: readonly OccasionView[]): OccasionView[] {
+  return [...list].sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, 'vi') || a.id.localeCompare(b.id));
+}
+
+export interface OccasionForm {
+  name: string;
+  // null = chưa chọn: không có màu mặc định im lặng.
+  color: OccasionColor | null;
+}
+
+export function occasionToForm(o: OccasionView | null): OccasionForm {
+  return { name: o?.name ?? '', color: o?.color ?? null };
+}
+
+export function validateOccasionForm(f: OccasionForm): FormErrors {
+  const e: FormErrors = {};
+  const name = f.name.trim();
+  if (!name) e.name = 'Nhập tên loại sự kiện.';
+  else if (name.length > OCCASION_NAME_MAX) e.name = `Tên tối đa ${OCCASION_NAME_MAX} ký tự.`;
+  if (f.color === null) e.color = 'Chọn một màu.';
+  return e;
+}
+
+// POST /occasions — gọi sau validateOccasionForm không lỗi. sortOrder: xếp cuối danh sách.
+export function buildOccasionCreate(f: OccasionForm, sortOrder: number): OccasionCreateInput {
+  if (f.color === null) throw new Error('Gọi validateOccasionForm trước khi dựng thân tạo loại sự kiện');
+  return { name: f.name.trim(), color: f.color, sortOrder, isActive: true };
+}
+
+// PATCH /occasions/:id — chỉ trường đã đổi; không đổi gì → null (không gọi, máy chủ sẽ báo "Không có gì để sửa").
+export function buildOccasionPatch(original: OccasionView, f: OccasionForm): OccasionUpdateInput | null {
+  const patch: OccasionUpdateInput = {};
+  if (f.name.trim() !== original.name) patch.name = f.name.trim();
+  if (f.color !== null && f.color !== original.color) patch.color = f.color;
+  return Object.keys(patch).length > 0 ? patch : null;
+}
+
+// 409 trùng tên → dưới ô Tên; 409 "Tối đa 50 loại sự kiện" và mọi lỗi khác → dải đầu hộp. Lời luôn là lời máy chủ.
+export function mapOccasionError(err: unknown): MappedError {
+  const m = mapSaveError(err, 'create');
+  if (errorKind(err) === 'conflict' && m.banner !== null && /^Tên /.test(m.banner)) return { fields: { name: m.banner }, banner: null };
+  return m;
+}
+
+// ======================= Luật phụ phí (bản vẽ D mục 3.3) =======================
+
+export const RULE_NAME_MAX = 120;
+export const RULE_NOTE_MAX = 500;
+
+// 1 = Thứ Hai … 7 = Chủ nhật (khớp máy chủ).
+export const WEEKDAY_OPTIONS: readonly { value: number; short: string; long: string }[] = [
+  { value: 1, short: 'T2', long: 'Thứ Hai' },
+  { value: 2, short: 'T3', long: 'Thứ Ba' },
+  { value: 3, short: 'T4', long: 'Thứ Tư' },
+  { value: 4, short: 'T5', long: 'Thứ Năm' },
+  { value: 5, short: 'T6', long: 'Thứ Sáu' },
+  { value: 6, short: 'T7', long: 'Thứ Bảy' },
+  { value: 7, short: 'CN', long: 'Chủ nhật' },
+];
+
+export const RULE_STATUS_TEXT: Record<Exclude<SurchargeRuleStatus, 'OK'>, string> = {
+  SERVICE_INACTIVE: 'Phụ phí đang ngừng — luật không chạy',
+  SERVICE_NOT_SURCHARGE: 'Dịch vụ không còn là phụ phí — luật không chạy',
+  NO_PRICE: 'Phụ phí chưa có giá — luật không chạy',
+};
+
+// Ngày lễ cố định theo dương lịch: 1/1, 30/4, 1/5, 2/9. Tết âm lịch thì thêm từng ngày (tooltip ở hộp).
+export function holidayDates(year: number): string[] {
+  if (!Number.isInteger(year) || year < 1900 || year > 2999) throw new Error(`Năm không hợp lệ: ${year}`);
+  return [`${year}-01-01`, `${year}-04-30`, `${year}-05-01`, `${year}-09-02`];
+}
+
+// Gộp ngày, bỏ trùng, tăng dần ("YYYY-MM-DD" so chuỗi là so ngày).
+export function mergeDates(existing: readonly string[], added: readonly string[]): string[] {
+  return [...new Set([...existing, ...added])].sort();
+}
+
+export const viDate = (iso: string) => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : iso;
+};
+
+export interface RuleLookups {
+  occasions: readonly { id: string; name: string }[];
+  packages: readonly { id: string; name: string }[];
+  subjects: readonly { id: string; name: string }[];
+}
+
+const namesOf = (ids: readonly string[], list: readonly { id: string; name: string }[], missing: string) => {
+  const byId = new Map(list.map((x) => [x.id, x.name]));
+  return ids.map((id) => byId.get(id) ?? missing).join(', ');
+};
+
+/**
+ * Tóm tắt điều kiện bằng chữ, ví dụ "Giờ bắt đầu 00:00–06:00 · Lễ cưới, Lễ vu quy · Gói Cô dâu cao cấp".
+ * Các phần ghép bằng " · " (mọi phần đã có phải cùng đúng); trong phần ngày, thứ HOẶC ngày cụ thể.
+ */
+export function summarizeRule(rule: SurchargeRuleView, lk: RuleLookups): string {
+  const parts: string[] = [];
+  if (rule.startTime !== null && rule.endTime !== null) parts.push(`Giờ bắt đầu ${rule.startTime}–${rule.endTime}`);
+  const days: string[] = [];
+  if (rule.weekdays.length > 0) {
+    const names = WEEKDAY_OPTIONS.filter((w) => rule.weekdays.includes(w.value)).map((w) => w.short);
+    days.push(`Thứ ${names.join(', ')}`);
+  }
+  if (rule.dates.length > 0) days.push(rule.dates.length <= 3 ? `ngày ${rule.dates.map(viDate).join(', ')}` : `${rule.dates.length} ngày cụ thể`);
+  if (days.length > 0) parts.push(days.join(' hoặc '));
+  if (rule.occasionIds.length > 0) parts.push(namesOf(rule.occasionIds, lk.occasions, 'Loại sự kiện không rõ'));
+  if (rule.packageIds.length > 0) parts.push(`Gói ${namesOf(rule.packageIds, lk.packages, 'không rõ')}`);
+  if (rule.subjectIds.length > 0) parts.push(`Nhân vật ${namesOf(rule.subjectIds, lk.subjects, 'không rõ')}`);
+  return parts.join(' · ');
+}
+
+export interface RuleForm {
+  name: string;
+  // '' = chưa chọn phụ phí.
+  serviceId: string;
+  useTime: boolean;
+  startTime: string | null;
+  // Ô "Đến": nửa đêm gõ 00:00 (ô giờ không nhận 24:00); máy chủ nhận 24:00 — xem wireEnd / ruleToForm.
+  endTime: string | null;
+  useDays: boolean;
+  weekdays: number[];
+  dates: string[];
+  useOccasions: boolean;
+  occasionIds: string[];
+  packageIds: string[];
+  subjectIds: string[];
+  perQuantity: boolean;
+  note: string;
+  isActive: boolean;
+}
+
+export function emptyRuleForm(): RuleForm {
+  return {
+    name: '',
+    serviceId: '',
+    useTime: false,
+    startTime: null,
+    endTime: null,
+    useDays: false,
+    weekdays: [],
+    dates: [],
+    useOccasions: false,
+    occasionIds: [],
+    packageIds: [],
+    subjectIds: [],
+    perQuantity: true,
+    note: '',
+    isActive: true,
+  };
+}
+
+export function ruleToForm(r: SurchargeRuleView | null): RuleForm {
+  if (!r) return emptyRuleForm();
+  return {
+    name: r.name,
+    serviceId: r.serviceId,
+    useTime: r.startTime !== null,
+    startTime: r.startTime,
+    endTime: r.endTime === '24:00' ? '00:00' : r.endTime,
+    useDays: r.weekdays.length > 0 || r.dates.length > 0,
+    weekdays: [...r.weekdays],
+    dates: [...r.dates],
+    useOccasions: r.occasionIds.length > 0,
+    occasionIds: [...r.occasionIds],
+    packageIds: [...r.packageIds],
+    subjectIds: [...r.subjectIds],
+    perQuantity: r.perQuantity,
+    note: r.note ?? '',
+    isActive: r.isActive,
+  };
+}
+
+// Giờ "Đến" gửi máy chủ: nửa đêm = 24:00 (máy chủ không nhận 00:00 ở ô kết thúc). 00:00 → 00:00 vẫn là lỗi "phải khác nhau".
+export function wireEnd(start: string | null, end: string | null): string | null {
+  return end === '00:00' && start !== null && start !== '00:00' ? '24:00' : end;
+}
+
+export function validateRuleForm(f: RuleForm): FormErrors {
+  const e: FormErrors = {};
+  if (!f.name.trim()) e.name = 'Nhập tên luật.';
+  else if (f.name.trim().length > RULE_NAME_MAX) e.name = `Tên luật tối đa ${RULE_NAME_MAX} ký tự.`;
+  if (f.serviceId === '') e.serviceId = 'Chọn phụ phí thu.';
+  if (f.useTime) {
+    if (f.startTime === null) e.startTime = 'Nhập giờ bắt đầu.';
+    if (f.endTime === null) e.endTime = 'Nhập giờ kết thúc.';
+    if (f.startTime !== null && f.endTime !== null && f.startTime === f.endTime) e.endTime = 'Giờ bắt đầu và kết thúc phải khác nhau.';
+  }
+  if (f.useDays && f.weekdays.length === 0 && f.dates.length === 0) e.days = 'Chọn ít nhất một thứ hoặc một ngày.';
+  if (f.useOccasions && f.occasionIds.length === 0) e.occasionIds = 'Chọn ít nhất một loại sự kiện.';
+  if (f.note.trim().length > RULE_NOTE_MAX) e.note = `Ghi chú tối đa ${RULE_NOTE_MAX} ký tự.`;
+  return e;
+}
+
+// Điều kiện thật sự gửi đi: nhóm bỏ tick thì coi như rỗng (dù trong ô còn dữ liệu cũ).
+function effective(f: RuleForm) {
+  return {
+    startTime: f.useTime ? f.startTime : null,
+    endTime: f.useTime ? wireEnd(f.startTime, f.endTime) : null,
+    weekdays: f.useDays ? [...f.weekdays].sort((a, b) => a - b) : [],
+    dates: f.useDays ? [...f.dates].sort() : [],
+    occasionIds: f.useOccasions ? [...f.occasionIds] : [],
+    packageIds: [...f.packageIds],
+    subjectIds: [...f.subjectIds],
+  };
+}
+
+// POST /surcharge-rules — gọi sau validateRuleForm không lỗi. Chỉ gửi nhóm có dữ liệu; luật chưa có điều kiện nào thì máy chủ trả 400.
+export function buildRuleCreate(f: RuleForm, sortOrder: number): SurchargeRuleCreateInput {
+  if (f.serviceId === '') throw new Error('Gọi validateRuleForm trước khi dựng thân tạo luật');
+  const x = effective(f);
+  const note = f.note.trim();
+  return {
+    name: f.name.trim(),
+    serviceId: f.serviceId,
+    ...(x.startTime !== null && x.endTime !== null ? { startTime: x.startTime, endTime: x.endTime } : {}),
+    ...(x.weekdays.length > 0 ? { weekdays: x.weekdays } : {}),
+    ...(x.dates.length > 0 ? { dates: x.dates } : {}),
+    ...(x.occasionIds.length > 0 ? { occasionIds: x.occasionIds } : {}),
+    ...(x.packageIds.length > 0 ? { packageIds: x.packageIds } : {}),
+    ...(x.subjectIds.length > 0 ? { subjectIds: x.subjectIds } : {}),
+    perQuantity: f.perQuantity,
+    ...(note ? { note } : {}),
+    sortOrder,
+    isActive: f.isActive,
+  };
+}
+
+// PATCH /surcharge-rules/:id — chỉ nhóm đã đổi; mảng gửi lên thay toàn bộ mảng cũ; bỏ khung giờ = startTime/endTime null.
+export function buildRulePatch(original: SurchargeRuleView, f: RuleForm): SurchargeRuleUpdateInput | null {
+  const x = effective(f);
+  const patch: SurchargeRuleUpdateInput = {};
+  if (f.name.trim() !== original.name) patch.name = f.name.trim();
+  if (f.serviceId !== '' && f.serviceId !== original.serviceId) patch.serviceId = f.serviceId;
+  if (x.startTime !== original.startTime || x.endTime !== original.endTime) {
+    patch.startTime = x.startTime;
+    patch.endTime = x.endTime;
+  }
+  if (!sameSet(x.weekdays, original.weekdays)) patch.weekdays = x.weekdays;
+  if (!sameSet(x.dates, original.dates)) patch.dates = x.dates;
+  if (!sameSet(x.occasionIds, original.occasionIds)) patch.occasionIds = x.occasionIds;
+  if (!sameSet(x.packageIds, original.packageIds)) patch.packageIds = x.packageIds;
+  if (!sameSet(x.subjectIds, original.subjectIds)) patch.subjectIds = x.subjectIds;
+  if (f.perQuantity !== original.perQuantity) patch.perQuantity = f.perQuantity;
+  const note = f.note.trim() === '' ? null : f.note.trim();
+  if (note !== original.note) patch.note = note;
+  if (f.isActive !== original.isActive) patch.isActive = f.isActive;
+  return Object.keys(patch).length > 0 ? patch : null;
+}
+
+/**
+ * Lỗi lưu luật → ô. 400 theo details.issues[].path; lời "chưa có điều kiện nào" của máy chủ nằm ở startTime/endTime, mà ô giờ
+ * đang ẩn (chưa tick) thì đặt dưới nhóm "Khi nào áp" (khoá `conditions`). weekdays/dates → khoá `days`. 409 trùng tên →
+ * dưới ô Tên; 409 "Tối đa 50 luật đang bật", 404, 403 → dải đầu hộp. Lời luôn là lời máy chủ.
+ */
+export function mapRuleError(err: unknown, form: RuleForm): MappedError {
+  const m = mapSaveError(err, 'create');
+  if (errorKind(err) === 'conflict' && m.banner !== null && /^Tên /.test(m.banner)) return { fields: { name: m.banner }, banner: null };
+  const fields: FormErrors = {};
+  for (const [k, v] of Object.entries(m.fields)) {
+    if ((k === 'startTime' || k === 'endTime') && !form.useTime) fields.conditions ??= v;
+    else if (k === 'weekdays' || k === 'dates') fields.days ??= v;
+    else fields[k] ??= v;
+  }
+  // Lỗi 400 không có đường dẫn nhưng có details.fields (vd phụ phí đã ngừng): đặt đúng ô nếu biết.
+  if (m.banner !== null && errorKind(err) === 'validation' && err instanceof ApiError) {
+    const named = (err.details as { fields?: unknown } | undefined)?.fields;
+    if (Array.isArray(named) && named.includes('serviceId')) return { fields: { ...fields, serviceId: m.banner }, banner: null };
+  }
+  return { fields, banner: m.banner };
 }

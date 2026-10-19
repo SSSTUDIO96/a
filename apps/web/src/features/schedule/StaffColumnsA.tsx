@@ -4,8 +4,8 @@
 import type { CSSProperties } from 'react';
 import type { Appointment } from '../../api/types';
 import { StatusTag } from '../../ui';
-import { appointmentsOfDay, axisHours, blockSpan, dayLoad, kindLabel, laneIdsOf, layoutLanes, quantityText, UNASSIGNED, whoText, type ConflictMarks, type StaffLane } from './model';
-import { apptClasses, apptTip, cx, LaneAvatar, placeText, timeRange, useSwatchOf, laneShort, useStaffNaming } from './parts';
+import { appointmentsOfDay, axisHours, blockSpan, dayLoad, kindLabelBy, laneIdsOf, layoutLanes, quantityText, UNASSIGNED, whoText, type ConflictMarks, type StaffLane } from './model';
+import { apptClasses, apptTip, cx, LaneAvatar, placeText, timeRange, useApptSwatch, useColorBy, laneShort, useStaffNaming } from './parts';
 import { formatHours, minutesFromDayStart, type DayKey } from './time';
 
 export function StaffColumnsA({
@@ -25,7 +25,8 @@ export function StaffColumnsA({
   hourPx: number;
   onOpen: (a: Appointment) => void;
 }) {
-  const swatchOfName = useSwatchOf();
+  const swatchOfAppt = useApptSwatch();
+  const colorBy = useColorBy();
   const dayItems = appointmentsOfDay(appointments, day);
   const [fromH, toH] = axisHours(dayItems.map(blockSpan), day);
   const hours = Array.from({ length: toH - fromH }, (_, i) => fromH + i);
@@ -96,9 +97,9 @@ export function StaffColumnsA({
                   <button
                     type="button"
                     key={a.id}
-                    className={cx('ws-ev', apptClasses(a, conflict, swatchOfName(a.subjectName)))}
+                    className={cx('ws-ev', apptClasses(a, conflict, swatchOfAppt(a)))}
                     style={box}
-                    title={apptTip(a)}
+                    title={apptTip(a, colorBy)}
                     onClick={() => onOpen(a)}
                     data-appt={a.id}
                   >
@@ -110,7 +111,7 @@ export function StaffColumnsA({
                       </span>
                       {/* L7 (biên bản M2): "× n" là thẻ riêng không co (như ws-chip__qty của lưới C) — chỉ tên loại ca rút "…". */}
                       <span className="ws-ev__sv">
-                        <span className="ws-ev__kind">{kindLabel(a)}</span>
+                        <span className="ws-ev__kind">{kindLabelBy(a, colorBy)}</span>
                         {quantityText(a) && (
                           <>
                             {' '}

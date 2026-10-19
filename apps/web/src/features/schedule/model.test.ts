@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isBlockingStatus, STATUS_TRANSITIONS, WORK_STATUSES } from '@makeup/shared';
+import { isBlockingStatus, OCCASION_COLORS, STATUS_TRANSITIONS, WORK_STATUSES } from '@makeup/shared';
 import { ApiError } from '../../api/errors';
 import type { Appointment, StaffMember } from '../../api/types';
 import {
@@ -35,6 +35,14 @@ import {
   whoText,
   swatchOf,
   UNASSIGNED,
+  apptSwatch,
+  DEFAULT_COLOR_BY,
+  kindLabelBy,
+  kindTextBy,
+  legendOccasions,
+  occasionSwatch,
+  occasionTitle,
+  SWATCHES,
 } from './model';
 import { addDays, dayKeyOf, formatHours, hhmm, weekDays, weekLabel, weekRange, weekStartOf } from './time';
 
@@ -59,6 +67,7 @@ function appt(p: Partial<Appointment> & { id: string; startsAt: string; endsAt: 
     longitude: null,
     notes: null,
     cancelReason: null,
+    occasion: null,
     staff: [],
     createdAt: '2026-10-01T00:00:00.000Z',
     updatedAt: '2026-10-01T00:00:00.000Z',
@@ -438,7 +447,7 @@ describe('K8: ca còn hiệu lực — một luật cho đếm và nhắc', () =
   });
 
   it('trục giờ B: tối thiểu 04–18, nới theo thanh sớm nhất / muộn nhất (làm tròn giờ), tối đa 00–24', () => {
-    const load = (startMin: number, endMin: number) => ({ count: 1, minutes: 0, bars: [{ id: 'x', startMin, endMin, subjectName: null, blocking: true, course: false }] });
+    const load = (startMin: number, endMin: number) => ({ count: 1, minutes: 0, bars: [{ id: 'x', startMin, endMin, subjectName: null, occasion: null, blocking: true, course: false }] });
     expect(loadAxisHours([])).toEqual([4, 18]);
     expect(loadAxisHours([load(8 * 60, 9 * 60)])).toEqual([4, 18]);
     expect(loadAxisHours([load(18 * 60 + 30, 20 * 60 + 30)])).toEqual([4, 21]);
@@ -469,5 +478,80 @@ describe('K8: ca còn hiệu lực — một luật cho đếm và nhắc', () =
     expect(axisTicks(0, 24)).toEqual([0, 4, 8, 12, 16, 20, 24]);
     expect(axisTicks(3, 18)).toEqual([3, 8, 12, 16, 18]);
     expect(axisTicks(7, 18)).toEqual([7, 12, 16, 18]);
+  });
+});
+
+// ---------------- Công tắc "Tô màu" (bản vẽ D 3.5) ----------------
+describe('tô màu theo sự kiện (occasion)', () => {
+  const T = { startsAt: '2026-10-24T08:00:00+07:00', endsAt: '2026-10-24T09:00:00+07:00' };
+  const LE_CUOI = { id: 'o1', name: 'Lễ cưới', color: 'rose' as const };
+  const AN_HOI = { id: 'o2', name: 'Ăn hỏi', color: 'amber' as const };
+
+  it('BẮT: SWATCHES chính là OCCASION_COLORS của shared (một nguồn, không chép)', () => {
+    expect(SWATCHES).toBe(OCCASION_COLORS);
+    expect(SWATCHES).toHaveLength(12);
+  });
+
+  it('GIỮ: công tắc mặc định là "Nhân vật" — không phải "Sự kiện"', () => {
+    expect(DEFAULT_COLOR_BY).toBe('subject');
+  });
+
+  it('BẮT: màu = màu của loại; ca không sự kiện → "other" (trung tính), không bao giờ màu đầu danh sách; màu lạ → "other"', () => {
+    for (const c of OCCASION_COLORS) expect(occasionSwatch({ occasion: { id: 'x', name: 'X', color: c } }), c).toBe(c);
+    expect(occasionSwatch({ occasion: null })).toBe('other');
+    expect(occasionSwatch({ occasion: null })).not.toBe(OCCASION_COLORS[0]);
+    expect(occasionSwatch({ occasion: { id: 'x', name: 'X', color: 'magenta' as never } })).toBe('other');
+  });
+
+  it('BẮT: apptSwatch theo công tắc — "Nhân vật" trả đúng swatchOf cũ (kể cả khi ca có sự kiện), "Sự kiện" trả màu loại', () => {
+    const a = appt({ id: 'a', subjectName: 'Cô dâu', occasion: AN_HOI, ...T });
+    expect(apptSwatch(a, 'subject', [])).toBe(swatchOf('Cô dâu', []));
+    expect(apptSwatch(a, 'subject', [])).toBe('rose');
+    expect(apptSwatch(a, 'occasion', [])).toBe('amber');
+    const none = appt({ id: 'b', subjectName: 'Cô dâu', ...T });
+    expect(apptSwatch(none, 'occasion', [])).toBe('other');
+    expect(apptSwatch(none, 'subject', [])).toBe('rose');
+    // Ca không nhân vật, có sự kiện: Nhân vật → "other"; Sự kiện → màu loại.
+    const noSubject = appt({ id: 'c', occasion: LE_CUOI, ...T });
+    expect(apptSwatch(noSubject, 'subject', [])).toBe('other');
+    expect(apptSwatch(noSubject, 'occasion', [])).toBe('rose');
+  });
+
+  it('chữ ô ca: "Lễ cưới · Cô dâu"; không nhân vật → tên ca; ca chưa có sự kiện và công tắc "Nhân vật" giữ chữ cũ nguyên văn', () => {
+    const a = appt({ id: 'a', subjectName: ' Cô dâu ', occasion: LE_CUOI, title: 'Makeup cô dâu', quantity: 2, ...T });
+    expect(occasionTitle(a)).toBe('Lễ cưới · Cô dâu');
+    expect(kindTextBy(a, 'occasion')).toBe('Lễ cưới · Cô dâu × 2');
+    expect(kindLabelBy(a, 'occasion')).toBe('Lễ cưới · Cô dâu');
+    expect(kindTextBy(a, 'subject')).toBe(kindText(a));
+    expect(kindLabelBy(a, 'subject')).toBe(kindLabel(a));
+    const noSubject = appt({ id: 'b', occasion: LE_CUOI, title: 'Makeup tiệc', ...T });
+    expect(occasionTitle(noSubject)).toBe('Lễ cưới · Makeup tiệc');
+    const none = appt({ id: 'c', title: 'Makeup tiệc', subjectName: 'Cô dâu', ...T });
+    expect(occasionTitle(none)).toBeNull();
+    expect(kindTextBy(none, 'occasion')).toBe(kindText(none));
+    expect(kindLabelBy(none, 'occasion')).toBe(kindLabel(none));
+  });
+
+  it('chú thích: loại có ca (không lặp, xếp theo tên), buổi học không tính; "chưa chọn sự kiện" chỉ khi có ca thiếu sự kiện', () => {
+    const list = [
+      appt({ id: '1', occasion: LE_CUOI, ...T }),
+      appt({ id: '2', occasion: AN_HOI, ...T }),
+      appt({ id: '3', occasion: LE_CUOI, ...T }),
+      appt({ id: '4', kind: 'COURSE_SESSION', ...T }),
+    ];
+    const r = legendOccasions(list);
+    expect(r.occasions.map((o) => [o.name, o.swatch])).toEqual([
+      ['Ăn hỏi', 'amber'],
+      ['Lễ cưới', 'rose'],
+    ]);
+    expect(r.hasNone).toBe(false);
+    expect(legendOccasions([...list, appt({ id: '5', ...T })]).hasNone).toBe(true);
+    expect(legendOccasions([])).toEqual({ occasions: [], hasNone: false });
+  });
+
+  it('thanh "Thợ trong ngày" mang sự kiện của ca để tô màu theo công tắc', () => {
+    const a = appt({ id: 'a', occasion: AN_HOI, staff: [staffOf('m-1')], ...T });
+    const load = dayLoad([a], 'm-1', dayKeyOf(T.startsAt));
+    expect(load.bars[0]?.occasion).toEqual(AN_HOI);
   });
 });

@@ -62,6 +62,7 @@ function a(id: string, code: string, start: string, end: string, staff: string[]
     longitude: null,
     notes: null,
     cancelReason: null,
+    occasion: null,
     staff: staff.map((m, i) => ({
       membershipId: m,
       fullName: STAFF.find((s) => s.membershipId === m)?.fullName ?? m,

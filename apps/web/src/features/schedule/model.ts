@@ -1,5 +1,5 @@
 // Logic thuần của màn Lịch (không React): chế độ xem, hàng thợ, xếp ca vào ô, xếp làn cho ca chồng giờ, trùng lịch 409.
-import { isBlockingStatus, STATUS_TRANSITIONS, type Permission, type WorkStatus } from '@makeup/shared';
+import { isBlockingStatus, isOccasionColor, OCCASION_COLORS, STATUS_TRANSITIONS, type Permission, type WorkStatus } from '@makeup/shared';
 import { ApiError } from '../../api/errors';
 import type { Appointment, AppointmentConflict, StaffMember } from '../../api/types';
 import { staffShortNames, type StaffRosterEntry } from '../../ui/staffName';
@@ -23,7 +23,9 @@ export const MODE_OPTIONS: readonly { value: ScheduleMode; label: string; short:
 // schedule.css khối ".ws-sw-*" (giá trị màu); mọi chỗ tô màu theo nhân vật trên màn Lịch đi qua swatchOf.
 // 12 màu (việc tồn 3): 6 màu đầu GIỮ NGUYÊN (người dùng đã quen), 6 màu thêm cho nhân vật tổ chức tự thêm — đã đo
 // ΔE2000 từng cặp ≥ 14 và độ tương phản chữ ≥ 4,5 trên nền nhạt của chính màu và trên nền trắng (subjectColors.test.ts).
-export const SWATCHES = ['rose', 'violet', 'amber', 'green', 'blue', 'taupe', 'brick', 'petrol', 'olive', 'plum', 'forest', 'brown'] as const;
+// Bản vẽ D 3.5: 12 tên màu có MỘT nguồn là OCCASION_COLORS (packages/shared/src/occasions.ts, cùng danh sách CHECK
+// occasions_color của database) — màu loại sự kiện và màu nhân vật dùng chung một bảng .ws-sw-* ở schedule.css.
+export const SWATCHES = OCCASION_COLORS;
 export type Swatch = (typeof SWATCHES)[number] | 'other';
 export const OTHER_SUBJECT_LABEL = 'Khác';
 
@@ -96,6 +98,69 @@ export function swatchOf(subjectName: string | null | undefined, orgSubjects: re
   const fixed = FIXED_SWATCH[key];
   if (fixed) return fixed;
   return subjectSwatches(orgSubjects).get(key) ?? SWATCHES[hashIndex(key)] ?? 'other';
+}
+
+// ---------------- Công tắc "Tô màu" (bản vẽ D 3.5) ----------------
+// 'subject' = theo nhân vật (màu đang chạy từ trước, MẶC ĐỊNH — ký duyệt D mục 7 câu 2); 'occasion' = theo loại sự kiện của
+// dòng hợp đồng. KHÔNG nhớ lựa chọn (không đọc/ghi localStorage), giống chế độ xem (DEFAULT_MODE): mỗi lần mở màn là 'subject'.
+export type ColorBy = 'subject' | 'occasion';
+export const DEFAULT_COLOR_BY: ColorBy = 'subject';
+export const COLOR_BY_OPTIONS: readonly { value: ColorBy; label: string }[] = [
+  { value: 'occasion', label: 'Sự kiện' },
+  { value: 'subject', label: 'Nhân vật' },
+];
+export const COLOR_BY_TIP = 'Đổi cách tô màu ca: theo loại sự kiện của dòng hợp đồng, hoặc theo nhân vật';
+export const NO_OCCASION_LABEL = 'Chưa chọn sự kiện';
+
+/**
+ * Màu theo SỰ KIỆN: màu của loại (shared OCCASION_COLORS). Ca không gắn sự kiện (ca lẻ, dòng chưa chọn, buổi học) → 'other'
+ * = nền trắng có viền, màu trung tính riêng — KHÔNG BAO GIỜ lấy màu đầu danh sách. Tên màu lạ (máy chủ gửi màu ngoài 12 tên) → 'other'.
+ */
+export function occasionSwatch(a: Pick<Appointment, 'occasion'>): Swatch {
+  const color = a.occasion?.color;
+  return isOccasionColor(color) ? color : 'other';
+}
+
+// MỘT cửa chọn màu ca cho mọi chế độ lịch (lưới C, C điện thoại, B, A, thanh "Thợ trong ngày"): theo công tắc.
+// swatchOf (nhân vật) giữ nguyên chữ ký và kết quả cũ — công tắc ở "Nhân vật" cho đúng màu hôm nay.
+export function apptSwatch(a: Pick<Appointment, 'subjectName' | 'occasion'>, colorBy: ColorBy, orgSubjects: readonly string[] = []): Swatch {
+  return colorBy === 'occasion' ? occasionSwatch(a) : swatchOf(a.subjectName, orgSubjects);
+}
+
+/** "Lễ cưới · Cô dâu": tên sự kiện (bản chụp trên dòng) · nhân vật (không có nhân vật thì tên ca). null khi ca chưa có sự kiện. */
+export function occasionTitle(a: Pick<Appointment, 'occasion' | 'subjectName' | 'title' | 'kind'>): string | null {
+  if (!a.occasion) return null;
+  const who = a.subjectName?.trim() || kindLabel(a);
+  return `${a.occasion.name} · ${who}`;
+}
+
+/** Tên loại ca (không kèm "× n") theo công tắc: Sự kiện + ca có sự kiện → "Lễ cưới · Cô dâu"; còn lại → `fallback` (chữ hôm nay, giữ nguyên). */
+export function kindLabelBy(a: Pick<Appointment, 'occasion' | 'subjectName' | 'title' | 'kind'>, colorBy: ColorBy, fallback: string = kindLabel(a)): string {
+  return colorBy === 'occasion' ? (occasionTitle(a) ?? fallback) : fallback;
+}
+
+/** Như kindText (kèm "× n") nhưng đổi tên loại theo công tắc. Tô theo Nhân vật → đúng kindText cũ. */
+export function kindTextBy(a: Pick<Appointment, 'occasion' | 'subjectName' | 'title' | 'kind' | 'quantity'>, colorBy: ColorBy): string {
+  if (colorBy !== 'occasion') return kindText(a);
+  const qty = quantityText(a);
+  const t = kindLabelBy(a, colorBy);
+  return qty ? `${t} ${qty}` : t;
+}
+
+// Chú thích khi tô theo Sự kiện: các loại sự kiện CÓ ca trong khoảng xem (theo tên), và có ca chưa chọn sự kiện hay không.
+// Buổi học (sinh từ lớp) có màu riêng "Buổi học", không tính vào "Chưa chọn sự kiện".
+export function legendOccasions(appointments: readonly Pick<Appointment, 'occasion' | 'kind'>[]): {
+  occasions: { id: string; name: string; swatch: Swatch }[];
+  hasNone: boolean;
+} {
+  const byId = new Map<string, { id: string; name: string; swatch: Swatch }>();
+  let hasNone = false;
+  for (const a of appointments) {
+    if (isCourseSession(a)) continue;
+    if (!a.occasion) hasNone = true;
+    else if (!byId.has(a.occasion.id)) byId.set(a.occasion.id, { id: a.occasion.id, name: a.occasion.name, swatch: occasionSwatch(a) });
+  }
+  return { occasions: [...byId.values()].sort((x, y) => x.name.localeCompare(y.name, 'vi')), hasNone };
 }
 
 // Chú thích màu: các nhân vật thật có trong tuần (theo thứ tự danh sách của tổ chức, rồi theo tên), cuối cùng là "Khác".
@@ -522,7 +587,7 @@ export const TRANSITION_LABELS: Record<WorkStatus, string> = {
 export interface DayLoad {
   count: number;
   minutes: number;
-  bars: { id: string; startMin: number; endMin: number; subjectName: string | null; blocking: boolean; course: boolean }[];
+  bars: { id: string; startMin: number; endMin: number; subjectName: string | null; occasion: Appointment['occasion']; blocking: boolean; course: boolean }[];
 }
 
 export function dayLoad(appointments: readonly Appointment[], laneId: string, day: DayKey): DayLoad {
@@ -537,7 +602,7 @@ export function dayLoad(appointments: readonly Appointment[], laneId: string, da
     const workEnd = Math.min(24 * 60, minutesFromDayStart(a.endsAt, day));
     // "N ca" và số giờ chỉ tính ca còn hiệu lực; ca không còn hiệu lực (huỷ, nháp, không đến) vẫn có thanh (mờ) nhưng không cộng.
     if (isLive(a)) minutes += Math.max(0, workEnd - workStart);
-    bars.push({ id: a.id, startMin: start, endMin: end, subjectName: a.subjectName, blocking: s ? s.isBlocking : isBlocking(a), course: isCourseSession(a) });
+    bars.push({ id: a.id, startMin: start, endMin: end, subjectName: a.subjectName, occasion: a.occasion, blocking: s ? s.isBlocking : isBlocking(a), course: isCourseSession(a) });
   }
   return { count: countLive(mine), minutes, bars };
 }
