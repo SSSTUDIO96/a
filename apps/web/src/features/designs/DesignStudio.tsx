@@ -48,6 +48,11 @@ const FONT_OPTIONS = [
   { value: 'ky-2', label: 'Chữ ký 2' },
   { value: 'ky-3', label: 'Chữ ký 3' },
   { value: 'ky-4', label: 'Chữ ký 4' },
+  { value: 'ky-5', label: 'Chữ ký 5 · MonteCarlo' },
+  { value: 'ky-6', label: 'Chữ ký 6 · Ephesis' },
+  { value: 'ky-7', label: 'Chữ ký 7 · WindSong' },
+  // Thư pháp nét thanh-đậm: thuộc nhóm chữ viết tay, không phải chữ ký nét mảnh đều.
+  { value: 'ky-8', label: 'Chữ viết tay · Pinyon Script' },
 ];
 type Step = 'idle' | 'save' | 'draw' | 'upload';
 const STEP_LABEL: Record<Step, string> = { idle: '', save: 'Đang lưu thẻ…', draw: 'Đang vẽ ảnh…', upload: 'Đang tải ảnh lên…' };

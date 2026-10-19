@@ -1,0 +1,96 @@
+/* =====================================================================
+   PHÔNG NHÓM A TỪ KHO SS-ALBUM CỦA ANH CHIẾN (19/10/2026)
+   Tất cả là phông tệp tự ghi giấy phép mở (SIL OFL 1.1; riêng Roboto Slab là Apache 2.0),
+   đủ 186/186 ký tự tiếng Việt, không cấm nhúng (fsType = 0). Đã chuyển sang WOFF2 (không sửa hình chữ).
+   Giấy phép từng họ: <thư mục họ>/OFL.txt (hoặc LICENSE.txt). Bảng kê cho chủ studio: docs/GHI-CHEP-MON-CUA-NGUOI-KHAC.md.
+   Tệp này được phong.css nạp bằng @import — mọi mẫu đã nạp phong.css thì có sẵn các phông dưới đây.
+
+   Tên family: 'SSA <Tên họ>' (dùng cho phông tiêu đề/chữ thường).
+   NHÓM CHỮ KÝ nét mảnh đều ('MP Chữ ký 5..7') = lựa chọn "Chữ ký 5..7" trên màn Mẫu thiết kế (?ky=5..7):
+     5 MonteCarlo · 6 Ephesis · 7 WindSong.
+   NHÓM CHỮ VIẾT TAY (thư pháp, nét thanh-đậm, KHÔNG phải nét đều): 'MP Chữ ký 8' = Pinyon Script (?ky=8).
+   Hệ số cỡ --ky-co-N chỉnh theo độ rộng/cao chữ của từng phông (mặc định 1).
+   ===================================================================== */
+
+/* ---- Chữ ký / chữ viết tay: tên MP Chữ ký N (dùng cho ?ky=N) ---- */
+@font-face{font-family:'MP Chữ ký 5';src:url(montecarlo/MonteCarlo-Regular.woff2) format('woff2');font-weight:100 900;font-display:block}
+@font-face{font-family:'MP Chữ ký 6';src:url(ephesis/Ephesis-Regular.woff2) format('woff2');font-weight:100 900;font-display:block}
+@font-face{font-family:'MP Chữ ký 7';src:url(windsong/WindSong-Regular.woff2) format('woff2');font-weight:100 900;font-display:block}
+@font-face{font-family:'MP Chữ ký 8';src:url(pinyon-script/PinyonScript-Regular.woff2) format('woff2');font-weight:100 900;font-display:block}
+
+/* ---- Toàn bộ phông nhóm A: tên SSA <Họ> ---- */
+/* Alegreya Sans SC · SIL OFL 1.1 · alegreya-sans-sc/ */
+@font-face{font-family:'SSA Alegreya Sans SC';src:url(alegreya-sans-sc/AlegreyaSansSC-Light.woff2) format('woff2');font-weight:300;font-display:block}
+/* Alex Brush · SIL OFL 1.1 · alex-brush/ */
+@font-face{font-family:'SSA Alex Brush';src:url(alex-brush/AlexBrush-Regular.woff2) format('woff2');font-weight:400;font-display:block}
+/* Alfa Slab One · SIL OFL 1.1 · alfa-slab-one/ */
+@font-face{font-family:'SSA Alfa Slab One';src:url(alfa-slab-one/AlfaSlabOne-Regular.woff2) format('woff2');font-weight:400;font-display:block}
+/* Be Vietnam Pro · SIL OFL 1.1 · be-vietnam-pro/ */
+@font-face{font-family:'SSA Be Vietnam Pro';src:url(be-vietnam-pro/BeVietnamPro-Light.woff2) format('woff2');font-weight:300;font-display:block}
+@font-face{font-family:'SSA Be Vietnam Pro';src:url(be-vietnam-pro/BeVietnamPro-Regular.woff2) format('woff2');font-weight:400;font-display:block}
+@font-face{font-family:'SSA Be Vietnam Pro';src:url(be-vietnam-pro/BeVietnamPro-Medium.woff2) format('woff2');font-weight:500;font-display:block}
+@font-face{font-family:'SSA Be Vietnam Pro';src:url(be-vietnam-pro/BeVietnamPro-SemiBold.woff2) format('woff2');font-weight:600;font-display:block}
+@font-face{font-family:'SSA Be Vietnam Pro';src:url(be-vietnam-pro/BeVietnamPro-Bold.woff2) format('woff2');font-weight:700;font-display:block}
+@font-face{font-family:'SSA Be Vietnam Pro';src:url(be-vietnam-pro/BeVietnamPro-ExtraBold.woff2) format('woff2');font-weight:800;font-display:block}
+/* Bungee Inline · SIL OFL 1.1 · bungee-inline/ */
+@font-face{font-family:'SSA Bungee Inline';src:url(bungee-inline/BungeeInline-Regular.woff2) format('woff2');font-weight:400;font-display:block}
+/* Dancing Script · SIL OFL 1.1 · dancing-script/ */
+@font-face{font-family:'SSA Dancing Script';src:url(dancing-script/DancingScript-VF.woff2) format('woff2');font-weight:400 700;font-display:block}
+/* Darker Grotesque · SIL OFL 1.1 · darker-grotesque/ */
+@font-face{font-family:'SSA Darker Grotesque';src:url(darker-grotesque/DarkerGrotesque-VF.woff2) format('woff2');font-weight:300 900;font-display:block}
+/* Ephesis · SIL OFL 1.1 · ephesis/ */
+@font-face{font-family:'SSA Ephesis';src:url(ephesis/Ephesis-Regular.woff2) format('woff2');font-weight:400;font-display:block}
+/* Great Vibes · SIL OFL 1.1 · great-vibes/ */
+@font-face{font-family:'SSA Great Vibes';src:url(great-vibes/GreatVibes-Regular.woff2) format('woff2');font-weight:400;font-display:block}
+/* Inter · SIL OFL 1.1 · inter/ */
+@font-face{font-family:'SSA Inter';src:url(inter/Inter-VF.woff2) format('woff2');font-weight:100 900;font-display:block}
+/* JetBrains Mono · SIL OFL 1.1 · jetbrains-mono/ */
+@font-face{font-family:'SSA JetBrains Mono';src:url(jetbrains-mono/JetBrainsMono-VF.woff2) format('woff2');font-weight:100 800;font-display:block}
+/* Josefin Sans · SIL OFL 1.1 · josefin-sans/ */
+@font-face{font-family:'SSA Josefin Sans';src:url(josefin-sans/JosefinSans-VF.woff2) format('woff2');font-weight:100 700;font-display:block}
+/* Lora · SIL OFL 1.1 · lora/ */
+@font-face{font-family:'SSA Lora';src:url(lora/Lora-VF.woff2) format('woff2');font-weight:400 700;font-display:block}
+@font-face{font-family:'SSA Lora';src:url(lora/Lora-Italic-VF.woff2) format('woff2');font-weight:400 700;font-style:italic;font-display:block}
+/* MonteCarlo · SIL OFL 1.1 · montecarlo/ */
+@font-face{font-family:'SSA MonteCarlo';src:url(montecarlo/MonteCarlo-Regular.woff2) format('woff2');font-weight:400;font-display:block}
+/* Montserrat · SIL OFL 1.1 · montserrat/ */
+@font-face{font-family:'SSA Montserrat';src:url(montserrat/Montserrat-LightItalic.woff2) format('woff2');font-weight:300;font-style:italic;font-display:block}
+@font-face{font-family:'SSA Montserrat';src:url(montserrat/Montserrat-Italic.woff2) format('woff2');font-weight:400;font-style:italic;font-display:block}
+@font-face{font-family:'SSA Montserrat';src:url(montserrat/Montserrat-MediumItalic.woff2) format('woff2');font-weight:500;font-style:italic;font-display:block}
+@font-face{font-family:'SSA Montserrat';src:url(../Montserrat-VF.ttf) format('truetype');font-weight:100 900;font-display:block}  /* chữ đứng: dùng lại tệp đã có sẵn trong app (giống byte với tệp trong kho) */
+/* Noto Serif Display · SIL OFL 1.1 · noto-serif-display/ */
+@font-face{font-family:'SSA Noto Serif Display';src:url(noto-serif-display/NotoSerifDisplay-VF.woff2) format('woff2');font-weight:100 900;font-stretch:62.5% 100%;font-display:block}
+/* Nunito · SIL OFL 1.1 · nunito/ */
+@font-face{font-family:'SSA Nunito';src:url(nunito/Nunito-VF.woff2) format('woff2');font-weight:200 1000;font-display:block}
+/* Oswald · SIL OFL 1.1 · oswald/ */
+@font-face{font-family:'SSA Oswald';src:url(oswald/Oswald-VF.woff2) format('woff2');font-weight:200 700;font-display:block}
+/* Pacifico · SIL OFL 1.1 · pacifico/ */
+@font-face{font-family:'SSA Pacifico';src:url(pacifico/Pacifico-Regular.woff2) format('woff2');font-weight:400;font-display:block}
+/* Philosopher · SIL OFL 1.1 · philosopher/ */
+@font-face{font-family:'SSA Philosopher';src:url(philosopher/Philosopher-Regular.woff2) format('woff2');font-weight:400;font-display:block}
+@font-face{font-family:'SSA Philosopher';src:url(philosopher/Philosopher-Italic.woff2) format('woff2');font-weight:400;font-style:italic;font-display:block}
+/* Pinyon Script · SIL OFL 1.1 · pinyon-script/ */
+@font-face{font-family:'SSA Pinyon Script';src:url(pinyon-script/PinyonScript-Regular.woff2) format('woff2');font-weight:400;font-display:block}
+/* Prata · SIL OFL 1.1 · prata/ */
+@font-face{font-family:'SSA Prata';src:url(prata/Prata-Regular.woff2) format('woff2');font-weight:400;font-display:block}
+/* Roboto Slab · Apache 2.0 · roboto-slab/ */
+@font-face{font-family:'SSA Roboto Slab';src:url(roboto-slab/RobotoSlab-VF.woff2) format('woff2');font-weight:100 900;font-display:block}
+/* SVN-Abril Fatface · SIL OFL 1.1 · svn-abril-fatface/ */
+@font-face{font-family:'SSA SVN-Abril Fatface';src:url(svn-abril-fatface/SVN-AbrilFatface.woff2) format('woff2');font-weight:400;font-display:block}
+/* SVN-Bebas Neue · SIL OFL 1.1 · svn-bebas-neue/ */
+@font-face{font-family:'SSA SVN-Bebas Neue';src:url(svn-bebas-neue/SVN-Bebas-Neue-Bold.woff2) format('woff2');font-weight:700;font-display:block}
+/* WindSong · SIL OFL 1.1 · windsong/ */
+@font-face{font-family:'SSA WindSong';src:url(windsong/WindSong-Regular.woff2) format('woff2');font-weight:400;font-display:block}
+@font-face{font-family:'SSA WindSong';src:url(windsong/WindSong-Medium.woff2) format('woff2');font-weight:500;font-display:block}
+/* Hai họ đã có sẵn trong app (tệp giống byte với kho) — đặt thêm tên SSA để dùng thống nhất, không chép lại tệp */
+@font-face{font-family:'SSA Cormorant Garamond';src:url(../CormorantGaramond-VF.ttf) format('truetype');font-weight:300 700;font-display:block}
+@font-face{font-family:'SSA Cormorant Garamond';src:url(../CormorantGaramond-Italic-VF.ttf) format('truetype');font-weight:300 700;font-style:italic;font-display:block}
+@font-face{font-family:'SSA Playfair Display';src:url(../PlayfairDisplay-VF.ttf) format('truetype');font-weight:400 900;font-display:block}
+@font-face{font-family:'SSA Playfair Display';src:url(../PlayfairDisplay-Italic-VF.ttf) format('truetype');font-weight:400 900;font-style:italic;font-display:block}
+
+:root{
+  --f-ky-5:'MP Chữ ký 5',cursive; --ky-co-5:1;  /* MonteCarlo */
+  --f-ky-6:'MP Chữ ký 6',cursive; --ky-co-6:1;  /* Ephesis */
+  --f-ky-7:'MP Chữ ký 7',cursive; --ky-co-7:1;  /* WindSong */
+  --f-ky-8:'MP Chữ ký 8',cursive; --ky-co-8:1;  /* Pinyon Script */
+}

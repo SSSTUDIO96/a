@@ -55,7 +55,9 @@ export const PHOTO_SLOTS = ['a1', 'a2', 'a3'] as const satisfies readonly SlotKe
 export const DESIGN_SIZES = ['1080x1350', '1080x1080'] as const;
 export type DesignSize = (typeof DESIGN_SIZES)[number];
 // DesignCard.fontOverride: thay mọi phông viết tay của mẫu bằng chữ ký N (tham số ?ky=N của tệp vẽ).
-export const FONT_OVERRIDES = ['ky-1', 'ky-2', 'ky-3', 'ky-4'] as const;
+// 1-4: phông tạm của R&D; 5 MonteCarlo · 6 Ephesis · 7 WindSong (chữ ký nét mảnh đều, kho SS-Album, OFL 1.1);
+// 8 Pinyon Script (nhóm CHỮ VIẾT TAY thư pháp nét thanh-đậm, không phải nét đều). Khai ở public/mau/phong/ss-album/ss-album.css.
+export const FONT_OVERRIDES = ['ky-1', 'ky-2', 'ky-3', 'ky-4', 'ky-5', 'ky-6', 'ky-7', 'ky-8'] as const;
 export type FontOverride = (typeof FONT_OVERRIDES)[number];
 export const MAX_DESIGN_PHOTOS = 3;
 export const FRAME_SHAPES = ['circle', 'pill'] as const;
