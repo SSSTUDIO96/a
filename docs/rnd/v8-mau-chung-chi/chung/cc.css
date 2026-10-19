@@ -1,5 +1,6 @@
-/* Khung chung cho 10 mẫu chứng nhận tốt nghiệp — A4 ngang (297×210 mm). R&D 08.
-   Mỗi <section class="cc"> = 1 trang in. Bố cục bên trong vẽ theo px trên khung 1122×794 (A4 ở 96 dpi). */
+/* Khung chung cho 15 mẫu giấy chứng nhận — A4 ngang (297×210 mm). R&D 08, bản 2.
+   Mỗi <section class="cc"> = 1 trang in. Bố cục bên trong vẽ theo px trên khung 1123×794 (A4 ở 96 dpi).
+   Tiêu đề và tên học viên là chữ SVG (.sv) do cc.js vẽ — chữ vàng nổi khối 3D vẽ bằng <text> + dải màu, KHÔNG dùng background-clip:text. */
 @import url('../phong/phong.css');
 @page { size: A4 landscape; margin: 0; }
 *{box-sizing:border-box;margin:0;padding:0}
@@ -7,6 +8,8 @@ html,body{background:#E9E5E1}
 body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 :root{
   --f-ten:var(--f-ky-1); --ten-co:var(--ky-co-1);
+  /* Phông tiêu đề: đổi ở MỘT chỗ này (hoặc thử bằng ?ph=1..5 trên đường dẫn) */
+  --f-tt:'MP Tiêu đề 2',serif; --w-tt:400; --ls-tt:.05em;
   --vang:linear-gradient(115deg,#8A6420 0%,#E9CF86 22%,#B88A35 45%,#F3DE9C 70%,#9C7428 100%);
   --vang-dam:#8A6420;
 }
@@ -16,19 +19,21 @@ body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 @media screen{ .cc + .cc{margin-top:24px} body.xem{padding:24px 0} }
 @media print{ html,body{background:none} }
 .cc > *{position:absolute}
-.vang-chu{background:var(--vang);-webkit-background-clip:text;background-clip:text;color:transparent}
-.vang-chu.toi{background:linear-gradient(115deg,#6E4A12 0%,#A57A2A 35%,#7A5418 60%,#9C7428 100%);-webkit-background-clip:text;background-clip:text}
-/* Vàng sáng cho chữ trên nền tối (dải màu tối nhất #B88A35 vẫn ≥ 3:1 trên nền đen) */
-.vang-chu.sang{background:linear-gradient(115deg,#B88A35 0%,#F3DE9C 30%,#C9A961 55%,#F7E7B4 80%,#B88A35 100%);-webkit-background-clip:text;background-clip:text}
-.ten{font-family:var(--f-ten);font-weight:400;white-space:nowrap;overflow:hidden;line-height:1.35;padding:0 .12em}
+/* Ô chữ SVG: tiêu đề (.tt) và tên học viên (.ten). cc.js vẽ <svg> vào trong, vừa khít khung. */
+.sv{overflow:visible}
+.sv svg{display:block;position:absolute;left:0;top:0;overflow:visible}
+.tt{font-family:var(--f-tt);font-weight:var(--w-tt);letter-spacing:var(--ls-tt);text-transform:uppercase;white-space:nowrap;line-height:1}
+.tt.viet{font-family:'MP Tiêu đề viết tay',cursive;font-weight:400;letter-spacing:0;text-transform:none}
+.ten{font-family:var(--f-ten);font-weight:400;white-space:nowrap;line-height:1}
 .caps{font-family:var(--f-sans);text-transform:uppercase;letter-spacing:.22em;font-weight:600}
-/* Ô ảnh học viên — khung tròn mặc định (luật 19/10/2026: "Mẫu nào cũng phải có ảnh", "khung ảnh mặc định để hình tròn") */
-.anh{border-radius:50%;overflow:hidden;background:#E9D6CC}
+/* Ô ảnh học viên — khung tròn mặc định (luật 19/10/2026), làm NHỎ (đường kính ≈ 26–30 mm khi in) để không tranh chỗ với huy hiệu và tên. */
+.anh{border-radius:50%;overflow:hidden;background:#E9D6CC;container-type:size}
 .anh img{width:100%;height:100%;object-fit:cover;display:block}
 .anh.chua-anh{display:grid;place-items:center}
 .anh.chua-anh img{display:none}
-.anh.chua-anh::after{content:attr(data-chu);font-family:var(--f-chan2);font-weight:600;font-size:46px;letter-spacing:.04em;color:#8A6420}
-.huy svg{width:100%;height:auto;display:block}
+.anh.chua-anh::after{content:attr(data-chu);font-family:var(--f-chan2);font-weight:600;font-size:34px;font-size:38cqw;letter-spacing:.04em;color:#8A6420}
+.khong-anh .anh{display:none}
+.huy svg{width:100%;height:auto;display:block;overflow:visible}
 .o-logo img{width:100%;height:100%;object-fit:contain;display:block}
 /* Hai chỗ ký */
 .ky{display:flex;flex-direction:column;align-items:center;text-align:center}
@@ -37,9 +42,12 @@ body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .ky .nm{font-family:var(--f-chan);font-size:17px;font-weight:600;margin-top:2px}
 .meta{font-family:var(--f-sans);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;font-weight:500}
 .meta b{font-weight:700;letter-spacing:.08em}
+.thg{font-family:var(--f-sans);font-weight:700;font-size:12px;letter-spacing:.2em;text-transform:uppercase;white-space:nowrap}
+.dong{font-family:var(--f-chan);font-size:24px;font-style:italic;font-weight:500;white-space:nowrap}
+.ngay{font-family:var(--f-chan);font-size:18px;font-style:italic}
+.tag{font-family:var(--f-sans);font-size:12px;letter-spacing:.26em;font-weight:600;text-transform:uppercase;white-space:nowrap}
+.c{text-align:center}
 
 /* Logo đặt trên nền tối: lót đế tròn sáng để logo màu nào cũng đọc được (logo là tệp trung tâm tải lên, không đổi màu được). */
-.o-logo.de-sang{background:#FFF9F0;border-radius:50%;padding:5px}
+.o-logo.de-sang{background:#FFF9F0;border-radius:50%;padding:4px}
 .xuat .cc{margin:0;width:1123px;height:794px}
-/* Khi IN (hộp in của trình duyệt / PDF vector): chữ vàng tô dải màu đổi sang màu đặc — vài trình xem PDF và máy in vẽ chữ tô dải màu thành ô chữ nhật. */
-@media print{ .vang-chu{background:none!important;color:#C9A961!important} .vang-chu.toi{color:#8A6420!important} .vang-chu.sang{color:#E2C47A!important} }

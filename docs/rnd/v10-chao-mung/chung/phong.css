@@ -1,0 +1,20 @@
+/* Phông cho 10 mẫu chào mừng R&D-10. Phông chữ ký nét mảnh: MonteCarlo, Ephesis, WindSong — cả ba SIL OFL 1.1 (văn bản giấy phép
+   cạnh tệp phông: phong/OFL-*.txt), đủ dấu tiếng Việt (đã kiểm bảng ký tự: Ă Â Ê Ô Ơ Ư Đ + 5 dấu thanh, kể cả Ặ Ỡ Ữ Ề).
+   Giữ nguyên TÊN family như bộ R&D trước ('MP Viết tay N') để chung/mau.js nạp phông đúng; ở thư mục này:
+     MP Viết tay 1 = MonteCarlo · MP Viết tay 2 = Ephesis · MP Viết tay 3 = WindSong · MP Viết tay 4 = WindSong Medium */
+@font-face{font-family:'MP Viết tay 1';src:url(phong/MonteCarlo-Regular.ttf) format('truetype');font-display:block}
+@font-face{font-family:'MP Viết tay 2';src:url(phong/Ephesis-Regular.ttf) format('truetype');font-display:block}
+@font-face{font-family:'MP Viết tay 3';src:url(phong/WindSong-Regular.ttf) format('truetype');font-display:block}
+@font-face{font-family:'MP Viết tay 4';src:url(phong/WindSong-Medium.ttf) format('truetype');font-display:block}
+@font-face{font-family:'MP Chữ có chân';src:url(phong/CormorantGaramond-VF.ttf) format('truetype');font-weight:300 700;font-display:block}
+@font-face{font-family:'MP Chữ có chân';src:url(phong/CormorantGaramond-Italic-VF.ttf) format('truetype');font-weight:300 700;font-style:italic;font-display:block}
+@font-face{font-family:'MP Chữ đậm có chân';src:url(phong/PlayfairDisplay-VF.ttf) format('truetype');font-weight:400 900;font-display:block}
+@font-face{font-family:'MP Chữ đậm có chân';src:url(phong/PlayfairDisplay-Italic-VF.ttf) format('truetype');font-weight:400 900;font-style:italic;font-display:block}
+@font-face{font-family:'MP Chữ không chân';src:url(phong/Montserrat-VF.ttf) format('truetype');font-weight:100 900;font-display:block}
+:root{
+  --f-tay-1:'MP Viết tay 1',cursive; --tay-co-1:1;
+  --f-tay-2:'MP Viết tay 2',cursive; --tay-co-2:1;
+  --f-tay-3:'MP Viết tay 3',cursive; --tay-co-3:1;
+  --f-tay-4:'MP Viết tay 4',cursive; --tay-co-4:1;
+  --f-chan:'MP Chữ có chân',serif; --f-chan2:'MP Chữ đậm có chân',serif; --f-sans:'MP Chữ không chân',sans-serif;
+}

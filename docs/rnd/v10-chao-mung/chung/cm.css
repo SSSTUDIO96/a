@@ -1,0 +1,11 @@
+/* Khung chung cho 10 mẫu chào mừng R&D-10 */
+#c{font-family:var(--f-chan)}
+.w{position:absolute;display:flex;flex-direction:column;align-items:center;text-align:center}
+.w img.lg{flex:none;object-fit:contain}
+.vang{display:block;width:100%}.vang svg{display:block;overflow:visible;margin:0 auto}
+.ten{font-family:var(--f-tay-1);line-height:1.2;width:100%;padding:0 6px}
+.seat{display:flex;align-items:center;justify-content:center}
+.khong-seat .seat{display:none!important}
+[data-fit]{flex-shrink:0;text-wrap:balance}
+.av{flex:none;overflow:hidden;border-radius:50%}
+.av img{width:100%;height:100%;object-fit:cover;object-position:50% 38%}
