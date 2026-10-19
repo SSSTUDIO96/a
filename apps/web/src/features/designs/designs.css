@@ -136,8 +136,8 @@
   .mtk-grid__scope { flex-direction: row; }
   .mtk-grid__list { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
   .mtk-thumb__code { display: none; }
-  /* Điện thoại: nút tải dính đáy, trên thanh dưới (64px). */
-  .mtk-export { position: sticky; bottom: 72px; padding: 8px 0; background: linear-gradient(transparent, var(--bg) 30%); }
+  /* Điện thoại: nút tải dính đáy, trên thanh dưới (var(--h-bottomnav)) + 8px đệm. */
+  .mtk-export { position: sticky; bottom: calc(var(--h-bottomnav) + 8px); padding: 8px 0; background: linear-gradient(transparent, var(--bg) 30%); }
   .mtk-phr__row { flex-direction: column; }
 }
 

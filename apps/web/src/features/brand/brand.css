@@ -106,7 +106,7 @@
 }
 
 @media (max-width: 640px) {
-  .br-page { padding-bottom: 72px; }
+  .br-page { padding-bottom: calc(var(--h-bottomnav) + 8px); }
   .br-pub { padding: 12px 14px; gap: 8px 12px; }
   .br-pub__url { flex-basis: 100%; order: 2; }
   .br-pub__actions { order: 3; }

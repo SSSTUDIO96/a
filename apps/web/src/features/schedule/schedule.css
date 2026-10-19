@@ -403,7 +403,7 @@
   .ws-item__who { grid-column: 2; font-size: 12.5px; }
   .ws-item__tm { font-size: 13.5px; }
   .ws-task { padding: 10px 12px; }
-  .ws-a { border: 1px solid var(--line); border-radius: var(--r-card); background: var(--surface); max-height: calc(100vh - 54px - 64px - 120px); }
+  .ws-a { border: 1px solid var(--line); border-radius: var(--r-card); background: var(--surface); max-height: calc(100vh - 54px - var(--h-bottomnav) - 120px); }
   .ws-a__in { --ws-axis: 44px; }
   .ws-a__colh { padding: 8px; }
   .ws-info__row { grid-template-columns: 96px minmax(0, 1fr); }

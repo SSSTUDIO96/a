@@ -12,7 +12,7 @@ export interface StickyTotalBarProps {
   pending?: boolean;
   /** Nút bên phải, ví dụ [Lưu nháp] [Xác nhận hợp đồng]. Thêm class "ui-total__hide-phone" để ẩn trên điện thoại. */
   actions?: ReactNode;
-  /** sticky (mặc định): dính đáy; điện thoại thì tràn mép, nằm trên thanh dưới (bottom: 64px). static: đứng yên. */
+  /** sticky (mặc định): dính đáy; điện thoại thì tràn mép, nằm trên thanh dưới (bottom: var(--h-bottomnav)). static: đứng yên. */
   position?: 'sticky' | 'static';
   className?: string;
 }

@@ -289,10 +289,10 @@
   .ct-grid > .ct-pick { display: none; }
   .ct-addm { display: flex; }
   .ct-phone-acts { display: flex; justify-content: flex-end; align-items: center; gap: 12px; }
-  .ct-page { padding-bottom: 84px; }
+  .ct-page { padding-bottom: calc(var(--h-bottomnav) + 20px); }
   .ct-page:has(.ct-totbar--note) { padding-bottom: 124px; }
   .ct-page:has(.ct-totbar__note--block) { padding-bottom: 156px; }
-  .ct-page:has(.ct-totbar__note + .ct-totbar__note) { padding-bottom: 188px; }
+  .ct-page:has(.ct-totbar__note + .ct-totbar__note) { padding-bottom: calc(var(--h-bottomnav) + 124px); }
   /* Điện thoại: thanh tổng dính trên thanh dưới, tràn mép (như StickyTotalBar sticky của ui). */
   .ct-totbar { position: fixed; left: 0; right: 0; bottom: var(--h-bottomnav); z-index: 25; margin-top: 0; }
   .ct-totbar > .ui-total { border-radius: 0; border-left: 0; border-right: 0; }
