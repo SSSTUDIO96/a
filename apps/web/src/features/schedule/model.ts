@@ -161,6 +161,30 @@ export function isBlocking(a: Pick<Appointment, 'status'>): boolean {
   return isBlockingStatus(a.status);
 }
 
+/**
+ * Ca "còn hiệu lực" — MỘT luật cho mọi chỗ ĐẾM ("N ca", "N ca/tuần", "N chưa có thợ", tải của thợ) và NHẮC ("Cần xử lý:
+ * Chưa có thợ · Phân thợ"). Lấy đúng luật chiếm giờ của máy chủ (isBlockingStatus, packages/shared/src/schedule.ts):
+ * - CANCELLED (đã huỷ): không đếm, không nhắc — việc đã bỏ, phân thợ cho nó là vô nghĩa.
+ * - NO_SHOW (khách không đến): không đếm, không nhắc — trạng thái cuối, ca đã qua, không còn ai cần phân thợ.
+ * - DRAFT (nháp): không đếm, không nhắc — nháp chưa giữ giờ của thợ (máy chủ cũng không cho nó chiếm giờ) và chưa là cam
+ *   kết với khách; đếm nháp sẽ làm "N ca" lệch với lịch thật của thợ. Nháp vẫn HIỆN trên lịch (mờ) để người soạn thấy và
+ *   chuyển tiếp.
+ * Quy tắc nhớ: ô vẽ MỜ (is-off) thì không được đếm và không được nhắc; ô vẽ rõ thì được đếm.
+ * Ca không còn hiệu lực vẫn nằm trên lưới / danh sách (mờ) — hàm này chỉ quyết định đếm và nhắc, không lọc việc hiển thị.
+ */
+export function isLive(a: Pick<Appointment, 'status'>): boolean {
+  return isBlocking(a);
+}
+
+export function countLive(appointments: readonly Pick<Appointment, 'status'>[]): number {
+  return appointments.reduce((n, a) => n + (isLive(a) ? 1 : 0), 0);
+}
+
+// Ca còn hiệu lực mà CHƯA CÓ THỢ — nguồn duy nhất cho "Cần xử lý: Chưa có thợ · Phân thợ" và "N ca chưa có thợ".
+export function needsStaff<T extends Pick<Appointment, 'status' | 'staff'>>(appointments: readonly T[]): T[] {
+  return appointments.filter((a) => isLive(a) && a.staff.length === 0);
+}
+
 // ---------------- Quyền ----------------
 export interface ScheduleAccess {
   readAll: boolean;
@@ -329,13 +353,19 @@ export function appointmentsOfDay(appointments: readonly Appointment[], day: Day
 export function countByDay(appointments: readonly Appointment[], days: readonly DayKey[]): Record<DayKey, number> {
   const out: Record<DayKey, number> = {};
   for (const d of days) out[d] = 0;
-  for (const a of appointments) for (const d of daysOf(a)) if (d in out) out[d] = (out[d] ?? 0) + 1;
+  for (const a of appointments) {
+    if (!isLive(a)) continue;
+    for (const d of daysOf(a)) if (d in out) out[d] = (out[d] ?? 0) + 1;
+  }
   return out;
 }
 
 export function countByLane(appointments: readonly Appointment[]): Map<string, number> {
   const out = new Map<string, number>();
-  for (const a of appointments) for (const lane of laneIdsOf(a)) out.set(lane, (out.get(lane) ?? 0) + 1);
+  for (const a of appointments) {
+    if (!isLive(a)) continue;
+    for (const lane of laneIdsOf(a)) out.set(lane, (out.get(lane) ?? 0) + 1);
+  }
   return out;
 }
 
@@ -388,17 +418,42 @@ export function layoutLanes(spans: readonly Span[]): Map<string, { lane: number;
   return out;
 }
 
-// Trục giờ chế độ A: mặc định 04:00–18:00 (bản vẽ); có ca ngoài khung thì nới ra cho đủ (làm tròn giờ), trong 00–24.
-export function axisHours(spans: readonly Span[], day: DayKey, base: [number, number] = [4, 18]): [number, number] {
+// Trục giờ: mặc định 04:00–18:00 (bản vẽ); có khoảng ngoài khung thì nới ra cho đủ (làm tròn giờ), tối đa 00–24.
+// `ranges` là phút tính từ 00:00 của ngày đang xem, có thể thò ra ngoài ngày (ca qua đêm, di chuyển từ hôm trước): phần ngoài
+// ngày bị cắt ở 00:00 / 24:00 — ca qua nửa đêm hiện phần thuộc ngày này ở mỗi ngày (22:00→24:00 hôm nay, 00:00→02:00 hôm sau).
+export function axisFromMinutes(ranges: readonly { start: number; end: number }[], base: [number, number] = [4, 18]): [number, number] {
   let [from, to] = base;
-  for (const s of spans) {
-    const a = Math.max(0, minutesFromDayStart(s.start, day));
-    const b = Math.min(24 * 60, minutesFromDayStart(s.end, day));
-    if (b <= 0 || a >= 24 * 60) continue;
+  for (const r of ranges) {
+    const a = Math.max(0, r.start);
+    const b = Math.min(24 * 60, r.end);
+    if (b <= 0 || a >= 24 * 60 || b <= a) continue;
     from = Math.min(from, Math.floor(a / 60));
     to = Math.max(to, Math.ceil(b / 60));
   }
   return [from, to];
+}
+
+// Trục giờ chế độ A.
+export function axisHours(spans: readonly Span[], day: DayKey, base: [number, number] = [4, 18]): [number, number] {
+  return axisFromMinutes(
+    spans.map((s) => ({ start: minutesFromDayStart(s.start, day), end: minutesFromDayStart(s.end, day) })),
+    base,
+  );
+}
+
+// Trục giờ khung "Thợ trong ngày" (chế độ B): nới theo CHÍNH các thanh sẽ vẽ (mọi hàng thợ đang hiện, kể cả ca mờ).
+export function loadAxisHours(loads: readonly DayLoad[], base: [number, number] = [4, 18]): [number, number] {
+  return axisFromMinutes(
+    loads.flatMap((l) => l.bars.map((b) => ({ start: b.startMin, end: b.endMin }))),
+    base,
+  );
+}
+
+// Mốc chữ dưới trục: bội của 4 giờ nằm trong trục + hai đầu; bỏ mốc ở giữa nếu cách đầu mút < 2 giờ (khỏi đè chữ).
+export function axisTicks(from: number, to: number): number[] {
+  const mid: number[] = [];
+  for (let h = Math.ceil(from / 4) * 4; h < to; h += 4) if (h - from >= 2 && to - h >= 2) mid.push(h);
+  return [from, ...mid, to];
 }
 
 // ---------------- Buổi trong ngày (chế độ B) ----------------
@@ -480,8 +535,9 @@ export function dayLoad(appointments: readonly Appointment[], laneId: string, da
     const end = Math.min(24 * 60, minutesFromDayStart(s?.blockEnd ?? a.endsAt, day));
     const workStart = Math.max(0, minutesFromDayStart(a.startsAt, day));
     const workEnd = Math.min(24 * 60, minutesFromDayStart(a.endsAt, day));
-    minutes += Math.max(0, workEnd - workStart);
+    // "N ca" và số giờ chỉ tính ca còn hiệu lực; ca không còn hiệu lực (huỷ, nháp, không đến) vẫn có thanh (mờ) nhưng không cộng.
+    if (isLive(a)) minutes += Math.max(0, workEnd - workStart);
     bars.push({ id: a.id, startMin: start, endMin: end, subjectName: a.subjectName, blocking: s ? s.isBlocking : isBlocking(a), course: isCourseSession(a) });
   }
-  return { count: mine.length, minutes, bars };
+  return { count: countLive(mine), minutes, bars };
 }

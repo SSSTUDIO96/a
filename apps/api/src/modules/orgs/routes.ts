@@ -16,7 +16,6 @@ export const RESERVED_SLUGS = new Set([
   'dang-nhap',
   'dang-ky',
   'tao-to-chuc',
-  'quen-mat-khau',
   'dat-lai-mat-khau',
   'api',
   'admin',

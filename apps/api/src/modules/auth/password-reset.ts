@@ -50,7 +50,7 @@ export async function revokeCredentialsAfterPasswordChange(
     data: { revokedAt: now },
   });
   const sessions = await tx.refreshToken.updateMany({
-    where: { userId, revokedAt: null, id: 'x' },
+    where: { userId, revokedAt: null },
     data: { revokedAt: now, revokeReason: 'PASSWORD_RESET' },
   });
   return { resetTokens: resetTokens.count, sessions: sessions.count };

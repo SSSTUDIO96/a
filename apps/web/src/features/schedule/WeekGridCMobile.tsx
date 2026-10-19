@@ -4,7 +4,7 @@
 import { useState, type CSSProperties } from 'react';
 import type { Appointment } from '../../api/types';
 import { StatusTag } from '../../ui';
-import { appointmentsOfDay, cellKey, countByDay, indexByCell, kindText, UNASSIGNED, whoText, type ConflictMarks, type StaffLane } from './model';
+import { appointmentsOfDay, cellKey, countByDay, countLive, indexByCell, kindText, needsStaff, UNASSIGNED, whoText, type ConflictMarks, type StaffLane } from './model';
 import { apptClasses, apptTip, cx, LaneAvatar, StaffAvatars, startLabel, useSwatchOf, laneShort, useStaffNaming } from './parts';
 import { dayKeyOf, dayNumber, ddmm, hhmm, isWeekend, weekDays, weekdayLong, weekdayShort, type DayKey } from './time';
 
@@ -43,7 +43,9 @@ export function WeekGridCMobile({
   const style = { '--ws-cols': cols.length } as CSSProperties;
 
   const dayList = appointmentsOfDay(appointments, day);
-  const unassigned = dayList.filter((a) => a.staff.length === 0).length;
+  // "N ca · M chưa có thợ" chỉ tính ca còn hiệu lực (model.isLive); danh sách bên dưới vẫn hiện cả ca đã huỷ (mờ).
+  const liveCount = countLive(dayList);
+  const unassigned = needsStaff(dayList).length;
   const expanded = expandedDay === day;
   const shown = expanded ? dayList : dayList.slice(0, MAX_LIST);
 
@@ -110,7 +112,7 @@ export function WeekGridCMobile({
             {weekdayLong(day)} {ddmm(day)}
           </b>
           <span>
-            {dayList.length} ca{unassigned > 0 ? ` · ${unassigned} chưa có thợ` : ''}
+            {liveCount} ca{unassigned > 0 ? ` · ${unassigned} chưa có thợ` : ''}
           </span>
         </div>
         {dayList.length === 0 ? (
@@ -122,7 +124,7 @@ export function WeekGridCMobile({
             ))}
             {dayList.length > MAX_LIST && (
               <button type="button" className="ws-cm-day__all" onClick={() => setExpandedDay(expanded ? null : day)}>
-                {expanded ? 'Thu gọn' : `Xem cả ngày (${dayList.length} ca)`}
+                {expanded ? 'Thu gọn' : `Xem cả ngày (${liveCount} ca)`}
               </button>
             )}
           </div>

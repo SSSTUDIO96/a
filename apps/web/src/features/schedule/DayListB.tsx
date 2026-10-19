@@ -6,13 +6,17 @@ import { Button, Chip, IconWarn, WorkStatusTag } from '../../ui';
 import { IconPerson } from './icons';
 import {
   appointmentsOfDay,
+  axisTicks,
   countByDay,
+  countLive,
   DAY_PART_LABELS,
   dayLoad,
   dayPartOf,
   kindText,
   whoText,
   laneIdsOf,
+  loadAxisHours,
+  needsStaff,
   UNASSIGNED,
   type ConflictMarks,
   type DayPart,
@@ -20,9 +24,6 @@ import {
 } from './model';
 import { apptClasses, cx, LaneAvatar, placeText, StaffAvatars, staffNames, startLabel, timeRange, useSwatchOf } from './parts';
 import { dayKeyOf, dayNumber, ddmm, formatHours, hhmm, isWeekend, weekDays, weekdayLong, weekdayShort, type DayKey } from './time';
-
-const AXIS_FROM = 4;
-const AXIS_TO = 18;
 
 export function DayListB({
   day,
@@ -53,8 +54,14 @@ export function DayListB({
   const perDay = countByDay(appointments, days);
   const all = appointmentsOfDay(appointments, day);
   const filtered = laneFilter ? all.filter((a) => laneIdsOf(a).includes(laneFilter)) : all;
-  const needStaff = all.filter((a) => a.staff.length === 0);
-  const laneCount = (id: string) => all.filter((a) => laneIdsOf(a).includes(id)).length;
+  // Mọi con số "N ca" / "chưa có thợ" / nhắc "Phân thợ" chỉ tính ca còn hiệu lực (model.isLive): ca đã huỷ, nháp, khách không
+  // đến vẫn nằm trong danh sách (mờ) nhưng không được đếm, không được nhắc.
+  const needStaff = needsStaff(all);
+  const laneCount = (id: string) => countLive(all.filter((a) => laneIdsOf(a).includes(id)));
+  // Trục giờ khung "Thợ trong ngày": 04–18 tối thiểu, nới theo giờ sớm nhất / muộn nhất của các thanh đang vẽ (tối đa 00–24).
+  const loads = lanes.map((l) => ({ lane: l, load: dayLoad(appointments, l.membershipId, day) }));
+  const [axisFrom, axisTo] = loadAxisHours(loads.map((x) => x.load));
+  const axisSpan = (axisTo - axisFrom) * 60;
   const conflictDays = new Set(appointments.filter((a) => marks.appointmentIds.has(a.id)).map((a) => dayKeyOf(a.startsAt)));
 
   const parts: DayPart[] = ['early', 'morning', 'afternoon'];
@@ -85,7 +92,7 @@ export function DayListB({
 
         {lanes.length + (showUnassigned ? 1 : 0) > 1 && (
           <div className="ws-filters" role="group" aria-label="Lọc theo thợ">
-            <Chip selected={laneFilter === null} count={all.length} onClick={() => setLaneFilter(null)}>
+            <Chip selected={laneFilter === null} count={countLive(all)} onClick={() => setLaneFilter(null)}>
               Tất cả
             </Chip>
             {lanes.map((l) => (
@@ -132,7 +139,7 @@ export function DayListB({
           grouped.map((g) => (
             <section key={g.part} className="ws-b__sec">
               <h3 className="ws-caps">
-                {DAY_PART_LABELS[g.part]} · {g.items.length} ca
+                {DAY_PART_LABELS[g.part]} · {countLive(g.items)} ca
               </h3>
               <div className="ws-agenda">
                 {g.items.map((a) => {
@@ -173,42 +180,38 @@ export function DayListB({
         <aside className="ws-load" aria-label="Thợ trong ngày">
           <h3>Thợ trong ngày</h3>
           <p className="ws-load__sub">
-            {weekdayLong(day)} {ddmm(day)} · {String(AXIS_FROM).padStart(2, '0')}:00 – {AXIS_TO}:00
+            {weekdayLong(day)} {ddmm(day)} · {String(axisFrom).padStart(2, '0')}:00 – {String(axisTo).padStart(2, '0')}:00
           </p>
-          {lanes.map((l) => {
-            const load = dayLoad(appointments, l.membershipId, day);
-            return (
-              <div key={l.membershipId} className="ws-load__row">
-                <LaneAvatar lane={l} />
-                <div className="ws-load__body">
-                  <div className="ws-load__nm">
-                    {l.name}
-                    <span>
-                      {load.count} ca · {formatHours(load.minutes)}
-                    </span>
-                  </div>
-                  <div className="ws-track" aria-hidden="true">
-                    {load.bars.map((b) => {
-                      const from = Math.max(b.startMin, AXIS_FROM * 60);
-                      const to = Math.min(b.endMin, AXIS_TO * 60);
-                      if (to <= from) return null;
-                      const span = (AXIS_TO - AXIS_FROM) * 60;
-                      return (
-                        <i
-                          key={b.id}
-                          className={cx(`ws-sw-${swatchOfName(b.subjectName)}`, !b.blocking && 'is-off', b.course && 'is-course', marks.appointmentIds.has(b.id) && 'is-x')}
-                          style={{ left: `${((from - AXIS_FROM * 60) / span) * 100}%`, width: `${((to - from) / span) * 100}%` }}
-                        />
-                      );
-                    })}
-                  </div>
+          {loads.map(({ lane: l, load }) => (
+            <div key={l.membershipId} className="ws-load__row">
+              <LaneAvatar lane={l} />
+              <div className="ws-load__body">
+                <div className="ws-load__nm">
+                  {l.name}
+                  <span>
+                    {load.count} ca · {formatHours(load.minutes)}
+                  </span>
+                </div>
+                <div className="ws-track" aria-hidden="true">
+                  {load.bars.map((b) => {
+                    const from = Math.max(b.startMin, axisFrom * 60);
+                    const to = Math.min(b.endMin, axisTo * 60);
+                    if (to <= from) return null;
+                    return (
+                      <i
+                        key={b.id}
+                        className={cx(`ws-sw-${swatchOfName(b.subjectName)}`, !b.blocking && 'is-off', b.course && 'is-course', marks.appointmentIds.has(b.id) && 'is-x')}
+                        style={{ left: `${((from - axisFrom * 60) / axisSpan) * 100}%`, width: `${((to - from) / axisSpan) * 100}%` }}
+                      />
+                    );
+                  })}
                 </div>
               </div>
-            );
-          })}
+            </div>
+          ))}
           <div className="ws-scale" aria-hidden="true">
-            {[4, 8, 12, 16, 18].map((h) => (
-              <span key={h} style={{ left: `${((h - AXIS_FROM) / (AXIS_TO - AXIS_FROM)) * 100}%` }}>
+            {axisTicks(axisFrom, axisTo).map((h) => (
+              <span key={h} style={{ left: `${((h - axisFrom) / (axisTo - axisFrom)) * 100}%` }}>
                 {h}h
               </span>
             ))}
@@ -216,7 +219,7 @@ export function DayListB({
           <div className="ws-load__sum">
             Tổng trong ngày
             <b>
-              {all.length} ca{showUnassigned ? ` · ${needStaff.length} ca chưa có thợ` : ''}
+              {countLive(all)} ca{showUnassigned ? ` · ${needStaff.length} ca chưa có thợ` : ''}
             </b>
           </div>
         </aside>
