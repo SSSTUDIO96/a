@@ -198,11 +198,13 @@ describe('cảnh báo thợ trong thẻ dòng', () => {
     expect((await confirmButton() as HTMLButtonElement).disabled).toBe(false);
   });
 
-  it('vàng: "Anh có lịch trong ngày · 1 ca"; vẫn xác nhận được', async () => {
+  // M3 (biên bản nghiệm thu lại): tên ngắn theo hàm chung staffShortName. Thợ của hợp đồng máy chủ chỉ gửi tên hiển thị
+  // (không có họ tên) → không đoán tiếng nào là tên: giữ nguyên tên hiển thị (trước đây "Anh" — tiếng cuối).
+  it('vàng: "Trần Minh Anh có lịch trong ngày · 1 ca"; vẫn xác nhận được', async () => {
     api.getContract.mockResolvedValue(detail('DRAFT') as never);
     api.quoteContract.mockResolvedValue(quote([SAME_DAY]) as never);
     renderEditor(OWNER);
-    expect(await screen.findByText('Anh có lịch trong ngày · 1 ca')).toBeTruthy();
+    expect(await screen.findByText('Trần Minh Anh có lịch trong ngày · 1 ca')).toBeTruthy();
     expect((await confirmButton() as HTMLButtonElement).disabled).toBe(false);
   });
 
@@ -786,6 +788,112 @@ describe('biên bản nghiệm thu cuối', () => {
     await userEvent.type(start, '07:00');
     await waitFor(() => expect((screen.getByLabelText('Giờ bắt đầu') as HTMLInputElement).value).toBe('07:00'));
     expect(end.value).toBe('10:15');
+  });
+});
+
+describe('biên bản nghiệm thu lại', () => {
+  const PKG_CD = {
+    ...PKG_ME,
+    id: 'p-cd',
+    code: 'CD',
+    name: 'Cô dâu – Ngày cưới',
+    subjectId: 's-cd',
+    currentPrice: { ...PKG_ME.currentPrice, unitPrice: 2_000_000, listPrice: 2_000_000 },
+  };
+  const SUBJECTS_ME_HIDDEN = [
+    { id: 's-me', name: 'Mẹ cô dâu', sortOrder: 1, isActive: false },
+    { id: 's-cd', name: 'Cô dâu', sortOrder: 0, isActive: true },
+  ];
+  const lineCd = (over: Record<string, unknown> = {}) =>
+    line({ id: 'l2', packageId: 'p-cd', name: 'Cô dâu – Ngày cưới', subjectId: 's-cd', subjectName: 'Cô dâu', unitPrice: 2_000_000, lineTotal: 2_000_000, staff: [], ...over });
+  const catalogMeHidden = () => {
+    vi.mocked(catalogApi).listPackages.mockImplementationOnce(async () => ({ items: [PKG_ME, PKG_CD], page: 1, pageSize: 100, total: 2 }) as never);
+    vi.mocked(catalogApi).listMakeupSubjects.mockImplementationOnce(async () => ({ items: SUBJECTS_ME_HIDDEN }) as never);
+  };
+
+  it('M1: nhân vật đang ẩn → cột Bảng giá KHÔNG bày gói của nhân vật đó (và không có chip lọc), báo số gói bị ẩn kèm "?"', async () => {
+    catalogMeHidden();
+    renderEditor(OWNER, null, '/studio/hop-dong/moi');
+    expect(await screen.findByRole('button', { name: 'Thêm Cô dâu – Ngày cưới' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Thêm Mẹ – Trang điểm nhẹ nhàng' })).toBeNull();
+    expect(screen.queryByText('Mẹ – Trang điểm nhẹ nhàng')).toBeNull();
+    const chips = screen.getByRole('group', { name: 'Lọc theo nhân vật' });
+    expect(within(chips).queryByText('Mẹ cô dâu')).toBeNull();
+    const note = document.querySelector('[data-o="goi-nhan-vat-an"]') as HTMLElement;
+    expect(note.textContent).toContain('1 gói của nhân vật đang ẩn (Mẹ cô dâu) không hiện ở đây.');
+    expect(within(note).getByRole('button', { name: 'Vì sao có gói không hiện' })).toBeTruthy();
+  });
+
+  it('M1: nháp ĐÃ có dòng của nhân vật vừa bị ẩn → lời báo ngay ở dòng đó; dòng khác vẫn có tiền; Tổng "—" có lý do; không lưu, không xác nhận', async () => {
+    catalogMeHidden();
+    api.getContract.mockResolvedValue(detail('DRAFT', { lines: [line({ staff: [] }), lineCd()] }) as never);
+    api.quoteContract.mockResolvedValue({ ...quote([]), lines: [lineCd({ id: null, staffWarnings: [] })], subtotal: 2_000_000, total: 2_000_000 } as never);
+    renderEditor(OWNER);
+    const hiddenCard = await screen.findByRole('region', { name: 'Mẹ cô dâu · Mẹ – Trang điểm nhẹ nhàng' });
+    expect(hiddenCard.getAttribute('data-dong')).toBe('0');
+    expect((await within(hiddenCard).findByRole('alert')).textContent).toBe(
+      'Nhân vật "Mẹ cô dâu" đang ẩn ở Bảng giá → Nhân vật nên dòng này chưa tính được tiền và hợp đồng chưa lưu được. Bật lại nhân vật hoặc bỏ dòng này.',
+    );
+    // Bảng tính chỉ gửi dòng còn tính được; dòng Cô dâu vẫn có tiền.
+    await waitFor(() => expect(api.quoteContract).toHaveBeenCalled());
+    const body = api.quoteContract.mock.calls.at(-1)![1] as { lines: { packageId?: string }[] };
+    expect(body.lines.map((l) => l.packageId)).toEqual(['p-cd']);
+    const cdCard = document.querySelector('[data-dong="1"]') as HTMLElement;
+    expect(await within(cdCard).findByText('2.000.000 ₫', { selector: '.ct-ln__ft b' })).toBeTruthy();
+    // Tạm tính / Tổng "—" (thiếu một dòng thì không phải tổng thật) — lý do kể đúng dòng ở thanh tổng.
+    expect(screen.getByText('—', { selector: '[data-o="tong"]' })).toBeTruthy();
+    expect(screen.getByText('—', { selector: '[data-o="tam-tinh"]' })).toBeTruthy();
+    const band = document.querySelector('[data-o="nhan-vat-an"]') as HTMLElement;
+    expect(band.textContent).toContain('Chưa tính được tổng — 1 dòng dùng nhân vật đang ẩn:');
+    expect(within(band).getByRole('button', { name: 'Dòng 1 · Mẹ cô dâu · Mẹ – Trang điểm nhẹ nhàng' })).toBeTruthy();
+    const confirm = await confirmButton();
+    expect((confirm as HTMLButtonElement).disabled).toBe(true);
+    expect(confirm.getAttribute('aria-label')).toContain('dòng dùng nhân vật đang ẩn');
+    await userEvent.click(screen.getByRole('button', { name: 'Lưu nháp' }));
+    expect(api.updateContract).not.toHaveBeenCalled();
+    // Bỏ dòng → hết báo, tổng tính lại đủ.
+    api.quoteContract.mockResolvedValue({ ...quote([]), lines: [lineCd({ id: null, staffWarnings: [] })], subtotal: 2_000_000, total: 2_000_000 } as never);
+    await userEvent.click(within(hiddenCard).getByRole('button', { name: 'Bỏ dòng Mẹ – Trang điểm nhẹ nhàng' }));
+    await waitFor(() => expect(document.querySelector('[data-o="nhan-vat-an"]')).toBeNull());
+    expect(await screen.findByText('2.000.000 ₫', { selector: '[data-o="tong"]' })).toBeTruthy();
+  });
+
+  it('M5: một dòng có giờ bắt đầu mà giờ kết thúc trống → mọi dòng khác và Tạm tính / Tổng vẫn có tiền; báo ngay dưới ô giờ kết thúc của đúng dòng', async () => {
+    const two = detail('DRAFT', { lines: [line(), lineCd({ staff: [MINH_ANH] })] });
+    vi.mocked(catalogApi).listPackages.mockImplementationOnce(async () => ({ items: [PKG_ME, PKG_CD], page: 1, pageSize: 100, total: 2 }) as never);
+    api.getContract.mockResolvedValue(two as never);
+    api.quoteContract.mockResolvedValue({
+      ...quote([]),
+      lines: [line({ id: null, staffWarnings: [] }), lineCd({ id: null, staffWarnings: [] })],
+      subtotal: 2_600_000,
+      total: 2_600_000,
+    } as never);
+    renderEditor(OWNER);
+    expect(await screen.findByText('2.600.000 ₫', { selector: '[data-o="tong"]' })).toBeTruthy();
+    const card2 = document.querySelector('[data-dong="1"]') as HTMLElement;
+    const end2 = within(card2).getByLabelText('Giờ kết thúc');
+    api.quoteContract.mockClear();
+    await userEvent.clear(end2);
+    await userEvent.tab();
+    // Bảng tính VẪN được gọi; dòng thiếu giờ gửi không kèm giờ và thợ (máy chủ đòi giờ khi có thợ).
+    await waitFor(() => expect(api.quoteContract).toHaveBeenCalled());
+    const body = api.quoteContract.mock.calls.at(-1)![1] as unknown as { lines: Record<string, unknown>[] };
+    expect(body.lines).toHaveLength(2);
+    expect(body.lines[0]).toHaveProperty('scheduledStart');
+    expect(body.lines[0]).toHaveProperty('staff');
+    expect(body.lines[1]).not.toHaveProperty('scheduledStart');
+    expect(body.lines[1]).not.toHaveProperty('scheduledEnd');
+    expect(body.lines[1]).not.toHaveProperty('staff');
+    // Tiền vẫn hiện ở mọi dòng và ở thẻ tổng / thanh tổng.
+    await waitFor(() => expect(screen.queryByText('—', { selector: '[data-o="tong"]' })).toBeNull());
+    expect(screen.getByText('2.600.000 ₫', { selector: '[data-o="tong"]' })).toBeTruthy();
+    expect(within(document.querySelector('[data-dong="0"]') as HTMLElement).getByText('600.000 ₫', { selector: '.ct-ln__ft b' })).toBeTruthy();
+    expect(within(card2).getByText('2.000.000 ₫', { selector: '.ct-ln__ft b' })).toBeTruthy();
+    // Lời báo ở đúng ô (giờ kết thúc dòng 2), chưa bấm Lưu; ô của dòng 1 không bị đánh dấu.
+    await waitFor(() => expect(end2.getAttribute('aria-invalid')).toBe('true'));
+    const described = (end2.getAttribute('aria-describedby') ?? '').split(/\s+/).map((id) => document.getElementById(id)?.textContent ?? '');
+    expect(described).toContain('Nhập đủ giờ bắt đầu và kết thúc.');
+    expect(within(document.querySelector('[data-dong="0"]') as HTMLElement).getByLabelText('Giờ kết thúc').getAttribute('aria-invalid')).toBeNull();
   });
 });
 

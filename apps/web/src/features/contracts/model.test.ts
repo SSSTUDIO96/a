@@ -10,6 +10,13 @@ import {
   draftIndexesOfLineIds,
   linesWithoutTime,
   noTimeBlockedReason,
+  hiddenSubjectOf,
+  quotePlan,
+  remapLineFields,
+  splitPackagesBySubject,
+  viewsByDraft,
+  draftIndexOfQuoteLine,
+  liveErrors,
   missingTimeLabel,
   missingTimeOf,
   staffGapText,
@@ -394,5 +401,85 @@ describe('L1: giờ kết thúc tự điền theo thời lượng gói', () => {
     expect(autoEndTime('', '23:00', '', 120)).toBe('');
     expect(autoEndTime('05:00', '', '07:00', 120)).toBe('');
     expect(autoEndTime('05:00', '', '09:00', 120)).toBe('09:00');
+  });
+});
+
+describe('M5 (biên bản nghiệm thu lại): lỗi chỉ về giờ không chặn bảng tính', () => {
+  const CUSTOMER = { kind: 'existing' as const, id: 'c', fullName: 'Khách', phone: null, email: null };
+  const ctx = { includedKmOf: () => 0 };
+  const draftOf = (lines: PlacedDraft[], eventDate = '2026-10-24'): ContractDraft => ({ ...EMPTY_DRAFT, customer: CUSTOMER, eventDate, lines });
+  const staff = [{ membershipId: 'm1', role: 'PRIMARY' as const }];
+
+  it('GỐC: một dòng có giờ bắt đầu, giờ kết thúc trống → validateDraft có lỗi (trước đây làm bỏ cả lời gọi quote)', () => {
+    const d = draftOf([pkgLine({ start: '05:00', end: '06:00' }), pkgLine({ start: '07:00', end: '', staff })]);
+    const e = validateDraft(d, ctx);
+    expect(Object.keys(e).sort()).toEqual(['lines.1.scheduledEnd', 'lines.1.staff']);
+    const plan = quotePlan(d, e);
+    expect(plan.draft).not.toBeNull();
+    expect(plan.complete).toBe(true);
+    const body = buildBody(plan.draft!, TZ)!;
+    expect(body.lines[0]).toHaveProperty('scheduledStart');
+    expect(body.lines[1]).not.toHaveProperty('scheduledStart');
+    expect(body.lines[1]).not.toHaveProperty('staff');
+  });
+
+  it('giờ ngược / chưa có ngày sự kiện: vẫn tính, bỏ giờ và thợ của dòng đó', () => {
+    const rev = draftOf([pkgLine({ start: '07:00', end: '06:00', staff })]);
+    const p1 = quotePlan(rev, validateDraft(rev, ctx));
+    expect(p1.draft?.lines[0]).toMatchObject({ start: '', end: '', staff: [] });
+    const noDate = draftOf([pkgLine({ start: '05:00', end: '06:00', staff })], '');
+    const p2 = quotePlan(noDate, validateDraft(noDate, ctx));
+    expect(p2.draft?.lines[0]).toMatchObject({ start: '', end: '', staff: [] });
+  });
+
+  it('lỗi làm đổi tiền (phí di chuyển thiếu số, chưa chọn nơi làm) vẫn chặn bảng tính', () => {
+    const d = draftOf([pkgLine({ start: '05:00', end: '06:00' }), pkgLine({ locationType: null })]);
+    expect(quotePlan(d, validateDraft(d, ctx)).draft).toBeNull();
+  });
+
+  it('lời báo giờ thiếu hiện ngay (liveErrors), không đợi Lưu', () => {
+    expect(liveErrors({ 'lines.1.scheduledEnd': 'Nhập đủ giờ bắt đầu và kết thúc.', customerId: 'Chọn khách hàng.' })).toEqual({
+      'lines.1.scheduledEnd': 'Nhập đủ giờ bắt đầu và kết thúc.',
+    });
+  });
+});
+
+describe('M1 (biên bản nghiệm thu lại): nhân vật đang ẩn', () => {
+  const subjects = [
+    { id: 's-me', name: 'Mẹ cô dâu', isActive: false },
+    { id: 's-cd', name: 'Cô dâu', isActive: true },
+  ];
+  const CUSTOMER = { kind: 'existing' as const, id: 'c', fullName: 'Khách', phone: null, email: null };
+
+  it('splitPackagesBySubject: gói của nhân vật đang ẩn tách riêng; gói "mọi nhân vật" vẫn bán', () => {
+    const pk = [
+      { id: 'a', subjectId: 's-me' },
+      { id: 'b', subjectId: 's-cd' },
+      { id: 'c', subjectId: null },
+      { id: 'd', subjectId: 's-x', subject: { isActive: false } },
+    ];
+    const r = splitPackagesBySubject(pk, subjects);
+    expect(r.shown.map((p) => p.id)).toEqual(['b', 'c']);
+    expect(r.hidden.map((p) => p.id)).toEqual(['a', 'd']);
+    expect(hiddenSubjectOf('s-me', subjects)?.name).toBe('Mẹ cô dâu');
+    expect(hiddenSubjectOf('s-cd', subjects)).toBeNull();
+    expect(hiddenSubjectOf(null, subjects)).toBeNull();
+  });
+
+  it('dòng của nhân vật đang ẩn: lỗi ở dòng, bỏ khỏi bảng tính (complete=false), vị trí lỗi máy chủ đổi về vị trí nháp', () => {
+    const d: ContractDraft = {
+      ...EMPTY_DRAFT,
+      customer: CUSTOMER,
+      lines: [pkgLine({ subjectId: 's-me', name: 'Mẹ' }), pkgLine({ refId: 'p-cd' })],
+    };
+    const e = validateDraft(d, { includedKmOf: () => 0, hiddenSubjectName: (id) => hiddenSubjectOf(id, subjects)?.name ?? null });
+    expect(e['lines.0.subjectId']).toContain('Nhân vật "Mẹ cô dâu" đang ẩn');
+    const plan = quotePlan(d, e);
+    expect(plan.complete).toBe(false);
+    expect(plan.toQuote).toEqual([null, 0]);
+    expect(plan.draft?.lines).toHaveLength(1);
+    expect(viewsByDraft(plan, ['v-cd'])).toEqual([null, 'v-cd']);
+    expect(draftIndexOfQuoteLine(plan, 0)).toBe(1);
+    expect(remapLineFields({ 'lines.0.travel.amount': 'x', discount: 'y' }, plan)).toEqual({ 'lines.1.travel.amount': 'x', discount: 'y' });
   });
 });
