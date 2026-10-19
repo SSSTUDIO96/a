@@ -22,7 +22,7 @@
 .g2 .ben2 p{display:grid;grid-template-columns:19mm minmax(0,1fr);margin:0 0 .3mm!important;font-size:8.4pt}
 .g2 .ben2 p span{color:#716862}
 .g2 .mo{margin:3.5mm 0 0!important;color:#4a423e}
-.g2 .h{font-size:7.2pt;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--nhan);margin:3.7mm 0 1.2mm;padding:.8mm 0 1mm;border-bottom:.5pt solid #E9E3DE}
+.g2 .h{font-size:7.2pt;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--nhan);margin:3.7mm 0 1mm;padding:1.2mm 0 0;border-top:.5pt solid #E9E3DE}
 .g2 .h small{font-weight:400;letter-spacing:0;text-transform:none;color:#A39A94;margin-left:2mm;font-size:7.2pt}
 .g2 .ds{list-style:none;margin:0;padding:0}
 .g2 .ds li{display:grid;grid-template-columns:minmax(0,1fr) 34mm 26mm;gap:3mm;padding:1.8mm 0;border-bottom:.5pt solid #F2EDE9}

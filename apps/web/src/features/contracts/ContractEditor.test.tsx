@@ -1,4 +1,5 @@
 import { configure, render, screen, waitFor, within } from '@testing-library/react';
+import { useState as useStateForTest } from 'react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { existsSync, readFileSync } from 'node:fs';
@@ -15,6 +16,7 @@ import { staffNaming } from '../../ui/staffName';
 import { ContractEditor } from './ContractEditor';
 import { ExtraPackageDialog } from './ExtraPackageDialog';
 import { StaffRow as ContractStaffRow } from './StaffRow';
+import { BottomSheet, Dialog } from '../../ui';
 
 // Màn hợp đồng với tầng API giả (vi.mock): cảnh báo thợ 3 mức, chặn xác nhận khi đỏ, lỗi 400/403/409, ẩn/khoá theo quyền.
 
@@ -1168,5 +1170,49 @@ describe('Lần 4 — N2/L3: hộp "Thêm phát sinh" chọn thợ', () => {
     expect(Array.from(container.querySelectorAll('.ui-av')).map((a) => a.textContent)).toEqual(['PH', 'NH']);
     // Tên + vai trò vẫn đọc được ở chữ nổi của ảnh.
     expect(container.querySelector('.ui-av')?.getAttribute('title')).toBe('Phạm Thu Hà · thợ chính');
+  });
+});
+
+describe('Lần 4 — N1 ở màn hợp đồng: huỷ dòng báo lịch đã huỷ theo', () => {
+  it('máy chủ trả lịch của dòng ở trạng thái "Đã huỷ" → dải báo "Đã huỷ 1 lịch của dòng này trên Lịch (LH-000008)."', async () => {
+    const appt = { id: 'a-8', code: 'LH-000008', startsAt: '2026-11-22T08:00:00.000Z', contractLineId: 'l1' };
+    api.getContract.mockResolvedValue(detail('CONFIRMED', { appointments: [{ ...appt, status: 'CONFIRMED' }] }) as never);
+    api.voidContractLine.mockResolvedValue({ ...detail('CONFIRMED', { appointments: [{ ...appt, status: 'CANCELLED' }] }), adjustments: [] } as never);
+    renderEditor(OWNER);
+    await userEvent.click(await screen.findByRole('button', { name: 'Huỷ dòng' }));
+    const dialog = await screen.findByRole('dialog');
+    await userEvent.type(within(dialog).getByLabelText(/Lý do/), 'Khách bớt một người');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Huỷ dòng' }));
+    expect(await screen.findByText('Đã huỷ 1 lịch của dòng này trên Lịch (LH-000008).')).toBeTruthy();
+  });
+});
+
+// N2 — mọi kiểu lồng: hộp/ngăn kéo mở SAU (từ bên trong cái đang mở) luôn nằm trên, dù là Dialog hay BottomSheet.
+describe('Lần 4 — N2: thứ tự lớp của mọi kiểu hộp lồng hộp', () => {
+  const kinds = { Dialog, BottomSheet } as const;
+  const cases: [keyof typeof kinds, keyof typeof kinds][] = [
+    ['Dialog', 'BottomSheet'],
+    ['BottomSheet', 'Dialog'],
+    ['Dialog', 'Dialog'],
+    ['BottomSheet', 'BottomSheet'],
+  ];
+  it.each(cases)('%s mở %s → cái mở sau nằm trên', async (outer, inner) => {
+    function Nested() {
+      const Outer = kinds[outer] as typeof Dialog;
+      const Inner = kinds[inner] as typeof Dialog;
+      const [open, setOpen] = useStateForTest(false);
+      return (
+        <Outer open onClose={() => {}} title="Ngoài">
+          <button type="button" onClick={() => setOpen(true)}>Mở trong</button>
+          <Inner open={open} onClose={() => setOpen(false)} title="Trong">
+            <span>nội dung trong</span>
+          </Inner>
+        </Outer>
+      );
+    }
+    render(<Nested />);
+    await userEvent.click(screen.getByRole('button', { name: 'Mở trong' }));
+    const innerDlg = await screen.findByRole('dialog', { name: 'Trong' });
+    expect(topOverlay()?.contains(innerDlg)).toBe(true);
   });
 });

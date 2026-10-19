@@ -11,7 +11,8 @@ import {
   planSessions,
   zonedInstant,
 } from '../src/modules/courses/sessions';
-import type { AppointmentRow } from '../src/modules/schedule/service';
+import { appointmentInclude, rescheduleAppointmentTx, type AppointmentRow } from '../src/modules/schedule/service';
+import { AppError } from '../src/lib/errors';
 
 const deps = makeDeps();
 let app: App;
@@ -393,6 +394,36 @@ describe('Đổi lịch lớp / huỷ lớp', () => {
     expect(cls.startMinute).toBe(1080);
     const s = live(sessionsOf(await listAppts(A, '2027-08-01T00:00:00.000Z', '2027-08-10T00:00:00.000Z'), k.id));
     expect(s.map((a) => a.startsAt)).toEqual(['2027-08-02T11:00:00.000Z']);
+  });
+
+  it('BẮT: hàm đổi giờ buổi học tự kiểm trùng (khi bước kiểm trước của cả kế hoạch không thấy — hai yêu cầu đua nhau) → 409 kèm danh sách', async () => {
+    const k = await makeClass(A, { startDate: '2027-08-09', endDate: '2027-08-15', weekdays: [1] });
+    expect((await sync(A, k.id, false)).status).toBe(200);
+    const mk = await post(A.owner, `${api(A)}/appointments`, {
+      startsAt: '2027-08-09T02:00:00.000Z',
+      endsAt: '2027-08-09T03:00:00.000Z',
+      status: 'CONFIRMED',
+      staff: [{ membershipId: A.instructorId, role: 'PRIMARY' }],
+    });
+    expect(mk.status).toBe(201);
+    const row = await deps.db.appointment.findFirstOrThrow({ where: { courseClassId: k.id }, include: appointmentInclude });
+    const ctx = { orgId: A.orgId, userId: A.owner.id, requestId: randomUUID() };
+    const err = await deps.db
+      .$transaction((tx) =>
+        rescheduleAppointmentTx(tx, ctx, row, {
+          startsAt: new Date('2027-08-09T01:30:00.000Z'),
+          endsAt: new Date('2027-08-09T03:30:00.000Z'),
+          staff: [{ membershipId: A.instructorId, role: 'PRIMARY' }],
+          title: null,
+          locationType: 'STUDIO',
+          address: row.address,
+        }, 'exclusive'),
+      )
+      .catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(AppError);
+    expect((err as AppError).code).toBe('CONFLICT');
+    expect(((err as AppError).details as { conflicts: { code: string }[] }).conflicts.map((c) => c.code)).toEqual([mk.body.code]);
+    expect((await deps.db.appointment.findUniqueOrThrow({ where: { id: row.id } })).startsAt.toISOString()).toBe('2027-08-09T11:00:00.000Z');
   });
 
   it('GIỮ: bỏ trống giờ học khi còn buổi sắp tới → 409; lớp chưa từng lên Lịch thì bỏ trống được', async () => {

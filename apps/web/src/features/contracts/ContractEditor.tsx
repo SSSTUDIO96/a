@@ -1166,12 +1166,19 @@ export function ContractEditor({ orgId, slug, tz, has, contractId, kindSwitch, o
           if (!detail || !voidTarget) return null;
           try {
             const res = await voidContractLine(orgId, detail.id, voidTarget.id, { reason });
+            // N1 (lần 4): máy chủ huỷ luôn các lịch của dòng (không xoá) → báo số lịch vừa huỷ.
+            const wasLive = new Set(detail.appointments.filter((a) => a.status !== 'CANCELLED').map((a) => a.id));
+            const cancelled = res.appointments.filter((a) => a.status === 'CANCELLED' && wasLive.has(a.id));
             setDetail(res as unknown as ContractDetail);
             setVoidTarget(null);
             const adj = res.adjustments
               .map((a) => `${a.field === 'discount' ? 'giảm giá' : 'cọc'} từ ${formatVnd(a.from)} xuống ${formatVnd(a.to)}`)
               .join(', ');
-            setAlert(adj ? { text: `Máy chủ đã hạ ${adj} cho khớp tổng mới.`, tone: 'warn' } : null);
+            const parts = [
+              ...(cancelled.length > 0 ? [`Đã huỷ ${cancelled.length} lịch của dòng này trên Lịch (${cancelled.map((a) => a.code).join(', ')}).`] : []),
+              ...(adj ? [`Máy chủ đã hạ ${adj} cho khớp tổng mới.`] : []),
+            ];
+            setAlert(parts.length > 0 ? { text: parts.join(' '), tone: adj ? 'warn' : 'ok' } : null);
             return null;
           } catch (err) {
             return userMessage(err);

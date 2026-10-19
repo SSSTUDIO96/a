@@ -67,6 +67,9 @@ body.show-f [data-f^="BIẾN"]::before,body.show-f [data-f^="THẺ"]::before{bac
   .giay tr,.giay li,.giay .ky,.giay .ben,.giay .khoi-tong,.giay .bang-tong,.giay .ck,.giay dl{break-inside:avoid}
   .giay h1,.giay h2,.giay h3,.giay .nguon,.giay .hv{break-after:avoid}
   .giay h1,.giay h2,.giay h3{break-inside:avoid}
+  /* Tiêu đề mục không mồ côi cuối trang: break-after:avoid của Chrome không đủ tin cậy khi mục sau là khối bọc danh sách,
+     nên kéo dài hộp tiêu đề thêm 14mm (vô hình, margin âm trả lại chỗ) — không đủ chỗ cho tiêu đề + 14mm thì cả tiêu đề sang trang. */
+  .giay h2::after{content:"";display:block;height:14mm;margin-bottom:-14mm}
   .giay thead{display:table-header-group}  /* đầu bảng lặp lại khi bảng sang trang — chủ đích */
   .giay tfoot{display:table-row-group}     /* KHÔNG lặp dòng tổng ở mọi trang (Chrome mặc định lặp tfoot) */
   .giay .ky{break-before:avoid}

@@ -1,0 +1,111 @@
+/* Bản mẫu R&D vòng 9 — Mẫu in hợp đồng. Dùng lại token + component họ C ở ../v4-chung/v4.css
+   (chép đúng apps/web/src/styles/tokens.css; component tương ứng apps/web/src/ui: Card, Button, Segmented, Switch,
+   SettingRow, ListRow, StatusTag, Dialog/BottomSheet). Tệp này chỉ thêm phần riêng của màn mẫu in, KHÔNG thêm màu mới. */
+@font-face{font-family:'MP Lora';src:url(../v9-mau-in/phong/Lora-Regular.ttf) format('truetype');font-weight:400;font-display:block}
+@font-face{font-family:'MP Lora';src:url(../v9-mau-in/phong/Lora-Bold.ttf) format('truetype');font-weight:700;font-display:block}
+body.show-f [data-f^="MỚI"]{outline-color:#9A5B0F}
+body.show-f [data-f^="MỚI"]::before{background:#9A5B0F}
+body.show-f [data-f^="TÍNH"]{outline-color:#2F7D72}
+body.show-f [data-f^="TÍNH"]::before{background:#2F7D72}
+
+/* Thanh phương án (đầu mỗi màn) */
+.pa{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:-4px 0 14px;font-size:12.5px;color:var(--muted)}
+.pa b{color:var(--accent)}
+
+/* Ảnh thu nhỏ trang A4 */
+.a4{display:block;width:100%;aspect-ratio:210/297;object-fit:cover;object-position:top;border:1px solid var(--line);border-radius:4px;background:#fff}
+.bo-cuc{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+.bo-cuc label{display:flex;flex-direction:column;gap:6px;border:1px solid var(--line);border-radius:10px;padding:8px;cursor:pointer;background:#fff;min-width:0}
+.bo-cuc label.on{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent);background:var(--accent-soft)}
+.bo-cuc label span{font-size:12.5px;font-weight:600;line-height:1.3}
+.bo-cuc label small{font-size:11.5px;color:var(--muted);font-weight:400}
+.bo-cuc input{position:absolute;opacity:0;pointer-events:none}
+
+/* Khung xem trước (trang in thật nhúng vào, thu nhỏ) */
+.xt{position:relative;overflow:auto;background:#E9E5E1;border:1px solid var(--line);border-radius:10px}
+.xt .in{position:relative;margin:0 auto}
+.xt iframe{position:absolute;left:0;top:0;border:0;transform-origin:0 0;background:#fff}
+.xt-cap{display:flex;gap:8px;align-items:center;font-size:12.5px;color:var(--muted);padding:8px 2px 0;flex-wrap:wrap}
+
+/* Màn sửa: hai cột (form | xem trước) */
+.sua{display:grid;grid-template-columns:420px minmax(0,1fr);gap:16px;align-items:start}
+.sua .phai{position:sticky;top:16px}
+.sua.ba{grid-template-columns:260px minmax(0,1fr) minmax(0,.9fr)}
+
+/* Danh sách khối có công tắc / tay kéo */
+.khoi{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--line-2)}
+.khoi:first-child{border-top:0}
+.khoi .t{flex:1;min-width:0}
+.khoi .t small{display:block;color:var(--muted);font-size:12px}
+.khoi.tat .t{color:var(--faint)}
+.keo{color:var(--faint);cursor:grab}
+.the-khoi{display:flex;align-items:center;gap:8px;border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 10px;margin-bottom:6px}
+.the-khoi.mo{border-color:var(--accent-line);background:#FFFCFD}
+.the-khoi .t{flex:1;min-width:0;font-weight:600}
+.the-khoi .t small{display:block;font-weight:400;color:var(--muted);font-size:12px}
+.the-khoi.dang-keo{box-shadow:0 6px 18px rgba(34,28,25,.18);transform:rotate(-1deg);border-color:var(--accent)}
+.cho-tha{height:6px;border-radius:3px;background:var(--accent);margin:-2px 0 6px}
+.cai-khoi{border:1px solid var(--accent-line);border-top:0;margin:-8px 0 6px;border-radius:0 0 8px 8px;padding:10px;background:#fff}
+.kho{display:flex;flex-direction:column;gap:6px}
+.kho button{display:flex;align-items:center;gap:8px;justify-content:space-between;border:1px dashed var(--accent-line);background:#FFFCFD;border-radius:8px;padding:7px 10px;color:var(--text);text-align:left}
+.kho button span small{display:block;color:var(--muted);font-size:11.5px}
+
+/* Biến chèn */
+.bien{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;padding:1px 7px;border-radius:999px;background:var(--accent-soft);color:var(--accent);white-space:nowrap;border:1px solid var(--accent-line)}
+.bien.khoi-dl{background:#F0ECFA;color:#5B45A0;border-color:#D9D0F2}
+.bien.loi{background:var(--danger-bg);color:var(--danger);border-color:var(--danger-line)}
+.bien-ds{display:flex;gap:6px;flex-wrap:wrap}
+
+/* Trình soạn văn bản tự do */
+.soan{border:1px solid var(--line);border-radius:10px;background:#fff;overflow:hidden}
+.soan .cu{display:flex;gap:2px;align-items:center;padding:6px 8px;border-bottom:1px solid var(--line);background:var(--soft);flex-wrap:wrap}
+.soan .cu button{border:0;background:none;width:30px;height:30px;border-radius:6px;font-weight:700;color:var(--muted)}
+.soan .cu button.on{background:var(--accent-soft);color:var(--accent)}
+.soan .cu .ng{width:1px;height:20px;background:var(--line);margin:0 4px}
+.soan .cu select{height:30px;border:1px solid var(--line);border-radius:6px;background:#fff;padding:0 6px;font-size:13px}
+.soan .vb{padding:22px 28px;font-family:"MP Lora",Georgia,serif;font-size:14px;line-height:1.6;min-height:420px}
+.soan .vb h3{text-align:center;font-size:18px;margin-bottom:6px}
+.soan .vb p{margin:0 0 8px}
+.soan .vb .bien,.soan .vb .khoi-dl{font-family:"Be Vietnam Pro",sans-serif}
+.soan .vb .dong-khoi{display:block;border:1px dashed #D9D0F2;background:#F7F5FC;border-radius:6px;padding:8px 10px;margin:8px 0;font-family:"Be Vietnam Pro",sans-serif;font-size:12.5px;color:#5B45A0}
+.soan .vb .con-tro{display:inline-block;width:1.5px;height:17px;background:var(--accent);vertical-align:-3px}
+
+/* Hộp thoại In */
+.in-lay{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:18px;padding-top:10px}
+.in-trang{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;background:#E9E5E1;border-radius:10px;padding:12px}
+.in-trang figure{display:flex;flex-direction:column;gap:4px;font-size:11.5px;color:var(--muted);text-align:center}
+.lua{display:flex;flex-direction:column;gap:8px}
+.lua label{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:10px;padding:9px 11px;cursor:pointer}
+.lua label.on{border-color:var(--accent);background:var(--accent-soft)}
+.lua label small{display:block;color:var(--muted);font-size:12px}
+.lua input{margin-top:3px}
+.nen-hd{opacity:1}
+.mini-hd{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px}
+
+/* Chú thích R&D trên màn (không phải giao diện sản phẩm) */
+.rnd-note{border:1px dashed #5B45A0;background:#F7F5FC;color:#3f3270;border-radius:10px;padding:10px 12px;font-size:12.5px;margin-top:14px}
+.rnd-note b{color:#5B45A0}
+body.chup .rnd-note{display:block}
+
+/* Máy tính bảng */
+@media (max-width:1180px){
+  .sua{grid-template-columns:360px minmax(0,1fr)}
+  .sua.ba{grid-template-columns:220px minmax(0,1fr)}
+  .sua.ba .phai{display:none}
+  .bo-cuc{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+/* Điện thoại */
+@media (max-width:640px){
+  .sua,.sua.ba{grid-template-columns:minmax(0,1fr)}
+  .sua .phai{position:static}
+  .sua.ba .phai{display:block}
+  .bo-cuc{display:flex;overflow-x:auto;gap:8px;scrollbar-width:none;margin:0 -14px;padding:0 14px}
+  .bo-cuc label{flex:0 0 116px}
+  .in-lay{grid-template-columns:minmax(0,1fr)}
+  .in-trang{grid-template-columns:repeat(2,minmax(0,1fr));padding:8px}
+  .mini-hd{grid-template-columns:minmax(0,1fr)}
+  .soan .vb{padding:14px 14px;font-size:13.5px;min-height:0}
+  .pa{margin:0 0 10px}
+  .d-hide{display:none!important}
+}
+@media (min-width:641px){ .p-only{display:none!important} }

@@ -32,10 +32,10 @@ man('b-cap', { nav: 'mau', title: 'Chứng chỉ', back: '#b-mau' }, `
   <div class="ph"><a class="btn icon ghost" href="#b-mau">${icon('back')}</a><h1>Chứng chỉ · Hoa văn vàng cổ điển</h1></div>
   <div class="c2 has-sum">
     <div class="card left">
-      <div class="step"><span class="so xong">${icon('check','s')}</span><span class="t"><b>Mẫu</b><small>05 · Hoa văn vàng cổ điển</small></span><a class="btn sm ghost" href="#b-mau">Đổi</a></div>
-      <div class="step"><span class="so xong">${icon('check','s')}</span><span class="t"><b>Lớp</b><small data-f="CourseClass (endDate ≤ hôm nay, status ≠ CANCELLED)">Chỉ hiện lớp đã kết thúc</small></span></div>
+      <div class="step"><span class="buoc xong">${icon('check','s')}</span><span class="t"><b>Mẫu</b><small>05 · Hoa văn vàng cổ điển</small></span><a class="btn sm ghost" href="#b-mau">Đổi</a></div>
+      <div class="step"><span class="buoc xong">${icon('check','s')}</span><span class="t"><b>Lớp</b><small data-f="CourseClass (endDate ≤ hôm nay, status ≠ CANCELLED)">Chỉ hiện lớp đã kết thúc</small></span></div>
       <div class="cb" style="padding-top:8px"><select class="ctl"><option>Makeup chuyên nghiệp · K12 (kết thúc 20/12/2026)</option><option>Makeup chuyên nghiệp · K11 (kết thúc 10/10/2026)</option><option>Cô dâu nâng cao · NC2 (kết thúc 30/09/2026)</option></select></div>
-      <div class="step"><span class="so">3</span><span class="t"><b>Học viên</b><small>Đã chọn 7 / 8</small></span><label class="row small"><input type="checkbox"> Tất cả</label></div>
+      <div class="step"><span class="buoc">3</span><span class="t"><b>Học viên</b><small>Đã chọn 7 / 8</small></span><label class="row small"><input type="checkbox"> Tất cả</label></div>
       <div class="ls">${hvList}</div>
     </div>
     <div class="right">
@@ -52,8 +52,8 @@ man('b-m-mau', { nav: 'mau', title: 'Mẫu thiết kế', mobile: 'list' }, `
 man('b-m-cap', { nav: 'mau', title: 'Chứng chỉ · mẫu 05', back: '#b-m-mau', mobile: 'detail' }, `
   <div class="vstack has-sum">
     <div class="card"><div class="xem-to">${the('05', { ten: HV[0], so: 'CC-2026-0008' })}<div class="nav3"><a class="btn icon" href="#">${icon('left')}</a><b>1/7</b><a class="btn icon" href="#">${icon('right')}</a></div></div></div>
-    <div class="card"><div class="step"><span class="so xong">${icon('check','s')}</span><span class="t"><b>Lớp</b><small>Makeup chuyên nghiệp · K12</small></span><a class="btn sm ghost" href="#">Đổi</a></div>
-      <div class="step"><span class="so">3</span><span class="t"><b>Học viên</b><small>Đã chọn 7 / 8</small></span></div>${hvList}</div>
+    <div class="card"><div class="step"><span class="buoc xong">${icon('check','s')}</span><span class="t"><b>Lớp</b><small>Makeup chuyên nghiệp · K12</small></span><a class="btn sm ghost" href="#">Đổi</a></div>
+      <div class="step"><span class="buoc">3</span><span class="t"><b>Học viên</b><small>Đã chọn 7 / 8</small></span></div>${hvList}</div>
     <div class="sumbar"><div class="t"><b>7 chứng chỉ</b></div><a class="btn pri" href="#">${icon('in','s')}Cấp và in</a></div>
   </div>`);
 V4.boot();
