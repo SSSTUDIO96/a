@@ -1086,6 +1086,8 @@ model PaymentInstallment {
   contract     Contract     @relation(fields: [contractId, organizationId], references: [id, organizationId], onDelete: Restrict)
 
   @@index([contractId])
+  // Bản vẽ D: trang "Hôm nay" đọc đợt theo hạn.
+  @@index([organizationId, dueDate])
   @@map("payment_installments")
 }
 
@@ -1371,6 +1373,8 @@ model Enrollment {
   @@unique([id, organizationId])
   @@index([courseClassId, status])
   @@index([organizationId, status, customerId])
+  // Bản vẽ D: trang "Hôm nay" đọc ghi danh theo lúc ghi danh.
+  @@index([organizationId, enrolledAt])
   @@map("enrollments")
 }
 
