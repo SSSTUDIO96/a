@@ -195,3 +195,10 @@ Mỗi lỗi ghi đủ: triệu chứng · gốc bệnh · số đo · cách ch�
 - **Gốc:** hết hạn mức sử dụng trong ngày của tài khoản, không phải lỗi mã.
 - **Hậu quả:** phần đang làm dở nằm trên đĩa, chưa ai kiểm; database thử và tiến trình chạy dở có thể mất; một migration đang viết ở thư mục nháp có thể mất.
 - **Cách chặn / cách làm lại:** (1) chụp ngay một commit tên "WIP … CHƯA nghiệm thu" để không mất phần dở; (2) bật lại PostgreSQL; (3) đánh thức lại ĐÚNG thợ cũ (giữ trí nhớ việc đang làm), báo rõ nó dừng ở bước nào và phần nào đã/ chưa có trên đĩa — không giao thợ mới làm lại từ đầu; (4) migration luôn viết ở nháp rồi mv một lần (sổ lỗi M1), nên dừng giữa chừng không để lại thư mục nửa vời.
+
+## 29. Phiếu giao của điều phối ghi sai tên migration (19/10/2026)
+
+- **Triệu chứng:** phiếu giao gói E1 ghi migration `20261019140000_cong_hoc_vien`; ba bản ký duyệt (KY-DUYET-E:19, KY-DUYET-F:14, KY-DUYET-G:18) đã đổi thành `20261019200000` để đứng sau migration 160000 đã có.
+- **Gốc:** điều phối chép từ bảng gói việc trong bản vẽ (viết trước khi ký) mà không đối chiếu bản ký duyệt — bản ký duyệt đè bản vẽ.
+- **Bắt được nhờ:** thợ E1 đọc ký duyệt, thử cả hai tên trên database thật, chọn đúng và nộp phiếu vướng thay vì làm theo phiếu giao.
+- **Cách chặn:** trước khi viết phiếu giao, điều phối grep bản KY-DUYET-* của bản vẽ đó tìm mọi chỗ "đổi", "thay", "không" và chép các điểm đè vào phiếu. Thứ tự migration chung ghi tại một chỗ: E 200000 → F 210000 → G 220000.
