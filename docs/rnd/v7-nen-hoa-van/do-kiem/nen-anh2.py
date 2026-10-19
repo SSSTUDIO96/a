@@ -8,9 +8,13 @@ a=Image.open(goc).convert('RGB');A=np.asarray(a).astype(int);B=np.asarray(Image.
 m=(np.abs(A-B).max(2)>6)
 import json
 info=json.load(open(nen[:-4]+'.json'))
-q=info['anh'];m[int(q['y'])-12:int(q['y']+q['h'])+12,int(q['x'])-12:int(q['x']+q['w'])+12]=True   # ô ảnh học viên
+Y,X=np.mgrid[0:A.shape[0],0:A.shape[1]]
+q=info['anh'];cx,cy,rx,ry=q['x']+q['w']/2,q['y']+q['h']/2,q['w']/2+3,q['h']/2+3;m|=((X-cx)/rx)**2+((Y-cy)/ry)**2<=1   # ô ảnh (bầu dục bám sát)
 th=[r for r in info['chu'] if r['lop']=='th']
-if th and th[0]['hop']:b=th[0]['hop'][0];m[max(0,int(b['y'])-110):int(b['y']),int(b['x']+b['w']/2)-70:int(b['x']+b['w']/2)+70]=True  # logo trên tên thương hiệu
+if th and th[0]['hop']:
+  b=th[0]['hop'][0];ngang=A.shape[1]>A.shape[0]
+  lx,ly=(b['x']-34,b['y']+b['h']/2) if ngang else (b['x']+b['w']/2,b['y']-58)   # chứng nhận: logo bên trái tên; thẻ: logo phía trên
+  m|=((X-lx)**2+(Y-ly)**2)<=(28 if ngang else 40)**2
 md=np.asarray(a.filter(ImageFilter.MedianFilter(7))).astype(int);m|=np.abs(A-md).max(2)>28   # nét mảnh: đường viền, gạch
 m=np.asarray(Image.fromarray((m*255).astype('uint8')).filter(ImageFilter.MaxFilter(5)))>0
 for r,k in [(1.6,0),(2.4,0),(2.4,24),(2.4,16)]:

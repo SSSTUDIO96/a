@@ -205,7 +205,7 @@ function rgb(s){return s.match(/[\d.]+/g).slice(0,3).map(Number);}
 // Ảnh khung (có ô trống) khác chiều với khổ thẻ → xoay 90° (ví dụ khung tem dọc dùng cho giấy chứng nhận ngang).
 function xoay90(img){const cv=document.createElement('canvas');cv.width=img.height;cv.height=img.width;const x=cv.getContext('2d');
   x.translate(cv.width,0);x.rotate(Math.PI/2);x.drawImage(img,0,0);return cv;}
-function ghep(img){if(GIAY==='trong-anh'&&P.get('xoay')!=='0'&&((img.height>img.width)!==(H>W))){img=xoay90(img);document.body.dataset.xoay='90';}
+function ghep(img){if(GIAY==='trong-anh'&&P.get('xoay')!=='0'&&W!==H&&((img.height>img.width)!==(H>W))){img=xoay90(img);document.body.dataset.xoay='90';}
   const cat=so(P.get('cat'),[0,0,1,1]);const sx=cat[0]*img.width,sy=cat[1]*img.height,sw=(cat[2]-cat[0])*img.width,sh=(cat[3]-cat[1])*img.height;
   let s,ox,oy,vungCard=null;
   if(GIAY==='trong-anh'){let v=P.get('vung');v=(!v||v==='tu-dong')?doVung(img):so(v);if(document.body.dataset.xoay&&P.get('vung')&&P.get('vung')!=='tu-dong')v=[1-v[3],v[0],1-v[1],v[2]]; // vùng nhập theo ảnh gốc → đổi sang ảnh đã xoaydocument.body.dataset.vung=v.map(n=>n.toFixed(3)).join(',');

@@ -1704,5 +1704,2972 @@
    "lech_p99": 0
   },
   "kich_thuoc": "1080x1350"
+ },
+ "v2-a-giay-dau-sap-vuong": {
+  "ds": {
+   "khungChu": "180,172,720,838",
+   "ready": "1",
+   "nenXong": "1"
+  },
+  "chu": [
+   {
+    "lop": "th",
+    "chu": "Chiến Makeup Academy",
+    "co": 14.2611,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.04,
+    "giua": 6.01,
+    "lech_max": 43,
+    "lech_p99": 25
+   },
+   {
+    "lop": "k1",
+    "chu": "Chào mừng đến với lớp",
+    "co": 12.2238,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.04,
+    "giua": 6.05,
+    "lech_max": 39,
+    "lech_p99": 25
+   },
+   {
+    "lop": "kh",
+    "chu": "Makeup chuyên nghiệp",
+    "co": 40.746,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 11.04,
+    "giua": 13.13,
+    "lech_max": 37,
+    "lech_p99": 24
+   },
+   {
+    "lop": "lo",
+    "chu": "Lớp K12 · khai giảng 02.11.2026",
+    "co": 20.373,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.74,
+    "giua": 6.89,
+    "lech_max": 37,
+    "lech_p99": 25
+   },
+   {
+    "lop": "dg",
+    "chu": "Thân gửi",
+    "co": 23.0894,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.84,
+    "giua": 7.01,
+    "lech_max": 32,
+    "lech_p99": 23
+   },
+   {
+    "lop": "ten",
+    "chu": "Tôn Nữ Hoàng Bảo Ngọc Phương Thảo",
+    "co": 76.0592,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 10.94,
+    "giua": 13.13,
+    "lech_max": 45,
+    "lech_p99": 25
+   },
+   {
+    "lop": "by",
+    "chu": "Thân ái, Chiến Makeup Academy",
+    "co": 19.0148,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.8,
+    "giua": 6.89,
+    "lech_max": 37,
+    "lech_p99": 24
+   },
+   {
+    "lop": "ft",
+    "chu": "Tháng 11 · 2026",
+    "co": 12.2238,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.08,
+    "giua": 6.0,
+    "lech_max": 35,
+    "lech_p99": 25
+   },
+   {
+    "lop": "dc",
+    "chu": "25 Hoàng Quốc Việt, Cầu Giấy, Hà Nội",
+    "co": 17.6566,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.74,
+    "giua": 6.89,
+    "lech_max": 39,
+    "lech_p99": 25
+   }
+  ],
+  "vong_anh": {
+   "lech_max": 39,
+   "lech_p99": 25
+  },
+  "kich_thuoc": "1080x1080"
+ },
+ "v2-a-giay-dau-sap": {
+  "ds": {
+   "khungChu": "120,212,840,1028",
+   "ready": "1",
+   "nenXong": "1"
+  },
+  "chu": [
+   {
+    "lop": "th",
+    "chu": "Chiến Makeup Academy",
+    "co": 17.4951,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.04,
+    "giua": 6.09,
+    "lech_max": 38,
+    "lech_p99": 25
+   },
+   {
+    "lop": "k1",
+    "chu": "Chào mừng đến với lớp",
+    "co": 14.9958,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.08,
+    "giua": 6.05,
+    "lech_max": 45,
+    "lech_p99": 25
+   },
+   {
+    "lop": "kh",
+    "chu": "Makeup chuyên nghiệp",
+    "co": 49.986,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 10.92,
+    "giua": 13.12,
+    "lech_max": 42,
+    "lech_p99": 26
+   },
+   {
+    "lop": "lo",
+    "chu": "Lớp K12 · khai giảng 02.11.2026",
+    "co": 24.993,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 5.73,
+    "giua": 6.89,
+    "lech_max": 37,
+    "lech_p99": 26
+   },
+   {
+    "lop": "dg",
+    "chu": "Thân gửi",
+    "co": 28.3254,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 5.79,
+    "giua": 6.84,
+    "lech_max": 37,
+    "lech_p99": 24
+   },
+   {
+    "lop": "ten",
+    "chu": "Tôn Nữ Hoàng Bảo Ngọc Phương Thảo",
+    "co": 93.3072,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 10.94,
+    "giua": 13.12,
+    "lech_max": 46,
+    "lech_p99": 25
+   },
+   {
+    "lop": "by",
+    "chu": "Thân ái, Chiến Makeup Academy",
+    "co": 23.3268,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.79,
+    "giua": 6.89,
+    "lech_max": 41,
+    "lech_p99": 24
+   },
+   {
+    "lop": "ft",
+    "chu": "Tháng 11 · 2026",
+    "co": 14.9958,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.01,
+    "giua": 6.05,
+    "lech_max": 42,
+    "lech_p99": 26
+   },
+   {
+    "lop": "dc",
+    "chu": "25 Hoàng Quốc Việt, Cầu Giấy, Hà Nội",
+    "co": 21.6606,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.8,
+    "giua": 6.93,
+    "lech_max": 42,
+    "lech_p99": 24
+   }
+  ],
+  "vong_anh": {
+   "lech_max": 38,
+   "lech_p99": 25
+  },
+  "kich_thuoc": "1080x1350"
+ },
+ "v2-b-panel-vien-thuoc": {
+  "ds": {
+   "khungChu": "134,190,812,990",
+   "ready": "1",
+   "nenXong": "1"
+  },
+  "chu": [
+   {
+    "lop": "th",
+    "chu": "Chiến Makeup Academy",
+    "co": 16.8483,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.08,
+    "giua": 6.05,
+    "lech_max": 35,
+    "lech_p99": 24
+   },
+   {
+    "lop": "k1",
+    "chu": "Chào mừng đến với lớp",
+    "co": 14.4414,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 4.98,
+    "giua": 6.0,
+    "lech_max": 41,
+    "lech_p99": 27
+   },
+   {
+    "lop": "kh",
+    "chu": "Makeup chuyên nghiệp",
+    "co": 48.138,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 10.94,
+    "giua": 13.13,
+    "lech_max": 41,
+    "lech_p99": 25
+   },
+   {
+    "lop": "lo",
+    "chu": "Lớp K12 · khai giảng 02.11.2026",
+    "co": 24.069,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 5.79,
+    "giua": 6.89,
+    "lech_max": 39,
+    "lech_p99": 25
+   },
+   {
+    "lop": "dg",
+    "chu": "Thân gửi",
+    "co": 27.2782,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 5.79,
+    "giua": 6.89,
+    "lech_max": 40,
+    "lech_p99": 24
+   },
+   {
+    "lop": "ten",
+    "chu": "Tôn Nữ Hoàng Bảo Ngọc Phương Thảo",
+    "co": 89.8576,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 10.94,
+    "giua": 13.13,
+    "lech_max": 46,
+    "lech_p99": 25
+   },
+   {
+    "lop": "by",
+    "chu": "Thân ái, Chiến Makeup Academy",
+    "co": 22.4644,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.8,
+    "giua": 6.89,
+    "lech_max": 38,
+    "lech_p99": 24
+   },
+   {
+    "lop": "ft",
+    "chu": "Tháng 11 · 2026",
+    "co": 14.4414,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.04,
+    "giua": 6.05,
+    "lech_max": 41,
+    "lech_p99": 25
+   },
+   {
+    "lop": "dc",
+    "chu": "25 Hoàng Quốc Việt, Cầu Giấy, Hà Nội",
+    "co": 20.8598,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.74,
+    "giua": 6.89,
+    "lech_max": 36,
+    "lech_p99": 25
+   }
+  ],
+  "vong_anh": {
+   "lech_max": 40,
+   "lech_p99": 25
+  },
+  "kich_thuoc": "1080x1350"
+ },
+ "v2-c-tem-nen-dam": {
+  "ds": {
+   "khungChu": "150,156,780,1048",
+   "ready": "1",
+   "nenXong": "1"
+  },
+  "chu": [
+   {
+    "lop": "th",
+    "chu": "Chiến Makeup Academy",
+    "co": 16.9911,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.03,
+    "giua": 6.05,
+    "lech_max": 38,
+    "lech_p99": 26
+   },
+   {
+    "lop": "k1",
+    "chu": "Chào mừng đến với lớp",
+    "co": 14.5638,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.03,
+    "giua": 6.02,
+    "lech_max": 45,
+    "lech_p99": 26
+   },
+   {
+    "lop": "kh",
+    "chu": "Makeup chuyên nghiệp",
+    "co": 48.546,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 10.91,
+    "giua": 13.01,
+    "lech_max": 43,
+    "lech_p99": 26
+   },
+   {
+    "lop": "lo",
+    "chu": "Lớp K12 · khai giảng 02.11.2026",
+    "co": 24.273,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 5.68,
+    "giua": 6.81,
+    "lech_max": 38,
+    "lech_p99": 27
+   },
+   {
+    "lop": "dg",
+    "chu": "Thân gửi",
+    "co": 27.5094,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 5.73,
+    "giua": 6.84,
+    "lech_max": 36,
+    "lech_p99": 26
+   },
+   {
+    "lop": "ten",
+    "chu": "Tôn Nữ Hoàng Bảo Ngọc Phương Thảo",
+    "co": 90.6192,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 10.92,
+    "giua": 13.01,
+    "lech_max": 46,
+    "lech_p99": 25
+   },
+   {
+    "lop": "by",
+    "chu": "Thân ái, Chiến Makeup Academy",
+    "co": 22.6548,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.73,
+    "giua": 6.83,
+    "lech_max": 38,
+    "lech_p99": 26
+   },
+   {
+    "lop": "ft",
+    "chu": "Tháng 11 · 2026",
+    "co": 14.5638,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.05,
+    "giua": 5.99,
+    "lech_max": 36,
+    "lech_p99": 25
+   },
+   {
+    "lop": "dc",
+    "chu": "25 Hoàng Quốc Việt, Cầu Giấy, Hà Nội",
+    "co": 21.0366,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.75,
+    "giua": 6.83,
+    "lech_max": 42,
+    "lech_p99": 25
+   }
+  ],
+  "vong_anh": {
+   "lech_max": 39,
+   "lech_p99": 25
+  },
+  "kich_thuoc": "1080x1350"
+ },
+ "v2-cn-a-giay-dau-sap": {
+  "ds": {
+   "khungChu": "90,147,943,591",
+   "ready": "1",
+   "nenXong": "1"
+  },
+  "chu": [
+   {
+    "lop": "so",
+    "chu": "Số CC-2026-0007",
+    "co": 13.437,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.04,
+    "giua": 5.99,
+    "lech_max": 39,
+    "lech_p99": 26
+   },
+   {
+    "lop": "th",
+    "chu": "Chiến Makeup Academy",
+    "co": 13.437,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.09,
+    "giua": 6.01,
+    "lech_max": 43,
+    "lech_p99": 24
+   },
+   {
+    "lop": "t1",
+    "chu": "Giấy chứng nhận",
+    "co": 50.1648,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 10.94,
+    "giua": 13.13,
+    "lech_max": 44,
+    "lech_p99": 25
+   },
+   {
+    "lop": "t2",
+    "chu": "Tốt nghiệp",
+    "co": 15.2286,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.0,
+    "giua": 6.05,
+    "lech_max": 41,
+    "lech_p99": 26
+   },
+   {
+    "lop": "tag",
+    "chu": "Trân trọng trao cho",
+    "co": 23.2908,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.73,
+    "giua": 6.89,
+    "lech_max": 37,
+    "lech_p99": 26
+   },
+   {
+    "lop": "ten",
+    "chu": "Tôn Nữ Hoàng Bảo Ngọc Phương Thảo",
+    "co": 75.2472,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 10.94,
+    "giua": 13.13,
+    "lech_max": 46,
+    "lech_p99": 25
+   },
+   {
+    "lop": "dong",
+    "chu": "Đã hoàn thành khoá Makeup chuyên nghiệp ",
+    "co": 22.395,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 11.02,
+    "giua": 13.13,
+    "lech_max": 45,
+    "lech_p99": 25
+   },
+   {
+    "lop": "ngay",
+    "chu": "Ngày 20 tháng 12 năm 2026",
+    "co": 19.7076,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.8,
+    "giua": 6.84,
+    "lech_max": 40,
+    "lech_p99": 24
+   },
+   {
+    "lop": "cv",
+    "chu": "Giảng viên",
+    "co": 11.6454,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.0,
+    "giua": 6.01,
+    "lech_max": 41,
+    "lech_p99": 26
+   },
+   {
+    "lop": "nm",
+    "chu": "Nguyễn Thu Hà",
+    "co": 19.7076,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 10.9,
+    "giua": 13.13,
+    "lech_max": 34,
+    "lech_p99": 26
+   },
+   {
+    "lop": "cv",
+    "chu": "Giám đốc học viện",
+    "co": 11.6454,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.03,
+    "giua": 6.05,
+    "lech_max": 42,
+    "lech_p99": 26
+   },
+   {
+    "lop": "nm",
+    "chu": "Nguyễn Trọng Chiến",
+    "co": 19.7076,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 10.94,
+    "giua": 13.12,
+    "lech_max": 36,
+    "lech_p99": 25
+   }
+  ],
+  "vong_anh": {
+   "lech_max": 44,
+   "lech_p99": 25
+  },
+  "kich_thuoc": "1123x794"
+ },
+ "v2-cn-b-panel": {
+  "ds": {
+   "khungChu": "91,94,940,627",
+   "ready": "1",
+   "nenXong": "1"
+  },
+  "chu": [
+   {
+    "lop": "so",
+    "chu": "Số CC-2026-0007",
+    "co": 14.103,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.04,
+    "giua": 6.05,
+    "lech_max": 44,
+    "lech_p99": 25
+   },
+   {
+    "lop": "th",
+    "chu": "Chiến Makeup Academy",
+    "co": 14.103,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.03,
+    "giua": 6.05,
+    "lech_max": 37,
+    "lech_p99": 26
+   },
+   {
+    "lop": "t1",
+    "chu": "Giấy chứng nhận",
+    "co": 52.6512,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 11.01,
+    "giua": 13.12,
+    "lech_max": 43,
+    "lech_p99": 25
+   },
+   {
+    "lop": "t2",
+    "chu": "Tốt nghiệp",
+    "co": 15.9834,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.08,
+    "giua": 6.05,
+    "lech_max": 37,
+    "lech_p99": 24
+   },
+   {
+    "lop": "tag",
+    "chu": "Trân trọng trao cho",
+    "co": 24.4452,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 5.69,
+    "giua": 6.89,
+    "lech_max": 41,
+    "lech_p99": 26
+   },
+   {
+    "lop": "ten",
+    "chu": "Tôn Nữ Hoàng Bảo Ngọc Phương Thảo",
+    "co": 78.9768,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 10.95,
+    "giua": 13.13,
+    "lech_max": 46,
+    "lech_p99": 25
+   },
+   {
+    "lop": "dong",
+    "chu": "Đã hoàn thành khoá Makeup chuyên nghiệp ",
+    "co": 23.505,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 11.01,
+    "giua": 13.13,
+    "lech_max": 40,
+    "lech_p99": 25
+   },
+   {
+    "lop": "ngay",
+    "chu": "Ngày 20 tháng 12 năm 2026",
+    "co": 20.6844,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.84,
+    "giua": 6.89,
+    "lech_max": 40,
+    "lech_p99": 23
+   },
+   {
+    "lop": "cv",
+    "chu": "Giảng viên",
+    "co": 12.2226,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 4.96,
+    "giua": 6.0,
+    "lech_max": 38,
+    "lech_p99": 27
+   },
+   {
+    "lop": "nm",
+    "chu": "Nguyễn Thu Hà",
+    "co": 20.6844,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 10.84,
+    "giua": 13.13,
+    "lech_max": 37,
+    "lech_p99": 26
+   },
+   {
+    "lop": "cv",
+    "chu": "Giám đốc học viện",
+    "co": 12.2226,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.09,
+    "giua": 6.01,
+    "lech_max": 33,
+    "lech_p99": 25
+   },
+   {
+    "lop": "nm",
+    "chu": "Nguyễn Trọng Chiến",
+    "co": 20.6844,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 10.94,
+    "giua": 13.12,
+    "lech_max": 42,
+    "lech_p99": 26
+   }
+  ],
+  "vong_anh": {
+   "lech_max": 39,
+   "lech_p99": 25
+  },
+  "kich_thuoc": "1123x794"
+ },
+ "v2-cn-c-tem-nen-dam": {
+  "ds": {
+   "khungChu": "110,105,903,593",
+   "ready": "1",
+   "nenXong": "1"
+  },
+  "chu": [
+   {
+    "lop": "so",
+    "chu": "Số CC-2026-0007",
+    "co": 13.482,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.04,
+    "giua": 6.01,
+    "lech_max": 37,
+    "lech_p99": 25
+   },
+   {
+    "lop": "th",
+    "chu": "Chiến Makeup Academy",
+    "co": 13.482,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 4.99,
+    "giua": 5.99,
+    "lech_max": 40,
+    "lech_p99": 27
+   },
+   {
+    "lop": "t1",
+    "chu": "Giấy chứng nhận",
+    "co": 50.3328,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 10.92,
+    "giua": 13.01,
+    "lech_max": 44,
+    "lech_p99": 25
+   },
+   {
+    "lop": "t2",
+    "chu": "Tốt nghiệp",
+    "co": 15.2796,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.05,
+    "giua": 6.05,
+    "lech_max": 37,
+    "lech_p99": 25
+   },
+   {
+    "lop": "tag",
+    "chu": "Trân trọng trao cho",
+    "co": 23.3688,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.64,
+    "giua": 6.83,
+    "lech_max": 41,
+    "lech_p99": 27
+   },
+   {
+    "lop": "ten",
+    "chu": "Tôn Nữ Hoàng Bảo Ngọc Phương Thảo",
+    "co": 75.4992,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 10.93,
+    "giua": 13.05,
+    "lech_max": 47,
+    "lech_p99": 25
+   },
+   {
+    "lop": "dong",
+    "chu": "Đã hoàn thành khoá Makeup chuyên nghiệp ",
+    "co": 22.47,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 10.91,
+    "giua": 13.04,
+    "lech_max": 41,
+    "lech_p99": 26
+   },
+   {
+    "lop": "ngay",
+    "chu": "Ngày 20 tháng 12 năm 2026",
+    "co": 19.7736,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.74,
+    "giua": 6.85,
+    "lech_max": 37,
+    "lech_p99": 25
+   },
+   {
+    "lop": "cv",
+    "chu": "Giảng viên",
+    "co": 11.6844,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 4.99,
+    "giua": 5.94,
+    "lech_max": 35,
+    "lech_p99": 26
+   },
+   {
+    "lop": "nm",
+    "chu": "Nguyễn Thu Hà",
+    "co": 19.7736,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 10.78,
+    "giua": 12.99,
+    "lech_max": 41,
+    "lech_p99": 27
+   },
+   {
+    "lop": "cv",
+    "chu": "Giám đốc học viện",
+    "co": 11.6844,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.0,
+    "giua": 5.99,
+    "lech_max": 38,
+    "lech_p99": 26
+   },
+   {
+    "lop": "nm",
+    "chu": "Nguyễn Trọng Chiến",
+    "co": 19.7736,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 10.92,
+    "giua": 13.01,
+    "lech_max": 42,
+    "lech_p99": 26
+   }
+  ],
+  "vong_anh": {
+   "lech_max": 40,
+   "lech_p99": 26
+  },
+  "kich_thuoc": "1123x794"
+ },
+ "v2-cn-d-giay-tran": {
+  "ds": {
+   "khungChu": "58,58,1007,678",
+   "ready": "1",
+   "nenXong": "1"
+  },
+  "chu": [
+   {
+    "lop": "so",
+    "chu": "Số CC-2026-0007",
+    "co": 15,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.06,
+    "giua": 6.01,
+    "lech_max": 39,
+    "lech_p99": 25
+   },
+   {
+    "lop": "th",
+    "chu": "Chiến Makeup Academy",
+    "co": 15,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.09,
+    "giua": 6.05,
+    "lech_max": 37,
+    "lech_p99": 24
+   },
+   {
+    "lop": "t1",
+    "chu": "Giấy chứng nhận",
+    "co": 56,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 10.94,
+    "giua": 13.12,
+    "lech_max": 43,
+    "lech_p99": 25
+   },
+   {
+    "lop": "t2",
+    "chu": "Tốt nghiệp",
+    "co": 17,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.03,
+    "giua": 6.01,
+    "lech_max": 36,
+    "lech_p99": 26
+   },
+   {
+    "lop": "tag",
+    "chu": "Trân trọng trao cho",
+    "co": 26,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 5.74,
+    "giua": 6.89,
+    "lech_max": 42,
+    "lech_p99": 25
+   },
+   {
+    "lop": "ten",
+    "chu": "Tôn Nữ Hoàng Bảo Ngọc Phương Thảo",
+    "co": 84,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 10.94,
+    "giua": 13.13,
+    "lech_max": 46,
+    "lech_p99": 25
+   },
+   {
+    "lop": "dong",
+    "chu": "Đã hoàn thành khoá Makeup chuyên nghiệp ",
+    "co": 25,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 10.97,
+    "giua": 13.13,
+    "lech_max": 40,
+    "lech_p99": 25
+   },
+   {
+    "lop": "ngay",
+    "chu": "Ngày 20 tháng 12 năm 2026",
+    "co": 22,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.84,
+    "giua": 6.89,
+    "lech_max": 40,
+    "lech_p99": 24
+   },
+   {
+    "lop": "cv",
+    "chu": "Giảng viên",
+    "co": 13,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 4.95,
+    "giua": 6.0,
+    "lech_max": 41,
+    "lech_p99": 27
+   },
+   {
+    "lop": "nm",
+    "chu": "Nguyễn Thu Hà",
+    "co": 22,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 10.94,
+    "giua": 13.13,
+    "lech_max": 36,
+    "lech_p99": 25
+   },
+   {
+    "lop": "cv",
+    "chu": "Giám đốc học viện",
+    "co": 13,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.06,
+    "giua": 6.01,
+    "lech_max": 37,
+    "lech_p99": 25
+   },
+   {
+    "lop": "nm",
+    "chu": "Nguyễn Trọng Chiến",
+    "co": 22,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 10.91,
+    "giua": 13.12,
+    "lech_max": 42,
+    "lech_p99": 26
+   }
+  ],
+  "vong_anh": {
+   "lech_max": 43,
+   "lech_p99": 25
+  },
+  "kich_thuoc": "1123x794"
+ },
+ "v2-cn-e-co-dien": {
+  "ds": {
+   "khungChu": "104,92,915,614",
+   "ready": "1",
+   "nenXong": "1"
+  },
+  "chu": [
+   {
+    "lop": "so",
+    "chu": "Số CC-2026-0007",
+    "co": 13.725,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 7.18,
+    "giua": 7.18,
+    "lech_max": 21,
+    "lech_p99": 21
+   },
+   {
+    "lop": "th",
+    "chu": "Chiến Makeup Academy",
+    "co": 13.725,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 7.18,
+    "giua": 7.18,
+    "lech_max": 21,
+    "lech_p99": 21
+   },
+   {
+    "lop": "t1",
+    "chu": "Giấy chứng nhận",
+    "co": 51.24,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 15.06,
+    "giua": 15.06,
+    "lech_max": 21,
+    "lech_p99": 21
+   },
+   {
+    "lop": "t2",
+    "chu": "Tốt nghiệp",
+    "co": 15.555,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 7.18,
+    "giua": 7.18,
+    "lech_max": 21,
+    "lech_p99": 21
+   },
+   {
+    "lop": "tag",
+    "chu": "Trân trọng trao cho",
+    "co": 23.79,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 8.69,
+    "giua": 8.69,
+    "lech_max": 21,
+    "lech_p99": 21
+   },
+   {
+    "lop": "ten",
+    "chu": "Tôn Nữ Hoàng Bảo Ngọc Phương Thảo",
+    "co": 76.86,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 15.06,
+    "giua": 15.06,
+    "lech_max": 21,
+    "lech_p99": 21
+   },
+   {
+    "lop": "dong",
+    "chu": "Đã hoàn thành khoá Makeup chuyên nghiệp ",
+    "co": 22.875,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 15.06,
+    "giua": 15.06,
+    "lech_max": 21,
+    "lech_p99": 21
+   },
+   {
+    "lop": "ngay",
+    "chu": "Ngày 20 tháng 12 năm 2026",
+    "co": 20.13,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 8.69,
+    "giua": 8.69,
+    "lech_max": 21,
+    "lech_p99": 21
+   },
+   {
+    "lop": "cv",
+    "chu": "Giảng viên",
+    "co": 11.895,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 7.18,
+    "giua": 7.18,
+    "lech_max": 21,
+    "lech_p99": 21
+   },
+   {
+    "lop": "nm",
+    "chu": "Nguyễn Thu Hà",
+    "co": 20.13,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 15.06,
+    "giua": 15.06,
+    "lech_max": 21,
+    "lech_p99": 21
+   },
+   {
+    "lop": "cv",
+    "chu": "Giám đốc học viện",
+    "co": 11.895,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 7.18,
+    "giua": 7.18,
+    "lech_max": 21,
+    "lech_p99": 21
+   },
+   {
+    "lop": "nm",
+    "chu": "Nguyễn Trọng Chiến",
+    "co": 20.13,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 15.06,
+    "giua": 15.06,
+    "lech_max": 21,
+    "lech_p99": 21
+   }
+  ],
+  "vong_anh": {
+   "lech_max": 21,
+   "lech_p99": 21
+  },
+  "kich_thuoc": "1123x794"
+ },
+ "v2-cn-f-tien-giay": {
+  "ds": {
+   "khungChu": "136,128,851,542",
+   "ready": "1",
+   "nenXong": "1"
+  },
+  "chu": [
+   {
+    "lop": "so",
+    "chu": "Số CC-2026-0007",
+    "co": 12.318,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 6.9,
+    "giua": 7.37,
+    "lech_max": 9,
+    "lech_p99": 8
+   },
+   {
+    "lop": "th",
+    "chu": "Chiến Makeup Academy",
+    "co": 12.318,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 6.84,
+    "giua": 7.37,
+    "lech_max": 10,
+    "lech_p99": 9
+   },
+   {
+    "lop": "t1",
+    "chu": "Giấy chứng nhận",
+    "co": 45.9872,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 12.6,
+    "giua": 13.57,
+    "lech_max": 10,
+    "lech_p99": 9
+   },
+   {
+    "lop": "t2",
+    "chu": "Tốt nghiệp",
+    "co": 13.9604,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 6.9,
+    "giua": 7.37,
+    "lech_max": 10,
+    "lech_p99": 8
+   },
+   {
+    "lop": "tag",
+    "chu": "Trân trọng trao cho",
+    "co": 21.3512,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 8.86,
+    "giua": 9.54,
+    "lech_max": 10,
+    "lech_p99": 9
+   },
+   {
+    "lop": "ten",
+    "chu": "Tôn Nữ Hoàng Bảo Ngọc Phương Thảo",
+    "co": 68.9808,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 12.6,
+    "giua": 13.57,
+    "lech_max": 10,
+    "lech_p99": 9
+   },
+   {
+    "lop": "dong",
+    "chu": "Đã hoàn thành khoá Makeup chuyên nghiệp ",
+    "co": 20.53,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 12.71,
+    "giua": 13.57,
+    "lech_max": 10,
+    "lech_p99": 8
+   },
+   {
+    "lop": "ngay",
+    "chu": "Ngày 20 tháng 12 năm 2026",
+    "co": 18.0664,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 8.86,
+    "giua": 9.54,
+    "lech_max": 10,
+    "lech_p99": 9
+   },
+   {
+    "lop": "cv",
+    "chu": "Giảng viên",
+    "co": 10.6756,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 6.84,
+    "giua": 7.37,
+    "lech_max": 10,
+    "lech_p99": 9
+   },
+   {
+    "lop": "nm",
+    "chu": "Nguyễn Thu Hà",
+    "co": 18.0664,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 12.6,
+    "giua": 13.57,
+    "lech_max": 10,
+    "lech_p99": 9
+   },
+   {
+    "lop": "cv",
+    "chu": "Giám đốc học viện",
+    "co": 10.6756,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 6.87,
+    "giua": 7.37,
+    "lech_max": 10,
+    "lech_p99": 8
+   },
+   {
+    "lop": "nm",
+    "chu": "Nguyễn Trọng Chiến",
+    "co": 18.0664,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 12.6,
+    "giua": 13.57,
+    "lech_max": 10,
+    "lech_p99": 9
+   }
+  ],
+  "vong_anh": {
+   "lech_max": 10,
+   "lech_p99": 9
+  },
+  "kich_thuoc": "1123x794"
+ },
+ "v2-cn-g-ba-tu": {
+  "ds": {
+   "khungChu": "116,112,891,574",
+   "ready": "1",
+   "nenXong": "1"
+  },
+  "chu": [
+   {
+    "lop": "so",
+    "chu": "Số CC-2026-0007",
+    "co": 13.0455,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 6.78,
+    "giua": 7.93,
+    "lech_max": 58,
+    "lech_p99": 47
+   },
+   {
+    "lop": "th",
+    "chu": "Chiến Makeup Academy",
+    "co": 13.0455,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 6.9,
+    "giua": 7.93,
+    "lech_max": 62,
+    "lech_p99": 44
+   },
+   {
+    "lop": "t1",
+    "chu": "Giấy chứng nhận",
+    "co": 48.7032,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 10.55,
+    "giua": 12.04,
+    "lech_max": 63,
+    "lech_p99": 43
+   },
+   {
+    "lop": "t2",
+    "chu": "Tốt nghiệp",
+    "co": 14.7849,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 7.93,
+    "giua": 7.93,
+    "lech_max": 24,
+    "lech_p99": 24
+   },
+   {
+    "lop": "tag",
+    "chu": "Trân trọng trao cho",
+    "co": 22.6122,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 9.15,
+    "giua": 9.15,
+    "lech_max": 24,
+    "lech_p99": 24
+   },
+   {
+    "lop": "ten",
+    "chu": "Tôn Nữ Hoàng Bảo Ngọc Phương Thảo",
+    "co": 73.0548,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 11.7,
+    "giua": 12.04,
+    "lech_max": 63,
+    "lech_p99": 29
+   },
+   {
+    "lop": "dong",
+    "chu": "Đã hoàn thành khoá Makeup chuyên nghiệp ",
+    "co": 21.7425,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 11.29,
+    "giua": 12.04,
+    "lech_max": 43,
+    "lech_p99": 33
+   },
+   {
+    "lop": "ngay",
+    "chu": "Ngày 20 tháng 12 năm 2026",
+    "co": 19.1334,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 8.98,
+    "giua": 9.15,
+    "lech_max": 43,
+    "lech_p99": 26
+   },
+   {
+    "lop": "cv",
+    "chu": "Giảng viên",
+    "co": 11.3061,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 6.95,
+    "giua": 7.93,
+    "lech_max": 43,
+    "lech_p99": 43
+   },
+   {
+    "lop": "nm",
+    "chu": "Nguyễn Thu Hà",
+    "co": 19.1334,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 10.55,
+    "giua": 12.04,
+    "lech_max": 43,
+    "lech_p99": 43
+   },
+   {
+    "lop": "cv",
+    "chu": "Giám đốc học viện",
+    "co": 11.3061,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 6.32,
+    "giua": 8.37,
+    "lech_max": 63,
+    "lech_p99": 58
+   },
+   {
+    "lop": "nm",
+    "chu": "Nguyễn Trọng Chiến",
+    "co": 19.1334,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 9.5,
+    "giua": 12.71,
+    "lech_max": 63,
+    "lech_p99": 59
+   }
+  ],
+  "vong_anh": {
+   "lech_max": 58,
+   "lech_p99": 42
+  },
+  "kich_thuoc": "1123x794"
+ },
+ "v2-cn-tai-10-giay-tran": {
+  "ds": {
+   "khungChu": "58,58,1007,678",
+   "mem": "0.79",
+   "phong": "1.53",
+   "mo": "0",
+   "cat": "0,-584,1123,1962",
+   "ready": "1",
+   "doiMau": "5",
+   "nenXong": "1"
+  },
+  "chu": [
+   {
+    "lop": "so",
+    "chu": "Số CC-2026-0007",
+    "co": 15,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.84,
+    "giua": 7.15,
+    "lech_max": 36,
+    "lech_p99": 18
+   },
+   {
+    "lop": "th",
+    "chu": "Chiến Makeup Academy",
+    "co": 15,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.67,
+    "giua": 7.07,
+    "lech_max": 43,
+    "lech_p99": 21
+   },
+   {
+    "lop": "t1",
+    "chu": "Giấy chứng nhận",
+    "co": 56,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 11.32,
+    "giua": 14.06,
+    "lech_max": 46,
+    "lech_p99": 20
+   },
+   {
+    "lop": "t2",
+    "chu": "Tốt nghiệp",
+    "co": 17,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.77,
+    "giua": 7.11,
+    "lech_max": 35,
+    "lech_p99": 19
+   },
+   {
+    "lop": "tag",
+    "chu": "Trân trọng trao cho",
+    "co": 26,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 6.14,
+    "giua": 7.45,
+    "lech_max": 33,
+    "lech_p99": 18
+   },
+   {
+    "lop": "ten",
+    "chu": "Tôn Nữ Hoàng Bảo Ngọc Phương Thảo",
+    "co": 84,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 11.36,
+    "giua": 14.07,
+    "lech_max": 46,
+    "lech_p99": 20
+   },
+   {
+    "lop": "dong",
+    "chu": "Đã hoàn thành khoá Makeup chuyên nghiệp ",
+    "co": 25,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 11.31,
+    "giua": 14.09,
+    "lech_max": 47,
+    "lech_p99": 20
+   },
+   {
+    "lop": "ngay",
+    "chu": "Ngày 20 tháng 12 năm 2026",
+    "co": 22,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 6.0,
+    "giua": 7.4,
+    "lech_max": 33,
+    "lech_p99": 19
+   },
+   {
+    "lop": "cv",
+    "chu": "Giảng viên",
+    "co": 13,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.91,
+    "giua": 7.2,
+    "lech_max": 33,
+    "lech_p99": 17
+   },
+   {
+    "lop": "nm",
+    "chu": "Nguyễn Thu Hà",
+    "co": 22,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 11.82,
+    "giua": 14.18,
+    "lech_max": 23,
+    "lech_p99": 20
+   },
+   {
+    "lop": "cv",
+    "chu": "Giám đốc học viện",
+    "co": 13,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.55,
+    "giua": 6.99,
+    "lech_max": 44,
+    "lech_p99": 24
+   },
+   {
+    "lop": "nm",
+    "chu": "Nguyễn Trọng Chiến",
+    "co": 22,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 11.12,
+    "giua": 14.07,
+    "lech_max": 34,
+    "lech_p99": 22
+   }
+  ],
+  "vong_anh": {
+   "lech_max": 38,
+   "lech_p99": 19
+  },
+  "kich_thuoc": "1123x794"
+ },
+ "v2-cn-tai-7-nen-hoa-la": {
+  "ds": {
+   "khungChu": "90,147,943,591",
+   "mem": "1.20",
+   "phong": "2.21",
+   "mo": "1",
+   "cat": "0,0,1123,1876",
+   "ready": "1",
+   "nenXong": "1"
+  },
+  "chu": [
+   {
+    "lop": "so",
+    "chu": "Số CC-2026-0007",
+    "co": 13.437,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.04,
+    "giua": 5.99,
+    "lech_max": 39,
+    "lech_p99": 26
+   },
+   {
+    "lop": "th",
+    "chu": "Chiến Makeup Academy",
+    "co": 13.437,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.09,
+    "giua": 6.01,
+    "lech_max": 43,
+    "lech_p99": 24
+   },
+   {
+    "lop": "t1",
+    "chu": "Giấy chứng nhận",
+    "co": 50.1648,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 10.94,
+    "giua": 13.13,
+    "lech_max": 44,
+    "lech_p99": 25
+   },
+   {
+    "lop": "t2",
+    "chu": "Tốt nghiệp",
+    "co": 15.2286,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.0,
+    "giua": 6.05,
+    "lech_max": 41,
+    "lech_p99": 26
+   },
+   {
+    "lop": "tag",
+    "chu": "Trân trọng trao cho",
+    "co": 23.2908,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.73,
+    "giua": 6.89,
+    "lech_max": 37,
+    "lech_p99": 26
+   },
+   {
+    "lop": "ten",
+    "chu": "Tôn Nữ Hoàng Bảo Ngọc Phương Thảo",
+    "co": 75.2472,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 10.94,
+    "giua": 13.13,
+    "lech_max": 46,
+    "lech_p99": 25
+   },
+   {
+    "lop": "dong",
+    "chu": "Đã hoàn thành khoá Makeup chuyên nghiệp ",
+    "co": 22.395,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 11.02,
+    "giua": 13.13,
+    "lech_max": 45,
+    "lech_p99": 25
+   },
+   {
+    "lop": "ngay",
+    "chu": "Ngày 20 tháng 12 năm 2026",
+    "co": 19.7076,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.8,
+    "giua": 6.84,
+    "lech_max": 40,
+    "lech_p99": 24
+   },
+   {
+    "lop": "cv",
+    "chu": "Giảng viên",
+    "co": 11.6454,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.0,
+    "giua": 6.01,
+    "lech_max": 41,
+    "lech_p99": 26
+   },
+   {
+    "lop": "nm",
+    "chu": "Nguyễn Thu Hà",
+    "co": 19.7076,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 10.9,
+    "giua": 13.13,
+    "lech_max": 34,
+    "lech_p99": 26
+   },
+   {
+    "lop": "cv",
+    "chu": "Giám đốc học viện",
+    "co": 11.6454,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.03,
+    "giua": 6.05,
+    "lech_max": 42,
+    "lech_p99": 26
+   },
+   {
+    "lop": "nm",
+    "chu": "Nguyễn Trọng Chiến",
+    "co": 19.7076,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 10.94,
+    "giua": 13.12,
+    "lech_max": 36,
+    "lech_p99": 25
+   }
+  ],
+  "vong_anh": {
+   "lech_max": 44,
+   "lech_p99": 25
+  },
+  "kich_thuoc": "1123x794"
+ },
+ "v2-cn-tai-9-tem-xoay": {
+  "ds": {
+   "xoay": "90",
+   "phong": "1.89",
+   "mo": "1",
+   "cat": "-414,-127,1946,1063",
+   "khungChu": "84,88,955,618",
+   "ready": "1",
+   "doiMau": "0",
+   "nenXong": "1"
+  },
+  "chu": [
+   {
+    "lop": "so",
+    "chu": "Số CC-2026-0007",
+    "co": 14.046,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 4.97,
+    "giua": 4.97,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "th",
+    "chu": "Chiến Makeup Academy",
+    "co": 14.046,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 4.97,
+    "giua": 4.97,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "t1",
+    "chu": "Giấy chứng nhận",
+    "co": 52.4384,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 13.37,
+    "giua": 13.37,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "t2",
+    "chu": "Tốt nghiệp",
+    "co": 15.9188,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 4.97,
+    "giua": 4.97,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "tag",
+    "chu": "Trân trọng trao cho",
+    "co": 24.3464,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 7.01,
+    "giua": 7.01,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "ten",
+    "chu": "Tôn Nữ Hoàng Bảo Ngọc Phương Thảo",
+    "co": 78.6576,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 13.37,
+    "giua": 13.37,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "dong",
+    "chu": "Đã hoàn thành khoá Makeup chuyên nghiệp ",
+    "co": 23.41,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 13.37,
+    "giua": 13.37,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "ngay",
+    "chu": "Ngày 20 tháng 12 năm 2026",
+    "co": 20.6008,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 7.01,
+    "giua": 7.01,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "cv",
+    "chu": "Giảng viên",
+    "co": 12.1732,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 4.97,
+    "giua": 4.97,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "nm",
+    "chu": "Nguyễn Thu Hà",
+    "co": 20.6008,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 13.37,
+    "giua": 13.37,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "cv",
+    "chu": "Giám đốc học viện",
+    "co": 12.1732,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 4.97,
+    "giua": 4.97,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "nm",
+    "chu": "Nguyễn Trọng Chiến",
+    "co": 20.6008,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 13.37,
+    "giua": 13.37,
+    "lech_max": 0,
+    "lech_p99": 0
+   }
+  ],
+  "vong_anh": {
+   "lech_max": 0,
+   "lech_p99": 0
+  },
+  "kich_thuoc": "1123x794"
+ },
+ "v2-d-giay-tran": {
+  "ds": {
+   "khungChu": "58,58,964,1234",
+   "ready": "1",
+   "nenXong": "1"
+  },
+  "chu": [
+   {
+    "lop": "th",
+    "chu": "Chiến Makeup Academy",
+    "co": 21,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.0,
+    "giua": 6.05,
+    "lech_max": 43,
+    "lech_p99": 26
+   },
+   {
+    "lop": "k1",
+    "chu": "Chào mừng đến với lớp",
+    "co": 18,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.04,
+    "giua": 6.06,
+    "lech_max": 45,
+    "lech_p99": 25
+   },
+   {
+    "lop": "kh",
+    "chu": "Makeup chuyên nghiệp",
+    "co": 60,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 10.94,
+    "giua": 13.12,
+    "lech_max": 42,
+    "lech_p99": 25
+   },
+   {
+    "lop": "lo",
+    "chu": "Lớp K12 · khai giảng 02.11.2026",
+    "co": 30,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 5.74,
+    "giua": 6.89,
+    "lech_max": 40,
+    "lech_p99": 25
+   },
+   {
+    "lop": "dg",
+    "chu": "Thân gửi",
+    "co": 34,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 5.72,
+    "giua": 6.82,
+    "lech_max": 37,
+    "lech_p99": 26
+   },
+   {
+    "lop": "ten",
+    "chu": "Tôn Nữ Hoàng Bảo Ngọc Phương Thảo",
+    "co": 112,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 10.97,
+    "giua": 13.12,
+    "lech_max": 46,
+    "lech_p99": 25
+   },
+   {
+    "lop": "by",
+    "chu": "Thân ái, Chiến Makeup Academy",
+    "co": 28,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 5.8,
+    "giua": 6.89,
+    "lech_max": 50,
+    "lech_p99": 24
+   },
+   {
+    "lop": "ft",
+    "chu": "Tháng 11 · 2026",
+    "co": 18,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.04,
+    "giua": 6.09,
+    "lech_max": 39,
+    "lech_p99": 25
+   },
+   {
+    "lop": "dc",
+    "chu": "25 Hoàng Quốc Việt, Cầu Giấy, Hà Nội",
+    "co": 26,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 5.79,
+    "giua": 6.89,
+    "lech_max": 42,
+    "lech_p99": 24
+   }
+  ],
+  "vong_anh": {
+   "lech_max": 43,
+   "lech_p99": 25
+  },
+  "kich_thuoc": "1080x1350"
+ },
+ "v2-e-co-dien": {
+  "ds": {
+   "khungChu": "92,96,896,1164",
+   "ready": "1",
+   "nenXong": "1"
+  },
+  "chu": [
+   {
+    "lop": "th",
+    "chu": "Chiến Makeup Academy",
+    "co": 19.5195,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 7.18,
+    "giua": 7.18,
+    "lech_max": 21,
+    "lech_p99": 21
+   },
+   {
+    "lop": "k1",
+    "chu": "Chào mừng đến với lớp",
+    "co": 16.731,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 7.18,
+    "giua": 7.18,
+    "lech_max": 21,
+    "lech_p99": 21
+   },
+   {
+    "lop": "kh",
+    "chu": "Makeup chuyên nghiệp",
+    "co": 55.77,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 15.06,
+    "giua": 15.06,
+    "lech_max": 21,
+    "lech_p99": 21
+   },
+   {
+    "lop": "lo",
+    "chu": "Lớp K12 · khai giảng 02.11.2026",
+    "co": 27.885,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 8.69,
+    "giua": 8.69,
+    "lech_max": 21,
+    "lech_p99": 21
+   },
+   {
+    "lop": "dg",
+    "chu": "Thân gửi",
+    "co": 31.603,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 8.69,
+    "giua": 8.69,
+    "lech_max": 21,
+    "lech_p99": 21
+   },
+   {
+    "lop": "ten",
+    "chu": "Tôn Nữ Hoàng Bảo Ngọc Phương Thảo",
+    "co": 104.104,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 15.06,
+    "giua": 15.06,
+    "lech_max": 21,
+    "lech_p99": 21
+   },
+   {
+    "lop": "by",
+    "chu": "Thân ái, Chiến Makeup Academy",
+    "co": 26.026,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 8.69,
+    "giua": 8.69,
+    "lech_max": 21,
+    "lech_p99": 21
+   },
+   {
+    "lop": "ft",
+    "chu": "Tháng 11 · 2026",
+    "co": 16.731,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 7.18,
+    "giua": 7.18,
+    "lech_max": 21,
+    "lech_p99": 21
+   },
+   {
+    "lop": "dc",
+    "chu": "25 Hoàng Quốc Việt, Cầu Giấy, Hà Nội",
+    "co": 24.167,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 8.69,
+    "giua": 8.69,
+    "lech_max": 21,
+    "lech_p99": 21
+   }
+  ],
+  "vong_anh": {
+   "lech_max": 21,
+   "lech_p99": 21
+  },
+  "kich_thuoc": "1080x1350"
+ },
+ "v2-f-tien-giay": {
+  "ds": {
+   "khungChu": "136,128,808,1098",
+   "ready": "1",
+   "nenXong": "1"
+  },
+  "chu": [
+   {
+    "lop": "th",
+    "chu": "Chiến Makeup Academy",
+    "co": 17.6022,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 6.84,
+    "giua": 7.37,
+    "lech_max": 10,
+    "lech_p99": 9
+   },
+   {
+    "lop": "k1",
+    "chu": "Chào mừng đến với lớp",
+    "co": 15.0876,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 6.86,
+    "giua": 7.37,
+    "lech_max": 10,
+    "lech_p99": 8
+   },
+   {
+    "lop": "kh",
+    "chu": "Makeup chuyên nghiệp",
+    "co": 50.292,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 12.71,
+    "giua": 13.57,
+    "lech_max": 10,
+    "lech_p99": 8
+   },
+   {
+    "lop": "lo",
+    "chu": "Lớp K12 · khai giảng 02.11.2026",
+    "co": 25.146,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 8.86,
+    "giua": 9.54,
+    "lech_max": 10,
+    "lech_p99": 9
+   },
+   {
+    "lop": "dg",
+    "chu": "Thân gửi",
+    "co": 28.4988,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 8.94,
+    "giua": 9.54,
+    "lech_max": 10,
+    "lech_p99": 8
+   },
+   {
+    "lop": "ten",
+    "chu": "Tôn Nữ Hoàng Bảo Ngọc Phương Thảo",
+    "co": 93.8784,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 12.6,
+    "giua": 13.57,
+    "lech_max": 10,
+    "lech_p99": 9
+   },
+   {
+    "lop": "by",
+    "chu": "Thân ái, Chiến Makeup Academy",
+    "co": 23.4696,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 8.86,
+    "giua": 9.54,
+    "lech_max": 10,
+    "lech_p99": 9
+   },
+   {
+    "lop": "ft",
+    "chu": "Tháng 11 · 2026",
+    "co": 15.0876,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 6.84,
+    "giua": 7.37,
+    "lech_max": 10,
+    "lech_p99": 9
+   },
+   {
+    "lop": "dc",
+    "chu": "25 Hoàng Quốc Việt, Cầu Giấy, Hà Nội",
+    "co": 21.7932,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 8.86,
+    "giua": 9.54,
+    "lech_max": 10,
+    "lech_p99": 9
+   }
+  ],
+  "vong_anh": {
+   "lech_max": 10,
+   "lech_p99": 8
+  },
+  "kich_thuoc": "1080x1350"
+ },
+ "v2-g-ba-tu": {
+  "ds": {
+   "khungChu": "116,112,848,1130",
+   "ready": "1",
+   "nenXong": "1"
+  },
+  "chu": [
+   {
+    "lop": "th",
+    "chu": "Chiến Makeup Academy",
+    "co": 18.4737,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 6.32,
+    "giua": 7.93,
+    "lech_max": 58,
+    "lech_p99": 58
+   },
+   {
+    "lop": "k1",
+    "chu": "Chào mừng đến với lớp",
+    "co": 15.8346,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 7.93,
+    "giua": 7.93,
+    "lech_max": 24,
+    "lech_p99": 24
+   },
+   {
+    "lop": "kh",
+    "chu": "Makeup chuyên nghiệp",
+    "co": 52.782,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 11.2,
+    "giua": 12.04,
+    "lech_max": 62,
+    "lech_p99": 34
+   },
+   {
+    "lop": "lo",
+    "chu": "Lớp K12 · khai giảng 02.11.2026",
+    "co": 26.391,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 9.15,
+    "giua": 9.15,
+    "lech_max": 24,
+    "lech_p99": 24
+   },
+   {
+    "lop": "dg",
+    "chu": "Thân gửi",
+    "co": 29.9098,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 9.15,
+    "giua": 9.15,
+    "lech_max": 24,
+    "lech_p99": 24
+   },
+   {
+    "lop": "ten",
+    "chu": "Tôn Nữ Hoàng Bảo Ngọc Phương Thảo",
+    "co": 98.5264,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 10.55,
+    "giua": 12.04,
+    "lech_max": 64,
+    "lech_p99": 43
+   },
+   {
+    "lop": "by",
+    "chu": "Thân ái, Chiến Makeup Academy",
+    "co": 24.6316,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 9.15,
+    "giua": 9.15,
+    "lech_max": 24,
+    "lech_p99": 24
+   },
+   {
+    "lop": "ft",
+    "chu": "Tháng 11 · 2026",
+    "co": 15.8346,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 6.08,
+    "giua": 8.37,
+    "lech_max": 63,
+    "lech_p99": 63
+   },
+   {
+    "lop": "dc",
+    "chu": "25 Hoàng Quốc Việt, Cầu Giấy, Hà Nội",
+    "co": 22.8722,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 7.66,
+    "giua": 9.66,
+    "lech_max": 58,
+    "lech_p99": 50
+   }
+  ],
+  "vong_anh": {
+   "lech_max": 43,
+   "lech_p99": 38
+  },
+  "kich_thuoc": "1080x1350"
+ },
+ "v2-tai-10-giay-tran": {
+  "ds": {
+   "khungChu": "58,58,964,1234",
+   "mem": "0.70",
+   "phong": "1.47",
+   "mo": "0",
+   "cat": "0,-269,1080,1887",
+   "ready": "1",
+   "doiMau": "3",
+   "nenXong": "1"
+  },
+  "chu": [
+   {
+    "lop": "th",
+    "chu": "Chiến Makeup Academy",
+    "co": 21,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.62,
+    "giua": 6.96,
+    "lech_max": 35,
+    "lech_p99": 22
+   },
+   {
+    "lop": "k1",
+    "chu": "Chào mừng đến với lớp",
+    "co": 18,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.9,
+    "giua": 7.15,
+    "lech_max": 31,
+    "lech_p99": 17
+   },
+   {
+    "lop": "kh",
+    "chu": "Makeup chuyên nghiệp",
+    "co": 60,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 11.47,
+    "giua": 14.07,
+    "lech_max": 41,
+    "lech_p99": 20
+   },
+   {
+    "lop": "lo",
+    "chu": "Lớp K12 · khai giảng 02.11.2026",
+    "co": 30,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 5.98,
+    "giua": 7.38,
+    "lech_max": 44,
+    "lech_p99": 20
+   },
+   {
+    "lop": "dg",
+    "chu": "Thân gửi",
+    "co": 34,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 5.95,
+    "giua": 7.39,
+    "lech_max": 35,
+    "lech_p99": 21
+   },
+   {
+    "lop": "ten",
+    "chu": "Tôn Nữ Hoàng Bảo Ngọc Phương Thảo",
+    "co": 112,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 11.4,
+    "giua": 14.14,
+    "lech_max": 60,
+    "lech_p99": 20
+   },
+   {
+    "lop": "by",
+    "chu": "Thân ái, Chiến Makeup Academy",
+    "co": 28,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 6.13,
+    "giua": 7.44,
+    "lech_max": 42,
+    "lech_p99": 19
+   },
+   {
+    "lop": "ft",
+    "chu": "Tháng 11 · 2026",
+    "co": 18,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.81,
+    "giua": 7.14,
+    "lech_max": 37,
+    "lech_p99": 19
+   },
+   {
+    "lop": "dc",
+    "chu": "25 Hoàng Quốc Việt, Cầu Giấy, Hà Nội",
+    "co": 26,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 5.9,
+    "giua": 7.39,
+    "lech_max": 39,
+    "lech_p99": 21
+   }
+  ],
+  "vong_anh": {
+   "lech_max": 42,
+   "lech_p99": 19
+  },
+  "kich_thuoc": "1080x1350"
+ },
+ "v2-tai-7-giay-co-san-vuong": {
+  "ds": {
+   "mem": "0.00",
+   "phong": "1.60",
+   "mo": "1",
+   "cat": "132,-160,814,1360",
+   "khungChu": "311,192,458,819",
+   "ready": "1",
+   "doiMau": "3",
+   "nenXong": "1"
+  },
+  "chu": [
+   {
+    "lop": "th",
+    "chu": "Chiến Makeup Academy",
+    "co": 9.9855,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.34,
+    "giua": 5.88,
+    "lech_max": 30,
+    "lech_p99": 26
+   },
+   {
+    "lop": "k1",
+    "chu": "Chào mừng đến với lớp",
+    "co": 8.559,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.49,
+    "giua": 6.0,
+    "lech_max": 32,
+    "lech_p99": 25
+   },
+   {
+    "lop": "kh",
+    "chu": "Makeup chuyên nghiệp",
+    "co": 28.53,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 10.9,
+    "giua": 11.95,
+    "lech_max": 32,
+    "lech_p99": 23
+   },
+   {
+    "lop": "lo",
+    "chu": "Lớp K12 · khai giảng 02.11.2026",
+    "co": 14.265,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.7,
+    "giua": 6.29,
+    "lech_max": 30,
+    "lech_p99": 24
+   },
+   {
+    "lop": "dg",
+    "chu": "Thân gửi",
+    "co": 16.167,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.74,
+    "giua": 6.33,
+    "lech_max": 27,
+    "lech_p99": 22
+   },
+   {
+    "lop": "ten",
+    "chu": "Tôn Nữ Hoàng Bảo Ngọc Phương Thảo",
+    "co": 53.256,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 10.99,
+    "giua": 12.1,
+    "lech_max": 32,
+    "lech_p99": 22
+   },
+   {
+    "lop": "by",
+    "chu": "Thân ái, Chiến Makeup Academy",
+    "co": 13.314,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.78,
+    "giua": 6.37,
+    "lech_max": 26,
+    "lech_p99": 21
+   },
+   {
+    "lop": "ft",
+    "chu": "Tháng 11 · 2026",
+    "co": 8.559,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.48,
+    "giua": 6.08,
+    "lech_max": 28,
+    "lech_p99": 24
+   },
+   {
+    "lop": "dc",
+    "chu": "25 Hoàng Quốc Việt, Cầu Giấy, Hà Nội",
+    "co": 12.363,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.67,
+    "giua": 6.3,
+    "lech_max": 34,
+    "lech_p99": 25
+   }
+  ],
+  "vong_anh": {
+   "lech_max": 32,
+   "lech_p99": 24
+  },
+  "kich_thuoc": "1080x1080"
+ },
+ "v2-tai-7-giay-co-san": {
+  "ds": {
+   "phong": "2.03",
+   "mo": "1",
+   "cat": "24,-211,1031,1722",
+   "khungChu": "250,234,580,1037",
+   "ready": "1",
+   "doiMau": "3",
+   "nenXong": "1"
+  },
+  "chu": [
+   {
+    "lop": "th",
+    "chu": "Chiến Makeup Academy",
+    "co": 12.642,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.32,
+    "giua": 5.87,
+    "lech_max": 32,
+    "lech_p99": 27
+   },
+   {
+    "lop": "k1",
+    "chu": "Chào mừng đến với lớp",
+    "co": 10.836,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.55,
+    "giua": 6.05,
+    "lech_max": 25,
+    "lech_p99": 22
+   },
+   {
+    "lop": "kh",
+    "chu": "Makeup chuyên nghiệp",
+    "co": 36.12,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 10.87,
+    "giua": 11.98,
+    "lech_max": 32,
+    "lech_p99": 24
+   },
+   {
+    "lop": "lo",
+    "chu": "Lớp K12 · khai giảng 02.11.2026",
+    "co": 18.06,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.73,
+    "giua": 6.33,
+    "lech_max": 31,
+    "lech_p99": 22
+   },
+   {
+    "lop": "dg",
+    "chu": "Thân gửi",
+    "co": 20.468,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.75,
+    "giua": 6.37,
+    "lech_max": 25,
+    "lech_p99": 22
+   },
+   {
+    "lop": "ten",
+    "chu": "Tôn Nữ Hoàng Bảo Ngọc Phương Thảo",
+    "co": 67.424,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 10.94,
+    "giua": 12.1,
+    "lech_max": 37,
+    "lech_p99": 22
+   },
+   {
+    "lop": "by",
+    "chu": "Thân ái, Chiến Makeup Academy",
+    "co": 16.856,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.8,
+    "giua": 6.36,
+    "lech_max": 33,
+    "lech_p99": 22
+   },
+   {
+    "lop": "ft",
+    "chu": "Tháng 11 · 2026",
+    "co": 10.836,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.48,
+    "giua": 6.08,
+    "lech_max": 29,
+    "lech_p99": 25
+   },
+   {
+    "lop": "dc",
+    "chu": "25 Hoàng Quốc Việt, Cầu Giấy, Hà Nội",
+    "co": 15.652,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 5.68,
+    "giua": 6.3,
+    "lech_max": 30,
+    "lech_p99": 25
+   }
+  ],
+  "vong_anh": {
+   "lech_max": 32,
+   "lech_p99": 25
+  },
+  "kich_thuoc": "1080x1350"
+ },
+ "v2-tai-9-tem-tu-do-vuong": {
+  "ds": {
+   "mem": "0.00",
+   "phong": "1.81",
+   "mo": "1",
+   "cat": "36,-395,1023,1872",
+   "khungChu": "243,81,594,919",
+   "ready": "1",
+   "doiMau": "0",
+   "nenXong": "1"
+  },
+  "chu": [
+   {
+    "lop": "th",
+    "chu": "Chiến Makeup Academy",
+    "co": 12.936,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 4.97,
+    "giua": 4.97,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "k1",
+    "chu": "Chào mừng đến với lớp",
+    "co": 11.088,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 4.97,
+    "giua": 4.97,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "kh",
+    "chu": "Makeup chuyên nghiệp",
+    "co": 36.96,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 13.37,
+    "giua": 13.37,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "lo",
+    "chu": "Lớp K12 · khai giảng 02.11.2026",
+    "co": 18.48,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 7.01,
+    "giua": 7.01,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "dg",
+    "chu": "Thân gửi",
+    "co": 20.944,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 7.01,
+    "giua": 7.01,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "ten",
+    "chu": "Tôn Nữ Hoàng Bảo Ngọc Phương Thảo",
+    "co": 68.992,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 13.37,
+    "giua": 13.37,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "by",
+    "chu": "Thân ái, Chiến Makeup Academy",
+    "co": 17.248,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 7.01,
+    "giua": 7.01,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "ft",
+    "chu": "Tháng 11 · 2026",
+    "co": 11.088,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 4.97,
+    "giua": 4.97,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "dc",
+    "chu": "25 Hoàng Quốc Việt, Cầu Giấy, Hà Nội",
+    "co": 16.016,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 7.01,
+    "giua": 7.01,
+    "lech_max": 0,
+    "lech_p99": 0
+   }
+  ],
+  "vong_anh": {
+   "lech_max": 0,
+   "lech_p99": 0
+  },
+  "kich_thuoc": "1080x1080"
+ },
+ "v2-tai-9-tem-tu-do": {
+  "ds": {
+   "vung": "0.155,0.228,0.830,0.770",
+   "phong": "2.30",
+   "mo": "1",
+   "cat": "-98,-508,1295,2370",
+   "khungChu": "164,94,752,1163",
+   "ready": "1",
+   "doiMau": "0",
+   "nenXong": "1"
+  },
+  "chu": [
+   {
+    "lop": "th",
+    "chu": "Chiến Makeup Academy",
+    "co": 16.3779,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 4.97,
+    "giua": 4.97,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "k1",
+    "chu": "Chào mừng đến với lớp",
+    "co": 14.0382,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 4.97,
+    "giua": 4.97,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "kh",
+    "chu": "Makeup chuyên nghiệp",
+    "co": 46.794,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 13.37,
+    "giua": 13.37,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "lo",
+    "chu": "Lớp K12 · khai giảng 02.11.2026",
+    "co": 23.397,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 7.01,
+    "giua": 7.01,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "dg",
+    "chu": "Thân gửi",
+    "co": 26.5166,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 7.01,
+    "giua": 7.01,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "ten",
+    "chu": "Tôn Nữ Hoàng Bảo Ngọc Phương Thảo",
+    "co": 87.3488,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 13.37,
+    "giua": 13.37,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "by",
+    "chu": "Thân ái, Chiến Makeup Academy",
+    "co": 21.8372,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 7.01,
+    "giua": 7.01,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "ft",
+    "chu": "Tháng 11 · 2026",
+    "co": 14.0382,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 4.97,
+    "giua": 4.97,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "dc",
+    "chu": "25 Hoàng Quốc Việt, Cầu Giấy, Hà Nội",
+    "co": 20.2774,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 7.01,
+    "giua": 7.01,
+    "lech_max": 0,
+    "lech_p99": 0
+   }
+  ],
+  "vong_anh": {
+   "lech_max": 0,
+   "lech_p99": 0
+  },
+  "kich_thuoc": "1080x1350"
  }
 }

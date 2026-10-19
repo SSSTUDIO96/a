@@ -1,0 +1,29 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=1080">
+<title>R&D 07 v2 · Bảng xem nhanh nền và khung</title>
+<!-- Bảng xem nhanh vòng 2: ghép các PNG đã xuất (../anh-rnd07/v2-*.png). Hai phần: Chào mừng / Chứng nhận. -->
+<link rel="stylesheet" href="../v3-mau-chao-mung/phong/phong.css">
+<style>*{box-sizing:border-box;margin:0;padding:0}body{background:#ddd}
+#c{width:1080px;padding:36px 36px 40px;background:#fff;font-family:'MP Chữ không chân',sans-serif;color:#2A2420}
+h1{font:600 30px 'MP Chữ không chân'}.ph{font-size:17px;color:#6b6157;margin-top:6px;line-height:1.45}
+h2{font:600 22px 'MP Chữ không chân';margin:26px 0 12px;padding-bottom:6px;border-bottom:2px solid #A63D62;color:#A63D62}
+.g{display:grid;gap:14px 12px}.g5{grid-template-columns:repeat(5,1fr)}.g3{grid-template-columns:repeat(3,1fr)}
+.o img{width:100%;display:block;border-radius:6px;border:1px solid #e3dccf}.o b{display:block;font:600 14px 'MP Chữ không chân';margin-top:6px}
+.o i{display:block;font:400 12.5px 'MP Chữ không chân';color:#7a7066;font-style:normal;line-height:1.35}.o.canh b{color:#B23B32}
+</style></head><body><div id="c">
+<h1>Nền ảnh, tấm giấy và khung toàn trang (vòng 2)</h1>
+<div class="ph">Mọi hình do R&D tự vẽ bằng SVG. Ảnh 7, 9, 10 là ảnh anh Chiến gửi, dùng làm "ảnh tải lên" giả lập. Mọi dòng chữ ≥ 4,5:1 (đo máy).</div>
+<h2>Chào mừng · 1080×1350 và 1080×1080</h2><div class="g g5" id="a"></div>
+<h2>Giấy chứng nhận tốt nghiệp · A4 ngang 1123×794</h2><div class="g g3" id="b"></div>
+</div><script>
+const A=[['v2-a-giay-dau-sap','(a) Giấy + dấu sáp','nền hoa lá khắc xanh lam'],['v2-b-panel-vien-thuoc','(b) Panel góc lõm','ảnh khung viên thuốc'],['v2-c-tem-nen-dam','(c) Tem răng cưa','nền đậm xanh rêu'],
+ ['v2-d-giay-tran','(d) Giấy vân tràn','viền vàng hai đường'],['v2-e-co-dien','(e) Khung cổ điển','vàng nâu, fleur-de-lis'],['v2-f-tien-giay','(f) Tiền giấy','guilloche, acanthus'],['v2-g-ba-tu','(g) Thảm Ba Tư','medallion kem'],
+ ['v2-tai-7-giay-co-san','Ảnh 7 tải lên','đặt chữ lên giấy có sẵn'],['v2-tai-9-tem-tu-do','Ảnh 9 tải lên','app tự dò ô trống'],['v2-tai-10-giay-tran','Ảnh 10 tải lên','giấy vân tràn trang'],
+ ['v2-a-giay-dau-sap-vuong','(a) khổ vuông',''],['v2-tai-9-tem-tu-do-vuong','Ảnh 9 · vuông','tự thu nhỏ, lấp mép'],['v2-tai-7-giay-co-san-vuong','Ảnh 7 · vuông ✗','chữ nhỏ nhất 8,6 px: app phải cảnh báo','canh']];
+const B=[['v2-cn-a-giay-dau-sap','(a) Giấy + dấu sáp',''],['v2-cn-b-panel','(b) Panel góc lõm',''],['v2-cn-c-tem-nen-dam','(c) Tem, nền đậm',''],['v2-cn-d-giay-tran','(d) Giấy vân tràn',''],
+ ['v2-cn-e-co-dien','(e) Khung cổ điển','ưu tiên cho chứng nhận'],['v2-cn-f-tien-giay','(f) Tiền giấy','ưu tiên cho chứng nhận'],['v2-cn-g-ba-tu','(g) Thảm Ba Tư','ưu tiên cho chứng nhận'],
+ ['v2-cn-tai-7-nen-hoa-la','Ảnh 7 làm nền','giấy + dấu sáp của app'],['v2-cn-tai-9-tem-xoay','Ảnh 9, app xoay 90°','khung dọc → khổ ngang'],['v2-cn-tai-10-giay-tran','Ảnh 10 giấy tràn','']];
+const ve=(L)=>L.map(([f,t,m,k])=>`<div class="o ${k||''}"><img src="../anh-rnd07/${f}.png"><b>${t}</b><i>${m}</i></div>`).join('');
+document.getElementById('a').innerHTML=ve(A);document.getElementById('b').innerHTML=ve(B);
+const PH=new URLSearchParams(location.search).get('phan');if(PH){document.querySelectorAll('h2,.g').forEach((e,i)=>{const sec=i<2?'a':'b';if(sec!==PH)e.remove();});}
+Promise.all([...document.images].map(i=>i.decode().catch(()=>0))).then(()=>document.fonts.ready).then(()=>document.body.dataset.ready='1');
+</script></body></html>
