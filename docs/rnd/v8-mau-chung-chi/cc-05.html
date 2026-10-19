@@ -1,65 +1,67 @@
 <!doctype html>
 <html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>CC-05 Hoa văn vàng cổ điển</title>
+<title>CC-05 Hoa văn vàng cổ điển (theo ảnh 5)</title>
 <link rel="stylesheet" href="chung/cc.css">
-<!-- Mẫu 05 — học tinh thần ảnh tham khảo 5 (viền hoa văn vàng cổ điển, chữ xanh đậm, huy hiệu nhỏ giữa hai chữ ký).
-     Hoa văn viền, góc và đường cuộn đều sinh bằng SVG trong tệp này (không chép ảnh).
-     Phông: tiêu đề Playfair Display, tên MP Chữ ký 2 (Whisper), chữ thường Cormorant Garamond, chữ hoa Montserrat. -->
+<!-- Mẫu 05 — dựng sát ảnh anh Chiến gửi số 5: viền hoa văn vàng DÀY (ren tròn đan), khung trong có hoa văn góc, chữ xanh đậm,
+     tiêu đề có dòng phụ + đường kẻ, "trân trọng trao cho", tên chữ ký nghiêng xanh có gạch dưới, đường cuộn xanh giữa trang,
+     hai chữ ký, HUY HIỆU NHỎ CÓ RUY BĂNG xanh ở giữa đáy. Tất cả vẽ SVG (không chép ảnh).
+     BIẾN THỂ BẠC (như nửa dưới ảnh gốc): thêm ?vien=bac vào đường dẫn — viền ngoài bạc, hoa văn trong vẫn vàng.
+     Ô ảnh học viên (tròn, nhỏ ~25 mm): bên TRÁI tên, trong khung (chỗ trống ở ảnh gốc). ?anh=an để ẩn. -->
 <style>
-.c5{--f-ten:var(--f-ky-2);--ten-co:var(--ky-co-2);--xanh:#14284B;background:#FFFDF8;color:var(--xanh)}
+.c5{--f-ten:var(--f-ky-2);--ten-co:var(--ky-co-2);--xanh:#14284B;background:#FFFDF8;color:var(--xanh);
+  --o-pat:#A97C2C;--o-dot:#8A6420;--o-bg:#FBF3DF;--o-a:#8A6420;--o-b:#E9CF86;--o-c:#A97C2C;--o-d:#F3DE9C}
+.c5.vien-bac{--o-pat:#8F99A7;--o-dot:#6F7B89;--o-bg:#F2F4F7;--o-a:#6E7B89;--o-b:#EEF1F5;--o-c:#98A3B0;--o-d:#FAFBFC}
 .c5 .vien{inset:0}
-.c5 .t1{left:0;right:0;top:110px;text-align:center;font-family:var(--f-chan2);font-weight:700;font-size:58px;letter-spacing:.08em;line-height:1}
-.c5 .t2{left:0;right:0;top:178px;text-align:center;font-size:16px;letter-spacing:.42em;color:var(--xanh)}
-.c5 .gach0{left:50%;top:210px;width:300px;margin-left:-150px;height:1px;background:#B88A35}
-.c5 .tag{left:0;right:0;top:232px;text-align:center;font-size:12.5px;letter-spacing:.28em;color:#3B4A66}
-.c5 .ten{left:150px;right:150px;top:254px;text-align:center;font-size:calc(82px * var(--ten-co))}
-.c5 .gach{left:50%;top:372px;width:520px;margin-left:-260px;height:1px;background:var(--xanh);opacity:.6}
-.c5 .dong{left:0;right:0;top:386px;text-align:center;font-size:24px;font-style:italic;font-weight:500;color:#1F2A3C}
-.c5 .ngay{left:0;right:0;top:424px;text-align:center;font-size:18px;font-style:italic;color:#3B4A66}
-.c5 .cuon{left:50%;top:462px;width:220px;margin-left:-110px;height:40px}
-.c5 .anh{left:50%;top:514px;width:136px;height:136px;margin-left:-68px;box-shadow:0 0 0 4px #FFFDF8,0 0 0 7px #B88A35}
-.c5 .huy{left:50%;top:620px;width:84px;margin-left:-42px}
-.c5 .ky1{left:190px;top:540px;width:250px}
-.c5 .ky2{right:190px;top:540px;width:250px}
-.c5 .o-logo{left:50%;top:60px;width:40px;height:40px;margin-left:-20px}
-.c5 .thg{left:0;right:0;top:64px;text-align:center;font-family:var(--f-sans);font-weight:600;font-size:11.5px;letter-spacing:.24em;text-transform:uppercase;display:none}
-.c5.khong-logo .thg{display:block}
-.c5 .tht{left:150px;top:108px;width:200px;text-align:center;font-family:var(--f-sans);font-weight:600;font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:#3B4A66;display:none}
-.c5 .so{right:150px;top:112px;color:#3B4A66}
-.c5 .tenth{left:150px;top:112px;color:#3B4A66}
+.c5 .o-logo{left:525px;top:62px;width:36px;height:36px}
+.c5 .thg{left:0;width:1123px;top:104px;text-align:center;font-size:10px;color:#3B4A66}
+.c5 .t1{left:281px;top:146px;width:560px;height:84px}
+.c5 .t2{left:0;width:1123px;top:240px;text-align:center;font-family:var(--f-sans);font-weight:500;font-size:15px;letter-spacing:.36em;text-transform:uppercase;color:var(--xanh)}
+.c5 .gach0{left:561px;top:278px;width:340px;margin-left:-170px;height:1px;background:var(--xanh);opacity:.75}
+.c5 .tag{left:0;width:1123px;top:296px;text-align:center;font-size:12.5px;letter-spacing:.3em;color:#3B4A66}
+.c5 .ten{left:261px;top:318px;width:600px;height:158px;font-size:calc(118px * var(--ten-co));color:var(--xanh)}
+.c5 .dong{left:0;width:1123px;top:490px;text-align:center;color:#1F2A3C}
+.c5 .ngay{left:0;width:1123px;top:526px;text-align:center;color:#3B4A66}
+.c5 .cuon{left:441px;top:558px;width:240px;height:36px}
+.c5 .anh{left:150px;top:372px;width:96px;height:96px;box-shadow:0 0 0 3px #FFFDF8,0 0 0 5px #B88A35,0 0 0 6px #FFFDF8}
+.c5 .huy{left:513px;top:588px;width:96px}
+.c5 .ky1{left:270px;top:566px;width:227px}
+.c5 .ky2{left:702px;top:566px;width:227px}
+.c5 .so{left:0;width:1123px;top:718px;text-align:center;color:#3B4A66}
 </style></head>
 <body class="xem"><main>
 <section class="cc c5">
-  <svg class="vien" viewBox="0 0 1122 794" aria-hidden="true">
+  <svg class="vien" viewBox="0 0 1123 794" aria-hidden="true">
     <defs>
       <linearGradient id="v5" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8A6420"/><stop offset=".3" stop-color="#E9CF86"/><stop offset=".55" stop-color="#A97C2C"/><stop offset=".8" stop-color="#F3DE9C"/><stop offset="1" stop-color="#8A6420"/></linearGradient>
+      <linearGradient id="vo5" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:var(--o-a)"/><stop offset=".3" style="stop-color:var(--o-b)"/><stop offset=".55" style="stop-color:var(--o-c)"/><stop offset=".8" style="stop-color:var(--o-d)"/><stop offset="1" style="stop-color:var(--o-a)"/></linearGradient>
       <pattern id="ren5" width="26" height="26" patternUnits="userSpaceOnUse">
-        <rect width="26" height="26" fill="#FBF3DF"/>
-        <g fill="none" stroke="#A97C2C" stroke-width="1.3"><circle cx="13" cy="7.5" r="5.2"/><circle cx="13" cy="18.5" r="5.2"/><circle cx="7.5" cy="13" r="5.2"/><circle cx="18.5" cy="13" r="5.2"/></g>
-        <circle cx="13" cy="13" r="1.8" fill="#8A6420"/><path d="M0 0 l3 0 -3 3z M26 0 l-3 0 3 3z M0 26 l3 0 -3 -3z M26 26 l-3 0 3 -3z" fill="#A97C2C"/>
+        <rect width="26" height="26" style="fill:var(--o-bg)"/>
+        <g fill="none" style="stroke:var(--o-pat)" stroke-width="1.3"><circle cx="13" cy="7.5" r="5.2"/><circle cx="13" cy="18.5" r="5.2"/><circle cx="7.5" cy="13" r="5.2"/><circle cx="18.5" cy="13" r="5.2"/></g>
+        <circle cx="13" cy="13" r="1.8" style="fill:var(--o-dot)"/><path d="M0 0 l3 0 -3 3z M26 0 l-3 0 3 3z M0 26 l3 0 -3 -3z M26 26 l-3 0 3 -3z" style="fill:var(--o-pat)"/>
       </pattern>
     </defs>
-    <rect x="18" y="18" width="1086" height="758" fill="url(#ren5)"/>
-    <rect x="18" y="18" width="1086" height="758" fill="none" stroke="url(#v5)" stroke-width="3"/>
-    <rect x="46" y="46" width="1030" height="702" fill="#FFFDF8" stroke="url(#v5)" stroke-width="3"/>
-    <rect x="56" y="56" width="1010" height="682" fill="none" stroke="#B88A35" stroke-width="1"/>
-    <rect x="62" y="62" width="998" height="670" fill="none" stroke="#B88A35" stroke-width=".6" stroke-dasharray="2 4"/>
+    <rect x="12" y="12" width="1099" height="770" rx="18" fill="url(#ren5)"/>
+    <rect x="12" y="12" width="1099" height="770" rx="18" fill="none" stroke="url(#vo5)" stroke-width="3.5"/>
+    <rect x="46" y="46" width="1031" height="702" fill="#FFFDF8" stroke="url(#vo5)" stroke-width="3"/>
+    <rect x="52" y="52" width="1019" height="690" fill="none" stroke="url(#v5)" stroke-width="2"/>
+    <rect x="62" y="62" width="999" height="670" fill="none" stroke="#B88A35" stroke-width="1"/>
+    <rect x="68" y="68" width="987" height="658" fill="none" stroke="#B88A35" stroke-width=".7" stroke-dasharray="2 4"/>
     <g id="goc5"></g>
+    <!-- lá thoi giữa hai cạnh bên -->
+    <g fill="url(#v5)"><path d="M82 397 q11 -17 0 -34 q-11 17 0 34z M82 397 q11 17 0 34 q-11 -17 0 -34z" transform="translate(-2 0)"/><path d="M1041 397 q11 -17 0 -34 q-11 17 0 34z M1041 397 q11 17 0 34 q-11 -17 0 -34z" transform="translate(2 0)"/></g>
   </svg>
   <svg class="cuon" viewBox="0 0 220 40" aria-hidden="true" id="cuon5"></svg>
   <div class="o-logo"><img data-f="logo" alt=""></div>
-  <div class="tenth meta" data-f="th"></div>
-  <div class="so meta">Số <b data-f="so"></b></div>
-  <div class="t1" data-td>CHỨNG NHẬN</div>
-  <div class="t2 caps">Tốt nghiệp</div>
+  <div class="thg" data-f="th"></div>
+  <div class="tt sv t1" data-td data-gold="xanh" data-al="center" data-max="64">Giấy chứng nhận</div>
+  <div class="t2">Hoàn thành khoá học</div>
   <div class="gach0"></div>
   <div class="tag caps">Trân trọng trao cho</div>
-  <div class="ten" data-f="ten" data-fitw></div>
-  <div class="gach"></div>
+  <div class="ten sv" data-f="ten" data-al="center" data-line="1" data-line-inset="70" data-line-h="1.4" data-line-color="#14284B"></div>
   <div class="dong" data-f="dong"></div>
-  <div class="ngay" data-f="ngayChu"></div>
+  <div class="ngay"><span data-f="ngayChu"></span> · Số <span data-f="so"></span></div>
   <div class="anh"><img data-f="anh" alt=""></div>
-  <div class="huy" data-huy-hieu data-kieu="rang" data-nen="#14284B" data-dong1="TỐT NGHIỆP"></div>
+  <div class="huy" data-huy-hieu data-kieu="rang" data-nen="#14284B" data-duoi="1" data-ruy="#14284B"></div>
   <div class="ky ky1"><div class="cv">Giảng viên</div><div class="dl"></div><div class="nm" data-f="gv"></div></div>
   <div class="ky ky2"><div class="cv">Giám đốc trung tâm</div><div class="dl"></div><div class="nm" data-f="gd"></div></div>
 </section>
@@ -69,13 +71,12 @@
 (function(){
   function xoan(cx,cy,r0,vong,chieu,goc0){let d='';const n=60;for(let i=0;i<=n;i++){const t=i/n;const a=goc0+chieu*t*vong*2*Math.PI;const r=r0*(1-t*.82);
     d+=(i?'L':'M')+(cx+r*Math.cos(a)).toFixed(1)+' '+(cy+r*Math.sin(a)).toFixed(1);}return d;}
-  // Một góc (vẽ ở góc trên trái, các góc khác lật gương)
   const g1=`<g fill="none" stroke="url(#v5)" stroke-width="2.4" stroke-linecap="round">
-    <path d="M66 150 C66 100 90 72 140 66"/><path d="M66 190 C72 130 110 90 190 80"/>
-    <path d="${xoan(100,104,26,1.1,1,Math.PI*0.9)}"/><path d="${xoan(150,82,14,1,-1,Math.PI*1.4)}"/><path d="${xoan(82,150,14,1,1,Math.PI*0.2)}"/>
-    <path d="M190 80 C215 76 228 84 236 96" /><path d="M66 190 C62 215 70 228 82 236"/></g>
-    <g fill="#8A6420"><circle cx="238" cy="98" r="3"/><circle cx="84" cy="238" r="3"/><path d="M98 98 l8 -14 8 14 -8 14z" opacity=".9"/></g>`;
-  const W=1122,H=794;
+    <path d="M70 160 C70 106 94 78 146 72"/><path d="M70 200 C76 140 114 98 196 88"/>
+    <path d="${xoan(104,110,26,1.1,1,Math.PI*0.9)}"/><path d="${xoan(154,88,14,1,-1,Math.PI*1.4)}"/><path d="${xoan(88,156,14,1,1,Math.PI*0.2)}"/>
+    <path d="M196 88 C221 84 234 92 242 104" /><path d="M70 200 C66 225 74 238 86 246"/></g>
+    <g fill="#8A6420"><circle cx="244" cy="106" r="3"/><circle cx="88" cy="248" r="3"/><path d="M104 104 l8 -14 8 14 -8 14z" opacity=".9"/></g>`;
+  const W=1123,H=794;
   document.getElementById('goc5').innerHTML=[`<g>${g1}</g>`,`<g transform="translate(${W} 0) scale(-1 1)">${g1}</g>`,`<g transform="translate(0 ${H}) scale(1 -1)">${g1}</g>`,`<g transform="translate(${W} ${H}) scale(-1 -1)">${g1}</g>`].join('');
   const nua=`<path d="M100 20 C80 4 52 4 40 20 C30 34 14 30 14 20 C14 12 24 10 26 18" /><path d="${xoan(26,20,9,.9,-1,Math.PI)}"/><path d="M100 20 C84 32 66 34 56 28"/>`;
   document.getElementById('cuon5').innerHTML=`<g fill="none" stroke="#14284B" stroke-width="2.2" stroke-linecap="round">${nua}<g transform="translate(220 0) scale(-1 1)">${nua}</g></g><path d="M110 10 l7 10 -7 10 -7 -10z" fill="#14284B"/>`;

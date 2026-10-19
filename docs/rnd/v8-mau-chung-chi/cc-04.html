@@ -1,58 +1,59 @@
 <!doctype html>
 <html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>CC-04 Kem sóng chìm dải đen</title>
+<title>CC-04 Kem sóng chìm dải đen (theo ảnh 4)</title>
 <link rel="stylesheet" href="chung/cc.css">
-<!-- Mẫu 04 — học tinh thần ảnh tham khảo 4 (nền kem có sóng chìm, dải đen–vàng phía trên, huy hiệu ở mép dải). Tự vẽ.
-     Phông: chữ "Chứng nhận" MP Chữ ký 4 (Waterfall), tên MP Chữ ký 3 (Oooh Baby), chữ thường Cormorant Garamond, chữ hoa Montserrat. -->
+<!-- Mẫu 04 — dựng sát ảnh anh Chiến gửi số 4: nền kem có sóng chìm, dải đen–vàng cong phía trên (dày bên trái, thon dần sang phải),
+     tiêu đề VIẾT TAY vàng nổi khối trên dải đen, huy hiệu răng cưa ở góc trên phải đè lên mép dải, "trân trọng trao cho", tên chữ ký vàng,
+     đoạn chữ, hai chỗ ký, LOGO + tên trung tâm ở giữa đáy, thanh đen–vàng dưới chân. Tự vẽ SVG.
+     Ô ảnh học viên (tròn, nhỏ ~27 mm): bên TRÁI tên (khoảng kem trống ở ảnh gốc). ?anh=an để ẩn. -->
 <style>
-.c4{--f-ten:var(--f-ky-3);--ten-co:var(--ky-co-3);background:#FBF5E8;color:#2B2117}
-.c4 .song{inset:0}
-.c4 .dai{left:0;top:0;width:100%;height:260px}
-.c4 .anh{left:60px;top:300px;width:180px;height:180px;box-shadow:0 0 0 5px #FBF5E8,0 0 0 7px #B88A35,0 0 0 12px #FBF5E8,0 0 0 13px #C9A961}
-.c4 .huy{right:72px;top:96px;width:168px}
-.c4 .o-logo{left:72px;top:40px;width:38px;height:38px}
-.c4 .thg{left:120px;top:40px;line-height:38px;font-family:var(--f-sans);font-weight:600;font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:#E6D7B4}
-.c4.khong-logo .thg{left:72px}
-.c4 .t1{left:66px;top:58px;font-family:var(--f-ky-4);font-size:118px;line-height:1.25;padding:0 .1em}
-.c4 .t2{left:400px;top:196px;font-size:16px;letter-spacing:.5em}
-.c4 .tag{left:290px;top:296px;font-size:13px;letter-spacing:.26em;color:#5A4630}
-.c4 .ten{left:280px;top:318px;width:780px;font-size:calc(84px * var(--ten-co));color:#3A2A14}
-.c4 .gach{left:290px;top:440px;width:740px;height:2px;background:var(--vang)}
-.c4 .dong{left:290px;top:456px;width:760px;font-size:24px;font-style:italic;font-weight:500}
-.c4 .ngay{left:290px;top:496px;font-size:18px;font-style:italic;color:#5A4630}
-.c4 .ky1{left:290px;top:572px;width:250px}
-.c4 .ky2{left:770px;top:572px;width:250px}
-.c4 .so{left:60px;top:520px;width:180px;text-align:center;color:#6B5536;line-height:1.7}
-.c4 .chan{left:0;bottom:0;width:100%;height:16px;background:#1D1A17}
-.c4 .chan::before{content:"";position:absolute;left:0;right:0;top:-4px;height:4px;background:var(--vang)}
+.c4{--f-ten:var(--f-ky-3);--ten-co:var(--ky-co-3);background:#FFF9E3;color:#2B2117}
+.c4 .song,.c4 .dai{inset:0}
+.c4 .huy{left:752px;top:46px;width:214px}
+.c4 .t1{left:92px;top:34px;width:640px;height:146px}
+.c4 .t2{left:104px;top:186px;font-family:var(--f-sans);font-weight:500;font-size:15px;letter-spacing:.42em;text-transform:uppercase;color:#E9D49A;white-space:nowrap}
+.c4 .anh{left:98px;top:368px;width:104px;height:104px;box-shadow:0 0 0 4px #FFF9E3,0 0 0 6px #B88A35,0 0 0 9px #FFF9E3,0 0 0 10px #C9A961}
+.c4 .tag{left:0;width:1123px;top:332px;text-align:center;color:#3F3426;font-size:13.5px;letter-spacing:.2em}
+.c4 .ten{left:238px;top:350px;width:650px;height:156px;font-size:calc(120px * var(--ten-co));color:#3A2A14}
+.c4 .dong{left:0;width:1123px;top:512px;text-align:center}
+.c4 .ngay{left:0;width:1123px;top:548px;text-align:center;color:#5A4630}
+.c4 .ky1{left:190px;top:575px;width:200px}
+.c4 .ky2{left:733px;top:575px;width:200px}
+.c4 .o-logo{left:484px;top:614px;width:38px;height:38px}
+.c4 .thg{left:532px;top:618px;width:130px;white-space:normal;line-height:1.25;font-size:10.5px;color:#3F3426}
+.c4.khong-logo .thg{left:0;width:1123px;text-align:center}
+.c4 .so{left:0;width:1123px;top:722px;text-align:center;color:#6B5536}
+.c4 .chan{left:0;bottom:0;width:100%;height:30px;background:#1D1A17}
+.c4 .chan::before{content:"";position:absolute;left:0;right:0;top:-5px;height:5px;background:var(--vang)}
 </style></head>
 <body class="xem"><main>
 <section class="cc c4">
-  <svg class="song" viewBox="0 0 1122 794" preserveAspectRatio="none" aria-hidden="true">
+  <svg class="song" viewBox="0 0 1123 794" aria-hidden="true">
     <defs><pattern id="s4" width="120" height="34" patternUnits="userSpaceOnUse">
-      <path d="M0 17 C20 5 40 5 60 17 S100 29 120 17" fill="none" stroke="#E7D9B8" stroke-width="7" stroke-linecap="round"/></pattern></defs>
-    <rect width="1122" height="794" fill="url(#s4)" opacity=".38"/>
+      <path d="M0 17 C20 5 40 5 60 17 S100 29 120 17" fill="none" stroke="#F1E3B8" stroke-width="7" stroke-linecap="round"/></pattern></defs>
+    <rect width="1123" height="794" fill="url(#s4)" opacity=".5"/>
+    <path d="M0 640 C250 700 420 730 560 740 C760 750 940 720 1123 650 V794 H0Z" fill="#F4E8C2" opacity=".45"/>
   </svg>
-  <svg class="dai" viewBox="0 0 1122 260" preserveAspectRatio="none" aria-hidden="true">
+  <svg class="dai" viewBox="0 0 1123 794" aria-hidden="true">
     <defs><linearGradient id="vg4" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8A6420"/><stop offset=".3" stop-color="#F3DE9C"/><stop offset=".6" stop-color="#B88A35"/><stop offset="1" stop-color="#E9CF86"/></linearGradient>
-      <linearGradient id="den4" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2A2622"/><stop offset="1" stop-color="#171411"/></linearGradient></defs>
-    <path d="M0 0 H1122 V128 C960 128 860 150 760 205 C690 244 620 250 520 250 H0Z" fill="url(#vg4)"/>
-    <path d="M0 0 H1122 V116 C950 116 850 138 750 192 C680 230 610 238 520 238 H0Z" fill="url(#den4)"/>
+      <linearGradient id="den4" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#2D2824"/><stop offset=".6" stop-color="#1E1A17"/><stop offset="1" stop-color="#2A2420"/></linearGradient></defs>
+    <path d="M0 0 H1123 V44 C1040 48 960 86 862 154 C760 218 560 228 440 228 H0Z" fill="url(#vg4)"/>
+    <path d="M0 0 H1123 V34 C1040 38 950 78 852 144 C756 206 560 216 440 216 H0Z" fill="url(#den4)"/>
+    <path d="M0 9 H1123" stroke="url(#vg4)" stroke-width="2"/>
   </svg>
-  <div class="o-logo de-sang"><img data-f="logo" alt=""></div>
-  <div class="thg" data-f="th"></div>
-  <div class="t1 vang-chu sang" data-td>Chứng nhận</div>
-  <div class="t2 caps vang-chu sang">Tốt nghiệp</div>
+  <div class="tt viet sv t1" data-td data-gold="noi" data-al="left" data-max="130">Giấy chứng nhận</div>
+  <div class="t2">Hoàn thành khoá học</div>
   <div class="huy" data-huy-hieu data-kieu="rang" data-nen="#1D1A17"></div>
   <div class="anh"><img data-f="anh" alt=""></div>
-  <div class="so meta">Số chứng chỉ<br><b data-f="so"></b></div>
-  <div class="tag caps">Trân trọng trao cho</div>
-  <div class="ten" data-f="ten" data-fitw></div>
-  <div class="gach"></div>
+  <div class="tag">Trân trọng trao cho</div>
+  <div class="ten sv" data-f="ten" data-gold="dam" data-al="center" data-line="1" data-line-inset="60" data-line-h="1.6"></div>
   <div class="dong" data-f="dong"></div>
   <div class="ngay" data-f="ngayChu"></div>
   <div class="ky ky1"><div class="cv">Giảng viên</div><div class="dl"></div><div class="nm" data-f="gv"></div></div>
   <div class="ky ky2"><div class="cv">Giám đốc trung tâm</div><div class="dl"></div><div class="nm" data-f="gd"></div></div>
+  <div class="o-logo"><img data-f="logo" alt=""></div>
+  <div class="thg" data-f="th"></div>
+  <div class="so meta">Số <b data-f="so"></b></div>
   <div class="chan"></div>
 </section>
 </main><script src="chung/cc.js"></script></body></html>

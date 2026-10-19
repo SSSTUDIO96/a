@@ -132,6 +132,7 @@
     noi: { face: [[0, '#FFF3C0'], [.3, '#EBC65A'], [.48, '#B08430'], [.56, '#D9AB43'], [.82, '#F6DE94'], [1, '#C79A3C']], rim: '#6B4812', rimK: 0.012, sh: 0.5, depth: 0.065, ext: ['#B8892E', '#5A3A0A'] },
     dap: { face: [[0, '#F6E0A0'], [.5, '#CDA64F'], [1, '#EBD18A']], rim: null, hi: ['#FFF1BC', 0.6], dsh: ['#000', 0.85] },
     hong: { face: [[0, '#FFE8DA'], [.3, '#EDBBA3'], [.48, '#B97A62'], [.56, '#D9A38B'], [.82, '#F8D7C5'], [1, '#C48A70']], rim: '#7A4636', rimK: 0.012, sh: 0.4, depth: 0.05, ext: ['#C98E73', '#7A4636'] },
+    xanh: { face: [[0, '#2A4C86'], [.45, '#1C3768'], [.6, '#0F2147'], [1, '#2B4F8E']], rim: '#08142E', rimK: 0.016, sh: 0.25, depth: 0.03, ext: ['#13264D', '#08142E'] },
     dam: { face: [[0, '#8A6420'], [.35, '#B5882F'], [.55, '#7A5418'], [.8, '#A57A2A'], [1, '#6E4A12']], rim: '#34230A', rimK: 0.02, sh: 0.22, depth: 0.04, ext: ['#5A3C0C', '#34230A'] },
   };
   const VANG_DUONG = [[0, '#8A6420'], [.22, '#E9CF86'], [.45, '#B88A35'], [.7, '#F3DE9C'], [1, '#9C7428']];
@@ -177,7 +178,7 @@
     }
     // vị trí
     const gH = (b.asc + (b.n - 1) * b.lh * 100 + (b.hasLine ? 24 : b.desc)) * S / 100 + b.lineH;
-    const top = (H - gH - d) / 2;
+    const top = o.va === 'b' ? H - gH - d - 3 : (H - gH - d) / 2;
     const base1 = top + (b.asc * S) / 100;
     const nhom = E('g', {}, svg);
     const xs = b.ms.map((m) => {
@@ -246,7 +247,7 @@
     const gold = (P.get('kieu') && !ten && VANG[P.get('kieu')]) ? P.get('kieu') : box.dataset.gold;
     const o = {
       fam: cs.fontFamily, wt: cs.fontWeight, st: cs.fontStyle, ls, tf: cs.textTransform, color: cs.color,
-      al: box.dataset.al || 'left', gold: VANG[gold] ? gold : null,
+      al: box.dataset.al || 'left', va: box.dataset.va || 'm', gold: VANG[gold] ? gold : null,
       max: ten ? parseFloat(cs.fontSize) : parseFloat(box.dataset.max) || 400, lh: ten ? 1.04 : 1.1,
     };
     if (box.dataset.line) {
@@ -257,9 +258,9 @@
     const W = box.clientWidth, H = box.clientHeight;
     let lines = [goc];
     if (ten) {
-      const minS = 54; // dưới 54 px (≈ 40 pt khi in) mới chuyển sang 2 dòng cân
+      const minS = 44; // dưới 44 px (≈ 33 pt khi in) mới chuyển sang 2 dòng cân
       const b1 = boCuc([goc], o, W, H);
-      if (b1.S < minS && goc.includes(' ')) {
+      if (P.get('mot') !== '1' && b1.S < minS && goc.includes(' ')) {
         const L2 = chiaHai(goc, o, W, H);
         const b2 = boCuc(L2, o, W, H);
         if (b2.S > b1.S) lines = L2;

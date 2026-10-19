@@ -41,12 +41,13 @@ window.CM_DO=function(){
     const vang=el.classList.contains('vang');let rects;
     if(vang)rects=[...el.querySelectorAll('svg text')].map(t=>t.getBoundingClientRect());
     else{const r=document.createRange();r.selectNodeContents(el);rects=[...r.getClientRects()];}
-    rects=rects.filter(q=>q.width>2&&q.height>2).map(q=>({x:q.left-cr.left,y:q.top-cr.top,w:q.width,h:q.height}));
-    const cs=getComputedStyle(el);const fs=vang?parseFloat(cs.fontSize):parseFloat(cs.fontSize);
+    const cs=getComputedStyle(el);const fs=parseFloat(cs.fontSize);
+    // hộp dòng chữ của phông có chân cao hơn thân chữ → thu về khung 1,05 em quanh tâm dòng (vẫn gồm cả nét lên và nét xuống)
+    rects=rects.filter(q=>q.width>2&&q.height>2).map(q=>{const hh=vang?q.height:Math.min(q.height,fs*1.05);return {x:q.left-cr.left,y:q.top+(q.height-hh)/2-cr.top,w:q.width,h:hh};});
     out.push({lop:el.className.split(' ')[0],chu:(el.dataset.goc||el.textContent).trim().slice(0,48),mau:vang?el.dataset.vang:cs.color,vang:vang,co:fs,dam:parseInt(cs.fontWeight),hop:rects});});
   return out;};
-window.VE_MOUNT=function(inner){const c=document.getElementById('c');const s=document.createElementNS(NS,'svg');const W=c.offsetWidth,H=c.offsetHeight;
-  s.setAttribute('width',W);s.setAttribute('height',H);s.setAttribute('viewBox',`0 0 ${W} ${H}`);s.style.cssText='position:absolute;left:0;top:0;pointer-events:none';s.innerHTML=inner;c.insertBefore(s,c.firstChild);return s;};
+window.VE_MOUNT=function(inner,tren){const c=document.getElementById('c');const s=document.createElementNS(NS,'svg');const W=c.offsetWidth,H=c.offsetHeight;
+  s.setAttribute('width',W);s.setAttribute('height',H);s.setAttribute('viewBox',`0 0 ${W} ${H}`);s.style.cssText='position:absolute;left:0;top:0;pointer-events:none';s.innerHTML=inner;c.insertBefore(s,tren?c.querySelector('.w'):c.firstChild);return s;};
 const goc=window.MAU_SAN_SANG||Promise.resolve();
 window.CM_SAU=[];// việc mẫu cần làm sau khi mau.js co chữ xong và chữ vàng đã dựng (ví dụ đặt ô theo vị trí ảnh)
 window.MAU_SAN_SANG=goc.then(()=>{document.querySelectorAll('.vang').forEach(chuVang);window.CM_SAU.forEach(fn=>fn());document.body.dataset.cmXong='1';});

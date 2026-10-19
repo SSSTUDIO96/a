@@ -44,7 +44,7 @@ describe('phông SS-Album nhóm A', () => {
       const src = readFileSync(new URL(`../${f}`, PHONG), 'utf8');
       expect(src, f).toContain('<link rel="stylesheet" href="phong/ss-album/ss-album.css">');
     }
-    expect(readFileSync(new URL('phong.css', PHONG), 'utf8')).not.toMatch(/@import/);
+    expect(readFileSync(new URL('phong.css', PHONG), 'utf8')).not.toMatch(/^\s*@import/m);
   });
 
   it('BẮT: mỗi chữ ký ky-N có biến --f-ky-N, hệ số --ky-co-N và được mau.js nạp trước khi vẽ', () => {

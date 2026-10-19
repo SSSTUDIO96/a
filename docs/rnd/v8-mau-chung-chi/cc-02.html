@@ -1,55 +1,59 @@
 <!doctype html>
 <html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>CC-02 Đen nhung mảng đỏ</title>
+<title>CC-02 Đen nhung mảng đỏ (theo ảnh 2)</title>
 <link rel="stylesheet" href="chung/cc.css">
-<!-- Mẫu 02 — học tinh thần ảnh tham khảo 2 (nền đen, mảng đỏ cong bên trái, huy hiệu vàng có ruy băng). Tự vẽ.
-     Phông: tiêu đề Playfair Display, tên MP Chữ ký 2 (Whisper), chữ thường Cormorant Garamond, chữ hoa nhỏ Montserrat. -->
+<!-- Mẫu 02 — dựng sát ảnh anh Chiến gửi số 2: nền đen có vệt sáng, mảng đỏ cong bên trái, lớp đen bo cong phủ lên mép đỏ,
+     huy hiệu vàng có HAI ĐUÔI RUY BĂNG vàng trên mảng đỏ, tiêu đề vàng đậm, dòng phụ chữ thưa, "trân trọng trao cho" chữ thưa,
+     tên chữ ký VÀNG, đường kẻ vàng, hai chỗ ký ngắn. Tự vẽ SVG.
+     Ô ảnh học viên (tròn, nhỏ ~26 mm): nằm GIỮA hai chỗ ký (chỗ trống ở ảnh gốc) — không đụng huy hiệu, tên. ?anh=an để ẩn. -->
 <style>
-.c2{--f-ten:var(--f-ky-2);--ten-co:var(--ky-co-2);background:radial-gradient(120% 90% at 70% 40%,#2A2A2F 0%,#18181B 55%,#0E0E10 100%);color:#EDE6DA}
-.c2 .mang{left:0;top:0;width:430px;height:100%}
-.c2 .anh{left:44px;top:92px;width:170px;height:170px;box-shadow:0 0 0 4px #7E1820,0 0 0 7px #C9A961,0 0 0 11px #7E1820,0 0 0 12px #E9CF86}
-.c2 .huy{left:44px;top:350px;width:170px}
-.c2 .o-logo{left:440px;top:62px;width:40px;height:40px}
-.c2 .thg{left:492px;top:62px;line-height:40px;font-family:var(--f-sans);font-weight:600;font-size:12.5px;letter-spacing:.24em;text-transform:uppercase;color:#D9CDB6}
-.c2.khong-logo .thg{left:440px}
-.c2 .t1{left:438px;top:122px;font-family:var(--f-chan2);font-weight:800;font-size:64px;letter-spacing:.05em;line-height:1}
-.c2 .t2{left:442px;top:196px;font-size:19px;letter-spacing:.46em;color:#EDE6DA}
-.c2 .tag{left:442px;top:268px;font-size:12px;letter-spacing:.3em;color:#D9CDB6}
-.c2 .ten{left:426px;top:290px;width:650px;font-size:calc(80px * var(--ten-co))}
-.c2 .gach{left:442px;top:410px;width:620px;height:1px;background:linear-gradient(90deg,#C9A961,rgba(201,169,97,.1))}
-.c2 .dong{left:442px;top:428px;width:630px;font-size:25px;font-style:italic;color:#EDE6DA}
-.c2 .ngay{left:442px;top:476px;font-size:19px;font-style:italic;color:#CFC4B2}
-.c2 .so{left:442px;top:740px;color:#B9AC96}
-.c2 .ky1{left:442px;top:556px;width:250px;color:#EDE6DA}
-.c2 .ky2{left:800px;top:556px;width:250px;color:#EDE6DA}
+.c2{--f-ten:var(--f-ky-2);--ten-co:var(--ky-co-2);background:radial-gradient(120% 90% at 70% 40%,#2C2C31 0%,#19191C 55%,#0C0C0E 100%);color:#EDE6DA}
+.c2 .mang{left:0;top:0;width:100%;height:100%}
+.c2 .huy{left:49px;top:206px;width:196px}
+.c2 .o-logo{left:468px;top:44px;width:36px;height:36px}
+.c2 .thg{left:514px;top:44px;line-height:36px;color:#D9CDB6;font-size:11.5px;font-weight:600}
+.c2.khong-logo .thg{left:468px}
+.c2 .t1{left:462px;top:92px;width:580px;height:100px}
+.c2 .t2{left:468px;top:206px;font-family:var(--f-sans);font-weight:500;font-size:17px;letter-spacing:.34em;text-transform:uppercase;color:#D8C58E;white-space:nowrap}
+.c2 .tag{left:468px;top:296px;color:#E4D6B4;font-size:13px;letter-spacing:.34em;font-weight:600}
+.c2 .ten{left:456px;top:316px;width:612px;height:156px;font-size:calc(116px * var(--ten-co))}
+.c2 .dong{left:468px;top:484px;color:#EDE6DA}
+.c2 .ngay{left:468px;top:524px;color:#CFC4B2}
+.c2 .ky1{left:468px;top:590px;width:222px;color:#EDE6DA}
+.c2 .ky2{left:836px;top:590px;width:222px;color:#EDE6DA}
+.c2 .anh{left:712px;top:588px;width:100px;height:100px;box-shadow:0 0 0 2px #19191C,0 0 0 4px #C9A961,0 0 0 5px #19191C}
+.c2 .so{left:468px;top:738px;color:#B9AC96}
 </style></head>
 <body class="xem"><main>
 <section class="cc c2">
-  <svg class="mang" viewBox="0 0 430 794" preserveAspectRatio="none" aria-hidden="true">
+  <svg class="mang" viewBox="0 0 1123 794" aria-hidden="true">
     <defs>
-      <linearGradient id="do2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5E0F16"/><stop offset=".55" stop-color="#A3202B"/><stop offset="1" stop-color="#6E121A"/></linearGradient>
-      <linearGradient id="den2" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#232327"/><stop offset="1" stop-color="#151517"/></linearGradient>
+      <linearGradient id="do2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5A0E15"/><stop offset=".5" stop-color="#A7222D"/><stop offset="1" stop-color="#6A111A"/></linearGradient>
+      <linearGradient id="den2" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#2E2E33"/><stop offset=".85" stop-color="#1D1D21"/><stop offset="1" stop-color="#141416"/></linearGradient>
       <linearGradient id="vg2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8A6420"/><stop offset=".4" stop-color="#F3DE9C"/><stop offset=".7" stop-color="#B88A35"/><stop offset="1" stop-color="#E9CF86"/></linearGradient>
     </defs>
-    <path d="M0 0 H300 C360 120 380 260 330 400 C290 520 300 660 360 794 H0Z" fill="#0B0B0C" opacity=".55" transform="translate(26 0)"/>
-    <path d="M0 0 H286 C340 120 356 260 310 400 C270 520 280 660 340 794 H0Z" fill="url(#den2)"/>
-    <path d="M0 40 H220 C268 140 282 260 244 380 C210 490 216 600 262 754 H0Z" fill="url(#do2)"/>
-    <path d="M286 0 C340 120 356 260 310 400 C270 520 280 660 340 794" fill="none" stroke="url(#vg2)" stroke-width="2.5"/>
-    <path d="M0 40 H220 C268 140 282 260 244 380 C210 490 216 600 262 754 H0" fill="none" stroke="#C9A961" stroke-width="1" opacity=".6"/>
+    <!-- bóng đổ của lớp đen -->
+    <path d="M0 0 H150 C318 12 436 160 434 346 C432 536 296 716 70 794 H0Z" fill="#000" opacity=".5"/>
+    <!-- lớp đen bo cong -->
+    <path d="M0 0 H133 C260 10 400 150 413 345 C425 530 280 700 49 794 H0Z" fill="url(#den2)"/>
+    <path d="M133 0 C260 10 400 150 413 345 C425 530 280 700 49 794" fill="none" stroke="#4A4A52" stroke-width="1.5" opacity=".7"/>
+    <!-- mảng đỏ -->
+    <path d="M0 0 H95 C180 30 310 180 320 380 C328 560 190 700 0 752Z" fill="url(#do2)"/>
+    <path d="M95 0 C180 30 310 180 320 380 C328 560 190 700 0 752" fill="none" stroke="#E0707A" stroke-width="1.2" opacity=".35"/>
+    <path d="M40 0 C150 50 270 190 282 380" fill="none" stroke="#fff" stroke-width="40" opacity=".05"/>
   </svg>
-  <div class="anh"><img data-f="anh" alt=""></div>
-  <div class="huy" data-huy-hieu data-kieu="rang" data-nen="#1A1A1D" data-duoi="1" data-ruy="#B88A35"></div>
+  <div class="huy" data-huy-hieu data-kieu="rang" data-nen="#22190C" data-duoi="1" data-ruy="vang"></div>
   <div class="o-logo de-sang"><img data-f="logo" alt=""></div>
   <div class="thg" data-f="th"></div>
-  <div class="t1 vang-chu sang" data-td>CHỨNG NHẬN</div>
-  <div class="t2 caps">Tốt nghiệp</div>
-  <div class="tag caps">Trân trọng trao cho</div>
-  <div class="ten vang-chu sang" data-f="ten" data-fitw></div>
-  <div class="gach"></div>
+  <div class="tt sv t1" data-td data-gold="noi" data-al="left" data-max="70">Giấy chứng nhận</div>
+  <div class="t2">Hoàn thành khoá học</div>
+  <div class="tag">Trân trọng trao cho</div>
+  <div class="ten sv" data-f="ten" data-gold="bong" data-al="left" data-line="1"></div>
   <div class="dong" data-f="dong"></div>
   <div class="ngay" data-f="ngayChu"></div>
   <div class="ky ky1"><div class="cv">Giảng viên</div><div class="dl"></div><div class="nm" data-f="gv"></div></div>
   <div class="ky ky2"><div class="cv">Giám đốc trung tâm</div><div class="dl"></div><div class="nm" data-f="gd"></div></div>
-  <div class="so meta">Số chứng chỉ <b data-f="so"></b></div>
+  <div class="anh"><img data-f="anh" alt=""></div>
+  <div class="so meta">Số <b data-f="so"></b></div>
 </section>
 </main><script src="chung/cc.js"></script></body></html>

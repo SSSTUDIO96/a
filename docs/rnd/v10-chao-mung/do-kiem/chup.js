@@ -28,6 +28,7 @@ for(const m of mau)for(const bn of bienArg){const [ten,q]=BIEN[bn];const vuong=q
       ten:(document.querySelector('.ten')||{}).style?.fontSize||getComputedStyle(document.querySelector('.ten')).fontSize,
       anh:(()=>{const a=document.querySelector('.av');if(!a)return null;const r=a.getBoundingClientRect();return {x:r.left-cr.left,y:r.top-cr.top,w:r.width,h:r.height};})()};});
   await p.addStyleTag({content:'#c [data-do]{color:transparent!important}#c svg text{fill:transparent!important}#c [data-do] svg text{fill:transparent!important}'});
+  await p.evaluate(()=>document.querySelectorAll('#c svg text').forEach(t=>{t.setAttribute('fill','none');t.style.fill='none';}));
   await xuat(`${WD}/nen/${m}-${ten}.png`);
   fs.writeFileSync(`${WD}/nen/${m}-${ten}.json`,JSON.stringify({q,...info},null,1));
   console.log(m,ten,'ok','ten',info.ten,info.loi.length?('CANH-BAO '+info.loi.join(' | ')):'');await p.close();}
