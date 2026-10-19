@@ -1,9 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { STATUS_TRANSITIONS } from '@makeup/shared';
+import { isBlockingStatus, STATUS_TRANSITIONS, WORK_STATUSES } from '@makeup/shared';
 import { ApiError } from '../../api/errors';
 import type { Appointment, StaffMember } from '../../api/types';
 import {
+  axisFromMinutes,
   axisHours,
+  axisTicks,
+  countByLane,
+  countLive,
+  dayLoad,
+  isBlocking,
+  isLive,
+  loadAxisHours,
+  needsStaff,
   blockSpan,
   buildStaffLanes,
   cellKey,
@@ -377,5 +386,88 @@ describe('buổi học (việc tồn 6)', () => {
     expect(legendSubjects([{ subjectName: null, kind: 'MAKEUP' }]).map((s) => s.label)).toEqual(['Khác']);
     expect(isCourseSession({ kind: 'COURSE_SESSION' })).toBe(true);
     expect(isCourseSession({ kind: 'MAKEUP' })).toBe(false);
+  });
+});
+
+describe('K8: ca còn hiệu lực — một luật cho đếm và nhắc', () => {
+  const day = '2026-10-21';
+  const mk = (id: string, status: Appointment['status'], staff: Appointment['staff'] = [], h = 9) =>
+    appt({ id, status, staff, startsAt: `2026-10-21T${String(h).padStart(2, '0')}:00:00+07:00`, endsAt: `2026-10-21T${String(h + 1).padStart(2, '0')}:00:00+07:00` });
+
+  it('BẮT: isLive khớp isBlockingStatus của máy chủ ở MỌI trạng thái; huỷ, nháp, không đến thì không còn hiệu lực', () => {
+    for (const st of WORK_STATUSES) expect(isLive({ status: st }), st).toBe(isBlockingStatus(st));
+    expect(isLive({ status: 'CANCELLED' })).toBe(false);
+    expect(isLive({ status: 'NO_SHOW' })).toBe(false);
+    expect(isLive({ status: 'DRAFT' })).toBe(false);
+    for (const st of ['PENDING_CONFIRMATION', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED'] as const) expect(isLive({ status: st }), st).toBe(true);
+    // Quy tắc nhớ: vẽ mờ ⇔ không đếm.
+    for (const st of WORK_STATUSES) expect(isBlocking({ status: st })).toBe(isLive({ status: st }));
+  });
+
+  const list = [
+    mk('ok', 'CONFIRMED', [staffOf('ha')]),
+    mk('chua', 'PENDING_CONFIRMATION', [], 10),
+    mk('huy', 'CANCELLED', [], 11),
+    mk('huy2', 'CANCELLED', [staffOf('ha')], 12),
+    mk('nhap', 'DRAFT', [], 13),
+    mk('vang', 'NO_SHOW', [], 14),
+  ];
+
+  it('BẮT: needsStaff chỉ lấy ca còn hiệu lực chưa có thợ', () => {
+    expect(needsStaff(list).map((a) => a.id)).toEqual(['chua']);
+    expect(countLive(list)).toBe(2);
+  });
+
+  it('BẮT: countByDay và countByLane không đếm ca huỷ / nháp / không đến (ca vẫn ở indexByCell để vẽ mờ)', () => {
+    expect(countByDay(list, [day])[day]).toBe(2);
+    const lane = countByLane(list);
+    expect(lane.get('ha')).toBe(1);
+    expect(lane.get(UNASSIGNED)).toBe(1);
+    expect(indexByCell(list).get(cellKey(UNASSIGNED, day))?.map((a) => a.id)).toEqual(['chua', 'huy', 'nhap', 'vang']);
+  });
+
+  it('BẮT: dayLoad — số ca và số giờ chỉ tính ca còn hiệu lực, thanh của ca huỷ vẫn có để vẽ mờ', () => {
+    const ha = dayLoad(list, 'ha', day);
+    expect(ha.count).toBe(1);
+    expect(ha.minutes).toBe(60);
+    expect(ha.bars.map((b) => b.id)).toEqual(['ok', 'huy2']);
+    const na = dayLoad(list, UNASSIGNED, day);
+    expect(na.count).toBe(1);
+    expect(na.minutes).toBe(60);
+    expect(na.bars).toHaveLength(4);
+  });
+
+  it('trục giờ B: tối thiểu 04–18, nới theo thanh sớm nhất / muộn nhất (làm tròn giờ), tối đa 00–24', () => {
+    const load = (startMin: number, endMin: number) => ({ count: 1, minutes: 0, bars: [{ id: 'x', startMin, endMin, subjectName: null, blocking: true, course: false }] });
+    expect(loadAxisHours([])).toEqual([4, 18]);
+    expect(loadAxisHours([load(8 * 60, 9 * 60)])).toEqual([4, 18]);
+    expect(loadAxisHours([load(18 * 60 + 30, 20 * 60 + 30)])).toEqual([4, 21]);
+    expect(loadAxisHours([load(18 * 60, 18 * 60 + 1)])).toEqual([4, 19]);
+    expect(loadAxisHours([load(2 * 60 + 15, 5 * 60)])).toEqual([2, 18]);
+    expect(loadAxisHours([load(0, 90), load(22 * 60, 24 * 60)])).toEqual([0, 24]);
+    // Ngoài ngày / rỗng thì bỏ qua.
+    expect(axisFromMinutes([{ start: -300, end: 0 }, { start: 1440, end: 1500 }, { start: 600, end: 600 }])).toEqual([4, 18]);
+    expect(axisFromMinutes([{ start: -300, end: 1700 }])).toEqual([0, 24]);
+  });
+
+  it('BẮT: ca qua nửa đêm 22:00→02:00 — mỗi ngày thấy phần của mình (22:00–24:00 hôm nay, 00:00–02:00 hôm sau)', () => {
+    const night = appt({ id: 'dem', startsAt: '2026-10-21T22:00:00+07:00', endsAt: '2026-10-22T02:00:00+07:00', staff: [{ ...staffOf('ha'), blockStart: '2026-10-21T22:00:00+07:00', blockEnd: '2026-10-22T02:00:00+07:00' }] });
+    const d1 = dayLoad([night], 'ha', '2026-10-21');
+    expect(d1.bars[0]).toMatchObject({ startMin: 22 * 60, endMin: 24 * 60 });
+    expect(d1.minutes).toBe(120);
+    expect(loadAxisHours([d1])).toEqual([4, 24]);
+    const d2 = dayLoad([night], 'ha', '2026-10-22');
+    expect(d2.bars[0]).toMatchObject({ startMin: 0, endMin: 120 });
+    expect(d2.minutes).toBe(120);
+    expect(loadAxisHours([d2])).toEqual([0, 18]);
+  });
+
+  it('mốc chữ dưới trục: bội của 4 giờ + hai đầu, bỏ mốc giữa cách đầu mút < 2 giờ', () => {
+    expect(axisTicks(4, 18)).toEqual([4, 8, 12, 16, 18]);
+    expect(axisTicks(4, 21)).toEqual([4, 8, 12, 16, 21]);
+    expect(axisTicks(4, 17)).toEqual([4, 8, 12, 17]);
+    expect(axisTicks(0, 24)).toEqual([0, 4, 8, 12, 16, 20, 24]);
+    expect(axisTicks(3, 18)).toEqual([3, 8, 12, 16, 18]);
+    expect(axisTicks(7, 18)).toEqual([7, 12, 16, 18]);
   });
 });

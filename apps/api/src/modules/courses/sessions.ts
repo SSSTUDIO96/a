@@ -16,7 +16,7 @@
 // - Buổi bị huỷ TAY (lý do khác câu máy tự ghi khi lịch lớp đổi) thì bấm lại KHÔNG sinh lại ngày đó (ví dụ nghỉ lễ).
 // - Huỷ lớp khi còn buổi Đang diễn ra → 409, nói rõ buổi nào (điều phối duyệt V3).
 import type { LocationType } from '@prisma/client';
-import { canTransition, type WorkStatus } from '@makeup/shared';
+import { canTransition, zonedInstant, type WorkStatus } from '@makeup/shared';
 import { AppError } from '../../lib/errors';
 import { writeAudit } from '../../lib/audit';
 import {
@@ -50,31 +50,8 @@ const NOT_STARTED: readonly WorkStatus[] = ['DRAFT', 'PENDING_CONFIRMATION', 'CO
 
 // ---------- Ngày giờ ----------
 
-// Độ lệch (ms) của múi giờ tại một thời điểm: giờ địa phương − giờ UTC.
-function tzOffsetMs(instant: Date, timezone: string): number {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: timezone,
-    hourCycle: 'h23',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  }).formatToParts(instant);
-  const get = (t: string) => Number(parts.find((p) => p.type === t)?.value);
-  const asUtc = Date.UTC(get('year'), get('month') - 1, get('day'), get('hour'), get('minute'), get('second'));
-  return asUtc - Math.floor(instant.getTime() / 1000) * 1000;
-}
-
-// "2026-11-03" + 1080 phút theo múi giờ tổ chức → thời điểm UTC. 1440 phút = 0:00 ngày hôm sau.
-export function zonedInstant(date: string, minute: number, timezone: string): Date {
-  const [y, m, d] = date.split('-').map(Number) as [number, number, number];
-  const naive = Date.UTC(y, m - 1, d, 0, minute);
-  const first = naive - tzOffsetMs(new Date(naive), timezone);
-  // Lần hai cho múi giờ có giờ mùa hè (độ lệch ở thời điểm thật có thể khác lần đoán đầu).
-  return new Date(naive - tzOffsetMs(new Date(first), timezone));
-}
+// zonedInstant chuyển sang @makeup/shared (bản vẽ D mục 2.4, gói M2) — một bản dùng chung; xuất lại để chỗ cũ vẫn nhập được.
+export { zonedInstant };
 
 // Thứ ISO của một ngày "YYYY-MM-DD": 1 = Thứ Hai … 7 = Chủ nhật.
 function isoWeekday(date: string): number {

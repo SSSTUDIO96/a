@@ -123,7 +123,7 @@ describe('localDateAndMinute — ngày + phút theo múi giờ tổ chức', () 
     }
   });
   it('BẮT: thời điểm không hợp lệ, múi giờ sai → RangeError', () => {
-    expect(() => localDateAndMinute(new Date('không phải ngày'), HCM)).toThrow(RangeError);
+    expect(() => localDateAndMinute(new Date('không phải ngày'), HCM)).toThrow(/thời điểm không hợp lệ/);
     expect(() => localDateAndMinute(new Date('2026-12-31T17:30:00Z'), 'Asia/Khong_Co')).toThrow(RangeError);
   });
 });
@@ -133,6 +133,10 @@ describe('zonedInstant — chuyển từ courses/sessions.ts, giữ đúng hành
     expect(zonedInstant('2027-03-01', 1080, HCM).toISOString()).toBe('2027-03-01T11:00:00.000Z');
     expect(zonedInstant('2027-03-01', 1440, HCM).toISOString()).toBe('2027-03-01T17:00:00.000Z');
     expect(zonedInstant('2027-07-01', 540, 'America/New_York').toISOString()).toBe('2027-07-01T13:00:00.000Z');
+  });
+  it('GIỮ: ngày đổi giờ mùa hè (New York 14/03/2027, 02:00 nhảy lên 03:00) — cần lần đoán thứ hai', () => {
+    expect(zonedInstant('2027-03-14', hm(4), 'America/New_York').toISOString()).toBe('2027-03-14T08:00:00.000Z');
+    expect(zonedInstant('2027-03-14', hm(1), 'America/New_York').toISOString()).toBe('2027-03-14T06:00:00.000Z');
   });
   it('GIỮ: đi một vòng zonedInstant → localDateAndMinute trả lại đúng ngày + phút', () => {
     for (const tz of [HCM, BKK, 'UTC', 'America/New_York', 'Asia/Tokyo']) {

@@ -633,3 +633,134 @@ describe('Buổi học trên Lịch (việc tồn 6)', () => {
     expect(document.querySelectorAll('.ws-pt.is-course').length).toBe(1);
   });
 });
+
+describe('K8: ca đã huỷ / nháp / khách không đến hiện mờ nhưng không được đếm và không bị nhắc "Phân thợ"', () => {
+  // Thứ Tư 21/10 (hôm nay). Ca còn hiệu lực: z (Hà 08:00), y (chưa có thợ 12:00), s (buổi học 18:30–20:30 của Hà).
+  // Ca không còn hiệu lực: x huỷ chưa có thợ, w huỷ của Minh Anh, d nháp chưa có thợ, n khách không đến chưa có thợ.
+  const Z = a('kz', 'L-0301', '2026-10-21T08:00:00+07:00', '2026-10-21T09:00:00+07:00', ['m-ha']);
+  const Y = a('ky', 'L-0302', '2026-10-21T12:00:00+07:00', '2026-10-21T13:00:00+07:00', [], { title: 'Makeup tiệc' });
+  const S = a('ks', 'LH-0303', '2026-10-21T18:30:00+07:00', '2026-10-21T20:30:00+07:00', ['m-ha'], {
+    kind: 'COURSE_SESSION',
+    title: null,
+    customer: null,
+    courseClass: { id: 'k12', name: 'K12 tối', courseId: 'kh-1', courseName: 'Makeup cá nhân' },
+    sessionDate: '2026-10-21',
+  });
+  const X = a('kx', 'L-0304', '2026-10-21T10:00:00+07:00', '2026-10-21T11:00:00+07:00', [], { status: 'CANCELLED', title: 'Makeup đã huỷ' });
+  const W = a('kw', 'L-0305', '2026-10-21T14:00:00+07:00', '2026-10-21T15:00:00+07:00', ['m-anh'], { status: 'CANCELLED' });
+  const D = a('kd', 'L-0306', '2026-10-21T15:30:00+07:00', '2026-10-21T16:30:00+07:00', [], { status: 'DRAFT' });
+  const N = a('kn', 'L-0307', '2026-10-21T16:30:00+07:00', '2026-10-21T17:00:00+07:00', [], { status: 'NO_SHOW' });
+  const ITEMS = [Z, Y, S, X, W, D, N];
+
+  const phoneQuery = (q: string) => ({
+    matches: q === '(max-width: 640px)',
+    media: q,
+    addEventListener: () => undefined,
+    removeEventListener: () => undefined,
+  });
+
+  it('BẮT: chế độ B — "Cần xử lý", "Phân thợ", chip, tiêu đề buổi, "Tổng trong ngày" chỉ tính ca còn hiệu lực; ca huỷ vẫn hiện mờ', async () => {
+    setupServer({ items: ITEMS });
+    renderScreen(OWNER);
+    await screen.findByTestId('che-do-C');
+    fireEvent.click(modeButton('Ngày'));
+    const b = await screen.findByTestId('che-do-B');
+    // Chỉ ca y (còn hiệu lực, chưa có thợ) được nhắc.
+    const tasks = [...b.querySelectorAll('.ws-task')];
+    expect(tasks).toHaveLength(1);
+    expect(tasks[0]?.textContent).toContain('Makeup tiệc');
+    expect(within(b).getAllByRole('button', { name: 'Phân thợ' })).toHaveLength(1);
+    // Ca huỷ / nháp / không đến vẫn có trên danh sách và mờ.
+    for (const id of ['L-0304', 'L-0305', 'L-0306', 'L-0307']) {
+      const row = [...b.querySelectorAll('.ws-item')].find((el) => el.textContent?.includes('Khách ' + id)) as HTMLElement;
+      expect(row, id).toBeTruthy();
+      expect(row.classList.contains('is-off'), id).toBe(true);
+    }
+    expect(b.querySelectorAll('.ws-item')).toHaveLength(7);
+    // Số đếm.
+    expect(b.querySelector('.ws-load__sum')?.textContent).toBe('Tổng trong ngày3 ca · 1 ca chưa có thợ');
+    const chip = (name: RegExp) => within(b.querySelector('.ws-filters') as HTMLElement).getByRole('button', { name }).querySelector('.ui-chip__count')?.textContent;
+    expect(chip(/^Tất cả/)).toBe('3');
+    expect(chip(/Chưa có thợ/)).toBe('1');
+    expect(chip(/Minh Anh/)).toBe('0');
+    expect(chip(/Thu Hà/)).toBe('2');
+    expect(b.querySelector('.ws-day.is-on')?.textContent).toContain('3 ca');
+    const heads = [...b.querySelectorAll('.ws-caps')].map((h) => h.textContent);
+    expect(heads).toContain('Buổi sáng · 1 ca');
+    expect(heads).toContain('Buổi chiều · 2 ca');
+  });
+
+  it('BẮT: lưới C — "N ca" đầu cột và "N ca/tuần" đầu hàng không đếm ca huỷ / nháp / không đến', async () => {
+    setupServer({ items: ITEMS });
+    renderScreen(OWNER);
+    await screen.findByTestId('che-do-C');
+    const rows = screen.getAllByRole('rowheader').map((r) => r.textContent);
+    expect(rows).toEqual(['THThu HàThợ chính2 ca/tuần', 'MAMinh AnhThợ chính0 ca/tuần', 'BVBảo VyThợ phụ0 ca/tuần', '?Chưa có thợ1 ca/tuần']);
+    const wed = screen.getAllByRole('columnheader').find((h) => h.textContent?.includes('21/10'));
+    expect(wed?.textContent).toBe('Thứ Tư21/103 ca');
+    // Ca huỷ vẫn nằm trong ô, mờ.
+    expect(document.querySelector('[data-appt="kx"]')?.classList.contains('is-off')).toBe(true);
+  });
+
+  it('BẮT: chế độ A — đầu cột "N ca" (kể cả cột "Chưa có thợ") không đếm ca huỷ / nháp / không đến', async () => {
+    setupServer({ items: ITEMS });
+    renderScreen(OWNER);
+    await screen.findByTestId('che-do-C');
+    fireEvent.click(modeButton('Cột thợ'));
+    const col = await screen.findByTestId('che-do-A');
+    const meta = (name: string) => [...col.querySelectorAll('[role="columnheader"]')].find((h) => h.textContent?.includes(name))?.querySelector('.ws-a__meta')?.textContent;
+    expect(meta('Chưa có thợ')).toBe('1 ca');
+    expect(meta('Minh Anh')).toMatch(/^0 ca/);
+    expect(meta('Thu Hà')).toMatch(/^2 ca/);
+    expect(document.querySelector('[data-appt="kx"]')?.classList.contains('is-off')).toBe(true);
+  });
+
+  it('BẮT: lưới C điện thoại — "N ca · M chưa có thợ" và "Xem cả ngày (N ca)" không đếm ca huỷ; ô huỷ vẫn hiện mờ', async () => {
+    vi.stubGlobal('matchMedia', phoneQuery);
+    setupServer({ items: ITEMS });
+    renderScreen(OWNER);
+    await waitFor(() => expect(document.querySelectorAll('.ws-ag').length).toBeGreaterThan(0));
+    expect(document.querySelector('.ws-cm-day__h span')?.textContent).toBe('3 ca · 1 chưa có thợ');
+    expect(screen.getByRole('button', { name: 'Xem cả ngày (3 ca)' })).toBeTruthy();
+    const wed = screen.getAllByRole('rowheader').find((h) => h.getAttribute('aria-label')?.includes('21/10'));
+    expect(wed?.getAttribute('aria-label')).toBe('Thứ Tư 21/10, 3 ca');
+    expect(document.querySelector('[data-cell="chua-co-tho|2026-10-21"] .ws-pt.is-off')).toBeTruthy();
+  });
+
+  it('GIỮ: ca huỷ có thợ / ca còn hiệu lực chưa có thợ vẫn được nhắc đúng (không "tắt nhắc" quá tay)', async () => {
+    setupServer({ items: [Y, X] });
+    renderScreen(OWNER);
+    await screen.findByTestId('che-do-C');
+    fireEvent.click(modeButton('Ngày'));
+    const b = await screen.findByTestId('che-do-B');
+    expect(b.querySelectorAll('.ws-task')).toHaveLength(1);
+    expect(b.querySelector('.ws-load__sum')?.textContent).toBe('Tổng trong ngày1 ca · 1 ca chưa có thợ');
+  });
+
+  it('BẮT: chế độ B — buổi học 18:30–20:30 hiện trên thanh "Thợ trong ngày"; trục nới 04:00 – 21:00, nhãn mốc đủ', async () => {
+    setupServer({ items: [Z, S] });
+    renderScreen(OWNER);
+    await screen.findByTestId('che-do-C');
+    fireEvent.click(modeButton('Ngày'));
+    const b = await screen.findByTestId('che-do-B');
+    expect(b.querySelector('.ws-load__sub')?.textContent).toContain('04:00 – 21:00');
+    const ha = [...b.querySelectorAll('.ws-load__row')].find((r) => r.textContent?.includes('Thu Hà')) as HTMLElement;
+    const bars = [...ha.querySelectorAll('.ws-track i')] as HTMLElement[];
+    expect(bars).toHaveLength(2);
+    const course = bars.find((i) => i.classList.contains('is-course')) as HTMLElement;
+    // (18:30 − 04:00) / 17 giờ = 85,29% ; rộng 2 / 17 = 11,76%.
+    expect(parseFloat(course.style.left)).toBeCloseTo((870 / 1020) * 100, 1);
+    expect(parseFloat(course.style.width)).toBeCloseTo((120 / 1020) * 100, 1);
+    expect([...b.querySelectorAll('.ws-scale span')].map((x) => x.textContent)).toEqual(['4h', '8h', '12h', '16h', '21h']);
+  });
+
+  it('GIỮ: ngày không có ca ngoài khung → trục vẫn 04:00 – 18:00 như cũ', async () => {
+    setupServer({ items: [Z] });
+    renderScreen(OWNER);
+    await screen.findByTestId('che-do-C');
+    fireEvent.click(modeButton('Ngày'));
+    const b = await screen.findByTestId('che-do-B');
+    expect(b.querySelector('.ws-load__sub')?.textContent).toContain('04:00 – 18:00');
+    expect([...b.querySelectorAll('.ws-scale span')].map((x) => x.textContent)).toEqual(['4h', '8h', '12h', '16h', '18h']);
+  });
+});

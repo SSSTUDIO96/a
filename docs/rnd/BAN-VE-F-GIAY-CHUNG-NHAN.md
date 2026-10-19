@@ -451,7 +451,7 @@ BEGIN
   END IF;
   SELECT end_date, status INTO k_end, k_status FROM course_classes
     WHERE id = NEW.course_class_id AND organization_id = NEW.organization_id;
-  IF k_end IS NULL OR k_status IS DISTINCT FROM 'OPEN' AND k_status IS DISTINCT FROM 'CLOSED' THEN
+  IF k_end IS NULL OR (k_status IS DISTINCT FROM 'OPEN' AND k_status IS DISTINCT FROM 'CLOSED') THEN
     RAISE EXCEPTION 'Lớp không tồn tại hoặc đã huỷ'
       USING ERRCODE = '23514', CONSTRAINT = 'certificates_insert_guard';
   END IF;

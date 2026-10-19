@@ -8,12 +8,12 @@ const root = resolve(__dirname, '../..');
 const css = readFileSync(resolve(root, 'src/layout/layout.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
 const html = readFileSync(resolve(root, 'index.html'), 'utf8');
 
-/** Thân khối `selector { ... }` đầu tiên khớp đúng bộ chọn (kể cả trong @media). */
+/** Gộp thân mọi khối đúng bộ chọn `selector { ... }` (bộ chọn có thể xuất hiện ở ngoài và trong @media). */
 function block(selector: string): string {
   const esc = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const m = new RegExp(`(?:^|[\\s}])${esc}\\s*\\{([^}]*)\\}`, 'm').exec(css);
-  if (!m) throw new Error(`Không thấy khối ${selector}`);
-  return m[1] ?? '';
+  const all = [...css.matchAll(new RegExp(`(?:^|[\\s}])${esc}\\s*\\{([^}]*)\\}`, 'gm'))].map((m) => m[1] ?? '');
+  if (all.length === 0) throw new Error(`Không thấy khối ${selector}`);
+  return all.join('\n');
 }
 
 describe('thanh dưới điện thoại chừa vùng an toàn đáy', () => {
