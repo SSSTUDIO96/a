@@ -91,7 +91,7 @@
 @media (max-width: 1180px) {
   .td { max-width: 760px; }
   .td .td-tiles.ui-stats { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
-  .td-grid { display: flex; flex-direction: column; }
+  .td-grid { display: flex; flex-direction: column; align-items: stretch; }
   .td-col { display: contents; }
   #td-needs, #td-today { order: 1; }
   #td-tomorrow { order: 2; }

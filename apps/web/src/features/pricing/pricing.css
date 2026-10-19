@@ -20,8 +20,9 @@
 .pr-gerr { font-size: var(--fs-fx); color: var(--danger); padding: 2px 0 6px; }
 .pr-add-link.ui-btn { padding: 0; margin-top: 6px; }
 
-/* Nhóm nút chuyển 4 ô (điện thoại) */
+/* Nhóm nút chuyển (điện thoại): 6 ô — chữ xuống 2 dòng trong ô thay vì bị cắt */
 .pr-tabs { margin-bottom: 12px; background: var(--surface); }
+.pr-tabs .ui-seg__opt { padding: 0 3px; white-space: normal; line-height: 1.2; font-size: 12.5px; min-height: 44px; height: auto; overflow-wrap: anywhere; }
 
 /* ---------- (a) Lưới thẻ nhân vật ---------- */
 .pr-grid {
@@ -401,4 +402,6 @@ span.pr-subrow__name { padding-left: 8px; }
   .pr-occcard { margin-bottom: 76px; }
   .pr-cond__body { padding-left: 4px; }
   .pr-nosvc { text-align: left; }
+  /* Ô chọn phụ phí kèm giá cần rộng hơn 160px mặc định của dòng cài đặt */
+  .pr-dlg-rule .ui-row:not(.ui-row--stack) { grid-template-columns: minmax(0, 1fr) minmax(0, 220px); }
 }

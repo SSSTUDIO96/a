@@ -66,6 +66,11 @@ model User {
   designCardsCreated   DesignCard[]               @relation("DesignCardCreatedBy")
   passwordResetTokens  PasswordResetToken[]
   surchargeRulesCreated SurchargeRule[]           @relation("SurchargeRuleCreatedBy")
+  // Bản vẽ E — cổng học viên (migration 20261019200000_cong_hoc_vien).
+  portalLinksCreated    PortalLink[]             @relation("PortalLinkCreatedBy")
+  portalLinksRevoked    PortalLink[]             @relation("PortalLinkRevokedBy")
+  portalDevicesEnded    PortalDevice[]           @relation("PortalDeviceEndedBy")
+  portalSettingsUpdated PortalSettings[]         @relation("PortalSettingsUpdatedBy")
 
   @@map("users")
 }
@@ -168,6 +173,11 @@ model Organization {
   surchargeRules       SurchargeRule[]
   surchargeRuleTargets SurchargeRuleTarget[]
   surchargeRuleDates   SurchargeRuleDate[]
+  // Bản vẽ E — cổng học viên (migration 20261019200000_cong_hoc_vien).
+  portalLinks    PortalLink[]
+  portalDevices  PortalDevice[]
+  portalSessions PortalSession[]
+  portalSettings PortalSettings?
 
   @@map("organizations")
 }
@@ -413,6 +423,10 @@ model Customer {
   contracts    Contract[]
   enrollments  Enrollment[]
   designCards  DesignCard[]
+  // Bản vẽ E — cổng học viên (migration 20261019200000_cong_hoc_vien).
+  portalLinks    PortalLink[]
+  portalDevices  PortalDevice[]
+  portalSessions PortalSession[]
 
   @@unique([id, organizationId])
   @@index([organizationId, phone])
@@ -1499,4 +1513,117 @@ model DesignCardPhoto {
   @@id([cardId, sortOrder])
   @@index([fileId])
   @@map("design_card_photos")
+}
+
+// ==================== CỔNG HỌC VIÊN (bản vẽ E) ====================
+
+enum PortalLinkRevokeReason {
+  REPLACED
+  REVOKED
+}
+
+enum PortalDeviceEndReason {
+  SIGNED_OUT
+  BLOCKED
+  LINK_REVOKED
+}
+
+// Đường dẫn gửi học viên. Chỉ lưu sha256 của chìa. Mỗi học viên tối đa MỘT đường dẫn chưa thu hồi: chỉ mục duy nhất CÓ ĐIỀU
+// KIỆN portal_links_one_live_per_customer (customer_id) WHERE revoked_at IS NULL viết tay trong migration 20261019200000 —
+// Prisma không ghi được. Trigger portal_links_guard: không đổi chủ/chìa, không gỡ thu hồi/khoá.
+model PortalLink {
+  id             String                  @id @default(uuid()) @db.Uuid
+  organizationId String                  @map("organization_id") @db.Uuid
+  customerId     String                  @map("customer_id") @db.Uuid
+  keyHash        String                  @unique @map("key_hash")
+  createdById    String                  @map("created_by_id") @db.Uuid
+  createdAt      DateTime                @default(now()) @map("created_at") @db.Timestamptz(3)
+  expiresAt      DateTime                @map("expires_at") @db.Timestamptz(3)
+  firstOpenedAt  DateTime?               @map("first_opened_at") @db.Timestamptz(3)
+  failedAttempts Int                     @default(0) @map("failed_attempts")
+  lockedAt       DateTime?               @map("locked_at") @db.Timestamptz(3)
+  revokedAt      DateTime?               @map("revoked_at") @db.Timestamptz(3)
+  revokeReason   PortalLinkRevokeReason? @map("revoke_reason")
+  revokedById    String?                 @map("revoked_by_id") @db.Uuid
+
+  organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  customer     Customer       @relation(fields: [customerId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  createdBy    User           @relation("PortalLinkCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  revokedBy    User?          @relation("PortalLinkRevokedBy", fields: [revokedById], references: [id], onDelete: Restrict)
+  devices      PortalDevice[]
+  devicesOfCustomer PortalDevice[] @relation("PortalDeviceLinkOfCustomer")
+
+  @@unique([id, organizationId])
+  @@unique([id, customerId])
+  @@index([organizationId, customerId, createdAt])
+  @@map("portal_links")
+}
+
+// Một máy (một kho trình duyệt) đã mở cổng. Tối đa 2 máy mỗi đường dẫn (trigger portal_devices_max_per_link).
+// Kết thúc (ended_at) thì không sống lại (trigger portal_devices_guard).
+model PortalDevice {
+  id               String                 @id @default(uuid()) @db.Uuid
+  organizationId   String                 @map("organization_id") @db.Uuid
+  customerId       String                 @map("customer_id") @db.Uuid
+  linkId           String                 @map("link_id") @db.Uuid
+  label            String
+  createdAt        DateTime               @default(now()) @map("created_at") @db.Timestamptz(3)
+  lastSeenAt       DateTime               @default(now()) @map("last_seen_at") @db.Timestamptz(3)
+  endedAt          DateTime?              @map("ended_at") @db.Timestamptz(3)
+  endReason        PortalDeviceEndReason? @map("end_reason")
+  endedById        String?                @map("ended_by_id") @db.Uuid
+  endNote          String?                @map("end_note")
+  handoffHash      String?                @map("handoff_hash")
+  handoffExpiresAt DateTime?              @map("handoff_expires_at") @db.Timestamptz(3)
+
+  organization       Organization    @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  customer           Customer        @relation(fields: [customerId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  link               PortalLink      @relation(fields: [linkId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  // Máy phải thuộc ĐÚNG học viên của đường dẫn (database tự chặn).
+  linkOfCustomer     PortalLink      @relation("PortalDeviceLinkOfCustomer", fields: [linkId, customerId], references: [id, customerId], onDelete: Restrict)
+  endedBy            User?           @relation("PortalDeviceEndedBy", fields: [endedById], references: [id], onDelete: Restrict)
+  sessions           PortalSession[]
+  sessionsOfCustomer PortalSession[] @relation("PortalSessionDeviceOfCustomer")
+
+  @@unique([id, organizationId])
+  @@unique([id, customerId])
+  @@index([linkId])
+  @@index([organizationId, customerId, createdAt])
+  @@map("portal_devices")
+}
+
+// Thẻ phiên cổng (cookie mp_portal, chuỗi "mpp_…"). Chỉ lưu sha256. Hết hạn trượt 90 ngày theo lần dùng.
+model PortalSession {
+  id             String    @id @default(uuid()) @db.Uuid
+  organizationId String    @map("organization_id") @db.Uuid
+  customerId     String    @map("customer_id") @db.Uuid
+  deviceId       String    @map("device_id") @db.Uuid
+  tokenHash      String    @unique @map("token_hash")
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  lastUsedAt     DateTime  @default(now()) @map("last_used_at") @db.Timestamptz(3)
+  expiresAt      DateTime  @map("expires_at") @db.Timestamptz(3)
+  revokedAt      DateTime? @map("revoked_at") @db.Timestamptz(3)
+
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  customer         Customer     @relation(fields: [customerId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  device           PortalDevice @relation(fields: [deviceId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  deviceOfCustomer PortalDevice @relation("PortalSessionDeviceOfCustomer", fields: [deviceId, customerId], references: [id, customerId], onDelete: Restrict)
+
+  @@index([deviceId])
+  @@map("portal_sessions")
+}
+
+// Cài đặt cổng của tổ chức. Số tài khoản: đủ cả 3 hoặc trống cả 3 (CHECK). Bảng riêng để không bao giờ lên trang công khai.
+model PortalSettings {
+  organizationId  String   @id @map("organization_id") @db.Uuid
+  bankName        String?  @map("bank_name")
+  bankAccountNo   String?  @map("bank_account_no")
+  bankAccountName String?  @map("bank_account_name")
+  updatedById     String   @map("updated_by_id") @db.Uuid
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  updatedBy    User         @relation("PortalSettingsUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+
+  @@map("portal_settings")
 }

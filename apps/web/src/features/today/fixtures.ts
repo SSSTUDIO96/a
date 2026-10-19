@@ -171,3 +171,24 @@ export function ownView(): TodayView {
     almostFullClasses: null,
   };
 }
+
+/** Vai trò tuỳ chỉnh thiếu cả schedule.read_all lẫn schedule.read_own (nhưng có quyền tiền): máy chủ trả ca = null. */
+export function noScheduleView(): TodayView {
+  const f = fullView();
+  return {
+    ...f,
+    scheduleScope: null,
+    counts: { appointmentsToday: null, appointmentsTomorrow: null, unassignedSoon: null, overdue: f.counts.overdue, dueSoon: f.counts.dueSoon },
+    appointments: null,
+    unassigned: null,
+    newContracts: null,
+    newEnrollments: null,
+    almostFullClasses: null,
+  };
+}
+
+/** Thiếu quyền lịch và mọi quyền khác: chỉ còn org.read. */
+export function nothingView(): TodayView {
+  const f = noScheduleView();
+  return { ...f, counts: { ...f.counts, overdue: null, dueSoon: null }, installments: null };
+}

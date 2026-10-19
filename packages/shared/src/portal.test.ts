@@ -73,6 +73,7 @@ describe('transferNote — nội dung chuyển khoản', () => {
   it('GIỮ: bỏ dấu (cả đ/Đ), giữ mã hợp đồng', () => {
     expect(transferNote('HĐKH-000042', 'Phương Thảo')).toBe('HDKH-000042 Phuong Thao');
     expect(transferNote('HĐKH-000042', 'Đặng Thị Đào')).toBe('HDKH-000042 Dang Thi Dao');
+    expect(transferNote('hđkh-7', 'lê đình đức')).toBe('hdkh-7 le dinh duc'); // đ thường không tách dấu theo NFD
   });
   it('BẮT: chỉ còn [A-Za-z0-9 -], gộp dấu cách, tối đa 50 ký tự, không đuôi cách', () => {
     const n = transferNote('HĐKH-000042', "  Ngô (Bé) O'Brien_ Hà  ");

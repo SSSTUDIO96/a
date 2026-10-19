@@ -1,8 +1,27 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { SYSTEM_ROLES } from '@makeup/shared';
+import { OCCASION_COLORS, SYSTEM_ROLES } from '@makeup/shared';
 import { ApiError } from '../../api/errors';
-import type { MakeupSubject, PayRateSheet, Service, ServicePackage } from '../../api/types';
+import type { MakeupSubject, OccasionView, PayRateSheet, Service, ServicePackage, SurchargeRuleView } from '../../api/types';
 import {
+  buildOccasionCreate,
+  buildOccasionPatch,
+  buildRuleCreate,
+  buildRulePatch,
+  emptyRuleForm,
+  holidayDates,
+  mapOccasionError,
+  mapRuleError,
+  mergeDates,
+  OCCASION_COLOR_LABEL,
+  occasionToForm,
+  occasionUsage,
+  ruleToForm,
+  sortOccasions,
+  summarizeRule,
+  validateOccasionForm,
+  validateRuleForm,
+  wireEnd,
   buildPackageCreate,
   buildPackagePatch,
   buildPayRatesInput,
@@ -81,12 +100,14 @@ function apiErr(status: number, code: string, message: string, details?: unknown
 }
 
 describe('nhóm và quyền', () => {
-  it('4 mục con lấy đúng từ nav.ts, chữ ngắn cho nhóm nút chuyển điện thoại', () => {
+  it('6 nhóm (4 từ nav.ts + Loại sự kiện, Luật phụ phí), chữ ngắn cho nhóm nút chuyển điện thoại', () => {
     expect(PRICING_GROUPS.map((g) => [g.key, g.label, g.short])).toEqual([
       ['goi', 'Gói theo nhân vật', 'Gói'],
       ['dich-vu', 'Dịch vụ phụ & phụ phí', 'Dịch vụ phụ'],
       ['di-chuyen', 'Phí di chuyển & studio', 'Di chuyển'],
       ['nhan-vat', 'Nhân vật', 'Nhân vật'],
+      ['su-kien', 'Loại sự kiện', 'Sự kiện'],
+      ['luat-phu-phi', 'Luật phụ phí', 'Luật phí'],
     ]);
     expect(resolveGroup(undefined)).toBeNull();
     expect(resolveGroup('di-chuyen')).toBe('di-chuyen');
@@ -418,5 +439,203 @@ describe('tải đủ trang và đổi thứ tự', () => {
       { id: 'b', sortOrder: 2 },
       { id: 'c', sortOrder: 3 },
     ]);
+  });
+});
+
+// ======================= Bản vẽ D: Loại sự kiện, Luật phụ phí =======================
+
+const occ = (over: Partial<OccasionView> = {}): OccasionView => ({ id: 'o1', name: 'Lễ cưới', color: 'rose', sortOrder: 0, isActive: true, lineCount: 0, createdAt: T, updatedAt: T, ...over });
+const ruleView = (over: Partial<SurchargeRuleView> = {}): SurchargeRuleView => ({
+  id: 'r1',
+  name: 'Ca sớm',
+  serviceId: 'sv',
+  service: { id: 'sv', name: 'Phụ phí', kind: 'SURCHARGE', isActive: true, currentPrice: 200000 },
+  startTime: null,
+  endTime: null,
+  weekdays: [],
+  dates: [],
+  occasionIds: [],
+  packageIds: [],
+  subjectIds: [],
+  perQuantity: true,
+  note: null,
+  sortOrder: 0,
+  isActive: true,
+  status: 'OK',
+  usedLineCount: 0,
+  createdAt: T,
+  updatedAt: T,
+  ...over,
+});
+const LK = { occasions: [{ id: 'o1', name: 'Lễ cưới' }, { id: 'o2', name: 'Lễ vu quy' }], packages: [{ id: 'p1', name: 'Cô dâu cao cấp' }], subjects: [{ id: 's1', name: 'Cô dâu' }] };
+
+describe('nhóm Bảng giá có thêm Loại sự kiện, Luật phụ phí', () => {
+  it('resolveGroup nhận hai nhóm mới, mỗi nhóm đúng một lần, có chữ ngắn cho điện thoại', () => {
+    expect(resolveGroup('su-kien')).toBe('su-kien');
+    expect(resolveGroup('luat-phu-phi')).toBe('luat-phu-phi');
+    expect(resolveGroup('khong-co')).toBe('unknown');
+    const keys = PRICING_GROUPS.map((g) => g.key);
+    expect(new Set(keys).size).toBe(keys.length);
+    expect(PRICING_GROUPS.find((g) => g.key === 'su-kien')?.label).toBe('Loại sự kiện');
+    expect(PRICING_GROUPS.find((g) => g.key === 'luat-phu-phi')?.short).toBe('Luật phí');
+  });
+
+  it('sortOrderPatches dùng được cho mọi danh sách có id + sortOrder', () => {
+    expect(sortOrderPatches([{ id: 'a', sortOrder: 5 }, { id: 'b', sortOrder: 1 }])).toEqual([{ id: 'a', sortOrder: 0 }]);
+  });
+});
+
+describe('màu sự kiện', () => {
+  it('mỗi trong 12 màu có tên tiếng Việt khác nhau', () => {
+    expect(Object.keys(OCCASION_COLOR_LABEL)).toEqual([...OCCASION_COLORS]);
+    expect(new Set(Object.values(OCCASION_COLOR_LABEL)).size).toBe(12);
+  });
+
+  it('pricing.css có đủ 12 ô màu, cùng giá trị với .ws-sw-* của Lịch', () => {
+    const pr = readFileSync(new URL('./pricing.css', import.meta.url), 'utf8');
+    const ws = readFileSync(new URL('../schedule/schedule.css', import.meta.url), 'utf8');
+    for (const c of OCCASION_COLORS) {
+      const mine = new RegExp(`\\.pr-sw--${c} \\{ --c: ([^;]+);`).exec(pr)?.[1];
+      const theirs = new RegExp(`\\.ws-sw-${c} \\{ --c: ([^;]+);`).exec(ws)?.[1];
+      expect(mine, `pricing.css thiếu màu ${c}`).toBeTruthy();
+      expect(mine).toBe(theirs);
+    }
+  });
+});
+
+describe('loại sự kiện: biểu mẫu', () => {
+  it('kiểm: tên trống, quá 60 ký tự, chưa chọn màu', () => {
+    expect(validateOccasionForm({ name: '  ', color: null })).toEqual({ name: 'Nhập tên loại sự kiện.', color: 'Chọn một màu.' });
+    expect(validateOccasionForm({ name: 'x'.repeat(61), color: 'rose' })).toEqual({ name: 'Tên tối đa 60 ký tự.' });
+    expect(validateOccasionForm({ name: 'x'.repeat(60), color: 'rose' })).toEqual({});
+  });
+
+  it('tạo: cắt khoảng trắng, xếp cuối, đang dùng; thiếu màu thì ném lỗi (không màu mặc định)', () => {
+    expect(buildOccasionCreate({ name: ' Tiệc ', color: 'violet' }, 4)).toEqual({ name: 'Tiệc', color: 'violet', sortOrder: 4, isActive: true });
+    expect(() => buildOccasionCreate({ name: 'Tiệc', color: null }, 0)).toThrow();
+  });
+
+  it('sửa: chỉ trường đổi; không đổi → null', () => {
+    const o = occ();
+    expect(buildOccasionPatch(o, occasionToForm(o))).toBeNull();
+    expect(buildOccasionPatch(o, { name: 'Lễ cưới sáng', color: 'rose' })).toEqual({ name: 'Lễ cưới sáng' });
+    expect(buildOccasionPatch(o, { name: 'Lễ cưới', color: 'blue' })).toEqual({ color: 'blue' });
+  });
+
+  it('chữ "N dòng hợp đồng đang dùng"; sắp theo sortOrder rồi tên', () => {
+    expect(occasionUsage(14)).toBe('14 dòng hợp đồng đang dùng');
+    expect(occasionUsage(0)).toBe('Chưa có dòng hợp đồng nào dùng');
+    expect(sortOccasions([occ({ id: 'b', name: 'B', sortOrder: 1 }), occ({ id: 'a', name: 'A', sortOrder: 1 }), occ({ id: 'c', name: 'C', sortOrder: 0 })]).map((x) => x.id)).toEqual(['c', 'a', 'b']);
+  });
+
+  it('lỗi máy chủ: trùng tên → ô Tên; Tối đa 50 → dải; lời luôn nguyên văn', () => {
+    const dup = apiErr(409, 'CONFLICT', 'Tên loại sự kiện đã có trong tổ chức', { fields: ['name'] });
+    expect(mapOccasionError(dup)).toEqual({ fields: { name: 'Tên loại sự kiện đã có trong tổ chức' }, banner: null });
+    expect(mapOccasionError(apiErr(409, 'CONFLICT', 'Tối đa 50 loại sự kiện'))).toEqual({ fields: {}, banner: 'Tối đa 50 loại sự kiện' });
+  });
+});
+
+describe('luật phụ phí: tóm tắt điều kiện', () => {
+  it('giờ · sự kiện · gói — đúng chữ bản vẽ', () => {
+    const r = ruleView({ startTime: '00:00', endTime: '06:00', occasionIds: ['o1', 'o2'], packageIds: ['p1'] });
+    expect(summarizeRule(r, LK)).toBe('Giờ bắt đầu 00:00–06:00 · Lễ cưới, Lễ vu quy · Gói Cô dâu cao cấp');
+  });
+
+  it('ngày: thứ HOẶC ngày cụ thể (≤ 3 ngày liệt kê, nhiều hơn thì đếm); nhân vật', () => {
+    expect(summarizeRule(ruleView({ weekdays: [7, 6], dates: ['2026-09-02'], subjectIds: ['s1'] }), LK)).toBe('Thứ 7, Chủ nhật hoặc ngày 02/09/2026 · Nhân vật Cô dâu');
+    expect(summarizeRule(ruleView({ weekdays: [1, 2, 3] }), LK)).toBe('Thứ 2, 3, 4');
+    expect(summarizeRule(ruleView({ dates: ['2026-01-01', '2026-04-30', '2026-05-01', '2026-09-02'] }), LK)).toBe('4 ngày cụ thể');
+  });
+
+  it('mã không tra được thì ghi "không rõ", không bỏ im lặng', () => {
+    expect(summarizeRule(ruleView({ occasionIds: ['zz'] }), LK)).toBe('Loại sự kiện không rõ');
+  });
+});
+
+describe('luật phụ phí: giờ kết thúc 24:00 (nửa đêm)', () => {
+  it('wireEnd: "Đến" 00:00 với giờ bắt đầu khác 00:00 → 24:00; còn lại giữ nguyên', () => {
+    expect(wireEnd('22:00', '00:00')).toBe('24:00');
+    expect(wireEnd('00:00', '00:00')).toBe('00:00');
+    expect(wireEnd('00:00', '06:00')).toBe('06:00');
+    expect(wireEnd('22:00', '02:00')).toBe('02:00');
+    expect(wireEnd(null, null)).toBeNull();
+  });
+
+  it('ruleToForm hiện 24:00 của máy chủ thành 00:00; gửi lại thành 24:00; không đổi gì thì không PATCH', () => {
+    const r = ruleView({ startTime: '22:00', endTime: '24:00', weekdays: [] });
+    const f = ruleToForm(r);
+    expect(f.endTime).toBe('00:00');
+    expect(buildRuleCreate({ ...f, name: 'Đêm', serviceId: 'sv' }, 0)).toMatchObject({ startTime: '22:00', endTime: '24:00' });
+    expect(buildRulePatch(r, f)).toBeNull();
+  });
+
+  it('00:00–00:00 vẫn là lỗi "phải khác nhau" (không đổi thành cả ngày)', () => {
+    const f = { ...emptyRuleForm(), name: 'X', serviceId: 'sv', useTime: true, startTime: '00:00', endTime: '00:00' };
+    expect(validateRuleForm(f)).toEqual({ endTime: 'Giờ bắt đầu và kết thúc phải khác nhau.' });
+  });
+});
+
+describe('luật phụ phí: biểu mẫu', () => {
+  it('kiểm: nhóm đã tick mà chưa điền; không tick nhóm nào thì để máy chủ trả lời', () => {
+    expect(validateRuleForm(emptyRuleForm())).toEqual({ name: 'Nhập tên luật.', serviceId: 'Chọn phụ phí thu.' });
+    const f = { ...emptyRuleForm(), name: 'X', serviceId: 's', useTime: true, useDays: true, useOccasions: true };
+    expect(validateRuleForm(f)).toEqual({
+      startTime: 'Nhập giờ bắt đầu.',
+      endTime: 'Nhập giờ kết thúc.',
+      days: 'Chọn ít nhất một thứ hoặc một ngày.',
+      occasionIds: 'Chọn ít nhất một loại sự kiện.',
+    });
+    expect(validateRuleForm({ ...emptyRuleForm(), name: 'X', serviceId: 's' })).toEqual({});
+  });
+
+  it('tạo: chỉ gửi nhóm có dữ liệu và đang tick; nhóm bỏ tick coi như rỗng', () => {
+    const f = { ...emptyRuleForm(), name: ' Cuối tuần ', serviceId: 's', useDays: true, weekdays: [7, 6], dates: ['2026-09-02'], useOccasions: false, occasionIds: ['o1'], packageIds: ['p1'], perQuantity: false, note: ' ' };
+    expect(buildRuleCreate(f, 3)).toEqual({ name: 'Cuối tuần', serviceId: 's', weekdays: [6, 7], dates: ['2026-09-02'], packageIds: ['p1'], perQuantity: false, sortOrder: 3, isActive: true });
+    expect(buildRuleCreate(emptyRuleForm().name === '' ? { ...emptyRuleForm(), name: 'N', serviceId: 's' } : emptyRuleForm(), 0)).toEqual({ name: 'N', serviceId: 's', perQuantity: true, sortOrder: 0, isActive: true });
+    expect(() => buildRuleCreate(emptyRuleForm(), 0)).toThrow();
+  });
+
+  it('sửa: chỉ nhóm đã đổi; bỏ tick giờ → null; mảng gửi cả mảng; so theo tập (thứ tự không tính)', () => {
+    const r = ruleView({ startTime: '00:00', endTime: '06:00', weekdays: [6, 7], occasionIds: ['o1', 'o2'], note: 'n' });
+    const base = ruleToForm(r);
+    expect(buildRulePatch(r, base)).toBeNull();
+    expect(buildRulePatch(r, { ...base, weekdays: [7, 6], occasionIds: ['o2', 'o1'] })).toBeNull();
+    expect(buildRulePatch(r, { ...base, useTime: false })).toEqual({ startTime: null, endTime: null });
+    expect(buildRulePatch(r, { ...base, occasionIds: ['o1'], note: '', isActive: false })).toEqual({ occasionIds: ['o1'], note: null, isActive: false });
+    expect(buildRulePatch(r, { ...base, useDays: false })).toEqual({ weekdays: [] });
+    expect(buildRulePatch(r, { ...base, serviceId: 'sv2' })).toEqual({ serviceId: 'sv2' });
+  });
+
+  it('ngày lễ: 4 ngày dương lịch; gộp bỏ trùng, tăng dần', () => {
+    expect(holidayDates(2027)).toEqual(['2027-01-01', '2027-04-30', '2027-05-01', '2027-09-02']);
+    expect(() => holidayDates(12)).toThrow();
+    expect(mergeDates(['2027-05-01', '2027-01-01'], ['2027-01-01', '2026-12-31'])).toEqual(['2026-12-31', '2027-01-01', '2027-05-01']);
+  });
+});
+
+describe('luật phụ phí: lỗi máy chủ → ô', () => {
+  const validation = (issues: { path: string; message: string }[], details: object = {}) => apiErr(400, 'VALIDATION_FAILED', 'Dữ liệu không hợp lệ', { issues, ...details });
+  const NO_TRIGGER = 'Luật phải có ít nhất một điều kiện: khung giờ, ngày hoặc loại sự kiện';
+
+  it('"chưa có điều kiện" (path startTime) khi ô giờ đang ẩn → nhóm Khi nào áp (conditions); ô giờ đang hiện → ô giờ', () => {
+    const e = validation([{ path: 'startTime', message: NO_TRIGGER }]);
+    expect(mapRuleError(e, emptyRuleForm())).toEqual({ fields: { conditions: NO_TRIGGER }, banner: null });
+    expect(mapRuleError(e, { ...emptyRuleForm(), useTime: true })).toEqual({ fields: { startTime: NO_TRIGGER }, banner: null });
+  });
+
+  it('weekdays / dates → khoá days; endTime của máy chủ ("nửa đêm ghi 24:00") ở ô giờ khi ô giờ hiện', () => {
+    const f = { ...emptyRuleForm(), useTime: true };
+    expect(mapRuleError(validation([{ path: 'dates.2', message: 'Ngày theo dạng YYYY-MM-DD' }]), f).fields).toEqual({ days: 'Ngày theo dạng YYYY-MM-DD' });
+    expect(mapRuleError(validation([{ path: 'endTime', message: 'Giờ kết thúc từ 00:01 đến 24:00 — nửa đêm ghi 24:00' }]), f).fields).toEqual({ endTime: 'Giờ kết thúc từ 00:01 đến 24:00 — nửa đêm ghi 24:00' });
+  });
+
+  it('trùng tên → ô Tên; phụ phí ngừng (details.fields serviceId) → ô Phụ phí; Tối đa 50 luật đang bật, 404, 403 → dải', () => {
+    const f = emptyRuleForm();
+    expect(mapRuleError(apiErr(409, 'CONFLICT', 'Tên luật đã có trong tổ chức'), f)).toEqual({ fields: { name: 'Tên luật đã có trong tổ chức' }, banner: null });
+    const stop = apiErr(400, 'VALIDATION_FAILED', 'Phụ phí "A" đang ngừng hoạt động', { fields: ['serviceId'] });
+    expect(mapRuleError(stop, f)).toEqual({ fields: { serviceId: 'Phụ phí "A" đang ngừng hoạt động' }, banner: null });
+    expect(mapRuleError(apiErr(409, 'CONFLICT', 'Tối đa 50 luật đang bật'), f).banner).toBe('Tối đa 50 luật đang bật');
+    expect(mapRuleError(apiErr(404, 'NOT_FOUND', 'Không tìm thấy loại sự kiện'), f).banner).toBe('Không tìm thấy loại sự kiện');
+    expect(mapRuleError(apiErr(403, 'FORBIDDEN', 'Bạn không có quyền đặt giá'), f).banner).toMatch(/Bạn không có quyền/);
   });
 });

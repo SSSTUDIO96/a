@@ -202,6 +202,14 @@ export interface LineView {
   note: string | null;
   // Lớp của dòng khoá học (chỉ dòng COURSE).
   courseClassId: string | null;
+  // Sự kiện của dòng đặt chỗ: occasionName là bản chụp lúc lưu (đổi tên loại không đổi dòng đã lưu).
+  occasionId: string | null;
+  occasionName: string | null;
+  // Dòng phụ phí TỰ THÊM theo luật: mã + tên luật lúc tính. Dòng nhập tay, mọi dòng cũ → null.
+  surchargeRuleId: string | null;
+  surchargeRuleName: string | null;
+  // Luật người lập đã bỏ ở dòng đặt chỗ này (dòng khác → []).
+  dismissedRuleIds: string[];
   addedAfterConfirm: boolean;
   // Lúc thêm dòng (web ghi "Phát sinh {ngày}"); null ở bảng tính xem trước.
   createdAt: Date | null;
@@ -217,6 +225,8 @@ export interface LineView {
 export interface GroupedLine extends LineView {
   addons: LineView[];
   travel: LineView | null;
+  // Dòng con loại SURCHARGE (phụ phí tự thêm theo luật), theo thứ tự luật.
+  surcharges: LineView[];
 }
 
 interface Keyed {
@@ -228,7 +238,7 @@ interface Keyed {
 function group(items: Keyed[]): GroupedLine[] {
   const roots = new Map<string, GroupedLine>();
   for (const it of items) {
-    if (it.parentKey === null) roots.set(it.key, { ...it.view, addons: [], travel: null });
+    if (it.parentKey === null) roots.set(it.key, { ...it.view, addons: [], travel: null, surcharges: [] });
   }
   for (const it of items) {
     if (it.parentKey === null) continue;
@@ -237,6 +247,8 @@ function group(items: Keyed[]): GroupedLine[] {
     if (it.view.kind === 'TRAVEL') {
       if (parent.travel) throw new Error(`Dòng ${it.parentKey} có hơn một dòng phí di chuyển`);
       parent.travel = it.view;
+    } else if (it.view.kind === 'SURCHARGE') {
+      parent.surcharges.push(it.view);
     } else {
       parent.addons.push(it.view);
     }
@@ -245,7 +257,7 @@ function group(items: Keyed[]): GroupedLine[] {
 }
 
 function plannedView(l: PlannedLine, staff: StaffMap, warnings: WarningMap): LineView {
-  const { id: _id, parentLineId: _p, packageDeposit: _d, staff: assigned, ...rest } = l;
+  const { id: _id, parentLineId: _p, packageDeposit: _d, staff: assigned, dismissedSurchargeRuleIds, ...rest } = l;
   const views = assigned.map((s) => {
     const m = staff.get(s.membershipId);
     // Thợ đã qua kiểm ở bảng tính; thiếu ở đây là lỗi lắp ráp, không đoán.
@@ -255,6 +267,7 @@ function plannedView(l: PlannedLine, staff: StaffMap, warnings: WarningMap): Lin
   return {
     ...rest,
     id: null,
+    dismissedRuleIds: dismissedSurchargeRuleIds,
     addedAfterConfirm: false,
     createdAt: null,
     voidedAt: null,
@@ -326,6 +339,11 @@ function rowView(r: LineRow, warnings: WarningMap, avatarOf: AvatarOf): LineView
     perKmAmount: r.perKmAmount === null ? null : vndFromBigInt(r.perKmAmount, 'đơn giá km'),
     note: r.note,
     courseClassId: r.courseClassId,
+    occasionId: r.occasionId,
+    occasionName: r.occasionName,
+    surchargeRuleId: r.surchargeRuleId,
+    surchargeRuleName: r.surchargeRuleName,
+    dismissedRuleIds: r.dismissedSurchargeRuleIds,
     addedAfterConfirm: r.addedAfterConfirm,
     createdAt: r.createdAt,
     voidedAt: r.voidedAt,

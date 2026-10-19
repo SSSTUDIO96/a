@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { TodayView } from '../../api/types';
-import { emptyView, fullView, noMoneyView, ownView } from './fixtures';
+import { emptyView, fullView, noMoneyView, noScheduleView, nothingView, ownView } from './fixtures';
 import { TodayScreen } from './index';
 import type { TodayAccess } from './model';
 
@@ -249,6 +249,40 @@ describe('giao diện thợ (OWN)', () => {
     expect(within(later).getByText('Thứ Ba 24/11 · 1 ca')).toBeTruthy();
     expect(within(later).getByText('08:00 Cô dâu · Phan Thu Trang')).toBeTruthy();
     expect(within(later).getByRole('link', { name: /08:00 Cô dâu/ }).getAttribute('href')).toBe('/hoa-dao/lich?ngay=2026-11-24&ca=ca-c');
+  });
+});
+
+describe('không có quyền xem lịch (máy chủ trả ca = null)', () => {
+  it('hiện "không có quyền xem lịch", không hiện số 0 hay thẻ Ngày mai; thẻ tiền vẫn theo dữ liệu', async () => {
+    serve(noScheduleView());
+    renderToday();
+    await loaded();
+    expect(screen.getByText('Bạn không có quyền xem lịch nên Hôm nay không hiện ca nào.')).toBeTruthy();
+    expect(tile('today')).toBeNull();
+    expect(tile('tomorrow')).toBeNull();
+    expect(screen.queryByRole('heading', { name: /^Ngày mai/ })).toBeNull();
+    expect(screen.queryByText(/0 ca/)).toBeNull();
+    expect(tile('overdue')?.textContent).toContain('3.500.000 ₫');
+    expect(document.querySelector('.td-tiles')?.getAttribute('style')).toContain('--stat-cols: 2');
+    expect(screen.getByText('Thu tiền 7 ngày tới', { exact: false })).toBeTruthy();
+  });
+
+  it('không còn quyền nào ngoài org.read: chỉ có lời báo, không ô số, không thẻ', async () => {
+    serve(nothingView());
+    renderToday();
+    await loaded();
+    expect(screen.getByText(/Bạn không có quyền xem lịch/)).toBeTruthy();
+    expect(document.querySelector('.td-tiles')).toBeNull();
+    expect(screen.queryByText('Cần làm ngay')).toBeNull();
+    expect(document.body.textContent).not.toMatch(/₫/);
+  });
+
+  it('thợ (OWN) mà máy chủ lỡ trả ca null: cũng báo không có quyền, không vẽ số 0', async () => {
+    serve({ ...ownView(), appointments: null, counts: { ...ownView().counts, appointmentsToday: null, appointmentsTomorrow: null } });
+    renderToday();
+    await loaded();
+    expect(screen.getByText(/Bạn không có quyền xem lịch/)).toBeTruthy();
+    expect(screen.queryByText(/0 ca/)).toBeNull();
   });
 });
 

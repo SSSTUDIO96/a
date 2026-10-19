@@ -26,7 +26,8 @@ import {
   type ContractBody,
   type ContractKindKey,
 } from './schemas';
-import { assertTotalsCap, buildSheet, insertLines, money, planLines } from './sheet';
+import { assertTotalsCap, autoSurchargeAudit, buildSheet, insertLines, money, planLines } from './sheet';
+import { orgTimezone } from './autoSurcharge';
 import { contractSummarySelect, loadContractDetail, loadStaffMap, presentSheet, presentSummary, sheetWarnings } from './present';
 import { classSeats, enrollContractLines, releaseEnrollments } from './enroll';
 import { checkChosenText, contractTextRoutes, snapshotTexts } from './texts';
@@ -354,7 +355,12 @@ export const contractRoutes: AnyRoute[] = [
         exclude = { contractId: self.id, appointmentIds: self.appointments.map((a) => a.id) };
       }
       // Xem trước không chặn lớp hết chỗ: trả classes[] để web báo lớp vừa đầy (chốt thật ở bước xác nhận).
-      const sheet = await buildSheet(deps.db, o.id, body, new Date(), { kind: body.kind, seatCheck: false });
+      const sheet = await buildSheet(deps.db, o.id, body, new Date(), {
+        kind: body.kind,
+        seatCheck: false,
+        timezone: await orgTimezone(deps.db, o.id),
+        eventDate: body.eventDate ? new Date(body.eventDate) : null,
+      });
       const [staff, warnings, classes] = await Promise.all([
         loadStaffMap(deps.db, o.id, sheet),
         sheetWarnings(deps.db, o.id, sheet, exclude),
@@ -364,7 +370,8 @@ export const contractRoutes: AnyRoute[] = [
           sheet.lines.flatMap((l) => (l.courseClassId ? [l.courseClassId] : [])),
         ),
       ]);
-      return { body: { ...presentSheet(sheet, staff, warnings), kind: body.kind, classes } };
+      // autoSurcharge: phụ phí máy chủ tự thêm / bỏ / bỏ qua theo luật (bản vẽ D 2.4) — chỉ quote trả.
+      return { body: { ...presentSheet(sheet, staff, warnings), kind: body.kind, classes, autoSurcharge: sheet.autoSurcharge } };
     },
   }),
 
@@ -387,7 +394,12 @@ export const contractRoutes: AnyRoute[] = [
         const choice = await checkCustomer(tx, o.id, body);
         const ownerMembershipId = body.ownerMembershipId ? await checkOwner(tx, o.id, body.ownerMembershipId) : null;
         const texts = await chooseTexts(tx, o.id, body.kind, body);
-        const sheet = await buildSheet(tx, o.id, body, at, { kind: body.kind, seatCheck: true });
+        const sheet = await buildSheet(tx, o.id, body, at, {
+          kind: body.kind,
+          seatCheck: true,
+          timezone: await orgTimezone(tx, o.id),
+          eventDate: body.eventDate ? new Date(body.eventDate) : null,
+        });
         const customerId =
           'existingId' in choice
             ? choice.existingId
@@ -431,6 +443,7 @@ export const contractRoutes: AnyRoute[] = [
             discount: sheet.discount,
             total: sheet.total,
             depositRequired: sheet.depositRequired,
+            autoSurcharges: autoSurchargeAudit(sheet.lines),
           },
           requestId,
         });
@@ -534,6 +547,7 @@ export const contractRoutes: AnyRoute[] = [
         let nextMoney: { subtotal: Vnd; discount: Vnd; total: Vnd; depositRequired: Vnd } | null = null;
         let textChoice: Awaited<ReturnType<typeof chooseTexts>> = {};
         let newCustomerId: string | null = null;
+        let autoSurcharges: ReturnType<typeof autoSurchargeAudit> | undefined;
         if (c.status === 'CONFIRMED') {
           const others = (['customerId', 'lines', 'discount', 'depositRequired', 'eventDate', 'terms', 'termsTemplateId', 'rulesTemplateId'] as const).filter(
             (k) => body[k] !== undefined,
@@ -566,8 +580,15 @@ export const contractRoutes: AnyRoute[] = [
               o.id,
               { lines: body.lines, discount, depositRequired: body.depositRequired },
               new Date(),
-              { kind: c.kind, seatCheck: true },
+              {
+                kind: c.kind,
+                seatCheck: true,
+                timezone: await orgTimezone(tx, o.id),
+                // Ngày sự kiện mới nếu thân có gửi (kể cả null = bỏ ngày), không thì ngày đang lưu.
+                eventDate: body.eventDate !== undefined ? (body.eventDate === null ? null : new Date(body.eventDate)) : c.eventDate,
+              },
             );
+            autoSurcharges = autoSurchargeAudit(sheet.lines);
             // Hợp đồng nháp chưa hứa với khách: thay dòng là xoá dòng cũ (dòng con trước, dòng cha sau).
             await tx.contractLine.deleteMany({ where: { contractId: c.id, organizationId: o.id, parentLineId: { not: null } } });
             await tx.contractLine.deleteMany({ where: { contractId: c.id, organizationId: o.id } });
@@ -616,6 +637,7 @@ export const contractRoutes: AnyRoute[] = [
             before,
             after: { ...nextMoney, eventDate: body.eventDate, ...(newCustomerId ? { customerId: newCustomerId } : {}), ...textChanges, ...textChoice },
             linesReplaced: body.lines !== undefined,
+            ...(autoSurcharges ? { autoSurcharges } : {}),
           },
           requestId,
         });
@@ -644,7 +666,18 @@ export const contractRoutes: AnyRoute[] = [
         if ((body.kind === 'PACKAGE' || body.kind === 'SERVICE') && (body.lineDiscount ?? 0) > 0) {
           assertCanAdjust(o, c.status, 'giảm giá dòng phát sinh');
         }
-        const planned = await planLines(tx, o.id, [body], new Date(), { kind: c.kind, seatCheck: true });
+        // Dòng phụ phí nhập tay sẵn có (gốc, không luật, chưa huỷ): luật cùng dịch vụ bỏ qua (MANUAL_LINE_EXISTS).
+        const manual = await tx.contractLine.findMany({
+          where: { contractId: c.id, organizationId: o.id, kind: 'SURCHARGE', parentLineId: null, surchargeRuleId: null, voidedAt: null },
+          select: { serviceId: true },
+        });
+        const { lines: planned } = await planLines(tx, o.id, [body], new Date(), {
+          kind: c.kind,
+          seatCheck: true,
+          timezone: await orgTimezone(tx, o.id),
+          eventDate: c.eventDate,
+          existingManualSurchargeServiceIds: manual.flatMap((m) => (m.serviceId ? [m.serviceId] : [])),
+        });
         const newClassIds = planned.flatMap((l) => (l.courseClassId ? [l.courseClassId] : []));
         if (newClassIds.length > 0) {
           const same = await tx.contractLine.findFirst({
@@ -702,6 +735,7 @@ export const contractRoutes: AnyRoute[] = [
             enrollmentIds,
             actorRoles: o.roleKeys,
             amount: planned.reduce((s, l) => s + l.lineTotal, 0),
+            autoSurcharges: autoSurchargeAudit(planned),
             before: { subtotal: vnd(c.subtotal, 'tạm tính'), total: vnd(c.total, 'tổng') },
             after: { subtotal, total },
           },

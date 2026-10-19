@@ -19,6 +19,17 @@ import { resolveCurrentPrice, type PriceRef } from '../catalog/prices';
 import { assertActiveStaff, assertBookable, type StaffAssignment } from '../schedule/service';
 import type { ContractKindKey, CourseLineInput, LineInput, PlacedLineInput, TravelInput } from './schemas';
 import { seatConflict } from './enroll';
+import {
+  checkLineRuleRefs,
+  dismissedToStore,
+  emptyReport,
+  lineFacts,
+  loadActiveRules,
+  loadOccasion,
+  planAutoSurcharges,
+  type AutoSurchargeReport,
+  type LoadedRule,
+} from './autoSurcharge';
 
 type Tx = Prisma.TransactionClient;
 // Lấy thẳng từ database (một nguồn): thêm loại dòng mới (COURSE) không phải sửa chỗ này.
@@ -59,6 +70,14 @@ export interface PlannedLine {
   courseClassId: string | null;
   // Số liệu để in dòng công thức phí di chuyển (chỉ dòng TRAVEL, chỉ có ở bảng tính — database chưa có cột lưu).
   travelBreakdown: TravelBreakdown | null;
+  // Loại sự kiện của dòng đặt chỗ + bản chụp tên (bản vẽ D 2.4).
+  occasionId: string | null;
+  occasionName: string | null;
+  // Dòng SURCHARGE tự thêm theo luật: mã + bản chụp tên luật. null = dòng nhập tay.
+  surchargeRuleId: string | null;
+  surchargeRuleName: string | null;
+  // Chỉ dòng đặt chỗ: luật người lập đã bỏ ở dòng này.
+  dismissedSurchargeRuleIds: string[];
 }
 
 export interface TravelBreakdown {
@@ -141,6 +160,11 @@ function blank(): Omit<PlannedLine, 'kind' | 'name' | 'quantity' | 'unitPrice' |
     staff: [],
     courseClassId: null,
     travelBreakdown: null,
+    occasionId: null,
+    occasionName: null,
+    surchargeRuleId: null,
+    surchargeRuleName: null,
+    dismissedSurchargeRuleIds: [],
   };
 }
 
@@ -202,6 +226,13 @@ interface Ctx {
   kind: ContractKindKey;
   // true: lớp hết chỗ / ngừng nhận → 409 ngay (tạo, sửa, thêm dòng). false: xem trước — không chặn, báo ở classes[].
   seatCheck: boolean;
+  // Phụ phí tự động (bản vẽ D 2.4): múi giờ tổ chức, ngày sự kiện (ngày của dòng chưa có giờ), luật đang bật (nạp MỘT
+  // lần mỗi bảng tính), dịch vụ của dòng phụ phí nhập tay (luật cùng dịch vụ bị bỏ qua), báo cáo cho quote.
+  timezone: string;
+  eventDate: Date | null;
+  rules: () => Promise<LoadedRule[]>;
+  manualSurchargeServiceIds: ReadonlySet<string>;
+  report: AutoSurchargeReport;
 }
 
 // Luật trộn dòng (BAN-VE-C3 mục 1.1): hợp đồng khoá học chỉ nhận dòng COURSE + CUSTOM; hợp đồng dịch vụ không nhận COURSE.
@@ -324,6 +355,14 @@ async function planPlaced(ctx: Ctx, input: PlacedLineInput, line: number): Promi
     main.subjectId = s.id;
     main.subjectName = s.name;
   }
+  // Mã luật người dùng gửi (bỏ / sửa dòng tự thêm) rồi loại sự kiện — thứ tự bản vẽ D 2.4 bước 1, 2.
+  const userRules = await checkLineRuleRefs(tx, orgId, input, line);
+  if (input.occasionId) {
+    const occ = await loadOccasion(tx, orgId, input.occasionId, line);
+    main.occasionId = occ.id;
+    main.occasionName = occ.name;
+  }
+  main.dismissedSurchargeRuleIds = dismissedToStore(input);
 
   // Địa điểm và phí di chuyển.
   const loc = input.locationType;
@@ -392,6 +431,21 @@ async function planPlaced(ctx: Ctx, input: PlacedLineInput, line: number): Promi
     });
   }
   if (input.travel) out.push(await planTravel(ctx, main, input.travel, includedKm, line));
+  // Phụ phí tự động chạy SAU dịch vụ phụ và phí di chuyển; dòng tự thêm đứng cuối theo thứ tự luật.
+  const auto = await planAutoSurcharges({
+    tx,
+    orgId,
+    at,
+    line,
+    rules: await ctx.rules(),
+    facts: lineFacts(main, ctx.timezone, ctx.eventDate),
+    mainQuantity: main.quantity,
+    input,
+    userRules,
+    manualSurchargeServiceIds: ctx.manualSurchargeServiceIds,
+    report: ctx.report,
+  });
+  for (const a of auto) out.push({ ...blank(), parentLineId: main.id, kind: 'SURCHARGE', lineDiscount: 0, ...a });
   return out;
 }
 
@@ -507,10 +561,25 @@ export interface PlanOptions {
   kind: ContractKindKey;
   seatCheck: boolean;
   firstIndex?: number;
+  // Múi giờ tổ chức (organizations.timezone) — bắt buộc, trống thì ném lỗi (không đoán múi giờ).
+  timezone: string;
+  // Ngày sự kiện của hợp đồng: ngày của dòng chưa có giờ.
+  eventDate: Date | null;
+  // Thêm dòng vào hợp đồng đã có: dịch vụ của các dòng phụ phí nhập tay chưa huỷ sẵn có (tránh thu hai lần).
+  existingManualSurchargeServiceIds?: readonly string[];
 }
 
-export async function planLines(tx: Tx, orgId: string, inputs: LineInput[], at: Date, opts: PlanOptions): Promise<PlannedLine[]> {
+export interface PlannedLines {
+  lines: PlannedLine[];
+  autoSurcharge: AutoSurchargeReport;
+}
+
+export async function planLines(tx: Tx, orgId: string, inputs: LineInput[], at: Date, opts: PlanOptions): Promise<PlannedLines> {
+  if (!opts.timezone) throw new Error('planLines: thiếu múi giờ tổ chức');
   let cached: TravelPolicy | null = null;
+  let rules: LoadedRule[] | null = null;
+  const manual = new Set(opts.existingManualSurchargeServiceIds ?? []);
+  for (const i of inputs) if (i.kind === 'SURCHARGE') manual.add(i.serviceId);
   const ctx: Ctx = {
     tx,
     orgId,
@@ -518,6 +587,11 @@ export async function planLines(tx: Tx, orgId: string, inputs: LineInput[], at: 
     policy: async () => (cached ??= await loadTravelPolicy(tx, orgId)),
     kind: opts.kind,
     seatCheck: opts.seatCheck,
+    timezone: opts.timezone,
+    eventDate: opts.eventDate,
+    rules: async () => (rules ??= await loadActiveRules(tx, orgId)),
+    manualSurchargeServiceIds: manual,
+    report: emptyReport(),
   };
   const out: PlannedLine[] = [];
   for (const [i, input] of inputs.entries()) {
@@ -532,7 +606,7 @@ export async function planLines(tx: Tx, orgId: string, inputs: LineInput[], at: 
     if (seen.has(l.courseClassId)) throw bad(`Lớp "${l.name}" có hai dòng trong cùng hợp đồng — mỗi lớp chỉ một dòng`, opts.firstIndex ?? 0);
     seen.add(l.courseClassId);
   }
-  return out;
+  return { lines: out, autoSurcharge: ctx.report };
 }
 
 export interface Sheet {
@@ -543,6 +617,7 @@ export interface Sheet {
   total: Vnd;
   depositRequired: Vnd;
   suggestedDeposit: Vnd;
+  autoSurcharge: AutoSurchargeReport;
 }
 
 // HÀM DỰNG BẢNG TÍNH DUY NHẤT: xem trước (quote), tạo và thay toàn bộ dòng khi sửa nháp đều gọi hàm này.
@@ -553,7 +628,7 @@ export async function buildSheet(
   at: Date,
   opts: PlanOptions,
 ): Promise<Sheet> {
-  const lines = await planLines(tx, orgId, input.lines, at, opts);
+  const { lines, autoSurcharge } = await planLines(tx, orgId, input.lines, at, opts);
   const { subtotal, total } = money(() =>
     computeContractTotals(
       lines.map((l) => ({ lineTotal: l.lineTotal, voided: false })),
@@ -579,7 +654,15 @@ export async function buildSheet(
     total,
     depositRequired: input.depositRequired ?? suggestedDeposit,
     suggestedDeposit,
+    autoSurcharge,
   };
+}
+
+// Nhật ký: các dòng tự thêm theo luật (contract.created / contract.updated có lines / contract.line_added).
+export function autoSurchargeAudit(lines: PlannedLine[]) {
+  return lines.flatMap((l) =>
+    l.surchargeRuleId ? [{ lineId: l.id, parentLineId: l.parentLineId, ruleId: l.surchargeRuleId, amount: l.lineTotal }] : [],
+  );
 }
 
 const km = (v: number | null, digits = 2) => (v === null ? null : new Prisma.Decimal(v.toFixed(digits)));
@@ -633,6 +716,11 @@ export async function insertLines(
       distanceKm: l.distanceKm === null ? null : new Prisma.Decimal(l.distanceKm.toFixed(2)),
       perKmAmount: l.perKmAmount === null ? null : BigInt(l.perKmAmount),
       courseClassId: l.courseClassId,
+      occasionId: l.occasionId,
+      occasionName: l.occasionName,
+      surchargeRuleId: l.surchargeRuleId,
+      surchargeRuleName: l.surchargeRuleName,
+      dismissedSurchargeRuleIds: l.dismissedSurchargeRuleIds,
       ...travelSnapshot(l.travelBreakdown),
       note: l.note,
       sortOrder: args.firstSort + i,
