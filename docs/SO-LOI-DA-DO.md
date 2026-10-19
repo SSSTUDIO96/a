@@ -153,6 +153,7 @@ Mỗi lỗi ghi đủ: triệu chứng · gốc bệnh · số đo · cách ch�
 - **Gốc:** điều phối dùng `git add -A` sau khi thợ W-HDKH báo xong, quên rằng thợ V vẫn đang ghi tệp.
 - **Hậu quả:** commit đó không nhất thiết build được ở phần máy chủ; không được dùng làm commit chấm.
 - **Cách chặn:** khi còn thợ đang chạy, chỉ `git add` đúng danh sách tệp trong báo cáo của thợ đã xong (như commit 2f362c9 của thợ U). `git add -A` chỉ dùng cho bản chụp ghi rõ "WIP — CHƯA nghiệm thu".
+- **Biến thể 19/10/2026:** bản chụp WIP 7751749 lấy đúng lúc thợ M4 đang gài đột biến (dòng `localDateAndMinute(…, 'UTC')` trong autoSurcharge.ts). Bản chụp sau (2271b14) đã về đúng. Bài học: commit WIP có thể chứa mã đột biến đang thử — tuyệt đối không dùng commit WIP làm bản chấm hay bản chạy thật; thợ đột biến phải báo tên tệp đang gài để điều phối kiểm lại ở commit kế.
 - **Tái phạm 19/10/2026:** commit b0223d0 đặt tên "Sổ ý muốn: anh chê 11 mẫu chào mừng…" nhưng lẫn 4 tệp bài thử PWA dở của thợ E-W1 (InstallGuide.test.tsx, platform.test.ts, registerSW.test.ts, sw.test.ts) và ss-album.test.ts. Gốc giống hệt: gom cả cây khi thợ còn chạy. Chặn thêm: trước mỗi commit tên không có chữ "WIP", chạy `git diff --cached --stat` và đối từng tệp với danh sách định commit; lệch là bỏ ra.
 
 ## 24. Chốt CHECK của Postgres cho qua NULL — câu SQL điều phối đã duyệt có bẫy
