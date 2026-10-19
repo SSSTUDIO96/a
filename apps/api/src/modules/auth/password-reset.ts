@@ -2,7 +2,8 @@
 // 1) POST /auth/password-reset/request { email } → LUÔN 202 cùng một lời (có tài khoản hay không — chống dò tài khoản),
 //    thời gian trả lời được kéo về cùng một mức sàn; thư gửi nền, không chờ.
 // 2) POST /auth/password-reset/confirm { token, password } → 204: thẻ dùng một lần, đổi mật khẩu, vô hiệu MỌI thẻ đặt lại
-//    còn lại và thu hồi MỌI phiên đăng nhập (refresh token) của người đó.
+//    còn lại, thu hồi MỌI phiên đăng nhập (refresh token) và làm MỌI thẻ truy cập đang cầm chết ngay (mốc
+//    users.password_changed_at — xem access-token.ts) của người đó.
 // Thẻ: 32 byte ngẫu nhiên (base64url), database chỉ giữ sha256. Thẻ thật và mật khẩu KHÔNG BAO GIỜ vào nhật ký hay audit
 // (ngoại lệ có chủ đích: người gửi thư "console" khi chạy thử in nguyên thư — production không bao giờ dựng driver đó).
 import { createHash, randomBytes } from 'node:crypto';
@@ -53,6 +54,19 @@ export async function revokeCredentialsAfterPasswordChange(
     data: { revokedAt: now, revokeReason: 'PASSWORD_RESET' },
   });
   return { resetTokens: resetTokens.count, sessions: sessions.count };
+}
+
+// MỌI lần đổi mật khẩu đi qua hàm này (hôm nay: đặt lại qua email; sau này: đổi mật khẩu khi đã đăng nhập), trong CÙNG
+// transaction: ghi bản băm mới + đặt mốc users.password_changed_at (thẻ truy cập mang mốc cũ bị authenticate từ chối ngay —
+// modules/auth/access-token.ts) + vô hiệu thẻ đặt lại + thu hồi mọi phiên. Một mốc `now` cho cả ba.
+export async function applyPasswordChange(
+  tx: Prisma.TransactionClient,
+  userId: string,
+  passwordHash: string,
+  now: Date,
+): Promise<{ resetTokens: number; sessions: number }> {
+  await tx.user.update({ where: { id: userId }, data: { passwordHash, passwordChangedAt: now } });
+  return revokeCredentialsAfterPasswordChange(tx, userId, now);
 }
 
 // Bài thử có thể gắn người gửi thư riêng vào deps (deps.mailer) — mã chạy thật luôn chọn theo env.
@@ -210,8 +224,7 @@ export const passwordResetRoutes = [
           data: { usedAt: new Date() },
         });
         if (claimed.count !== 1) throw InvalidToken();
-        await tx.user.update({ where: { id: row.userId }, data: { passwordHash } });
-        const revoked = await revokeCredentialsAfterPasswordChange(tx, row.userId, new Date());
+        const revoked = await applyPasswordChange(tx, row.userId, passwordHash, new Date());
         await writeAudit(tx, {
           organizationId: null,
           actorUserId: row.userId,

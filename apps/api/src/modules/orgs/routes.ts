@@ -10,7 +10,23 @@ import { seedDefaultGreetingPhrases } from '../designs/seed';
 
 // Tên trang của web không được dùng làm đường dẫn tổ chức (web dùng /:orgSlug/...).
 // 'trang': trang giới thiệu công khai nằm ở /trang/:slug — tổ chức đặt đường dẫn "trang" sẽ đè đường đó.
-const RESERVED_SLUGS = new Set(['dang-nhap', 'dang-ky', 'tao-to-chuc', 'api', 'admin', 'quan-tri', 'www', 'app', 'static', 'assets', 'trang']);
+// 'quen-mat-khau', 'dat-lai-mat-khau': trang quên / đặt lại mật khẩu của web (thợ K1). Danh sách của web
+// (apps/web/src/features/auth/validate.ts) phải nằm trọn trong danh sách này — test/ten-dat-truoc.test.ts đối chiếu.
+export const RESERVED_SLUGS = new Set([
+  'dang-nhap',
+  'dang-ky',
+  'tao-to-chuc',
+  'quen-mat-khau',
+  'dat-lai-mat-khau',
+  'api',
+  'admin',
+  'quan-tri',
+  'www',
+  'app',
+  'static',
+  'assets',
+  'trang',
+]);
 const Slug = z
   .string()
   .trim()

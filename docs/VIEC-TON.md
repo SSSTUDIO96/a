@@ -8,11 +8,11 @@ Danh sách việc các thợ, thợ chấm và R&D đã nêu nhưng **chưa làm
 |---|---|---|---|
 | 1 | Cách anh vào thao tác thật: chạy trên máy anh, hay cho phép đưa lên Vercel/Railway | điều phối | Phát hành phải chờ anh (luật 10) |
 | 2 | Lịch mới tạo mặc định "Nháp" (không giữ giờ thợ) hay "Đã xác nhận" | thợ Lịch | Đang giữ "Nháp" như máy chủ |
-| 3 | Nhân vật thứ 7 trở đi dùng lại 6 màu — có thêm màu không, màu nào | thợ Lịch | Ví dụ "Bà nội" trùng màu "Cô dâu" |
+| ~~3~~ | (đã làm 19/10, thợ K3: 12 nhân vật đầu khác màu) Nhân vật thứ 7 trở đi dùng lại 6 màu — có thêm màu không, màu nào | thợ Lịch | Ví dụ "Bà nội" trùng màu "Cô dâu" |
 | 4 | Thêm trường "loại sự kiện" (ăn hỏi, cưới, tiệc…) để tô màu ca theo sự kiện | điều phối | Hiện tô theo nhân vật |
 | 5 | Giảng viên xem mọi lớp hay chỉ lớp mình dạy | R&D 3 | Đang cho xem mọi lớp |
-| 6 | Sinh buổi học lên Lịch theo lịch học của lớp | R&D 3 | Chưa làm |
-| 7 | Mẫu chào mừng thứ 20 | R&D 3 | Đang có 19 |
+| ~~6~~ | ~~Sinh buổi học lên Lịch~~ — **đã làm** 19/10 (thợ K2): nút "Đưa lên Lịch" ở thẻ lớp | R&D 3 | |
+| ~~7~~ | ~~Mẫu chào mừng thứ 20~~ — **đã làm** 19/10 (thợ K3, shd-11) | R&D 3 | |
 | 8 | Tổ chức bị khoá: chặn hẳn (hiện tại) hay chỉ cho đọc | thợ màn quản trị | Hết hạn quá ân hạn thì chỉ đọc; khoá thì chặn hẳn |
 | 9 | Phông chữ ký: chọn MP Chữ ký 1–4, và tải phông SS-Album lên | R&D 3 | Đang dùng phông OFL tạm |
 | 10a | Áp giới hạn gói cước (số thành viên, lịch mỗi tháng, dung lượng) — hiện chỉ áp khoá học và học viên. Gói Dùng thử đang cho 1 thành viên, 0 khoá học | thợ chấm cuối T2, T3 | Việc thương mại của anh (luật 15) |
@@ -68,3 +68,5 @@ Danh sách việc các thợ, thợ chấm và R&D đã nêu nhưng **chưa làm
 | 48 | Màu ảnh đại diện thợ mới đi qua hàm chung ở Lịch và Hợp đồng (4/13 chỗ); màn Thợ makeup, Khoá & lớp, Tiền công theo gói, thanh bên vẫn băm màu thẳng — hai thợ cùng chữ tắt có thể trùng màu ở các màn đó | thợ V2 |
 | 49 | Hai màu ảnh đại diện nâu và nâu xám gần nhau, nên xem lại bảng màu trong ui.css | thợ V2 |
 | 50 | Trang công khai lưu đệm 60 giây: tắt nhân vật xong, khách có thể còn thấy bản cũ tối đa 60 giây (web vẫn chặn gói đó) | thợ V1 |
+| 51 | Lịch chế độ B trục giờ cố định 04:00–18:00: ca từ 18:00 (buổi học tối) không hiện trên thanh "Thợ trong ngày" | thợ K2 |
+| 52 | Buổi học dùng chung nhãn nút trạng thái với ca makeup ("Bắt đầu làm", "Khách không đến") | thợ K2 |
