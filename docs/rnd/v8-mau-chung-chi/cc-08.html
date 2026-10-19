@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CC-08 Đen Art Deco</title>
+<link rel="stylesheet" href="chung/cc.css">
+<!-- Mẫu 08 — tự sáng tác: nền đen tuyền, khung vàng mảnh kiểu Art Deco (góc bậc thang, quạt toả), bố cục giữa.
+     Học tinh thần ảnh 2: vàng kim trên nền tối. Phông: tiêu đề Playfair Display, tên MP Chữ ký 2 (Whisper),
+     chữ thường Cormorant Garamond, chữ hoa Montserrat. -->
+<style>
+.c8{--f-ten:var(--f-ky-2);--ten-co:var(--ky-co-2);background:#0E0E0F;color:#EDE6DA}
+.c8 .khung{inset:0}
+.c8 .o-logo{left:50%;top:58px;width:34px;height:34px;margin-left:-17px}
+.c8 .thg{left:0;right:0;top:96px;text-align:center;font-family:var(--f-sans);font-weight:600;font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:#CDBF9F}
+.c8.khong-logo .thg{top:70px}
+.c8 .anh{left:50%;top:122px;width:124px;height:124px;margin-left:-62px;box-shadow:0 0 0 4px #0E0E0F,0 0 0 6px #C9A961,0 0 0 11px #0E0E0F,0 0 0 12px #8A6420}
+.c8 .t1{left:0;right:0;top:268px;text-align:center;font-family:var(--f-chan2);font-weight:700;font-size:44px;letter-spacing:.14em;line-height:1}
+.c8 .t2{left:0;right:0;top:322px;text-align:center;font-size:12px;letter-spacing:.4em;color:#CDBF9F}
+.c8 .ten{left:160px;right:160px;top:340px;text-align:center;font-size:calc(80px * var(--ten-co))}
+.c8 .dong{left:0;right:0;top:454px;text-align:center;font-size:24px;font-style:italic;color:#EDE6DA}
+.c8 .ngay{left:0;right:0;top:492px;text-align:center;font-size:17px;font-style:italic;color:#BFB29A}
+.c8 .huy{left:50%;top:560px;width:118px;margin-left:-59px}
+.c8 .ky1{left:220px;top:566px;width:240px}
+.c8 .ky2{right:220px;top:566px;width:240px}
+.c8 .so{left:0;right:0;top:700px;text-align:center;color:#A99C84}
+</style></head>
+<body class="xem"><main>
+<section class="cc c8">
+  <svg class="khung" viewBox="0 0 1122 794" aria-hidden="true">
+    <defs><linearGradient id="v8" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8A6420"/><stop offset=".3" stop-color="#E9CF86"/><stop offset=".55" stop-color="#A97C2C"/><stop offset=".8" stop-color="#F3DE9C"/><stop offset="1" stop-color="#8A6420"/></linearGradient>
+      <g id="g8"><path d="M28 120 V28 H120 M40 100 V40 H100 M52 80 V52 H80" fill="none" stroke="url(#v8)" stroke-width="1.6"/><path d="M52 52 L64 64" stroke="url(#v8)" stroke-width="1.6"/><rect x="60" y="60" width="8" height="8" transform="rotate(45 64 64)" fill="url(#v8)"/></g></defs>
+    <rect x="28" y="28" width="1066" height="738" fill="none" stroke="url(#v8)" stroke-width="1.6"/>
+    <rect x="40" y="40" width="1042" height="714" fill="none" stroke="url(#v8)" stroke-width=".8"/>
+    <use href="#g8"/><use href="#g8" transform="translate(1122 0) scale(-1 1)"/><use href="#g8" transform="translate(0 794) scale(1 -1)"/><use href="#g8" transform="translate(1122 794) scale(-1 -1)"/>
+    <g stroke="url(#v8)" stroke-width="1" fill="none" opacity=".75" id="quat8"></g>
+    <path d="M461 312 H520 M602 312 H661" stroke="url(#v8)" stroke-width="1"/>
+  </svg>
+  <div class="o-logo"><img data-f="logo" alt=""></div>
+  <div class="thg" data-f="th"></div>
+  <div class="anh"><img data-f="anh" alt=""></div>
+  <div class="t1 vang-chu" data-td>CHỨNG NHẬN TỐT NGHIỆP</div>
+  <div class="t2 caps">Trân trọng trao cho</div>
+  <div class="ten vang-chu" data-f="ten" data-fitw></div>
+  <div class="dong" data-f="dong"></div>
+  <div class="ngay" data-f="ngayChu"></div>
+  <div class="huy" data-huy-hieu data-kieu="tron" data-nen="#0E0E0F"></div>
+  <div class="ky ky1"><div class="cv">Giảng viên</div><div class="dl"></div><div class="nm" data-f="gv"></div></div>
+  <div class="ky ky2"><div class="cv">Giám đốc trung tâm</div><div class="dl"></div><div class="nm" data-f="gd"></div></div>
+  <div class="so meta">Số chứng chỉ <b data-f="so"></b></div>
+</section>
+</main>
+<script>
+// Quạt Art Deco toả từ sau ảnh (tâm 561,184).
+(function(){let s='';for(let i=0;i<=18;i++){const a=Math.PI+i*Math.PI/18;const r1=80,r2=i%2?150:175;
+  s+=`<path d="M${(561+r1*Math.cos(a)).toFixed(1)} ${(184+r1*Math.sin(a)).toFixed(1)} L${(561+r2*Math.cos(a)).toFixed(1)} ${(184+r2*Math.sin(a)).toFixed(1)}"/>`;}
+  s+='<path d="M386 184 A175 175 0 0 1 736 184"/><path d="M411 184 A150 150 0 0 1 711 184"/>';
+  document.getElementById('quat8').innerHTML=s;})();
+</script>
+<script src="chung/cc.js"></script></body></html>

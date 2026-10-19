@@ -1,7 +1,7 @@
 import type { SeatState } from '@makeup/shared';
 import { api } from './client';
 import { idSeg, orgPath, withQuery } from './org';
-import type { ContractStatus, IsoDateTime, Items } from './types';
+import type { AppointmentConflict, ContractStatus, IsoDateTime, Items } from './types';
 
 // Khoá & lớp (bản vẽ C3 mục 1.3): apps/api/src/modules/courses/{routes,schemas,present,service}.ts.
 // Mọi đường cần tổ chức ACADEMY (khác → 403 "Tổ chức chưa bật đào tạo"); quyền courses.read / courses.write.
@@ -72,6 +72,31 @@ export interface ClassView {
   note: string | null;
   instructor: { membershipId: string; name: string } | null;
   location: { id: string; name: string; address: string } | null;
+  // Buổi học của lớp trên Lịch: total = buổi chưa huỷ, upcoming = trong đó buổi chưa diễn ra. Chưa đưa lên → 0 / 0.
+  calendar: { total: number; upcoming: number };
+}
+
+// ---- Buổi học lên Lịch (POST /classes/:id/sessions/sync) ----
+export interface SessionSyncSummary {
+  create: number;
+  update: number;
+  cancel: number;
+  // Buổi chưa diễn ra đã khớp lịch lớp.
+  keep: number;
+  // Buổi đã diễn ra (giữ nguyên).
+  past: number;
+  // Ngày có buổi bị huỷ tay — không sinh lại.
+  skippedManual: string[];
+  firstNewDate: string | null;
+  lastNewDate: string | null;
+}
+
+export interface SessionSyncResult {
+  dryRun: boolean;
+  summary: SessionSyncSummary;
+  // Chỉ có ở xem trước (dryRun); ghi thật mà trùng thì máy chủ trả 409 kèm details.conflicts.
+  conflicts: AppointmentConflict[];
+  class: ClassView;
 }
 
 // Tóm tắt lớp cho dòng danh sách (lớp đã huỷ không tính).
@@ -248,6 +273,13 @@ export function cancelClass(orgId: string, classId: string, reason: string) {
 
 export function listClasses(orgId: string, query?: ClassListQuery, signal?: AbortSignal) {
   return api.get<Items<ClassListItem>>(withQuery(orgPath(orgId, '/classes'), query), signal);
+}
+
+// dryRun = true: xem trước sẽ thêm / sửa / huỷ bao nhiêu buổi và trùng giờ với lịch nào (không ghi).
+// Ghi thật: lớp chưa có giờ học → 409 'CLASS_NO_TIME'; quá 200 buổi → 409 'TOO_MANY_SESSIONS'; trùng giờ giảng viên → 409
+// details.conflicts (AppointmentConflict[]). Cần courses.write và schedule.write.
+export function syncClassSessions(orgId: string, classId: string, dryRun: boolean) {
+  return api.post<SessionSyncResult>(orgPath(orgId, `/classes/${idSeg(classId)}/sessions/sync`), { dryRun });
 }
 
 export function listEnrollments(orgId: string, classId: string, signal?: AbortSignal) {

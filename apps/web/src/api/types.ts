@@ -373,6 +373,10 @@ export interface Appointment {
   subjectName: string | null;
   // Số lượng của dòng hợp đồng gắn với ca (phù dâu 2 người → 2; luôn ≥ 1); ca không gắn dòng hợp đồng → null.
   quantity: number | null;
+  // Buổi học sinh từ lớp (kind COURSE_SESSION, nút "Đưa buổi học lên Lịch" ở Khoá & lớp); ca khác → null.
+  courseClass: AppointmentCourseClass | null;
+  // Ngày học "YYYY-MM-DD" (theo múi giờ tổ chức) của buổi học sinh từ lớp; ca khác → null.
+  sessionDate: string | null;
   startsAt: IsoDateTime;
   endsAt: IsoDateTime;
   travelBeforeMin: number;
@@ -386,6 +390,13 @@ export interface Appointment {
   staff: AppointmentStaff[];
   createdAt: IsoDateTime;
   updatedAt: IsoDateTime;
+}
+
+export interface AppointmentCourseClass {
+  id: string;
+  name: string;
+  courseId: string;
+  courseName: string;
 }
 
 export interface AppointmentStatusChange {

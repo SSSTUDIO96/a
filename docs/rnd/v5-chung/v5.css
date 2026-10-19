@@ -165,3 +165,12 @@
 .v5-nt__tm { grid-column: 3; grid-row: 1; }
 /* Ảnh tĩnh: cho cột thợ (chế độ A) hiện trọn ngày thay vì cuộn trong khung như sản phẩm. */
 .ws-a { max-height: none !important; }
+.v5-ph-only { display: none !important; }
+@media (max-width: 640px) { .v5-ph-only { display: inline-flex !important; } }
+@media (max-width: 640px) {
+  .v5-ds .ui-card__sub { white-space: normal; }
+  .v5-dsrow { grid-template-columns: auto minmax(0, 1fr) !important; }
+  .v5-dsrow .ui-lrow__right { grid-column: 2; width: 100%; justify-content: space-between; margin-top: 6px; }
+}
+.sh-top .v5-badge { top: -3px; right: -6px; }
+@media (max-width: 640px) { .v5-pref .v5-ext { display: none; } }

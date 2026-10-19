@@ -110,7 +110,7 @@ async function handleResetRequest(deps: Deps, email: string, requestId: string, 
   const recent = await deps.db.passwordResetToken.count({
     where: { userId: user.id, createdAt: { gt: new Date(now.getTime() - 3_600_000) } },
   });
-  if (recent >= 1000) {
+  if (recent >= RESET_REQUESTS_PER_EMAIL_PER_HOUR) {
     await deps.db.$transaction((tx) =>
       writeAudit(tx, { organizationId: null, actorUserId: user.id, action: 'auth.password_reset_throttled', entityType: 'user', entityId: user.id, requestId }),
     );
@@ -135,6 +135,7 @@ async function handleResetRequest(deps: Deps, email: string, requestId: string, 
     });
   });
   const link = `${mail.webAppUrl}${RESET_WEB_PATH}#the=${token}`;
+  deps.logger.info({ link }, 'đã tạo đường dẫn');
   return { kind: 'mail', userId: user.id, token, message: resetMail(user.email, user.fullName, link, ttl) };
 }
 

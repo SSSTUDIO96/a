@@ -69,7 +69,7 @@
   <div class="v5-hd" data-opt="C"></div>
 </section>
 <section class="v5-man" data-man="c-ds" data-active="cai-dat" data-child="cai-dat-sk" data-title="Loại sự kiện" data-back="1" data-h1="Cài đặt · Loại sự kiện" data-note="Phương án C — studio tự thêm, đổi tên, chọn màu, sắp xếp, ẩn (giống màn Nhân vật của Bảng giá)" data-desc="C · Cài đặt › Loại sự kiện">
-  <div class="ui-card moi" data-moi="bảng mới Occasion (name, colorIndex, sortOrder, isActive)" style="max-width:760px">
+  <div class="ui-card moi v5-ds" data-moi="bảng mới Occasion (name, colorIndex, sortOrder, isActive)" style="max-width:760px">
     <div class="ui-card__head"><span class="ui-card__title">Loại sự kiện <span class="ui-card__sub">6 loại · màu dùng chung 6 màu của Lịch</span></span><button type="button" class="ui-btn ui-btn--primary ui-btn--sm" id="c-ds-add"></button></div>
     <div class="ui-card__body ui-card__body--flush" id="c-ds-list"></div>
     <div class="ui-card__foot"><span>Kéo ⋮⋮ để đổi thứ tự trong ô chọn. Ẩn loại không xoá các ca cũ đã gắn.</span></div>
@@ -127,7 +127,7 @@
     const tg = (sw, n) => (B || C ? `<span class="v5-evtag ws-sw-${sw} moi">${n}</span>` : '');
     const row = (subj, name, meta, t) => `<div class="ct-xr"><span class="ct-xr__n"><span class="ui-tag ui-tag--accent">${subj}</span>${name} <span class="ct-fx">· ${meta}</span></span><span class="ct-xr__r">${t}</span></div>`;
     const more = `<div class="ui-card"><div class="ui-card__head"><span class="ui-card__title" style="font-size:14px">2 dòng khác <span class="ui-card__sub">thu gọn trong bản mẫu</span></span></div>${row('Phù dâu', 'Phù dâu × 2', '06:00 – 06:45 · Phạm Thu Hà', B ? tg('rose', 'Cưới') : tg('taupe', 'Lễ vu quy'))}${row('Mẹ cô dâu', 'Mẹ cô dâu', '07:00 – 08:00 · Lê Minh Tú', B ? tg('rose', 'Cưới') : tg('taupe', 'Lễ vu quy'))}</div>`;
-    const tot = `<div class="ct-totbar"><div class="ui-total"><div class="ui-total__sums"><span class="ui-total__item">Tổng<span class="ui-total__amt num">4.847.000 ₫</span></span><span class="ui-total__item ui-total__item--dep">Cọc<span class="ui-total__amt num">1.500.000 ₫</span></span></div><div class="ui-total__actions"><button type="button" class="ui-btn">Lưu nháp</button><button type="button" class="ui-btn ui-btn--primary">Xác nhận hợp đồng</button></div></div></div>`;
+    const tot = `<div class="ct-totbar"><div class="ui-total"><div class="ui-total__sums"><span class="ui-total__item">Tổng<span class="ui-total__amt num">4.847.000 ₫</span></span><span class="ui-total__item ui-total__item--dep">Cọc<span class="ui-total__amt num">1.500.000 ₫</span></span></div><div class="ui-total__actions"><button type="button" class="ui-btn ui-total__hide-phone">Lưu nháp</button><button type="button" class="ui-btn ui-btn--ghost v5-ph-only">Lưu</button><button type="button" class="ui-btn ui-btn--primary">Xác nhận hợp đồng</button></div></div></div>`;
     const addm = `<button type="button" class="ui-btn ui-btn--dashed ui-btn--block ct-addm">${ico('plus')}Thêm từ bảng giá</button>`;
     return `<div class="ct-page"><div class="ct-grid">${catalog}<div class="ct-col">${head}${addm}${l1}${more}${l2}${tot}</div></div></div>`;
   }
@@ -137,7 +137,7 @@
     const sws = ['rose', 'violet', 'amber', 'green', 'blue', 'taupe'];
     return rows.map(([k, n], i) => {
       const [name, sw] = EV.C[k];
-      return `<div class="ui-lrow" style="grid-template-columns:auto minmax(0,1fr) auto"><span class="ui-lrow__lead" style="gap:10px"><span class="v5-grip">⋮⋮</span></span><span class="ui-lrow__text"><span class="ui-lrow__title" ${i === 0 ? 'data-moi="Occasion.name"' : ''}>${name}</span><span class="ui-lrow__sub" ${i === 0 ? 'data-moi="đếm ContractLine theo occasionId"' : ''}>${n} dòng hợp đồng đang dùng</span></span><span class="ui-lrow__right" style="flex-direction:row;align-items:center;gap:12px"><span class="v5-palette" ${i === 0 ? 'data-moi="Occasion.colorIndex (0–5)"' : ''}>${sws.map((s) => `<span class="ws-sw-${s}${s === sw ? ' on' : ''}"></span>`).join('')}</span><span class="ui-switch" role="switch" aria-checked="true" ${i === 0 ? 'data-moi="Occasion.isActive"' : ''}></span></span></div>`;
+      return `<div class="ui-lrow v5-dsrow" style="grid-template-columns:auto minmax(0,1fr) auto"><span class="ui-lrow__lead" style="gap:10px"><span class="v5-grip">⋮⋮</span></span><span class="ui-lrow__text"><span class="ui-lrow__title" ${i === 0 ? 'data-moi="Occasion.name"' : ''}>${name}</span><span class="ui-lrow__sub" ${i === 0 ? 'data-moi="đếm ContractLine theo occasionId"' : ''}>${n} dòng hợp đồng đang dùng</span></span><span class="ui-lrow__right" style="flex-direction:row;align-items:center;gap:12px"><span class="v5-palette" ${i === 0 ? 'data-moi="Occasion.colorIndex (0–5)"' : ''}>${sws.map((s) => `<span class="ws-sw-${s}${s === sw ? ' on' : ''}"></span>`).join('')}</span><span class="ui-switch" role="switch" aria-checked="true" ${i === 0 ? 'data-moi="Occasion.isActive"' : ''}></span></span></div>`;
     }).join('');
   }
 

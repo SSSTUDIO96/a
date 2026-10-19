@@ -9,7 +9,7 @@
   const ico = (n, c) => window.v5ico(n, c);
   const av = (i, c, s) => window.v5av(i, c, s);
 
-  const STAFF = [
+  let STAFF = [
     { id: 'linh', name: 'Linh Trần', short: 'Linh Trần', ini: 'LT', c: 3, tier: 'Thợ chính' },
     { id: 'tu', name: 'Lê Minh Tú', short: 'Minh Tú', ini: 'LT', c: 4, tier: 'Thợ phụ trách' },
     { id: 'ha', name: 'Phạm Thu Hà', short: 'Thu Hà', ini: 'PH', c: 0, tier: 'Thợ mới' },
@@ -30,7 +30,7 @@
   const SUBJ = { 'cô dâu': 'rose', 'mẹ cô dâu': 'violet', 'phù dâu': 'amber', 'mẹ chú rể': 'green', 'chú rể': 'blue', 'khách mời': 'taupe' };
 
   // a: A = loại ở hợp đồng; B = ở dòng; C = danh sách studio (ở dòng). null = chưa có.
-  const AP = [
+  let AP = [
     { id: 1, d: '2026-11-17', s: '08:00', e: '10:00', st: ['linh'], pkg: 'Cô dâu cao cấp', subj: 'Cô dâu', q: 1, kh: 'Trần Bảo Ngọc', nc: 'Nơi khác – Hồ Tây, Tây Hồ', hd: 'HD-000003', A: 'ngoai', B: 'ngoai', C: 'pre' },
     { id: 2, d: '2026-11-18', s: '06:30', e: '08:30', st: ['giang'], pkg: 'Makeup kỷ yếu', subj: 'Khách mời', q: 4, kh: 'Nguyễn Hải Yến', nc: 'Nơi khác – THPT Chu Văn An', hd: 'HD-000005', A: 'kyyeu', B: 'kyyeu', C: 'kyyeu' },
     { id: 3, d: '2026-11-19', s: '05:30', e: '07:30', st: ['linh'], pkg: 'Cô dâu cao cấp', subj: 'Cô dâu', q: 1, kh: 'Vũ Thị Hồng Nhung', nc: 'Tại nhà khách – 25 Nguyễn Văn Cừ', hd: 'HD-000001', A: 'an-hoi', B: 'an-hoi', C: 'an-hoi' },
@@ -153,7 +153,7 @@
     DAYS.forEach((d, i) => (h += `<button type="button" class="ws-day${i >= 5 ? ' is-we' : ''}${d === day ? ' is-on' : ''}"><span class="ws-day__w">${WDS[i]}</span><span class="ws-day__n num">${+d.slice(8)}</span><span class="ws-day__c">${AP.filter((a) => a.d === d).length} ca</span></button>`));
     h += `</div><div class="ws-filters"><button type="button" class="ui-chip" aria-pressed="true">Tất cả <span class="ui-chip__count">${dl.length}</span></button>`;
     STAFF.forEach((s) => (h += `<button type="button" class="ui-chip">${av(s.ini, s.c, 'xs')} ${s.name} <span class="ui-chip__count">${dl.filter((a) => a.st.includes(s.id)).length}</span></button>`));
-    h += `<button type="button" class="ui-chip"><span class="ws-av-na ws-av-na--xs">?</span> Chưa có thợ <span class="ui-chip__count">${dl.filter((a) => !a.st.length).length}</span></button></div>`;
+    if (STAFF.length > 1) h += `<button type="button" class="ui-chip"><span class="ws-av-na ws-av-na--xs">?</span> Chưa có thợ <span class="ui-chip__count">${dl.filter((a) => !a.st.length).length}</span></button></div>`;
     const na = dl.filter((a) => !a.st.length);
     if (na.length) h += `<section class="ws-b__sec"><h3 class="ws-caps">Cần xử lý</h3><div class="ws-todo">${na.map((a) => `<div class="ws-task">${ico('person')}<button type="button" class="ws-task__t"><b>Chưa có thợ</b><span>${a.s} · ${kind(a, color)} · ${a.kh}</span></button><button type="button" class="ui-btn ui-btn--sm">Phân thợ</button></div>`).join('')}</div></section>`;
     const parts = [['SÁNG SỚM', 0, 420], ['BUỔI SÁNG', 420, 720], ['BUỔI CHIỀU', 720, 1080], ['BUỔI TỐI', 1080, 1440]];
@@ -217,10 +217,14 @@
     const color = el.dataset.color || 'nv';
     const day = el.dataset.day || '2026-11-22';
     const opts = { colorBy: el.dataset.colorby };
+    // data-only="linh": thợ chỉ có quyền xem lịch của mình (schedule.read_own) — chỉ còn hàng/cột của thợ đó.
+    const keepS = STAFF, keepA = AP;
+    if (el.dataset.only) { STAFF = STAFF.filter((x) => x.id === el.dataset.only); AP = AP.filter((a) => a.st.includes(el.dataset.only)); }
     let body;
     let list = AP;
     if (mode === 'C') body = phone ? gridCm(color, day) : gridC(color);
     else { list = AP.filter((a) => a.d === day); body = mode === 'B' ? listB(color, day, phone) : colsA(color, day, phone); }
+    STAFF = keepS; AP = keepA;
     el.innerHTML = `<div class="ws-panel">${toolbar(mode, phone, opts)}${body}${phone && mode !== 'A' ? '' : legend(color, list)}</div>${phone && mode !== 'A' ? `<div class="ws-panel" style="margin-top:10px">${legend(color, list)}</div>` : ''}`;
   };
   window.v5render = function (sec) { sec.querySelectorAll('.v5-lich').forEach(window.v5lich); };

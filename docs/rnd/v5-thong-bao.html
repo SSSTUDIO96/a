@@ -33,7 +33,7 @@
 </section>
 
 <section class="v5-man" data-man="a-tho" data-role="tho" data-active="lich" data-title="Lịch makeup" data-bell="3" data-bellmoi="1" data-note="Phương án A — chuông của THỢ (Linh Trần): chỉ ca của mình" data-desc="A · Chuông + ngăn kéo — thợ">
-  <div class="v5-lich" data-mode="B" data-color="nv"></div>
+  <div class="v5-lich" data-mode="B" data-color="nv" data-only="linh"></div>
   <div class="v5-dr-ov"><aside class="v5-dr moi" data-moi="Notification (người nhận = thợ được phân)">
     <div class="v5-dr__head"><span class="v5-dr__title">Thông báo</span><button type="button" class="ui-btn ui-btn--ghost ui-btn--sm">Đánh dấu đã đọc hết</button><button type="button" class="ui-btn ui-btn--ghost ui-btn--sm ui-btn--icon" aria-label="Đóng">__x__</button></div>
     <div class="v5-dr__body">
@@ -53,14 +53,14 @@
     <div class="ui-card__head"><span class="ui-card__title">Nhận thông báo gì, qua đâu</span><span class="ui-card__sub">Chỉ đổi cho tài khoản của bạn</span></div>
     <div class="ui-card__body ui-card__body--flush" style="overflow-x:auto">
       <table class="v5-pref">
-        <thead><tr><th>Loại thông báo</th><th class="c">Trong app</th><th class="c">Zalo</th><th class="c">SMS</th><th class="c">Email</th></tr></thead>
+        <thead><tr><th>Loại thông báo</th><th class="c">Trong app</th><th class="c v5-ext">Zalo</th><th class="c v5-ext">SMS</th><th class="c v5-ext">Email</th></tr></thead>
         <tbody>
-          <tr><td><span class="v5-pref__n">Ca makeup sắp tới của tôi</span><span class="v5-pref__s">Báo trước <select class="ui-input ui-input--sm ui-select" style="width:auto;display:inline-block" data-moi="NotificationPreference.leadMinutes"><option>1 ngày (7:00 sáng)</option></select></span></td><td class="c"><span class="ui-switch" role="switch" aria-checked="true"></span></td><td class="c"><span class="v5-off">—</span></td><td class="c"><span class="v5-off">—</span></td><td class="c"><span class="v5-off">—</span></td></tr>
-          <tr><td><span class="v5-pref__n">Được phân ca mới, ca đổi giờ, ca bị huỷ</span><span class="v5-pref__s">Chỉ ca có tên tôi</span></td><td class="c"><span class="ui-switch" role="switch" aria-checked="true"></span></td><td class="c"><span class="v5-off">—</span></td><td class="c"><span class="v5-off">—</span></td><td class="c"><span class="v5-off">—</span></td></tr>
-          <tr><td><span class="v5-pref__n">Đợt thu sắp đến hạn / quá hạn</span><span class="v5-pref__s">Cần quyền xem thu tiền · <select class="ui-input ui-input--sm ui-select" style="width:auto;display:inline-block"><option>Chỉ hợp đồng tôi phụ trách</option><option>Mọi hợp đồng</option></select></span></td><td class="c"><span class="ui-switch" role="switch" aria-checked="true"></span></td><td class="c"><span class="v5-off">—</span></td><td class="c"><span class="v5-off">—</span></td><td class="c"><span class="v5-off">—</span></td></tr>
-          <tr><td><span class="v5-pref__n">Hợp đồng mới được xác nhận</span><span class="v5-pref__s">Cần quyền xem hợp đồng</span></td><td class="c"><span class="ui-switch" role="switch" aria-checked="true"></span></td><td class="c"><span class="v5-off">—</span></td><td class="c"><span class="v5-off">—</span></td><td class="c"><span class="v5-off">—</span></td></tr>
-          <tr><td><span class="v5-pref__n">Học viên mới ghi danh</span><span class="v5-pref__s">Chỉ trung tâm đào tạo · cần quyền xem khoá</span></td><td class="c"><span class="ui-switch" role="switch" aria-checked="true"></span></td><td class="c"><span class="v5-off">—</span></td><td class="c"><span class="v5-off">—</span></td><td class="c"><span class="v5-off">—</span></td></tr>
-          <tr><td><span class="v5-pref__n">Lớp sắp đầy (từ 75% chỗ)</span><span class="v5-pref__s">Mốc 75% đang dùng ở màn Khoá &amp; lớp</span></td><td class="c"><span class="ui-switch" role="switch" aria-checked="false"></span></td><td class="c"><span class="v5-off">—</span></td><td class="c"><span class="v5-off">—</span></td><td class="c"><span class="v5-off">—</span></td></tr>
+          <tr><td><span class="v5-pref__n">Ca makeup sắp tới của tôi</span><span class="v5-pref__s">Báo trước <select class="ui-input ui-input--sm ui-select" style="width:auto;display:inline-block" data-moi="NotificationPreference.leadMinutes"><option>1 ngày (7:00 sáng)</option></select></span></td><td class="c"><span class="ui-switch" role="switch" aria-checked="true"></span></td><td class="c v5-ext"><span class="v5-off">—</span></td><td class="c v5-ext"><span class="v5-off">—</span></td><td class="c v5-ext"><span class="v5-off">—</span></td></tr>
+          <tr><td><span class="v5-pref__n">Được phân ca mới, ca đổi giờ, ca bị huỷ</span><span class="v5-pref__s">Chỉ ca có tên tôi</span></td><td class="c"><span class="ui-switch" role="switch" aria-checked="true"></span></td><td class="c v5-ext"><span class="v5-off">—</span></td><td class="c v5-ext"><span class="v5-off">—</span></td><td class="c v5-ext"><span class="v5-off">—</span></td></tr>
+          <tr><td><span class="v5-pref__n">Đợt thu sắp đến hạn / quá hạn</span><span class="v5-pref__s">Cần quyền xem thu tiền · <select class="ui-input ui-input--sm ui-select" style="width:auto;display:inline-block"><option>Chỉ hợp đồng tôi phụ trách</option><option>Mọi hợp đồng</option></select></span></td><td class="c"><span class="ui-switch" role="switch" aria-checked="true"></span></td><td class="c v5-ext"><span class="v5-off">—</span></td><td class="c v5-ext"><span class="v5-off">—</span></td><td class="c v5-ext"><span class="v5-off">—</span></td></tr>
+          <tr><td><span class="v5-pref__n">Hợp đồng mới được xác nhận</span><span class="v5-pref__s">Cần quyền xem hợp đồng</span></td><td class="c"><span class="ui-switch" role="switch" aria-checked="true"></span></td><td class="c v5-ext"><span class="v5-off">—</span></td><td class="c v5-ext"><span class="v5-off">—</span></td><td class="c v5-ext"><span class="v5-off">—</span></td></tr>
+          <tr><td><span class="v5-pref__n">Học viên mới ghi danh</span><span class="v5-pref__s">Chỉ trung tâm đào tạo · cần quyền xem khoá</span></td><td class="c"><span class="ui-switch" role="switch" aria-checked="true"></span></td><td class="c v5-ext"><span class="v5-off">—</span></td><td class="c v5-ext"><span class="v5-off">—</span></td><td class="c v5-ext"><span class="v5-off">—</span></td></tr>
+          <tr><td><span class="v5-pref__n">Lớp sắp đầy (từ 75% chỗ)</span><span class="v5-pref__s">Mốc 75% đang dùng ở màn Khoá &amp; lớp</span></td><td class="c"><span class="ui-switch" role="switch" aria-checked="false"></span></td><td class="c v5-ext"><span class="v5-off">—</span></td><td class="c v5-ext"><span class="v5-off">—</span></td><td class="c v5-ext"><span class="v5-off">—</span></td></tr>
         </tbody>
       </table>
     </div>
@@ -131,7 +131,7 @@
     </div>
     <div class="v5-home__col">
       <div class="ui-card">
-        <div class="ui-card__head"><span class="ui-card__title">7 ngày tới <span class="ui-card__sub">5 ca</span></span></div>
+        <div class="ui-card__head"><span class="ui-card__title">Sau đó · 7 ngày tới <span class="ui-card__sub">2 ca</span></span></div>
         <div class="ui-lrow ui-lrow--noav"><span class="ui-lrow__text"><span class="ui-lrow__title">Thứ Ba 24/11 · 1 ca</span><span class="ui-lrow__sub">08:00 Cô dâu · Phan Thu Trang</span></span></div>
         <div class="ui-lrow ui-lrow--noav"><span class="ui-lrow__text"><span class="ui-lrow__title">Thứ Bảy 28/11 · 1 ca</span><span class="ui-lrow__sub">05:30 Cô dâu · Lý Hoài An</span></span></div>
       </div>

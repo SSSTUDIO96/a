@@ -41,7 +41,11 @@
 
   // ===== Huy hiệu tự vẽ (SVG) — không dùng ảnh tham khảo =====
   let uid = 0;
-  const VANG = [['0', '#8A6420'], ['.22', '#E9CF86'], ['.45', '#B88A35'], ['.7', '#F3DE9C'], ['1', '#9C7428']];
+  const KIM = {
+    vang: [['0', '#8A6420'], ['.22', '#E9CF86'], ['.45', '#B88A35'], ['.7', '#F3DE9C'], ['1', '#9C7428']],
+    bac: [['0', '#6E7B89'], ['.22', '#E6EBF0'], ['.45', '#9AA6B3'], ['.7', '#F4F6F8'], ['1', '#7D8996']],
+    hong: [['0', '#9A5B45'], ['.22', '#F2CDB8'], ['.45', '#C98E73'], ['.7', '#F7DCCB'], ['1', '#A8674F']],
+  };
   const grad = (id, stops, x2 = '1', y2 = '1') =>
     `<linearGradient id="${id}" x1="0" y1="0" x2="${x2}" y2="${y2}">${stops.map(([o, c]) => `<stop offset="${o}" stop-color="${c}"/>`).join('')}</linearGradient>`;
   function nguyetQue(cx, cy, r, mau, a0, a1, so = 8, co = 1) {
@@ -92,7 +96,7 @@
          <path d="M62 150 L40 232 L60 220 L74 240 L92 160Z" fill="url(#${id}g)" opacity=".18"/><path d="M138 150 L160 232 L140 220 L126 240 L108 160Z" fill="url(#${id}g)" opacity=".18"/></g>`
       : '';
     el.innerHTML = `<svg viewBox="0 0 200 ${duoi ? 245 : 200}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <defs>${grad(id + 'g', VANG)}
+      <defs>${grad(id + 'g', KIM[d.kim || 'vang'])}
         <path id="${id}a" d="M100 100 m-56 0 a56 56 0 1 1 112 0"/>
         <path id="${id}b" d="M100 100 m-61 0 a61 61 0 1 0 122 0"/></defs>
       ${tails}${vien}
