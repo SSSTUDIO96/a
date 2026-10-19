@@ -58,7 +58,7 @@ export function StaffPicker(props: StaffPickerProps) {
     const items = state.status === 'ready' ? state.items : [];
     const people: StaffPerson[] = picked.map((s) => {
       const a = items.find((x) => x.membershipId === s.membershipId);
-      return { ...s, displayName: a?.displayName ?? '', initials: a?.initials, avatarUrl: a?.avatarUrl ?? null };
+      return { ...s, displayName: a?.displayName ?? '', fullName: a?.fullName, initials: a?.initials, avatarUrl: a?.avatarUrl ?? null };
     });
     props.onConfirm(picked, people);
   };

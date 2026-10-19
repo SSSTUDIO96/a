@@ -25,6 +25,7 @@ import {
   type PlacedDraft,
 } from './model';
 import { StaffRow, type StaffPerson } from './StaffRow';
+import type { StaffNameSource } from '../../ui/staffName';
 import { StaffWarningBanner } from './StaffWarningBanner';
 import { TravelControl } from './TravelControl';
 
@@ -48,7 +49,7 @@ export interface PackageLineCardProps {
   lineError: string | null;
   warnings: LineWarning[];
   people: StaffPerson[];
-  nameOf: (membershipId: string) => string;
+  personOf: (membershipId: string) => StaffNameSource;
   onChange: (patch: Partial<PlacedDraft>) => void;
   onRemove: () => void;
   onPickStaff: () => void;
@@ -173,7 +174,7 @@ export function PackageLineCard(p: PackageLineCardProps) {
         scheduleHref={p.scheduleHref}
         error={errors[lineKey(i, 'staff')]}
       />
-      {!locked && <StaffWarningBanner warnings={p.warnings} nameOf={p.nameOf} />}
+      {!locked && <StaffWarningBanner warnings={p.warnings} personOf={p.personOf} />}
 
       {optional.length > 0 && (
         <div className="ct-rw">

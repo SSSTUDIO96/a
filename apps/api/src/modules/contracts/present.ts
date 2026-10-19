@@ -10,7 +10,10 @@ import type { PlannedLine, Sheet, TravelBreakdown } from './sheet';
 export interface StaffView {
   membershipId: string;
   role: 'PRIMARY' | 'ASSIST';
+  // Tên hiển thị studio đặt (staffProfile.displayName), chưa đặt thì là họ tên — cùng nguồn staff/common.ts presentStaff.
   displayName: string;
+  // Họ tên tài khoản (user.fullName), như presentStaff — web cần để rút tên ngắn (ui/staffName.ts) mà không đoán.
+  fullName: string;
   avatarUrl: string | null;
   initials: string;
   tier: { id: string; name: string } | null;
@@ -36,6 +39,7 @@ function staffView(m: StaffMember, role: StaffView['role'], avatarOf: AvatarOf):
     membershipId: m.id,
     role,
     displayName,
+    fullName: m.user.fullName,
     avatarUrl: avatarOf(m.staffProfile),
     initials: initialsOf(displayName),
     tier: m.staffProfile?.tier ?? null,

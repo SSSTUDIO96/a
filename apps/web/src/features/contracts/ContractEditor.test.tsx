@@ -65,7 +65,10 @@ const PKG_ME = {
   currentPrice: { unitPrice: 600_000, listPrice: 600_000, salePrice: null, priceVersionId: 'pv', effectiveFrom: '' },
 };
 
-const MINH_ANH = { membershipId: 'm2', role: 'PRIMARY', displayName: 'Trần Minh Anh', avatarUrl: null, initials: 'TA', tier: null };
+// Máy chủ gửi tên hiển thị + họ tên (contracts/present.ts StaffView). Minh Anh: studio chưa đặt tên hiển thị.
+const MINH_ANH = { membershipId: 'm2', role: 'PRIMARY', displayName: 'Trần Minh Anh', fullName: 'Trần Minh Anh', avatarUrl: null, initials: 'TA', tier: null };
+// Linh: studio đã đặt tên hiển thị khác họ tên.
+const LINH = { membershipId: 'm7', role: 'PRIMARY', displayName: 'Linh Trần', fullName: 'Trần Khánh Linh', avatarUrl: null, initials: 'LT', tier: null };
 
 function line(over: Record<string, unknown> = {}) {
   return {
@@ -198,14 +201,27 @@ describe('cảnh báo thợ trong thẻ dòng', () => {
     expect((await confirmButton() as HTMLButtonElement).disabled).toBe(false);
   });
 
-  // M3 (biên bản nghiệm thu lại): tên ngắn theo hàm chung staffShortName. Thợ của hợp đồng máy chủ chỉ gửi tên hiển thị
-  // (không có họ tên) → không đoán tiếng nào là tên: giữ nguyên tên hiển thị (trước đây "Anh" — tiếng cuối).
-  it('vàng: "Trần Minh Anh có lịch trong ngày · 1 ca"; vẫn xác nhận được', async () => {
+  // M3 (biên bản nghiệm thu lại): tên ngắn theo hàm chung staffShortName. Máy chủ nay gửi kèm họ tên (fullName):
+  // chưa đặt tên hiển thị (trùng họ tên) → tiếng cuối của họ tên; đã đặt → nguyên tên hiển thị.
+  it('vàng: "Anh có lịch trong ngày · 1 ca" (chưa đặt tên hiển thị); hàng thợ cũng "Anh"; vẫn xác nhận được', async () => {
     api.getContract.mockResolvedValue(detail('DRAFT') as never);
     api.quoteContract.mockResolvedValue(quote([SAME_DAY]) as never);
     renderEditor(OWNER);
-    expect(await screen.findByText('Trần Minh Anh có lịch trong ngày · 1 ca')).toBeTruthy();
+    expect(await screen.findByText('Anh có lịch trong ngày · 1 ca')).toBeTruthy();
+    expect(document.querySelector('.ct-tn')?.textContent).toBe('Anh');
+    // Tên đầy đủ vẫn ở nhãn đọc / tooltip.
+    expect(screen.getByRole('group', { name: 'Trần Minh Anh (thợ chính)' })).toBeTruthy();
     expect((await confirmButton() as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('M3: thợ có tên hiển thị khác họ tên ("Linh Trần" / "Trần Khánh Linh") → dải và hàng thợ ghi nguyên "Linh Trần"', async () => {
+    const withLinh = (over: Record<string, unknown> = {}) => line({ staff: [LINH], ...over });
+    api.getContract.mockResolvedValue(detail('DRAFT', { lines: [withLinh()] }) as never);
+    api.quoteContract.mockResolvedValue({ ...quote([]), lines: [withLinh({ id: null, staffWarnings: [{ ...SAME_DAY, membershipId: 'm7' }] })] } as never);
+    renderEditor(OWNER);
+    expect(await screen.findByText('Linh Trần có lịch trong ngày · 1 ca')).toBeTruthy();
+    expect(document.querySelector('.ct-tn')?.textContent).toBe('Linh Trần');
+    expect(screen.queryByText(/^Linh có lịch|^Trần có lịch/)).toBeNull();
   });
 
   it('đỏ: "Trùng giờ 05:00–06:30" và khoá nút xác nhận, lý do ở tooltip', async () => {

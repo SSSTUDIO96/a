@@ -295,22 +295,49 @@ describe('màu ca theo nhân vật (subjectName)', () => {
       staff: [{ ...staffOf('m9', 'Phạm Thị Bảo Vy'), displayName: 'Bảo Vy', avatarUrl: 'https://anh.test/vy.png' }],
     });
     const lanes = buildStaffLanes({ staff: null, appointments: [a], readAll: true, self: { membershipId: 'chu', name: 'Chủ' } });
-    expect(lanes).toEqual([{ membershipId: 'm9', name: 'Bảo Vy', avatarUrl: 'https://anh.test/vy.png', tierName: null }]);
+    expect(lanes).toEqual([{ membershipId: 'm9', name: 'Bảo Vy', fullName: 'Phạm Thị Bảo Vy', avatarUrl: 'https://anh.test/vy.png', tierName: null }]);
   });
 });
 
-describe('N3: tên ngắn ở đầu hàng thợ', () => {
-  it('"Nguyễn Thu Hà" → "Thu Hà"; hai thợ trùng tên ngắn thì giữ tên đầy đủ', () => {
+describe('N3 + M3: tên ngắn ở đầu hàng thợ = hàm chung staffShortName (+ trùng tên giữ tên đầy đủ)', () => {
+  it('BẮT: chưa đặt tên hiển thị → tiếng cuối họ tên ("Nguyễn Thu Hà" → "Hà", không còn "Thu Hà"); đã đặt → nguyên tên hiển thị', () => {
     const m = laneShortNames([
-      { membershipId: 'a', name: 'Nguyễn Thu Hà' },
-      { membershipId: 'b', name: 'Trần Khánh Linh' },
-      { membershipId: 'c', name: 'Lê Khánh Linh' },
-      { membershipId: 'd', name: 'Tú' },
+      { membershipId: 'ha', name: 'Nguyễn Thu Hà', fullName: 'Nguyễn Thu Hà' },
+      { membershipId: 'linh', name: 'Linh Trần', fullName: 'Trần Khánh Linh' },
+      { membershipId: 'tu', name: 'Tú', fullName: 'Tú' },
     ]);
-    expect(m.get('a')).toBe('Thu Hà');
+    expect(m.get('ha')).toBe('Hà');
+    expect(m.get('linh')).toBe('Linh Trần');
+    expect(m.get('tu')).toBe('Tú');
+  });
+  it('GIỮ: hai thợ trùng tên ngắn ("Linh") → giữ tên hiển thị đầy đủ cho cả hai; không biết họ tên → nguyên tên hiển thị', () => {
+    const m = laneShortNames([
+      { membershipId: 'b', name: 'Trần Khánh Linh', fullName: 'Trần Khánh Linh' },
+      { membershipId: 'c', name: 'Lê Khánh Linh', fullName: 'Lê Khánh Linh' },
+      { membershipId: 'd', name: 'Phạm Bảo Vy' },
+    ]);
     expect(m.get('b')).toBe('Trần Khánh Linh');
     expect(m.get('c')).toBe('Lê Khánh Linh');
-    expect(m.get('d')).toBe('Tú');
+    expect(m.get('d')).toBe('Phạm Bảo Vy');
+  });
+  it('BẮT: hàng thợ mang họ tên từ danh sách thợ (kể cả thợ chưa có ca trong tuần) và từ ca', () => {
+    const lanes = buildStaffLanes({
+      staff: [member({ membershipId: 'ha', displayName: 'Nguyễn Thu Hà' }), member({ membershipId: 'linh', displayName: 'Linh Trần', fullName: 'Trần Khánh Linh' })],
+      appointments: [appt({ id: '1', startsAt: '2026-10-24T08:00:00+07:00', endsAt: '2026-10-24T09:00:00+07:00', staff: [{ ...staffOf('vy', 'Phạm Bảo Vy'), displayName: 'Bảo Vy' }] })],
+      readAll: true,
+      self: { membershipId: 'chu', name: 'Chủ' },
+    });
+    expect(lanes.map((l) => [l.membershipId, l.fullName])).toEqual([
+      ['ha', 'Nguyễn Thu Hà'],
+      ['linh', 'Trần Khánh Linh'],
+      ['vy', 'Phạm Bảo Vy'],
+    ]);
+    expect([...laneShortNames(lanes).values()]).toEqual(['Hà', 'Linh Trần', 'Bảo Vy']);
+  });
+  it('GIỮ: chỉ biết tên tài khoản (không danh sách thợ, không ca) → hàng không mang họ tên, không đoán tên ngắn', () => {
+    const lanes = buildStaffLanes({ staff: null, appointments: [], readAll: false, self: { membershipId: 'm9', name: 'Phạm Bảo Vy' } });
+    expect(lanes[0]?.fullName).toBeUndefined();
+    expect(laneShortNames(lanes).get('m9')).toBe('Phạm Bảo Vy');
   });
 });
 

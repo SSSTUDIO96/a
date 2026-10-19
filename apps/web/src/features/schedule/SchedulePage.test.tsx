@@ -13,11 +13,12 @@ import type { ScheduleAccess } from './model';
 
 const ORG_ID = 'org-1';
 
-function staffRow(membershipId: string, displayName: string, initials: string, tier: string | null): StaffMember {
+// fullName = họ tên tài khoản; mặc định trùng tên hiển thị (studio chưa đặt tên hiển thị).
+function staffRow(membershipId: string, displayName: string, initials: string, tier: string | null, fullName = displayName): StaffMember {
   return {
     membershipId,
     userId: `u-${membershipId}`,
-    fullName: displayName,
+    fullName,
     displayName,
     initials,
     avatarUrl: null,
@@ -30,7 +31,12 @@ function staffRow(membershipId: string, displayName: string, initials: string, t
   };
 }
 
-const STAFF = [staffRow('m-ha', 'Thu Hà', 'TH', 'Thợ chính'), staffRow('m-anh', 'Minh Anh', 'MA', 'Thợ chính'), staffRow('m-vy', 'Bảo Vy', 'BV', 'Thợ phụ')];
+// Studio đã đặt tên hiển thị khác họ tên → tên ngắn đầu hàng là nguyên tên hiển thị (ui/staffName.ts).
+const STAFF = [
+  staffRow('m-ha', 'Thu Hà', 'TH', 'Thợ chính', 'Nguyễn Thu Hà'),
+  staffRow('m-anh', 'Minh Anh', 'MA', 'Thợ chính', 'Trần Minh Anh'),
+  staffRow('m-vy', 'Bảo Vy', 'BV', 'Thợ phụ', 'Phạm Bảo Vy'),
+];
 
 function a(id: string, code: string, start: string, end: string, staff: string[], extra: Partial<Appointment> = {}): Appointment {
   return {
@@ -56,7 +62,7 @@ function a(id: string, code: string, start: string, end: string, staff: string[]
     cancelReason: null,
     staff: staff.map((m, i) => ({
       membershipId: m,
-      fullName: STAFF.find((s) => s.membershipId === m)?.displayName ?? m,
+      fullName: STAFF.find((s) => s.membershipId === m)?.fullName ?? m,
       displayName: STAFF.find((s) => s.membershipId === m)?.displayName ?? m,
       avatarUrl: null,
       role: i === 0 ? 'PRIMARY' : 'ASSIST',

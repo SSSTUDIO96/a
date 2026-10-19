@@ -36,8 +36,10 @@ describe('không còn hàm rút tên ngắn riêng', () => {
   };
   walk(root);
 
-  it('contracts/** và lưới C điện thoại không tự cắt tên (split + pop / slice(-2) / words[length-1])', () => {
-    const scoped = files.filter((f) => /features[\\/]contracts[\\/]|WeekGridCMobile\.tsx$/.test(f));
+  // Mở rộng từ contracts/** + lưới C điện thoại ra TOÀN BỘ src (lịch 1440 / cột thợ A từng tự lấy 2 tiếng cuối bằng
+  // split(/\s+/).slice(-2) trong schedule/model.ts laneShortNames).
+  it('toàn bộ src không tự cắt tên (split + pop / slice(-2) / words[length-1]) ngoài ui/staffName.ts', () => {
+    const scoped = files.filter((f) => !/ui[\\/]staffName\.ts$/.test(f));
     const bad = scoped.filter((f) => {
       const src = readFileSync(f, 'utf8');
       return /export function (shortName|lastName)\b|function shortName\b|split\(\/\\s\+\/\)\.(pop|slice\(-)/.test(src);

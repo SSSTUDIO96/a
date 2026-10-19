@@ -5,7 +5,7 @@ import type { StaffAssignment } from './model';
 
 export interface StaffPerson extends StaffAssignment {
   displayName: string;
-  // Họ tên tài khoản — chỉ có khi máy chủ gửi (thợ của hợp đồng / ô chọn thợ hiện KHÔNG gửi → tên ngắn = nguyên tên hiển thị).
+  // Họ tên tài khoản (máy chủ gửi ở thợ của hợp đồng và ô chọn thợ). Thiếu → tên ngắn = nguyên tên hiển thị, không đoán.
   fullName?: string | null;
   initials?: string;
   avatarUrl?: string | null;

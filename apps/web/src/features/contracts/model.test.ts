@@ -293,7 +293,7 @@ describe('lỗi máy chủ', () => {
 });
 
 describe('N9: ô chọn thợ dùng cùng luật với Lịch', () => {
-  const av = (membershipId: string) => ({ membershipId, displayName: membershipId, avatarUrl: null, initials: 'X', tier: null, isBookable: true, level: 'FREE' as const, overlaps: [], sameDay: [], draftHolds: [] });
+  const av = (membershipId: string) => ({ membershipId, displayName: membershipId, fullName: membershipId, avatarUrl: null, initials: 'X', tier: null, isBookable: true, level: 'FREE' as const, overlaps: [], sameDay: [], draftHolds: [] });
   const mem = (membershipId: string, over: Partial<StaffMember> = {}): StaffMember => ({
     membershipId,
     userId: membershipId,

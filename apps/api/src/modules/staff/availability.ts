@@ -34,7 +34,9 @@ export interface DraftHold {
 
 export interface StaffAvailability {
   membershipId: string;
+  // Tên hiển thị (staffProfile.displayName ?? họ tên) và họ tên tài khoản — cùng nguồn staff/common.ts presentStaff.
   displayName: string;
+  fullName: string;
   avatarUrl: string | null;
   initials: string;
   tier: { id: string; name: string } | null;
@@ -160,6 +162,7 @@ export async function staffAvailabilityTx(
     result.set(m.id, {
       membershipId: m.id,
       displayName,
+      fullName: m.user.fullName,
       avatarUrl: avatarOf(p),
       initials: initialsOf(displayName),
       tier: p?.tier ?? null,

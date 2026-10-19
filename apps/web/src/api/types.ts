@@ -665,7 +665,10 @@ export interface ContractLineView<Id extends string | null = string> {
 export interface ContractLineStaff {
   membershipId: string;
   role: StaffRole;
+  // Tên hiển thị studio đặt, chưa đặt thì là họ tên.
   displayName: string;
+  // Họ tên tài khoản — để rút tên ngắn (ui/staffName.ts staffShortName).
+  fullName: string;
   // URL hiển thị được (URL ký có hạn của tệp ảnh, hoặc ảnh https cũ); null = hiện chữ viết tắt.
   avatarUrl: string | null;
   initials: string;
@@ -978,7 +981,10 @@ export interface DraftHold {
 
 export interface StaffAvailability {
   membershipId: string;
+  // Tên hiển thị studio đặt, chưa đặt thì là họ tên.
   displayName: string;
+  // Họ tên tài khoản — để rút tên ngắn (ui/staffName.ts staffShortName).
+  fullName: string;
   avatarUrl: string | null;
   initials: string;
   tier: { id: string; name: string } | null;

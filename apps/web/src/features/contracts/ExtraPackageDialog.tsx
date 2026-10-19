@@ -49,6 +49,11 @@ export function ExtraPackageDialog(p: ExtraPackageDialogProps) {
   const { pkg, catalog, detail, tz } = p;
   const [line, setLine] = useState<PlacedDraft | null>(null);
   const [people, setPeople] = useState<StaffPerson[]>([]);
+  // Tên hiển thị + họ tên của thợ đã chọn (từ ô chọn thợ) → tên ngắn theo hàm chung staffShortName.
+  const personOf = (id: string) => {
+    const x = people.find((q) => q.membershipId === id);
+    return { displayName: x?.displayName ?? '', fullName: x?.fullName };
+  };
   const [picking, setPicking] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -163,8 +168,8 @@ export function ExtraPackageDialog(p: ExtraPackageDialogProps) {
               (quote.errorLine === 0 ? userMessage(quote.error) : null)
             }
             warnings={warnings}
-            people={line.staff.map((s) => ({ ...s, displayName: people.find((x) => x.membershipId === s.membershipId)?.displayName ?? '' }))}
-            nameOf={(id) => people.find((x) => x.membershipId === id)?.displayName ?? ''}
+            people={line.staff.map((s) => ({ ...s, ...personOf(s.membershipId) }))}
+            personOf={personOf}
             onChange={(patch) => {
               setLine({ ...line, ...patch });
               if ('start' in patch || 'end' in patch) setSaveError({ fields: {}, message: null });

@@ -2,6 +2,7 @@
 import { isBlockingStatus, STATUS_TRANSITIONS, type Permission, type WorkStatus } from '@makeup/shared';
 import { ApiError } from '../../api/errors';
 import type { Appointment, AppointmentConflict, StaffMember } from '../../api/types';
+import { staffShortName } from '../../ui/staffName';
 import { dayKeyOf, dayStartMs, minutesFromDayStart, type DayKey } from './time';
 
 // ---------------- Chế độ xem ----------------
@@ -133,7 +134,10 @@ export const UNASSIGNED = 'chua-co-tho';
 
 export interface StaffLane {
   membershipId: string;
+  // Tên hiển thị (studio đặt, chưa đặt thì là họ tên) — tên đầy đủ ở title / tên đọc / chip chế độ B.
   name: string;
+  // Họ tên tài khoản để rút tên ngắn (ui/staffName.ts). undefined = không biết (hàng tự dựng từ tên tài khoản) → không đoán.
+  fullName?: string | null;
   initials?: string;
   avatarUrl: string | null;
   tierName: string | null;
@@ -162,15 +166,18 @@ export function buildStaffLanes(input: {
   const fromStaff = (m: StaffMember): StaffLane => ({
     membershipId: m.membershipId,
     name: m.displayName,
+    fullName: m.fullName,
     initials: m.initials,
     avatarUrl: m.avatarUrl,
     tierName: m.tier?.name ?? null,
   });
-  // Thợ đang có ca: tên hiển thị và ảnh lấy thẳng từ ca (máy chủ gửi displayName, avatarUrl).
-  const fromAppointments = new Map<string, { name: string; avatarUrl: string | null }>();
+  // Thợ đang có ca: tên hiển thị, họ tên và ảnh lấy thẳng từ ca (máy chủ gửi displayName, fullName, avatarUrl).
+  const fromAppointments = new Map<string, { name: string; fullName: string; avatarUrl: string | null }>();
   for (const a of appointments) {
     for (const s of a.staff) {
-      if (!fromAppointments.has(s.membershipId)) fromAppointments.set(s.membershipId, { name: s.displayName, avatarUrl: s.avatarUrl });
+      if (!fromAppointments.has(s.membershipId)) {
+        fromAppointments.set(s.membershipId, { name: s.displayName, fullName: s.fullName, avatarUrl: s.avatarUrl });
+      }
     }
   }
 
@@ -178,7 +185,9 @@ export function buildStaffLanes(input: {
     const me = staff?.find((m) => m.membershipId === self.membershipId);
     if (me) return [fromStaff(me)];
     const mine = fromAppointments.get(self.membershipId);
-    return [{ membershipId: self.membershipId, name: mine?.name ?? self.name, avatarUrl: mine?.avatarUrl ?? null, tierName: null }];
+    // Không có danh sách thợ lẫn ca: chỉ biết tên tài khoản, không biết studio có đặt tên hiển thị không → không mang fullName.
+    if (mine) return [{ membershipId: self.membershipId, name: mine.name, fullName: mine.fullName, avatarUrl: mine.avatarUrl, tierName: null }];
+    return [{ membershipId: self.membershipId, name: self.name, avatarUrl: null, tierName: null }];
   }
 
   const lanes: StaffLane[] = [];
@@ -190,20 +199,21 @@ export function buildStaffLanes(input: {
     }
   }
   for (const [membershipId, p] of fromAppointments) {
-    if (!seen.has(membershipId)) lanes.push({ membershipId, name: p.name, avatarUrl: p.avatarUrl, tierName: null });
+    if (!seen.has(membershipId)) lanes.push({ membershipId, name: p.name, fullName: p.fullName, avatarUrl: p.avatarUrl, tierName: null });
   }
   return lanes;
 }
 
 /**
- * N3: tên ngắn trên đầu hàng / đầu cột thợ như bản mẫu ("Nguyễn Thu Hà" → "Thu Hà") để không bị cắt "Nguyễn Thu …".
- * Hai thợ trùng tên ngắn thì giữ tên đầy đủ cho cả hai (không đoán). Tên đầy đủ vẫn ở title / tên đọc.
+ * N3 + M3: tên ngắn trên đầu hàng / đầu cột thợ — MỘT luật cho lưới C (1440 và 390) và cột thợ A: hàm chung staffShortName
+ * (tên hiển thị khác họ tên → nguyên; trùng họ tên → tiếng cuối của họ tên; không biết họ tên → nguyên, không đoán).
+ * Hai thợ trùng tên ngắn thì giữ tên hiển thị đầy đủ cho cả hai (không đoán). Tên đầy đủ vẫn ở title / tên đọc.
  */
-export function laneShortNames(lanes: readonly Pick<StaffLane, 'membershipId' | 'name'>[]): Map<string, string> {
-  const short = (n: string) => n.trim().split(/\s+/).slice(-2).join(' ');
+export function laneShortNames(lanes: readonly Pick<StaffLane, 'membershipId' | 'name' | 'fullName'>[]): Map<string, string> {
+  const short = (l: Pick<StaffLane, 'name' | 'fullName'>) => staffShortName({ displayName: l.name, fullName: l.fullName });
   const count = new Map<string, number>();
-  for (const l of lanes) count.set(short(l.name), (count.get(short(l.name)) ?? 0) + 1);
-  return new Map(lanes.map((l) => [l.membershipId, (count.get(short(l.name)) ?? 0) > 1 ? l.name : short(l.name)]));
+  for (const l of lanes) count.set(short(l), (count.get(short(l)) ?? 0) + 1);
+  return new Map(lanes.map((l) => [l.membershipId, (count.get(short(l)) ?? 0) > 1 ? l.name : short(l)]));
 }
 
 // ---------------- Ca theo ngày ----------------

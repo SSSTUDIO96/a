@@ -301,7 +301,7 @@ export function ContractEditor({ orgId, slug, tz, has, contractId, kindSwitch, o
   // ---- Thợ: tên, ảnh; cảnh báo 3 mức ----
   const people = useMemo(() => {
     const m = new Map<string, StaffPerson>();
-    const add = (s: { membershipId: string; role: 'PRIMARY' | 'ASSIST'; displayName: string; initials?: string; avatarUrl?: string | null }) =>
+    const add = (s: { membershipId: string; role: 'PRIMARY' | 'ASSIST'; displayName: string; fullName?: string | null; initials?: string; avatarUrl?: string | null }) =>
       m.set(s.membershipId, { ...s });
     for (const l of detail?.lines ?? []) for (const s of l.staff ?? []) add(s);
     for (const v of views) for (const s of v?.staff ?? []) add(s);
@@ -309,6 +309,8 @@ export function ContractEditor({ orgId, slug, tz, has, contractId, kindSwitch, o
     return m;
   }, [detail, views, pickedPeople]);
   const nameOf = (id: string) => people.get(id)?.displayName ?? 'Thợ';
+  // Họ tên đi kèm tên hiển thị (máy chủ gửi ở thợ của dòng và ô chọn thợ) → tên ngắn theo hàm chung staffShortName.
+  const personOf = (id: string) => ({ displayName: nameOf(id), fullName: people.get(id)?.fullName });
 
   const warnings = useMemo(() => {
     const out = new Map<string, LineWarning[]>();
@@ -925,8 +927,8 @@ export function ContractEditor({ orgId, slug, tz, has, contractId, kindSwitch, o
                 addedLabel={!draftMode && view ? addedLabel(view, tz) : null}
                 lineError={draftMode ? lineErrorAt(i) : null}
                 warnings={warnings.get(l.key) ?? []}
-                people={l.staff.map((s) => ({ ...s, displayName: nameOf(s.membershipId), initials: people.get(s.membershipId)?.initials, avatarUrl: people.get(s.membershipId)?.avatarUrl }))}
-                nameOf={nameOf}
+                people={l.staff.map((s) => ({ ...s, ...personOf(s.membershipId), initials: people.get(s.membershipId)?.initials, avatarUrl: people.get(s.membershipId)?.avatarUrl }))}
+                personOf={personOf}
                 onChange={(patch) => patchLine(l.key, patch)}
                 onRemove={() => removeLine(l.key)}
                 onPickStaff={() => setPickerFor(l.key)}
