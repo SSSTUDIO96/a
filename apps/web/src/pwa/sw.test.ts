@@ -21,7 +21,7 @@ function setup(online = true) {
   const handlers: Record<string, Handler> = {};
   const stores = new Map<string, Map<string, FakeResponse>>(); // tên cache → (url → phản hồi)
   const log = { fetches: [] as string[], puts: [] as string[], opened: [] as string[], deleted: [] as string[], skipWaiting: 0, claim: 0 };
-  const state = { online };
+  const state = { online, ok: true };
 
   const keyOf = (req: string | { url: string }) => (typeof req === 'string' ? new URL(req, ORIGIN).href : req.url);
   const makeCache = (name: string) => {
@@ -45,7 +45,7 @@ function setup(online = true) {
   const fakeFetch = async (req: { url: string }) => {
     log.fetches.push(req.url);
     if (!state.online) throw new TypeError('Failed to fetch');
-    return resp(`NET:${req.url}`);
+    return resp(`NET:${req.url}`, state.ok);
   };
   const self = {
     location: { origin: ORIGIN },
@@ -163,15 +163,13 @@ describe('public/sw.js — service worker tối thiểu', () => {
       expect(second?.body).toBe(`NET:${ORIGIN}/assets/x-1a2b3c.js`);
       expect(t.log.fetches).toEqual([]);
     });
-    it('phản hồi lỗi (404/500) không bị ghi vào cache', async () => {
+    it('phản hồi lỗi (404/500) trả về nguyên trạng và không bị ghi vào cache', async () => {
       await t.lifecycle('install');
-      // thay fetch giả: trả 404 — dựng lại môi trường với fetch lỗi
-      const bad = setup();
-      await bad.lifecycle('install');
-      const ctxFetch = bad.log; // chỉ để dùng log
-      void ctxFetch;
-      // Dùng đường vòng: đặt sẵn cache rồi kiểm tra put không chạy khi res.ok=false được kiểm bằng mã nguồn
-      expect(SW_SOURCE).toMatch(/if \(res\.ok\) cache\.put\(req, res\.clone\(\)\)/);
+      t.state.ok = false;
+      const r = await t.fire('/assets/khong-co-9z.js');
+      expect(r?.ok).toBe(false);
+      expect(t.log.puts).toEqual([]);
+      expect(t.cachedUrls()).toEqual([`${ORIGIN}/offline.html`]);
     });
   });
 

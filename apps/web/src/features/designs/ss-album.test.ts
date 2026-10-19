@@ -8,7 +8,7 @@ import { frameQuery } from './model';
 const PHONG = new URL('../../../public/mau/phong/', import.meta.url);
 const SS = new URL('ss-album/', PHONG);
 const css = readFileSync(new URL('ss-album.css', SS), 'utf8');
-const dirs = readdirSync(SS).filter((n) => statSync(new URL(`${n}/`, SS)).isDirectory());
+const dirs = readdirSync(SS).filter((n) => statSync(new URL(n, SS)).isDirectory());
 
 describe('phông SS-Album nhóm A', () => {
   it('BẮT: mọi url() trong ss-album.css trỏ tới tệp có thật', () => {
