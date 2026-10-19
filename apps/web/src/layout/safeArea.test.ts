@@ -45,3 +45,72 @@ describe('thanh dưới điện thoại chừa vùng an toàn đáy', () => {
     expect(left).not.toMatch(/\b64px\b/);
   });
 });
+
+// ---- Các tệp ngoài layout.css cũng chừa chỗ cho thanh dưới: phải dùng var(--h-bottomnav), không số cứng ----
+const src = (rel: string): string => readFileSync(resolve(root, 'src', rel), 'utf8');
+const noComment = (t: string): string => t.replace(/\/\*[\s\S]*?\*\//g, '');
+
+const BAR_FILES = [
+  'features/schedule/schedule.css',
+  'features/designs/designs.css',
+  'features/brand/brand.css',
+  'features/contracts/contracts.css',
+  'ui/ui.css',
+  'layout/layout.css',
+];
+
+// NỢ ĐÃ BIẾT (đã lập phiếu, chưa sửa): contracts.css `.ct-page:has(.ct-totbar--note)` 124px và `--block` 156px
+// vẫn là 64px + đệm viết cứng. Khi sửa xong thì XOÁ hai mục này, bài thử sẽ tự canh.
+const KNOWN_DEBT = new Set(['features/contracts/contracts.css|padding-bottom|124px', 'features/contracts/contracts.css|padding-bottom|156px']);
+
+describe('không còn số cứng chiều cao thanh dưới ngoài layout.css', () => {
+  it('schedule.css: .ws-a trừ thanh dưới bằng biến', () => {
+    expect(noComment(src('features/schedule/schedule.css'))).toMatch(
+      /\.ws-a\s*\{[^}]*max-height:\s*calc\(100vh - 54px - var\(--h-bottomnav\) - 120px\)/,
+    );
+  });
+
+  it('designs.css: .mtk-export dính đáy = thanh dưới + 8px', () => {
+    expect(noComment(src('features/designs/designs.css'))).toMatch(
+      /\.mtk-export\s*\{[^}]*bottom:\s*calc\(var\(--h-bottomnav\) \+ 8px\)/,
+    );
+  });
+
+  it('brand.css: .br-page đệm đáy = thanh dưới + 8px', () => {
+    expect(noComment(src('features/brand/brand.css'))).toMatch(
+      /\.br-page\s*\{\s*padding-bottom:\s*calc\(var\(--h-bottomnav\) \+ 8px\)/,
+    );
+  });
+
+  it('contracts.css: .ct-page đệm đáy = thanh dưới + 20px; hai ghi chú liền = thanh dưới + 124px', () => {
+    const c = noComment(src('features/contracts/contracts.css'));
+    expect(c).toMatch(/\.ct-page\s*\{\s*padding-bottom:\s*calc\(var\(--h-bottomnav\) \+ 20px\)/);
+    expect(c).toMatch(
+      /\.ct-page:has\(\.ct-totbar__note \+ \.ct-totbar__note\)\s*\{\s*padding-bottom:\s*calc\(var\(--h-bottomnav\) \+ 124px\)/,
+    );
+  });
+
+  it.each(BAR_FILES)('%s: không có bottom / padding-bottom ≥ 48px viết cứng (trừ nợ đã biết)', (rel) => {
+    const text = noComment(src(rel));
+    const bad: string[] = [];
+    for (const m of text.matchAll(/(?<![-\w])(bottom|padding-bottom)\s*:\s*([^;}]+)/g)) {
+      const value = (m[2] ?? '').trim();
+      if (value.includes('var(--h-bottomnav')) continue;
+      for (const px of value.matchAll(/(\d+(?:\.\d+)?)px/g)) {
+        if (Number(px[1]) >= 48 && !KNOWN_DEBT.has(`${rel}|${m[1]}|${px[0]}`)) bad.push(`${m[1]}: ${value}`);
+      }
+    }
+    expect(bad).toEqual([]);
+  });
+
+  it.each(BAR_FILES)('%s: không có max-height 100vh/100dvh trừ 64/72/84px cứng', (rel) => {
+    const text = noComment(src(rel));
+    expect(text).not.toMatch(/max-height:\s*calc\(\s*100d?vh[^;]*\b(64|72|84)px/);
+  });
+
+  it('StickyTotalBar.tsx: chú thích ghi tên biến, không ghi 64px', () => {
+    const t = src('ui/StickyTotalBar.tsx');
+    expect(t).toContain('bottom: var(--h-bottomnav)');
+    expect(t).not.toMatch(/bottom:\s*64px/);
+  });
+});

@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit -p tsconfig.json && vite build && node scripts/check-bundle-secrets.mjs && node scripts/vercel-config.mjs --check",
+    "build": "tsc --noEmit -p tsconfig.json && vite build && node scripts/check-bundle-secrets.mjs && node scripts/check-portal-bundle.mjs && node scripts/vercel-config.mjs --check",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json",
     "test": "vitest run",

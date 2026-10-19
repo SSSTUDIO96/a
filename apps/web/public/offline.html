@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#A63D62" />
+    <title>Đang ngoại tuyến</title>
+    <style>
+      * { box-sizing: border-box; }
+      html, body { margin: 0; min-height: 100%; background: #F6F4F2; color: #221C19; }
+      body {
+        font-family: 'Be Vietnam Pro', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        font-size: 15px; line-height: 1.5;
+        min-height: 100vh; display: flex; align-items: center; justify-content: center;
+        padding: max(24px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom));
+      }
+      main { max-width: 340px; text-align: center; }
+      .ico { width: 56px; height: 56px; margin: 0 auto 16px; border-radius: 14px; background: #F7E8EE; display: flex; align-items: center; justify-content: center; }
+      .ico svg { width: 28px; height: 28px; fill: none; stroke: #A63D62; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+      h1 { font-size: 20px; margin: 0 0 8px; }
+      p { margin: 0 0 20px; color: #716862; }
+      button {
+        font: inherit; font-weight: 600; height: 44px; padding: 0 24px; border-radius: 10px;
+        border: 1px solid #A63D62; background: #A63D62; color: #fff; cursor: pointer;
+      }
+      button:focus-visible { outline: 2px solid #A63D62; outline-offset: 2px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="ico" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M2 8.8a15 15 0 0120 0M5 12.4a10 10 0 0114 0M8.5 16a5 5 0 017 0M12 19.5h.01M3 3l18 18" /></svg>
+      </div>
+      <h1>Đang ngoại tuyến</h1>
+      <p>Không có mạng. Kiểm tra kết nối rồi thử lại.</p>
+      <button type="button" onclick="location.reload()">Thử lại</button>
+    </main>
+  </body>
+</html>

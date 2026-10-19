@@ -18,8 +18,22 @@ export function buildConfig(origin) {
     rewrites: [
       // Cùng tên miền: trình duyệt gọi /api/... trên Vercel, Vercel chuyển sang máy chủ Railway. Cookie refresh nhờ vậy là cookie cùng trang.
       { source: '/api/(.*)', destination: `${origin}/api/$1` },
+      // Cổng học viên: trang vào riêng hv.html (bản vẽ E mục 5.3). Phải đứng TRƯỚC "/(.*)". Tệp có thật (/hv/manifest.webmanifest) được Vercel phục vụ trước khi xét rewrite.
+      { source: '/hv', destination: '/hv.html' },
+      { source: '/hv/(.*)', destination: '/hv.html' },
       // SPA: mọi đường còn lại (không phải tệp tĩnh có thật) trả index.html để React Router xử lý.
       { source: '/(.*)', destination: '/index.html' },
+    ],
+    // PWA: trình duyệt phải luôn hỏi lại sw.js (không giữ bản cũ) và được phép dùng phạm vi "/"; manifest đúng kiểu nội dung.
+    headers: [
+      {
+        source: '/sw.js',
+        headers: [
+          { key: 'Cache-Control', value: 'no-cache' },
+          { key: 'Service-Worker-Allowed', value: '/' },
+        ],
+      },
+      { source: '/(.*).webmanifest', headers: [{ key: 'Content-Type', value: 'application/manifest+json' }] },
     ],
   };
 }

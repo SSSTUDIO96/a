@@ -8,8 +8,40 @@
       "destination": "https://API_ORIGIN-chua-dat.invalid/api/$1"
     },
     {
+      "source": "/hv",
+      "destination": "/hv.html"
+    },
+    {
+      "source": "/hv/(.*)",
+      "destination": "/hv.html"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/sw.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache"
+        },
+        {
+          "key": "Service-Worker-Allowed",
+          "value": "/"
+        }
+      ]
+    },
+    {
+      "source": "/(.*).webmanifest",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/manifest+json"
+        }
+      ]
     }
   ]
 }

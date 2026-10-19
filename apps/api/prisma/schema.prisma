@@ -65,6 +65,7 @@ model User {
   contractTextsUpdated ContractText[]             @relation("ContractTextUpdatedBy")
   designCardsCreated   DesignCard[]               @relation("DesignCardCreatedBy")
   passwordResetTokens  PasswordResetToken[]
+  surchargeRulesCreated SurchargeRule[]           @relation("SurchargeRuleCreatedBy")
 
   @@map("users")
 }
@@ -162,6 +163,11 @@ model Organization {
   greetingPhrases   GreetingPhrase[]
   designCards       DesignCard[]
   designCardPhotos  DesignCardPhoto[]
+  // Bản vẽ D (migration 20261019130000_hom_nay_su_kien_phu_phi).
+  occasions            Occasion[]
+  surchargeRules       SurchargeRule[]
+  surchargeRuleTargets SurchargeRuleTarget[]
+  surchargeRuleDates   SurchargeRuleDate[]
 
   @@map("organizations")
 }
@@ -301,6 +307,7 @@ model Service {
   packageItems  PackageItem[]
   contractLines ContractLine[]
   payRates      StaffPayRate[]
+  surchargeRules SurchargeRule[]
 
   @@unique([organizationId, code])
   @@unique([id, organizationId])
@@ -336,6 +343,7 @@ model ServicePackage {
   payRates      StaffPayRate[]
   contractLines ContractLine[]
   prices        PriceVersion[]
+  surchargeRuleTargets SurchargeRuleTarget[]
 
   @@unique([organizationId, code])
   @@unique([id, organizationId])
@@ -573,10 +581,104 @@ model MakeupSubject {
   organization  Organization     @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   packages      ServicePackage[]
   contractLines ContractLine[]
+  surchargeRuleTargets SurchargeRuleTarget[]
 
   @@unique([organizationId, name])
   @@unique([id, organizationId])
   @@map("makeup_subjects")
+}
+
+// ---------- Bản vẽ D (docs/rnd/BAN-VE-D-HOM-NAY-SU-KIEN-PHU-PHI.md mục 1.3; migration 20261019130000_hom_nay_su_kien_phu_phi) ----------
+
+// Loại sự kiện (ăn hỏi, lễ vu quy, lễ cưới, tiệc…) — studio tự đặt, giống MakeupSubject. Không xoá, chỉ ẩn.
+// color: một trong 12 tên màu của Lịch (OCCASION_COLORS ở packages/shared; CHECK occasions_color).
+model Occasion {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  name           String
+  color          String
+  sortOrder      Int      @default(0) @map("sort_order")
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  organization  Organization          @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  contractLines ContractLine[]
+  ruleTargets   SurchargeRuleTarget[]
+
+  @@unique([organizationId, name])
+  @@unique([id, organizationId])
+  @@map("occasions")
+}
+
+// Luật phụ phí: khớp thì máy chủ tự thêm một dòng SURCHARGE (dịch vụ service_id, giá theo bảng giá) làm dòng con của dòng đặt chỗ.
+// Điều kiện đã điền nối bằng VÀ; trong nhóm "Ngày", thứ trong tuần và ngày cụ thể nối bằng HOẶC (mục 2.4).
+// Không xoá luật (dòng hợp đồng trỏ về luật) — tắt bằng is_active.
+model SurchargeRule {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  name           String
+  serviceId      String   @map("service_id") @db.Uuid
+  // Khung giờ BẮT ĐẦU theo múi giờ tổ chức, phút từ 0:00. Có cả hai hoặc không có cả hai (CHECK surcharge_rules_window).
+  // start > end = khung qua nửa đêm (22:00–04:00).
+  startMinute    Int?     @map("start_minute")
+  endMinute      Int?     @map("end_minute")
+  // 1 = Thứ Hai … 7 = Chủ nhật (ISO, giống CourseClass.weekdays). Rỗng = không xét thứ.
+  weekdays       Int[]    @default([])
+  // true: số lượng dòng tự thêm = số lượng dòng đặt chỗ (phù dâu × 2 → phụ phí × 2); false: luôn 1.
+  perQuantity    Boolean  @default(true) @map("per_quantity")
+  note           String?
+  sortOrder      Int      @default(0) @map("sort_order")
+  isActive       Boolean  @default(true) @map("is_active")
+  createdById    String   @map("created_by_id") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  organization  Organization          @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  service       Service               @relation(fields: [serviceId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  createdBy     User                  @relation("SurchargeRuleCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  targets       SurchargeRuleTarget[]
+  dates         SurchargeRuleDate[]
+  contractLines ContractLine[]
+
+  @@unique([organizationId, name])
+  @@unique([id, organizationId])
+  @@index([organizationId, isActive, sortOrder])
+  @@map("surcharge_rules")
+}
+
+// Một điều kiện "thuộc tập" của luật: đúng MỘT trong ba mã (CHECK surcharge_rule_targets_one). Khoá ngoại kép: không trỏ chéo tổ chức.
+model SurchargeRuleTarget {
+  id             String  @id @default(uuid()) @db.Uuid
+  organizationId String  @map("organization_id") @db.Uuid
+  ruleId         String  @map("rule_id") @db.Uuid
+  occasionId     String? @map("occasion_id") @db.Uuid
+  packageId      String? @map("package_id") @db.Uuid
+  subjectId      String? @map("subject_id") @db.Uuid
+
+  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  rule         SurchargeRule   @relation(fields: [ruleId, organizationId], references: [id, organizationId], onDelete: Cascade)
+  occasion     Occasion?       @relation(fields: [occasionId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  package      ServicePackage? @relation(fields: [packageId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  subject      MakeupSubject?  @relation(fields: [subjectId, organizationId], references: [id, organizationId], onDelete: Restrict)
+
+  @@unique([ruleId, occasionId])
+  @@unique([ruleId, packageId])
+  @@unique([ruleId, subjectId])
+  @@map("surcharge_rule_targets")
+}
+
+// Ngày cụ thể / ngày lễ của luật (ngày theo lịch, không giờ — giống CourseClass.startDate).
+model SurchargeRuleDate {
+  organizationId String   @map("organization_id") @db.Uuid
+  ruleId         String   @map("rule_id") @db.Uuid
+  day            DateTime @db.Date
+
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  rule         SurchargeRule @relation(fields: [ruleId, organizationId], references: [id, organizationId], onDelete: Cascade)
+
+  @@id([ruleId, day])
+  @@map("surcharge_rule_dates")
 }
 
 // Studio / cửa hàng của tổ chức — điểm xuất phát để tính km.
@@ -719,6 +821,8 @@ model Contract {
   @@unique([id, organizationId])
   @@index([organizationId, eventDate])
   @@index([organizationId, kind])
+  // Bản vẽ D: trang "Hôm nay" đọc theo lúc xác nhận.
+  @@index([organizationId, confirmedAt])
   @@map("contracts")
 }
 
@@ -772,6 +876,17 @@ model ContractLine {
   voidReason        String?          @map("void_reason")
   createdById       String           @map("created_by_id") @db.Uuid
   createdAt         DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  // Bản vẽ D: loại sự kiện của dòng đặt chỗ + bản chụp tên lúc lưu (đổi tên loại sau không đổi hợp đồng — giống subjectName).
+  // Có mã ⇔ có tên, chỉ dòng PACKAGE/SERVICE (CHECK contract_lines_occasion).
+  occasionId                String?   @map("occasion_id") @db.Uuid
+  occasionName              String?   @map("occasion_name")
+  // Dòng SURCHARGE tự thêm theo luật: mã luật + bản chụp tên luật ("tự thêm theo luật …"). NULL = dòng nhập tay.
+  // Có mã ⇔ có tên, chỉ dòng SURCHARGE là dòng con (CHECK contract_lines_auto_surcharge).
+  surchargeRuleId           String?   @map("surcharge_rule_id") @db.Uuid
+  surchargeRuleName         String?   @map("surcharge_rule_name")
+  // Chỉ dòng đặt chỗ: luật người lập đã bỏ ở dòng này — không tự thêm lại. Không có khoá ngoại (mảng); máy chủ kiểm từng mã.
+  // Tối đa 50, không phần tử NULL (CHECK contract_lines_dismissed_rules).
+  dismissedSurchargeRuleIds String[]  @default([]) @map("dismissed_surcharge_rule_ids") @db.Uuid
 
   organization           Organization        @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   contract               Contract            @relation(fields: [contractId, organizationId], references: [id, organizationId], onDelete: Restrict)
@@ -790,11 +905,19 @@ model ContractLine {
   enrollments            Enrollment[]
   enrollmentsInContract  Enrollment[]        @relation("EnrollmentLineOfContract")
   createdBy              User                @relation("ContractLineCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  // Khoá ngoại kép: sự kiện / luật chỉ trỏ được tới bản ghi của CHÍNH tổ chức.
+  occasion               Occasion?           @relation(fields: [occasionId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  surchargeRule          SurchargeRule?      @relation(fields: [surchargeRuleId, organizationId], references: [id, organizationId], onDelete: Restrict)
 
   @@unique([id, organizationId])
   @@unique([id, contractId])
   @@index([contractId])
   @@index([courseClassId])
+  // Mỗi dòng đặt chỗ tối đa MỘT dòng tự thêm chưa huỷ cho mỗi luật: chỉ mục duy nhất CÓ ĐIỀU KIỆN viết tay trong migration
+  // 20261019130000_hom_nay_su_kien_phu_phi: contract_lines_one_auto_per_rule (parent_line_id, surcharge_rule_id)
+  // WHERE surcharge_rule_id IS NOT NULL AND voided_at IS NULL — Prisma không ghi được chỉ mục có điều kiện nên không có ở đây.
+  @@index([occasionId])
+  @@index([surchargeRuleId])
   @@map("contract_lines")
 }
 
