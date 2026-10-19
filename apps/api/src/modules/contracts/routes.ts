@@ -31,6 +31,7 @@ import { contractSummarySelect, loadContractDetail, loadStaffMap, presentSheet, 
 import { classSeats, enrollContractLines, releaseEnrollments } from './enroll';
 import { checkChosenText, contractTextRoutes, snapshotTexts } from './texts';
 import { cancelAppointmentsOfContractTx, createAppointmentTx, type TxCtx } from '../schedule/service';
+import { cancelAppointmentsOfLinesTx } from './lineAppointments';
 import { contractSummary as paymentSummary } from '../payments/common';
 
 type Tx = Prisma.TransactionClient;
@@ -719,7 +720,7 @@ export const contractRoutes: AnyRoute[] = [
     scope: 'org',
     permission: 'contracts.write',
     tag: TAG,
-    summary: 'Huỷ một dòng (kéo theo dịch vụ phụ, phí di chuyển của dòng đó) — không xoá, bắt buộc lý do',
+    summary: 'Huỷ một dòng (kéo theo dịch vụ phụ, phí di chuyển của dòng đó) và huỷ các lịch chưa huỷ của các dòng đó — không xoá, bắt buộc lý do',
     params: LineParams,
     body: VoidBodySchema,
     handler: async ({ deps, org, params, body, userId, requestId }) => {
@@ -746,6 +747,15 @@ export const contractRoutes: AnyRoute[] = [
         });
         // Huỷ dòng khoá học của hợp đồng đã xác nhận → huỷ ghi danh, trả chỗ (cùng transaction).
         const released = await releaseEnrollments(tx, o.id, { contractId: c.id, lineIds: voidedIds }, body.reason);
+        // Huỷ dòng → huỷ (không xoá) các lịch chưa huỷ của dòng và dòng con, cùng transaction (biên bản lần 4, N1).
+        // Còn lịch đang làm dở → 409, cả transaction quay lui.
+        const cancelledAppointmentIds = await cancelAppointmentsOfLinesTx(
+          tx,
+          { orgId: o.id, userId: uid, requestId },
+          c.id,
+          voidedIds,
+          body.reason,
+        );
         // Huỷ dòng làm tổng giảm: giảm giá và cọc không được vượt tổng mới → hạ xuống và ghi nhật ký.
         const oldDiscount = vnd(c.discount, 'giảm giá');
         const oldDeposit = vnd(c.depositRequired, 'tiền cọc');
@@ -778,6 +788,7 @@ export const contractRoutes: AnyRoute[] = [
             lineId: line.id,
             voidedLineIds: voidedIds,
             releasedEnrollmentIds: released.map((e) => e.id),
+            cancelledAppointmentIds,
             reason: body.reason,
             contractStatus: c.status,
             actorRoles: o.roleKeys,
