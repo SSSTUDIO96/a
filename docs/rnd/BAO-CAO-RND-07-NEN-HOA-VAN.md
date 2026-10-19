@@ -1,13 +1,194 @@
-# Báo cáo R&D 07: Nền và viền có hoa văn chìm cho mẫu thẻ
+# Báo cáo R&D 07: Nền, viền và khung cho thẻ chào mừng và giấy chứng nhận
 
 - Sản phẩm: Makeup Pro, phần Thiết kế thẻ (chào mừng / feedback / lời chúc)
 - Người đọc: anh Chiến
 - Ngày: 19/10/2026
-- Chặng: 1 (trả lời, 3 phương án, ảnh thật)
+- Chặng: 1 (trả lời, phương án, ảnh thật). Vòng 1 (nền chìm) và **vòng 2 (nền ảnh đậm, tấm giấy, khung; chào mừng và chứng nhận)**
 - Câu anh hỏi (nguyên văn): *"Nền viền có thể dùng bằng ảnh khác có hoa văn họa tiết chìm được không?"*
 - Anh dặn thêm cùng ngày: *"Tôi muốn khung ảnh mặc định để hình tròn và có 1 mẫu để dạng viên thuốc"*, *"Mẫu nào cũng phải có ảnh nhé"*. Mọi ảnh trong báo cáo này đều đã có ô ảnh học viên, khung tròn. Ảnh `pa1-la-canh-vien-thuoc.png` dùng khung viên thuốc.
 
 ---
+
+# PHẦN A — VÒNG 2: Nền ảnh đậm, tấm giấy, khung toàn trang (chào mừng và giấy chứng nhận)
+
+- Câu anh hỏi (19/10/2026, nguyên văn): *"Mẫu nền kiểu thế này hoặc có thể dùng ảnh tôi tải lên được không?"* (kèm ảnh 7, 8, 9, 10), rồi *"Đây nữa nhé"* (3 kiểu khung e, f, g), rồi *"Yêu cầu mới bằng các mẫu nền về chào mừng và chứng chỉ hoặc chứng nhận mà"*.
+- Phạm vi vòng 2: mẫu **chào mừng** (1080×1350 và 1080×1080) và **giấy chứng nhận tốt nghiệp A4 ngang** (1123×794, cùng khổ với 10 mẫu của R&D-08). Không làm cho mẫu in hợp đồng.
+- Vòng 1 (nền chìm nhạt) vẫn giữ nguyên ở Phần B bên dưới.
+
+## A1. Trả lời ngắn
+
+**Được, cả hai.**
+
+1. **Mẫu nền kiểu như ảnh anh gửi:** R&D dựng được bảy kiểu, tự vẽ toàn bộ bằng SVG (không lấy ảnh mạng):
+   - bốn kiểu "nền ảnh đậm và tấm giấy ở giữa": (a) giấy chữ nhật có dấu sáp, (b) panel góc lõm như ảnh 8, (c) tem răng cưa như ảnh 9, (d) giấy vân tràn trang như ảnh 10;
+   - ba khung toàn trang: (e) vàng nâu cổ điển, (f) xanh tiền giấy, (g) thảm Ba Tư.
+2. **Dùng ảnh anh tự tải lên:** dùng chính ảnh 7, 9, 10 của anh làm "ảnh tải lên" thử, app ghép được cả ba vào thẻ chào mừng và giấy chứng nhận. App tự cắt cho đủ khổ, tự dò ô trống trong ảnh để đặt chữ, tự xoay khung dọc thành ngang khi làm chứng nhận, và tự làm đậm chữ dòng nào chưa đủ rõ.
+
+Mọi ảnh đều có ô ảnh học viên khung tròn. Ảnh `v2-b-panel-vien-thuoc.png` dùng khung viên thuốc. **Mọi dòng chữ trên mọi ảnh vòng 2 đạt tương phản ≥ 4,95:1** (đo bằng máy, bảng ở A5).
+
+## A2. Ảnh nên cho anh xem đầu tiên
+
+1. **/home/user/a/docs/rnd/anh-rnd07/v2-tai-7-giay-co-san.png**: chính ảnh 7 anh gửi, app đặt thẻ chào mừng lên tấm giấy có sẵn trong ảnh. Trả lời thẳng câu "dùng ảnh tôi tải lên được không".
+2. **/home/user/a/docs/rnd/anh-rnd07/v2-bang-xem-nhanh-chao-mung.png** và **/home/user/a/docs/rnd/anh-rnd07/v2-bang-xem-nhanh-chung-nhan.png**: bảng xem nhanh, tách hai phần Chào mừng / Chứng nhận.
+3. **/home/user/a/docs/rnd/anh-rnd07/v2-cn-f-tien-giay.png** và **v2-cn-e-co-dien.png**: hai khung đẹp nhất trên giấy chứng nhận.
+4. **/home/user/a/docs/rnd/anh-rnd07/v2-cn-tai-9-tem-xoay.png**: ảnh 9 (khung tem dọc) app tự xoay thành giấy chứng nhận ngang.
+
+## A3. Bảy kiểu nền / khung (đều có cả bản chào mừng và bản chứng nhận)
+
+| Kiểu | Học từ | Chào mừng | Giấy chứng nhận A4 ngang |
+|---|---|---|---|
+| (a) Nền hoa lá khắc + giấy chữ nhật + **dấu sáp chữ M** | ảnh 7 | `v2-a-giay-dau-sap.png`, khổ vuông `v2-a-giay-dau-sap-vuong.png` | `v2-cn-a-giay-dau-sap.png` |
+| (b) Nền hoa lá xanh rêu + **panel bo góc lõm**, viền nổi | ảnh 8 | `v2-b-panel-vien-thuoc.png` (**ảnh viên thuốc**) | `v2-cn-b-panel.png` |
+| (c) Nền đậm xanh rêu + **tem răng cưa** | ảnh 9 | `v2-c-tem-nen-dam.png` | `v2-cn-c-tem-nen-dam.png` |
+| (d) **Giấy vân tràn trang**, viền vàng hai đường | ảnh 10 | `v2-d-giay-tran.png` | `v2-cn-d-giay-tran.png` |
+| (e) **Khung vàng nâu cổ điển**: hai viền, góc fleur-de-lis, cụm xoắn giữa các cạnh, màu #A0601E | mô tả anh gửi | `v2-e-co-dien.png` | **`v2-cn-e-co-dien.png`** |
+| (f) **Khung xanh tiền giấy**: viền nhiều lớp, hoa thị guilloche ở góc, lưới sóng đan, lá acanthus kem, lòng kem vân sóng mờ | mô tả anh gửi | `v2-f-tien-giay.png` | **`v2-cn-f-tien-giay.png`** |
+| (g) **Thảm Ba Tư**: dải xanh đậm lặp tim và lá, medallion kem trên kem nổi nhẹ, chỉ mảnh song song | mô tả anh gửi | `v2-g-ba-tu.png` | **`v2-cn-g-ba-tu.png`** |
+
+Tất cả ảnh nằm ở `/home/user/a/docs/rnd/anh-rnd07/`.
+
+**Cách làm (tóm tắt):**
+- Nền hoa lá "nét khắc" (lá dương xỉ, hoa, chùm quả, gạch chéo kiểu tranh khắc) do R&D tự vẽ bằng SVG, có ba bộ màu: xanh lam trên trắng, xanh rêu trên kem, kem trên xanh rêu đậm. Đây là **học tinh thần** ảnh 7, không chép.
+- **Vân giấy** là nhiễu SVG (`feTurbulence`) hai tầng: sợi nhỏ và loang lớn. **Dấu sáp** là hình tròn mép nhoè không đều, gradient vàng (hoặc đỏ rượu), chữ lồng nổi; đổi chữ bằng tham số `?dau=M`.
+- **Khung tự co theo khổ:** góc giữ nguyên, cạnh chia đều số hoa văn. Cùng một hàm vẽ dùng cho 1080×1350, 1080×1080 và 1123×794.
+- **Chữ và ảnh tự co** theo khung nội dung của từng kiểu (tấm giấy nhỏ thì chữ nhỏ theo), nên không có chữ nào tràn ra ngoài tấm giấy.
+- Trên giấy vân R&D vẽ, dòng chữ nhỏ màu vàng nâu `#7A6340` chỉ còn khoảng 4,05:1 vì đốm vân. R&D đổi chữ nhỏ trên tấm giấy sang `#6B5535`, đo lại đạt ≥ 4,95:1.
+
+## A4. "Ảnh của tôi": studio tự tải nền lên
+
+Thử bằng chính ảnh anh gửi, dùng làm ảnh tải lên **giả lập**:
+
+| Ảnh anh gửi | App làm gì | Chào mừng | Chứng nhận |
+|---|---|---|---|
+| **7** (nền hoa lá xanh, tấm giấy kem có dấu sáp, 629×975 px) | Cắt bỏ mép và biểu tượng giao diện Pinterest ở góc dưới. Đặt chữ đúng vào **tấm giấy có sẵn trong ảnh**, chừa chỗ cho dấu sáp có sẵn và ẩn logo để khỏi hai chữ M. Trên chứng nhận, tấm giấy trong ảnh là giấy dọc nên app dùng ảnh làm **nền tràn** và đặt tấm giấy cùng dấu sáp của app lên trên. | `v2-tai-7-giay-co-san.png`, vuông `v2-tai-7-giay-co-san-vuong.png` | `v2-cn-tai-7-nen-hoa-la.png` |
+| **9** (khung tem răng cưa trên nền đen, PNG có lỗ trong suốt) | **Tự dò ô trống** (phần trong suốt hoặc rất sáng); dò ra vùng 15,5–83,0% ngang × 22,8–77,0% dọc. Lấp ô trống bằng giấy kem, đặt chữ vào. Trên chứng nhận ngang, app **tự xoay khung 90°**. | `v2-tai-9-tem-tu-do.png`, vuông `v2-tai-9-tem-tu-do-vuong.png` | `v2-cn-tai-9-tem-xoay.png` |
+| **10** (giấy kem có vân, ảnh dọc dài 736×1286) | Cắt giữa cho đủ khổ, làm mềm nhẹ cho hết ô vuông JPEG. Chữ đặt thẳng lên giấy; app tự làm đậm 3–5 dòng chữ nhỏ bị vân làm mờ. | `v2-tai-10-giay-tran.png` | `v2-cn-tai-10-giay-tran.png` |
+
+**Cắt và thu phóng.** Ảnh dọc dài hay ảnh hẹp đều được phủ kín khổ. Ảnh hẹp hơn khổ thì hai bên được lấp bằng chính ảnh đó, phóng to và làm mờ (xem `v2-tai-9-tem-tu-do-vuong.png`), không để mép trắng. Vị trí cắt và điểm trọng tâm do studio kéo một lần lúc tải lên; tham số `?cat=` và `?tam=`.
+
+**Những điều R&D phát hiện khi thử:**
+- **Ảnh 7 quá nhỏ** (629 px rộng). Lên thẻ phải phóng 2,0–2,2 lần nên hơi mềm, chưa nhoè. App nên **cảnh báo khi phải phóng quá 1,6 lần** và khuyên tải ảnh ≥ 1600 px.
+- **Ảnh 7 ở khổ vuông:** tấm giấy trong ảnh vừa hẹp vừa dài, chữ phải co tới **8,6 px**, vẫn đủ tương phản nhưng quá nhỏ để đọc trên điện thoại. App phải **cảnh báo khi chữ nhỏ nhất dưới 12 px** và gợi ý "dùng ảnh này làm nền tràn, tấm giấy của app" (cách đã làm cho chứng nhận).
+- **Quyền dùng ảnh:** ảnh 7 là ảnh Pinterest của người khác. R&D chỉ dùng để thử trong `docs/rnd/`, **không đưa vào sản phẩm**, và các ảnh `v2-tai-7-*`, `v2-cn-tai-7-*` chỉ dùng nội bộ. Khi studio tải ảnh lên, app phải có ô bắt buộc: *"Tôi có quyền sử dụng ảnh này; Makeup Pro không chịu trách nhiệm về bản quyền ảnh tôi tải lên."* Studio tự chịu trách nhiệm.
+- **Tự dò ô trống** chạy tốt với khung có lỗ trong suốt hoặc ô giấy sáng đều (ảnh 9). Với ảnh 7 (giấy có vân, nền trắng sát mép), dò tự động dễ nhầm sang nền trắng. Vì vậy R&D khoanh tay vùng giấy (`?vung=`). Trong app, màn tải lên nên cho **kéo một khung chữ nhật** "chữ đặt ở đây", có gợi ý sẵn từ tự dò.
+
+## A5. Đo độ rõ của chữ (vòng 2)
+
+Cách đo như vòng 1 (mục 6, Phần B): xuất bằng `MAU_XUAT_PNG`, xuất thêm bản chữ trong suốt, rồi tính tỉ lệ tương phản WCAG trên **1% điểm ảnh tệ nhất** dưới từng dòng chữ. Ngưỡng nhà: mọi dòng ≥ 4,5:1.
+
+| Ảnh | Dòng tệ nhất | Chữ lớn tệ nhất | Tên chữ ký | Chữ nhỏ nhất (px) | Phóng ảnh | Dòng app tự làm đậm |
+|---|---|---|---|---|---|---|
+| v2-a-giay-dau-sap | 5,01 | 5,73 | 10,94 | 15,0 | | |
+| v2-a-giay-dau-sap-vuong | 5,04 | 11,04 | 10,94 | 12,2 | | |
+| v2-b-panel-vien-thuoc | 4,98 | 5,79 | 10,94 | 14,4 | | |
+| v2-c-tem-nen-dam | 5,03 | 5,68 | 10,92 | 14,6 | | |
+| v2-d-giay-tran | 5,00 | 5,72 | 10,97 | 18,0 | | |
+| v2-e-co-dien | 7,18 | 8,69 | 15,06 | 16,7 | | |
+| v2-f-tien-giay | 6,84 | 8,86 | 12,60 | 15,1 | | |
+| v2-g-ba-tu | 6,08 | 9,15 | 10,55 | 15,8 | | |
+| v2-tai-7-giay-co-san | 5,32 | 10,87 | 10,94 | 10,8 | 2,03× | 3 |
+| v2-tai-7-giay-co-san-vuong | 5,34 | 10,90 | 10,99 | **8,6 ✗** | 1,60× | 3 |
+| v2-tai-9-tem-tu-do | 4,97 | 7,01 | 13,37 | 14,0 | 2,30× | 0 |
+| v2-tai-9-tem-tu-do-vuong | 4,97 | 13,37 | 13,37 | 11,1 | 1,81× | 0 |
+| v2-tai-10-giay-tran | 5,62 | 5,90 | 11,40 | 18,0 | 1,47× | 3 |
+| v2-cn-a-giay-dau-sap | 5,00 | 10,94 | 10,94 | 11,6 | | |
+| v2-cn-b-panel | 4,96 | 5,69 | 10,95 | 12,2 | | |
+| v2-cn-c-tem-nen-dam | 4,99 | 10,92 | 10,93 | 11,7 | | |
+| v2-cn-d-giay-tran | 4,95 | 5,74 | 10,94 | 13,0 | | |
+| v2-cn-e-co-dien | 7,18 | 15,06 | 15,06 | 11,9 | | |
+| v2-cn-f-tien-giay | 6,84 | 12,60 | 12,60 | 10,7 | | |
+| v2-cn-g-ba-tu | 6,32 | 10,55 | 11,70 | 11,3 | | |
+| v2-cn-tai-7-nen-hoa-la | 5,00 | 10,94 | 10,94 | 11,6 | 2,21× | (chữ trên giấy app) |
+| v2-cn-tai-9-tem-xoay | 4,97 | 7,01 | 13,37 | 12,2 | 1,89× | 0 |
+| v2-cn-tai-10-giay-tran | 5,55 | 6,14 | 11,36 | 13,0 | 1,53× | 5 |
+
+Đọc bảng:
+- **Tất cả đạt ≥ 4,5:1.** Ba khung (e), (f), (g) rõ nhất (≥ 6,1:1) vì lòng khung là nền trơn sáng.
+- Chữ nhỏ nhất trên chứng nhận 10,7–13 px là dòng số và chức danh ký, cỡ in 8–10 pt trên A4. In ra đọc tốt, nhưng xem trên điện thoại thì nhỏ.
+- Dấu ✗ duy nhất là **cỡ chữ**, không phải độ tương phản: ảnh 7 ở khổ vuông (mục A4).
+
+## A6. Ghi chú chuyển cho R&D-08 (giấy chứng nhận)
+
+- Khung **(e) vàng nâu cổ điển** và **(f) xanh tiền giấy** rất hợp chứng nhận. (g) Ba Tư cũng đẹp trên khổ ngang. Ảnh: `v2-cn-e-co-dien.png`, `v2-cn-f-tien-giay.png`, `v2-cn-g-ba-tu.png`.
+- Hàm vẽ dùng lại được cho mọi khổ: `window.VE_KHUNG('co-dien'|'tien-giay'|'ba-tu', rộng, cao)` trong `/home/user/a/docs/rnd/v7-nen-hoa-van/chung/giay.js`. Trang mẫu `khung-ngang.html?k=…` vẽ ở 1414×1000. Trả về SVG thuần, đặt dưới lớp chữ là xong.
+- Màu chữ nhấn đi kèm khung:
+  - (e) chữ nhấn `#7E4A14` trên `#FFFDF8`;
+  - (f) chữ nhấn `#1F4E8C`, lòng khung `#F6F1E3`;
+  - (g) chữ nhấn `#22407A`, lòng khung `#F3E9D6`.
+  - Đã đo: dòng tệ nhất 6,3–7,2:1.
+- **Vùng chữ an toàn** (lòng khung, tính từ mép trang) ở khổ 1123×794: (e) 104 / 92 px, (f) 136 / 128 px, (g) 116 / 112 px (trái-phải / trên-dưới). Đặt chữ trong vùng này thì không đè hoa văn.
+- Bản chứng nhận của R&D-07 (`chung-nhan.html`) chỉ để thử nền. Bố cục chính thức vẫn là 10 mẫu cc-01…cc-10 của R&D-08.
+
+## A7. Đề xuất vòng 2
+
+1. **Làm trước các kiểu dựng sẵn**, vì anh thích nền đậm có tấm giấy hoặc khung:
+   - (e) cổ điển, (f) tiền giấy, (g) Ba Tư làm khung cho **giấy chứng nhận**;
+   - (a) giấy và dấu sáp, (d) giấy vân tràn cho **chào mừng**;
+   - (b) panel và (c) tem để thêm lựa chọn.
+   - Đây là việc an toàn: R&D đã đo hết, studio không làm hỏng được.
+2. **Làm ngay sau đó "Ảnh của tôi"** với hai cách dùng ảnh:
+   - "**ảnh nền tràn**" (như ảnh 10, hoặc ảnh 7 làm nền dưới tấm giấy của app);
+   - "**ảnh có ô trống sẵn**" (như ảnh 7, 9): app tự dò và cho studio kéo chỉnh khung đặt chữ.
+   - Kèm các chốt chặn: tự làm đậm chữ, cảnh báo ảnh nhỏ (phóng > 1,6 lần), cảnh báo chữ < 12 px, ô cam kết quyền dùng ảnh.
+3. Nền chìm nhạt của vòng 1 (Phần B) giữ làm một nấc nhẹ trong cùng ô "Nền".
+4. **Dấu sáp có chữ** cho studio tự gõ 1–2 chữ cái (mặc định chữ đầu tên thương hiệu), màu vàng hoặc đỏ rượu. Khi đã có dấu sáp thì ẩn logo cho khỏi trùng.
+
+### Đề xuất trường mới (vòng 2, bổ sung cho mục 9 Phần B)
+
+| Bảng | Trường | Kiểu | Ghi chú |
+|---|---|---|---|
+| **mới** `DesignBackground` (thư viện nền của tổ chức; một studio tải nhiều ảnh) | `id`, `organizationId`, `fileId` (→ `StoredFile`, khoá kép), `name` | | Mỗi ảnh studio tải lên một dòng. Ảnh dùng chung cho mọi mẫu chào mừng và chứng nhận của tổ chức. |
+| | `kind` | `String` | `"NEN_TRAN"` (như ảnh 10) hoặc `"CO_O_TRONG"` (như ảnh 7, 9) |
+| | `crop` | `Json` | `{x0,y0,x1,y1}` (0..1): vùng cắt, bỏ mép / biểu tượng thừa |
+| | `focus` | `Json?` | `{fx,fy}`: điểm trọng tâm khi cắt cho đủ khổ |
+| | `textArea` | `Json?` | `{x0,y0,x1,y1, topGap}`: ô đặt chữ (CO_O_TRONG); lưu kết quả tự dò sau khi studio kéo chỉnh |
+| | `hasSeal` | `Boolean` | ảnh đã có dấu hoặc chữ lồng → ẩn logo của thẻ |
+| | `widthPx`, `heightPx` | `Int` | để cảnh báo ảnh nhỏ (đã có ở `StoredFile.width/height`, có thể dùng lại) |
+| | `rightsConfirmedAt`, `rightsConfirmedById` | `DateTime`, `Uuid` | **bắt buộc**: thời điểm và người tick "Tôi có quyền dùng ảnh này" |
+| `DesignCard` | `paperShape` | `String?` | `"chu-nhat"`, `"panel"`, `"tem"`, `"tran"`, `"trong-anh"`; `null` = bố cục cũ |
+| `DesignCard` | `frameStyle` | `String?` | thêm `"co-dien"`, `"tien-giay"`, `"ba-tu"` (bên cạnh khung vòng 1) |
+| `DesignCard` | `backgroundId` và `backgroundFileId` | `Uuid?` | `backgroundFileId` lưu đúng tệp lúc xuất, để thẻ cũ tải lại vẫn y như cũ khi studio đổi hoặc xoá ảnh |
+| `DesignCard` | `drawnBackground` | `String?` | nền vẽ sẵn của app: `"khac-lam"`, `"khac-reu"`, `"toi-reu"` |
+| `DesignCard` | `sealText`, `sealColor` | `String?` | dấu sáp: 1–2 ký tự; `"vang"` / `"do"` |
+| `OrganizationProfile` | `defaultBackgroundId`, `defaultSealText` | | mặc định của studio |
+| Giấy chứng nhận | các trường như `DesignCard` ở trên | | Schema hiện **chưa có bảng chứng nhận**; khi đội máy chủ làm theo R&D-08 thì thêm cùng bộ trường (`paperShape`, `frameStyle`, `backgroundFileId`, `sealText`…) |
+| `FilePurpose` | `DESIGN_BACKGROUND` | | như vòng 1 |
+
+### Công sức vòng 2 (1 buổi ≈ 4 giờ)
+
+| Việc | Buổi |
+|---|---|
+| Đưa `giay.js` vào `public/mau/chung`, chạy cho ba khổ (dọc, vuông, A4 ngang); 4 tấm giấy, 3 khung, 3 nền khắc đã có bản chạy | 1,5 |
+| Rà và gắn cho 10 mẫu chào mừng và 10 mẫu chứng nhận R&D-08 (vùng chữ an toàn từng mẫu), chỉnh nét vẽ | 2,5 |
+| Dấu sáp có chữ (ô nhập, mặc định theo tên thương hiệu) | 0,5 |
+| "Ảnh của tôi": tải lên, màn cắt + điểm trọng tâm + kéo khung đặt chữ (có gợi ý tự dò), tự xoay, cảnh báo ảnh nhỏ và chữ nhỏ, ô cam kết quyền | 3 |
+| Máy chủ: `DesignBackground`, trường `DesignCard`, kiểm mã kiểu và khung trong `packages/shared` | 1,5 |
+| Bộ đo tự động (đã có) chạy trên cả 20 mẫu × 7 kiểu × khổ | 1 |
+| **Cộng** | **khoảng 10 buổi** |
+
+Nếu làm cả vòng 1 (ô "Nền" chìm): dùng chung vùng an toàn, bộ đo và tải ảnh, nên chỉ thêm khoảng 4–5 buổi chứ không phải 8–9.
+
+## A8. Giới hạn vòng 2 và đường dẫn
+
+**Giới hạn:**
+- Mới thử trên **một bố cục chào mừng** (nội dung shd-01) và **một bố cục chứng nhận do R&D-07 dựng** (bám nội dung R&D-08), chưa áp vào từng mẫu cc-01…cc-10.
+- Ảnh tải lên chỉ có 3 ảnh của anh; chưa thử ảnh chụp điện thoại thật của studio.
+- Nhiều ảnh nộp phải nén bảng màu để ≤ 600 KB (vân giấy rất nhiễu), có ảnh xuống 128, 64 hoặc 16 màu, không dither. Riêng `v2-d-giay-tran.png` và `v2-tai-10-giay-tran.png` được nén bằng cách **giữ nguyên điểm ảnh chữ, ảnh, logo, đường viền** và chỉ làm mịn vân giấy (`do-kiem/nen-anh2.py`), nên vân trong hai ảnh này mịn hơn bản app xuất thật. **Mọi số đo lấy trên bản PNG gốc chưa nén.**
+
+**Tệp mới vòng 2:**
+- Trang mẫu, trong `/home/user/a/docs/rnd/v7-nen-hoa-van/`:
+  - `the-giay.html`: chào mừng;
+  - `chung-nhan.html`: chứng nhận A4 ngang;
+  - `chung/giay.js`: tấm giấy, dấu sáp, nền khắc, 3 khung, ghép ảnh tải lên, tự dò, tự xoay, tự làm đậm chữ;
+  - `bang-xem-nhanh-v2.html`: bảng xem nhanh (`?phan=a` chào mừng, `?phan=b` chứng nhận);
+  - `khung-ngang.html`: hàm khung cho R&D-08.
+- Bộ chụp và đo: `do-kiem/chup2.js`, `v2.json`, `cn.json`, `bang.js`, `nen-anh2.py`, `ket-qua.json`.
+- Ảnh: `/home/user/a/docs/rnd/anh-rnd07/v2-*.png`, gồm 25 ảnh: 13 chào mừng, 10 chứng nhận và 2 bảng xem nhanh. Mỗi ảnh ≤ 600 KB.
+
+---
+
+# PHẦN B — VÒNG 1: Nền và viền hoa văn chìm (giữ nguyên)
+
 
 ## 1. Trả lời ngắn
 
@@ -242,7 +423,7 @@ API thiết kế cần trả thêm `cardBackgroundUrl` (đường dẫn có hạ
 ## 11. Đường dẫn
 
 - Báo cáo: `/home/user/a/docs/rnd/BAO-CAO-RND-07-NEN-HOA-VAN.md`
-- Ảnh (15 PNG, mỗi ảnh ≤ 600 KB): `/home/user/a/docs/rnd/anh-rnd07/`
+- Ảnh vòng 1 (15 PNG, mỗi ảnh ≤ 600 KB): `/home/user/a/docs/rnd/anh-rnd07/` (tên không có tiền tố `v2-`); ảnh vòng 2: `v2-*.png` cùng thư mục
 - Bản mẫu: `/home/user/a/docs/rnd/v7-nen-hoa-van/`
   - Mục lục: `index.html`
   - Mẫu thử: `shd-01-hv.html` (tham số ghi ở đầu `chung/nen.js`)

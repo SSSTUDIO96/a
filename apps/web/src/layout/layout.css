@@ -3,6 +3,14 @@
  * Chỉ dùng token trong src/styles/tokens.css.
  */
 
+/*
+ * Chiều cao thanh dưới điện thoại = 64px + vùng an toàn đáy (thanh Home iPhone). MỘT biến duy nhất: --h-bottomnav
+ * (tokens.css khai 64px làm giá trị gốc; `html:root` ở đây thắng về độ cụ thể nên không phụ thuộc thứ tự nạp tệp).
+ * Mọi chỗ chừa chỗ cho thanh dưới (đáy trang, thanh tổng dính, nút tải dính…) phải dùng var(--h-bottomnav), không viết 64px.
+ * env() cần <meta viewport ... viewport-fit=cover> (index.html); nơi không hỗ trợ thì env() = 0 → đúng 64px.
+ */
+html:root { --h-bottomnav: calc(64px + env(safe-area-inset-bottom, 0px)); }
+
 .sh {
   display: grid;
   grid-template-columns: 240px minmax(0, 1fr);
@@ -278,9 +286,9 @@
   .sh-banner { padding: 10px 20px; }
 }
 
-/* ---------- Điện thoại ≤ 640: ẩn thanh trái; thanh trên 54px; thanh dưới 64px cố định ---------- */
+/* ---------- Điện thoại ≤ 640: ẩn thanh trái; thanh trên 54px; thanh dưới 64px + vùng an toàn đáy, cố định ---------- */
 @media (max-width: 640px) {
-  .sh { grid-template-columns: minmax(0, 1fr); padding-bottom: 64px; }
+  .sh { grid-template-columns: minmax(0, 1fr); padding-bottom: var(--h-bottomnav); }
   .sh-sidecol { display: none; }
   .sh-top {
     display: flex;
@@ -310,7 +318,8 @@
     left: 0;
     right: 0;
     bottom: 0;
-    height: 64px;
+    height: var(--h-bottomnav);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
     background: var(--surface);
     border-top: 1px solid var(--line);
     z-index: 30;

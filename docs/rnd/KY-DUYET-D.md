@@ -16,3 +16,5 @@ Bản vẽ: `docs/rnd/BAN-VE-D-HOM-NAY-SU-KIEN-PHU-PHI.md`. **Ký, với các qu
 **Thứ tự giao (giữ bản vẽ mục 5, thêm một chặn):** gói **M1 (schema.prisma) chỉ bắt đầu khi thợ K2 và K6 đã xong** — hai thợ này đang sửa cùng tệp `schema.prisma`. H1 và M2 bắt đầu ngay.
 
 **Cửa gác bắt buộc khi nghiệm thu:** số đường cửa gác tăng đúng 8 so với số đo H1; 3 đột biến gate-mutants đỏ; bài thử ghi thẳng database của M1; một thợ KHÁC nghiệm thu (N1 chỉ chụp ảnh, không phải nghiệm thu).
+
+**Số đo H1 (thợ Haiku, 19/10):** trước khi áp migration của bản vẽ D: 4 bảng mới 0/0, 5 cột mới 0/0; `contract_lines` có 22 dòng trên bản sao dữ liệu thử. Cửa gác hiện tại: scope 100/100, outsider 100/100, noPerms 100/100, unauth 110/110, crossId 51/51, leak 40/40, refBase 45/45, crossRef 107/107, keep 100/100, platform 40/40 — tổng **793/793**. Sau gói M7 số đường org phải là 100 + 8 = 108 (scope/outsider/noPerms/keep), unauth 118.
