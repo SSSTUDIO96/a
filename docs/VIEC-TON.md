@@ -65,3 +65,6 @@ Danh sách việc các thợ, thợ chấm và R&D đã nêu nhưng **chưa làm
 | 45 | Màn Tạo tổ chức: lỗi dưới ô chỉ tính lại khi bấm gửi, chọn xong loại tổ chức chữ đỏ vẫn còn | thợ Y3 |
 | 46 | Mẫu shd-03: chữ "THÁNG 11" đè lên số "03" (có từ trước) | thợ Y4 |
 | 47 | Ô chọn loại tổ chức dựng riêng trong auth.css vì `Segmented` không dùng `<label>` — nên thống nhất vào src/ui | thợ Y3 |
+| 48 | Màu ảnh đại diện thợ mới đi qua hàm chung ở Lịch và Hợp đồng (4/13 chỗ); màn Thợ makeup, Khoá & lớp, Tiền công theo gói, thanh bên vẫn băm màu thẳng — hai thợ cùng chữ tắt có thể trùng màu ở các màn đó | thợ V2 |
+| 49 | Hai màu ảnh đại diện nâu và nâu xám gần nhau, nên xem lại bảng màu trong ui.css | thợ V2 |
+| 50 | Trang công khai lưu đệm 60 giây: tắt nhân vật xong, khách có thể còn thấy bản cũ tối đa 60 giây (web vẫn chặn gói đó) | thợ V1 |
