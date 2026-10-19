@@ -770,8 +770,10 @@ export function summarizeRule(rule: SurchargeRuleView, lk: RuleLookups): string 
   if (rule.startTime !== null && rule.endTime !== null) parts.push(`Giờ bắt đầu ${rule.startTime}–${rule.endTime}`);
   const days: string[] = [];
   if (rule.weekdays.length > 0) {
-    const names = WEEKDAY_OPTIONS.filter((w) => rule.weekdays.includes(w.value)).map((w) => w.short);
-    days.push(`Thứ ${names.join(', ')}`);
+    // 1..6 = Thứ 2..Thứ 7 ("Thứ 6, 7"), 7 = Chủ nhật.
+    const sorted = [...rule.weekdays].sort((a, b) => a - b);
+    const nums = sorted.filter((d) => d <= 6).map((d) => String(d + 1));
+    days.push([...(nums.length > 0 ? [`Thứ ${nums.join(', ')}`] : []), ...(sorted.includes(7) ? ['Chủ nhật'] : [])].join(', '));
   }
   if (rule.dates.length > 0) days.push(rule.dates.length <= 3 ? `ngày ${rule.dates.map(viDate).join(', ')}` : `${rule.dates.length} ngày cụ thể`);
   if (days.length > 0) parts.push(days.join(' hoặc '));

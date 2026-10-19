@@ -671,3 +671,543 @@ describe('biên bản web 2: bảng giá', () => {
     await waitFor(() => expect(calls.filter((c) => c.method === 'PATCH').at(-1)?.body).toEqual({ durationMinutes: null }));
   });
 });
+
+// ======================= Bản vẽ D: Loại sự kiện, Luật phụ phí (gói W2) =======================
+
+const OCC = (id: string, name: string, color: string, sortOrder: number, isActive: boolean, lineCount: number) => ({
+  id,
+  name,
+  color,
+  sortOrder,
+  isActive,
+  lineCount,
+  createdAt: T,
+  updatedAt: T,
+});
+const OCCASIONS = [OCC('o1', 'Lễ vu quy', 'taupe', 0, true, 14), OCC('o2', 'Lễ cưới', 'rose', 1, true, 22), OCC('o3', 'Ăn hỏi', 'amber', 2, false, 0)];
+
+function rule(over: Record<string, unknown> = {}) {
+  return {
+    id: 'r1',
+    name: 'Ca sớm trước 6 giờ',
+    serviceId: 'pple',
+    service: { id: 'pple', name: 'Phụ phí ngày lễ', kind: 'SURCHARGE', isActive: true, currentPrice: 200_000 },
+    startTime: '00:00',
+    endTime: '06:00',
+    weekdays: [],
+    dates: [],
+    occasionIds: ['o2', 'o1'],
+    packageIds: ['p1'],
+    subjectIds: [],
+    perQuantity: true,
+    note: null,
+    sortOrder: 0,
+    isActive: true,
+    status: 'OK',
+    usedLineCount: 3,
+    createdAt: T,
+    updatedAt: T,
+    ...over,
+  };
+}
+const RULE1 = rule();
+const RULE2 = rule({
+  id: 'r2',
+  name: 'Cuối tuần và lễ',
+  startTime: null,
+  endTime: null,
+  weekdays: [6, 7],
+  dates: ['2026-09-02'],
+  occasionIds: [],
+  packageIds: [],
+  service: { id: 'pple', name: 'Phụ phí ngày lễ', kind: 'SURCHARGE', isActive: true, currentPrice: null },
+  sortOrder: 1,
+  status: 'NO_PRICE',
+  usedLineCount: 0,
+});
+
+const PATH_OCC = '/orgs/org-1/occasions';
+const PATH_RULES = '/orgs/org-1/surcharge-rules';
+
+// Máy chủ giả cho hai đường mới: giữ danh sách trong bộ nhớ, trả đúng dạng OccasionView / SurchargeRuleView. `fail` ép lỗi theo "METHOD path".
+function dServer(permissions: readonly string[], opts: { occasions?: unknown[]; rules?: unknown[]; fail?: Record<string, Response> } = {}) {
+  const occasions = [...(opts.occasions ?? OCCASIONS)] as ReturnType<typeof OCC>[];
+  const rules = [...(opts.rules ?? [RULE1, RULE2])] as ReturnType<typeof rule>[];
+  const calls = setupServer(permissions, (m, p, b) => {
+    const failure = opts.fail?.[`${m} ${p}`];
+    if (failure) return failure;
+    if (p === PATH_OCC && m === 'GET') return json(200, { items: occasions });
+    if (p === PATH_OCC && m === 'POST') {
+      const made = OCC(`o${occasions.length + 1}`, (b as { name: string }).name, (b as { color: string }).color, occasions.length, true, 0);
+      occasions.push(made);
+      return json(201, made);
+    }
+    if (p === `${PATH_OCC}/order` && m === 'PUT') {
+      const ids = (b as { occasionIds: string[] }).occasionIds;
+      return json(200, { items: ids.map((id, i) => ({ ...occasions.find((o) => o.id === id), sortOrder: i })) });
+    }
+    if (p.startsWith(`${PATH_OCC}/`) && m === 'PATCH') return json(200, { ...occasions.find((o) => p.endsWith(o.id)), ...(b as object) });
+    if (p === PATH_RULES && m === 'GET') return json(200, { items: rules });
+    if (p === PATH_RULES && m === 'POST') return json(201, rule({ ...(b as object), id: 'r9' }));
+    if (p.startsWith(`${PATH_RULES}/`) && m === 'PATCH') return json(200, { ...rules.find((r) => p.endsWith(r.id)), ...(b as object) });
+    return undefined;
+  });
+  return calls;
+}
+const bodyOf = (calls: Call[], method: string, path?: string) => calls.filter((c) => c.method === method && (path === undefined || c.path === path)).at(-1)?.body;
+
+// Giả lập điện thoại cho useBreakpoint (matchMedia khớp điểm gãy ≤ 640).
+function stubPhone() {
+  vi.stubGlobal(
+    'matchMedia',
+    (q: string) => ({ matches: q.includes('max-width: 640px'), media: q, addEventListener: () => {}, removeEventListener: () => {}, addListener: () => {}, removeListener: () => {}, onchange: null, dispatchEvent: () => false }),
+  );
+}
+
+describe('Bảng giá › Loại sự kiện', () => {
+  it('mỗi loại: tên · "N dòng hợp đồng đang dùng" · 12 ô màu có tên tiếng Việt · công tắc; ô đang chọn bấm-xuống', async () => {
+    dServer(OWNER);
+    renderAt('/chien/bang-gia/su-kien');
+    expect(await screen.findByRole('heading', { level: 2, name: /Loại sự kiện/ })).toBeTruthy();
+    expect(screen.getByText('3 loại · màu dùng chung 12 màu của Lịch')).toBeTruthy();
+    expect(screen.getByText('14 dòng hợp đồng đang dùng')).toBeTruthy();
+    expect(screen.getByText('Chưa có dòng hợp đồng nào dùng')).toBeTruthy();
+    const group = screen.getByRole('group', { name: 'Màu của Lễ cưới' });
+    const titles = within(group).getAllByRole('button').map((b) => b.getAttribute('title'));
+    expect(titles).toEqual(['Hồng', 'Tím', 'Hổ phách', 'Xanh lá', 'Xanh dương', 'Nâu xám', 'Đỏ gạch', 'Xanh dầu', 'Ô liu', 'Mận', 'Xanh rừng', 'Nâu']);
+    expect(within(group).getByRole('button', { name: 'Lễ cưới: màu Hồng' }).getAttribute('aria-pressed')).toBe('true');
+    expect(within(group).getByRole('button', { name: 'Lễ cưới: màu Tím' }).getAttribute('aria-pressed')).toBe('false');
+    expect(screen.getByRole('switch', { name: 'Ăn hỏi: đang ẩn' }).getAttribute('aria-checked')).toBe('false');
+    expect(screen.getByRole('button', { name: 'Đổi thứ tự Lễ cưới' }).getAttribute('title')).toBe('Kéo để đổi thứ tự trong ô chọn');
+    expect(screen.getByText(/Kéo ⋮⋮ để đổi thứ tự trong ô chọn\. Ẩn loại không xoá các ca cũ đã gắn\./)).toBeTruthy();
+  });
+
+  it('bấm ô màu → PATCH { color } ngay, chỉ trường màu', async () => {
+    const user = userEvent.setup();
+    const calls = dServer(OWNER);
+    renderAt('/chien/bang-gia/su-kien');
+    await user.click(await screen.findByRole('button', { name: 'Lễ cưới: màu Tím' }));
+    await waitFor(() => expect(writes(calls)).toEqual([`PATCH ${PATH_OCC}/o2`]));
+    expect(bodyOf(calls, 'PATCH')).toEqual({ color: 'violet' });
+    // Bấm lại đúng màu đang chọn: không gọi gì thêm.
+    await user.click(screen.getByRole('button', { name: 'Lễ vu quy: màu Nâu xám' }));
+    await new Promise((r) => setTimeout(r, 30));
+    expect(writes(calls)).toHaveLength(1);
+  });
+
+  it('công tắc ẩn / hiện → PATCH { isActive }; lời máy chủ khi lỗi hiện nguyên văn trên đầu thẻ', async () => {
+    const user = userEvent.setup();
+    const calls = dServer(OWNER, { fail: { [`PATCH ${PATH_OCC}/o1`]: err(409, 'CONFLICT', 'Loại này đang được dùng, không ẩn được') } });
+    renderAt('/chien/bang-gia/su-kien');
+    await user.click(await screen.findByRole('switch', { name: 'Ăn hỏi: đang ẩn' }));
+    await waitFor(() => expect(bodyOf(calls, 'PATCH', `${PATH_OCC}/o3`)).toEqual({ isActive: true }));
+    await user.click(await screen.findByRole('switch', { name: 'Lễ vu quy: đang dùng' }));
+    expect((await screen.findByRole('alert')).textContent).toBe('Loại này đang được dùng, không ẩn được');
+  });
+
+  it('mũi tên xuống trên tay nắm → PUT /occasions/order gửi ĐỦ mọi loại (cả loại ẩn), đúng thứ tự mới', async () => {
+    const user = userEvent.setup();
+    const calls = dServer(OWNER);
+    renderAt('/chien/bang-gia/su-kien');
+    const grip = await screen.findByRole('button', { name: 'Đổi thứ tự Lễ vu quy' });
+    grip.focus();
+    await user.keyboard('{ArrowDown}');
+    await waitFor(() => expect(writes(calls)).toEqual([`PUT ${PATH_OCC}/order`]));
+    expect(bodyOf(calls, 'PUT')).toEqual({ occasionIds: ['o2', 'o1', 'o3'] });
+  });
+
+  it('điện thoại: không tay nắm, có nút ↑ ↓ (nút đầu không lên được) → PUT đủ danh sách; nút + là nút tròn nổi', async () => {
+    stubPhone();
+    const user = userEvent.setup();
+    const calls = dServer(OWNER);
+    renderAt('/chien/bang-gia/su-kien');
+    await screen.findByText('14 dòng hợp đồng đang dùng');
+    expect(screen.queryByRole('button', { name: /Đổi thứ tự/ })).toBeNull();
+    expect((screen.getByRole('button', { name: 'Đưa Lễ vu quy lên' }) as HTMLButtonElement).disabled).toBe(true);
+    await user.click(screen.getByRole('button', { name: 'Đưa Ăn hỏi lên' }));
+    await waitFor(() => expect(bodyOf(calls, 'PUT')).toEqual({ occasionIds: ['o1', 'o3', 'o2'] }));
+    expect(screen.getByRole('button', { name: 'Thêm loại' }).className).toContain('pr-fab');
+    expect(screen.getByText(/Dùng nút ↑ ↓ để đổi thứ tự/)).toBeTruthy();
+  });
+
+  it('thứ tự lỗi (400 "Danh sách phải gồm đủ …") → lời máy chủ trên đầu thẻ, danh sách tải lại', async () => {
+    const user = userEvent.setup();
+    const msg = 'Danh sách phải gồm đủ mọi loại sự kiện của tổ chức, mỗi loại một lần';
+    dServer(OWNER, { fail: { [`PUT ${PATH_OCC}/order`]: err(400, 'VALIDATION_FAILED', msg) } });
+    renderAt('/chien/bang-gia/su-kien');
+    const grip = await screen.findByRole('button', { name: 'Đổi thứ tự Lễ vu quy' });
+    grip.focus();
+    await user.keyboard('{ArrowDown}');
+    expect((await screen.findByRole('alert')).textContent).toBe(msg);
+    await waitFor(() => expect(screen.getAllByRole('listitem')[0]?.textContent).toContain('Lễ vu quy'));
+  });
+
+  it('không có catalog.write (thợ): không tay nắm, không nút thêm, chỉ thấy MÀU ĐANG CHỌN, công tắc khoá', async () => {
+    dServer(ARTIST);
+    renderAt('/chien/bang-gia/su-kien');
+    const group = await screen.findByRole('group', { name: 'Màu của Lễ cưới' });
+    expect(within(group).getAllByRole('button')).toHaveLength(1);
+    expect((within(group).getByRole('button') as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.queryByRole('button', { name: /Đổi thứ tự/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Thêm loại' })).toBeNull();
+    expect((screen.getByRole('switch', { name: 'Lễ cưới: đang dùng' }) as HTMLButtonElement).disabled).toBe(true);
+    // Tên không bấm được (không mở hộp sửa).
+    expect(screen.queryByRole('button', { name: 'Lễ cưới' })).toBeNull();
+  });
+
+  it('chưa có loại nào → câu trống + nút thêm', async () => {
+    dServer(OWNER, { occasions: [] });
+    renderAt('/chien/bang-gia/su-kien');
+    expect(await screen.findByText('Chưa có loại sự kiện nào.')).toBeTruthy();
+    expect(screen.getAllByRole('button', { name: 'Thêm loại' }).length).toBeGreaterThan(0);
+  });
+});
+
+describe('Hộp Loại sự kiện', () => {
+  it('thêm: bỏ trống → lỗi dưới ô Tên và Màu, KHÔNG gọi máy chủ; nhập tên + chọn màu → POST đủ trường, xếp cuối', async () => {
+    const user = userEvent.setup();
+    const calls = dServer(OWNER);
+    renderAt('/chien/bang-gia/su-kien');
+    await user.click((await screen.findAllByRole('button', { name: 'Thêm loại' }))[0] as HTMLElement);
+    const dlg = await screen.findByRole('dialog', { name: 'Thêm loại sự kiện' });
+    await user.click(within(dlg).getByRole('button', { name: 'Lưu' }));
+    expect(within(dlg).getByText('Nhập tên loại sự kiện.')).toBeTruthy();
+    expect(within(dlg).getByText('Chọn một màu.')).toBeTruthy();
+    expect(within(dlg).getByLabelText(/Tên loại/).getAttribute('aria-invalid')).toBe('true');
+    expect(writes(calls)).toEqual([]);
+    await user.type(within(dlg).getByLabelText(/Tên loại/), '  Chụp ngoại cảnh ');
+    await user.click(within(dlg).getByRole('button', { name: 'Màu Xanh rừng' }));
+    await user.click(within(dlg).getByRole('button', { name: 'Lưu' }));
+    await waitFor(() => expect(writes(calls)).toEqual([`POST ${PATH_OCC}`]));
+    expect(bodyOf(calls, 'POST')).toEqual({ name: 'Chụp ngoại cảnh', color: 'forest', sortOrder: 3, isActive: true });
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  });
+
+  it('tên quá 60 ký tự bị chặn ở máy khách', async () => {
+    const user = userEvent.setup();
+    const calls = dServer(OWNER);
+    renderAt('/chien/bang-gia/su-kien');
+    await user.click((await screen.findAllByRole('button', { name: 'Thêm loại' }))[0] as HTMLElement);
+    const dlg = await screen.findByRole('dialog');
+    const name = within(dlg).getByLabelText(/Tên loại/) as HTMLInputElement;
+    expect(name.maxLength).toBe(60);
+    await user.click(within(dlg).getByRole('button', { name: 'Lưu' }));
+    expect(writes(calls)).toEqual([]);
+  });
+
+  it('409 trùng tên → lời máy chủ dưới ô Tên, hộp vẫn mở, tên đã nhập giữ nguyên', async () => {
+    const user = userEvent.setup();
+    dServer(OWNER, { fail: { [`POST ${PATH_OCC}`]: err(409, 'CONFLICT', 'Tên loại sự kiện đã có trong tổ chức', { fields: ['name'] }) } });
+    renderAt('/chien/bang-gia/su-kien');
+    await user.click((await screen.findAllByRole('button', { name: 'Thêm loại' }))[0] as HTMLElement);
+    const dlg = await screen.findByRole('dialog');
+    await user.type(within(dlg).getByLabelText(/Tên loại/), 'Lễ cưới');
+    await user.click(within(dlg).getByRole('button', { name: 'Màu Hồng' }));
+    await user.click(within(dlg).getByRole('button', { name: 'Lưu' }));
+    expect(await within(dlg).findByText('Tên loại sự kiện đã có trong tổ chức')).toBeTruthy();
+    expect(within(dlg).getByLabelText(/Tên loại/).getAttribute('aria-invalid')).toBe('true');
+    expect((within(dlg).getByLabelText(/Tên loại/) as HTMLInputElement).value).toBe('Lễ cưới');
+  });
+
+  it('409 "Tối đa 50 loại sự kiện" → dải đỏ đầu hộp (không gắn vào ô)', async () => {
+    const user = userEvent.setup();
+    dServer(OWNER, { fail: { [`POST ${PATH_OCC}`]: err(409, 'CONFLICT', 'Tối đa 50 loại sự kiện') } });
+    renderAt('/chien/bang-gia/su-kien');
+    await user.click((await screen.findAllByRole('button', { name: 'Thêm loại' }))[0] as HTMLElement);
+    const dlg = await screen.findByRole('dialog');
+    await user.type(within(dlg).getByLabelText(/Tên loại/), 'Mới');
+    await user.click(within(dlg).getByRole('button', { name: 'Màu Hồng' }));
+    await user.click(within(dlg).getByRole('button', { name: 'Lưu' }));
+    expect((await within(dlg).findByRole('alert')).textContent).toBe('Tối đa 50 loại sự kiện');
+    expect(within(dlg).getByLabelText(/Tên loại/).getAttribute('aria-invalid')).toBeNull();
+  });
+
+  it('sửa: bấm tên → hộp có tên hiện tại; đổi tên → PATCH chỉ { name }; không đổi gì → đóng, không gọi', async () => {
+    const user = userEvent.setup();
+    const calls = dServer(OWNER);
+    renderAt('/chien/bang-gia/su-kien');
+    await user.click(await screen.findByRole('button', { name: 'Lễ cưới' }));
+    let dlg = await screen.findByRole('dialog', { name: 'Sửa loại sự kiện' });
+    expect((within(dlg).getByLabelText(/Tên loại/) as HTMLInputElement).value).toBe('Lễ cưới');
+    expect(within(dlg).getByRole('button', { name: 'Màu Hồng' }).getAttribute('aria-pressed')).toBe('true');
+    await user.click(within(dlg).getByRole('button', { name: 'Lưu' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(writes(calls)).toEqual([]);
+    await user.click(screen.getByRole('button', { name: 'Lễ cưới' }));
+    dlg = await screen.findByRole('dialog');
+    await user.type(within(dlg).getByLabelText(/Tên loại/), ' sáng');
+    await user.click(within(dlg).getByRole('button', { name: 'Lưu' }));
+    await waitFor(() => expect(bodyOf(calls, 'PATCH', `${PATH_OCC}/o2`)).toEqual({ name: 'Lễ cưới sáng' }));
+  });
+});
+
+describe('Bảng giá › Luật phụ phí', () => {
+  it('mỗi luật: tên · tóm tắt điều kiện đúng chữ · tên phụ phí + giá hiện hành · "Đang dùng ở N dòng" · công tắc', async () => {
+    dServer(OWNER);
+    renderAt('/chien/bang-gia/luat-phu-phi');
+    expect(await screen.findByText('Khớp luật thì hợp đồng tự thêm dòng phụ phí; người lập bỏ được')).toBeTruthy();
+    expect(screen.getByText('Giờ bắt đầu 00:00–06:00 · Lễ cưới, Lễ vu quy · Gói Cô dâu – Ngày cưới')).toBeTruthy();
+    expect(screen.getByText('Thứ 7, Chủ nhật hoặc ngày 02/09/2026')).toBeTruthy();
+    const items = screen.getAllByRole('listitem');
+    expect(items[0]?.textContent).toContain('Phụ phí ngày lễ · 200.000 ₫');
+    expect(items[0]?.textContent).toContain('Đang dùng ở 3 dòng');
+    expect(items[1]?.textContent).toContain('Phụ phí ngày lễ · chưa có giá');
+    expect(items[1]?.textContent).not.toContain('Đang dùng ở');
+    expect(screen.getByRole('switch', { name: 'Ca sớm trước 6 giờ: đang bật' })).toBeTruthy();
+  });
+
+  it('thẻ vàng theo status (luật OK thì không có)', async () => {
+    dServer(OWNER, {
+      rules: [
+        RULE1,
+        rule({ id: 'r2', name: 'B', sortOrder: 1, status: 'SERVICE_INACTIVE' }),
+        rule({ id: 'r3', name: 'C', sortOrder: 2, status: 'SERVICE_NOT_SURCHARGE' }),
+        rule({ id: 'r4', name: 'D', sortOrder: 3, status: 'NO_PRICE' }),
+      ],
+    });
+    renderAt('/chien/bang-gia/luat-phu-phi');
+    await screen.findByText('Phụ phí đang ngừng — luật không chạy');
+    expect(screen.getByText('Dịch vụ không còn là phụ phí — luật không chạy')).toBeTruthy();
+    expect(screen.getByText('Phụ phí chưa có giá — luật không chạy')).toBeTruthy();
+    expect(screen.getAllByText(/luật không chạy$/)).toHaveLength(3);
+  });
+
+  it('công tắc → PATCH { isActive }; nút ↓ → chỉ PATCH hai luật đổi sortOrder', async () => {
+    const user = userEvent.setup();
+    const calls = dServer(OWNER);
+    renderAt('/chien/bang-gia/luat-phu-phi');
+    await user.click(await screen.findByRole('switch', { name: 'Ca sớm trước 6 giờ: đang bật' }));
+    await waitFor(() => expect(bodyOf(calls, 'PATCH', `${PATH_RULES}/r1`)).toEqual({ isActive: false }));
+    await user.click(screen.getByRole('button', { name: 'Đưa luật Ca sớm trước 6 giờ xuống' }));
+    await waitFor(() => expect(calls.filter((c) => c.method === 'PATCH' && 'sortOrder' in (c.body as object)).map((c) => [c.path, c.body])).toEqual([
+      [`${PATH_RULES}/r2`, { sortOrder: 0 }],
+      [`${PATH_RULES}/r1`, { sortOrder: 1 }],
+    ]));
+    expect(screen.getByRole('button', { name: 'Đưa luật Ca sớm trước 6 giờ xuống' }).getAttribute('title')).toBe('Hai luật cùng một phụ phí: luật đứng trên được áp');
+  });
+
+  it('chỉ có catalog.read (thợ): thấy luật, không nút thêm, không mũi tên, tên không bấm được, công tắc khoá', async () => {
+    dServer(ARTIST);
+    renderAt('/chien/bang-gia/luat-phu-phi');
+    await screen.findByText('Giờ bắt đầu 00:00–06:00 · Lễ cưới, Lễ vu quy · Gói Cô dâu – Ngày cưới');
+    expect(screen.queryByRole('button', { name: 'Thêm luật' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Đưa luật/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Ca sớm trước 6 giờ' })).toBeNull();
+    expect((screen.getByRole('switch', { name: 'Ca sớm trước 6 giờ: đang bật' }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('chưa có luật → câu trống; tải lỗi 403 → dải quyền', async () => {
+    dServer(OWNER, { rules: [] });
+    renderAt('/chien/bang-gia/luat-phu-phi');
+    expect(await screen.findByText('Chưa có luật phụ phí nào.')).toBeTruthy();
+  });
+});
+
+describe('Hộp Luật phụ phí', () => {
+  async function openNew(user: ReturnType<typeof userEvent.setup>) {
+    renderAt('/chien/bang-gia/luat-phu-phi');
+    await user.click((await screen.findAllByRole('button', { name: 'Thêm luật' }))[0] as HTMLElement);
+    return screen.findByRole('dialog', { name: 'Thêm luật phụ phí' });
+  }
+
+  it('kiểm hợp lệ trước khi gửi: tên trống, chưa chọn phụ phí; tick giờ / ngày / sự kiện mà chưa điền → lỗi từng ô, KHÔNG gọi máy chủ', async () => {
+    const user = userEvent.setup();
+    const calls = dServer(OWNER);
+    const dlg = await openNew(user);
+    await user.click(within(dlg).getByRole('checkbox', { name: 'Theo giờ bắt đầu' }));
+    await user.click(within(dlg).getByRole('checkbox', { name: 'Theo ngày' }));
+    await user.click(within(dlg).getByRole('checkbox', { name: 'Theo loại sự kiện' }));
+    await user.click(within(dlg).getByRole('button', { name: 'Lưu' }));
+    expect(within(dlg).getByText('Nhập tên luật.')).toBeTruthy();
+    expect(within(dlg).getByText('Chọn phụ phí thu.')).toBeTruthy();
+    expect(within(dlg).getByText('Nhập giờ bắt đầu.')).toBeTruthy();
+    expect(within(dlg).getByText('Nhập giờ kết thúc.')).toBeTruthy();
+    expect(within(dlg).getByText('Chọn ít nhất một thứ hoặc một ngày.')).toBeTruthy();
+    expect(within(dlg).getByText('Chọn ít nhất một loại sự kiện.')).toBeTruthy();
+    expect(writes(calls)).toEqual([]);
+  });
+
+  it('giờ bắt đầu = giờ kết thúc → "phải khác nhau", không gọi máy chủ', async () => {
+    const user = userEvent.setup();
+    const calls = dServer(OWNER);
+    const dlg = await openNew(user);
+    await user.type(within(dlg).getByLabelText(/^Tên luật/), 'X');
+    await user.selectOptions(within(dlg).getByLabelText(/^Phụ phí thu/), 'pple');
+    await user.click(within(dlg).getByRole('checkbox', { name: 'Theo giờ bắt đầu' }));
+    await user.type(within(dlg).getByLabelText('Giờ bắt đầu của khung, từ'), '06:00');
+    await user.type(within(dlg).getByLabelText('Giờ bắt đầu của khung, đến'), '06:00');
+    await user.click(within(dlg).getByRole('button', { name: 'Lưu' }));
+    expect(await within(dlg).findByText('Giờ bắt đầu và kết thúc phải khác nhau.')).toBeTruthy();
+    expect(writes(calls)).toEqual([]);
+  });
+
+  it('thêm đầy đủ → POST đúng thân: giờ 00:00–06:00, thứ + ngày lễ, loại sự kiện, gói, số lượng "một lần", ghi chú, xếp cuối', async () => {
+    const user = userEvent.setup();
+    const calls = dServer(OWNER);
+    const dlg = await openNew(user);
+    await user.type(within(dlg).getByLabelText(/^Tên luật/), ' Ca sớm ');
+    await user.selectOptions(within(dlg).getByLabelText(/^Phụ phí thu/), 'pple');
+    await user.click(within(dlg).getByRole('checkbox', { name: 'Theo giờ bắt đầu' }));
+    await user.type(within(dlg).getByLabelText('Giờ bắt đầu của khung, từ'), '00:00');
+    await user.type(within(dlg).getByLabelText('Giờ bắt đầu của khung, đến'), '06:00');
+    await user.click(within(dlg).getByRole('checkbox', { name: 'Theo ngày' }));
+    await user.click(within(dlg).getByRole('button', { name: 'T7' }));
+    await user.click(within(dlg).getByRole('button', { name: 'CN' }));
+    await user.click(within(dlg).getByRole('button', { name: `Thêm ngày lễ năm ${new Date().getFullYear()}: 1/1, 30/4, 1/5, 2/9` }));
+    await user.click(within(dlg).getByRole('checkbox', { name: 'Theo loại sự kiện' }));
+    await user.click(within(dlg).getByRole('button', { name: 'Lễ cưới' }));
+    await user.click(within(dlg).getByRole('button', { name: 'Ăn hỏi (đang ẩn)' }));
+    await user.click(within(dlg).getByRole('button', { name: 'Cô dâu – Ngày cưới' }));
+    await user.click(within(dlg).getByRole('radio', { name: 'Một lần mỗi dòng' }));
+    await user.type(within(dlg).getByLabelText('Ghi chú'), ' Báo khách trước ');
+    await user.click(within(dlg).getByRole('button', { name: 'Lưu' }));
+    await waitFor(() => expect(writes(calls)).toEqual([`POST ${PATH_RULES}`]));
+    const year = new Date().getFullYear();
+    expect(bodyOf(calls, 'POST')).toEqual({
+      name: 'Ca sớm',
+      serviceId: 'pple',
+      startTime: '00:00',
+      endTime: '06:00',
+      weekdays: [6, 7],
+      dates: [`${year}-01-01`, `${year}-04-30`, `${year}-05-01`, `${year}-09-02`],
+      occasionIds: ['o2', 'o3'],
+      packageIds: ['p1'],
+      perQuantity: false,
+      note: 'Báo khách trước',
+      sortOrder: 2,
+      isActive: true,
+    });
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  });
+
+  it('"Đến" nhập 00:00 (nửa đêm) → gửi 24:00; ô giờ không nhận 24:00', async () => {
+    const user = userEvent.setup();
+    const calls = dServer(OWNER);
+    const dlg = await openNew(user);
+    await user.type(within(dlg).getByLabelText(/^Tên luật/), 'Đêm khuya');
+    await user.selectOptions(within(dlg).getByLabelText(/^Phụ phí thu/), 'pple');
+    await user.click(within(dlg).getByRole('checkbox', { name: 'Theo giờ bắt đầu' }));
+    await user.type(within(dlg).getByLabelText('Giờ bắt đầu của khung, từ'), '22:00');
+    await user.type(within(dlg).getByLabelText('Giờ bắt đầu của khung, đến'), '00:00');
+    await user.click(within(dlg).getByRole('button', { name: 'Lưu' }));
+    await waitFor(() => expect(bodyOf(calls, 'POST')).toMatchObject({ startTime: '22:00', endTime: '24:00' }));
+  });
+
+  it('không tick điều kiện nào → máy chủ 400 → lời máy chủ hiện dưới nhóm "Khi nào áp"; thân gửi KHÔNG có điều kiện', async () => {
+    const user = userEvent.setup();
+    const msg = 'Luật phải có ít nhất một điều kiện: khung giờ, ngày hoặc loại sự kiện';
+    const calls = dServer(OWNER, {
+      fail: { [`POST ${PATH_RULES}`]: err(400, 'VALIDATION_FAILED', 'Dữ liệu không hợp lệ', { issues: [{ path: 'startTime', message: msg }] }) },
+    });
+    const dlg = await openNew(user);
+    await user.type(within(dlg).getByLabelText(/^Tên luật/), 'Thiếu điều kiện');
+    await user.selectOptions(within(dlg).getByLabelText(/^Phụ phí thu/), 'pple');
+    await user.click(within(dlg).getByRole('button', { name: 'Lưu' }));
+    expect(await within(dlg).findByText(msg)).toBeTruthy();
+    expect(bodyOf(calls, 'POST')).not.toHaveProperty('startTime');
+    expect(bodyOf(calls, 'POST')).not.toHaveProperty('weekdays');
+    // Tick một điều kiện → lời cũ biến mất.
+    await user.click(within(dlg).getByRole('checkbox', { name: 'Theo giờ bắt đầu' }));
+    expect(within(dlg).queryByText(msg)).toBeNull();
+  });
+
+  it('400 theo ô: phụ phí đã ngừng → dưới ô Phụ phí; 409 trùng tên → dưới ô Tên; 409 "Tối đa 50 luật đang bật" → dải đầu hộp', async () => {
+    const user = userEvent.setup();
+    const fail: Record<string, Response> = {
+      [`POST ${PATH_RULES}`]: err(400, 'VALIDATION_FAILED', 'Phụ phí "Phụ phí ngày lễ" đang ngừng hoạt động', { fields: ['serviceId'] }),
+    };
+    dServer(OWNER, { fail });
+    const dlg = await openNew(user);
+    await user.type(within(dlg).getByLabelText(/^Tên luật/), 'Luật mới');
+    await user.selectOptions(within(dlg).getByLabelText(/^Phụ phí thu/), 'pple');
+    await user.click(within(dlg).getByRole('checkbox', { name: 'Theo loại sự kiện' }));
+    await user.click(within(dlg).getByRole('button', { name: 'Lễ cưới' }));
+    await user.click(within(dlg).getByRole('button', { name: 'Lưu' }));
+    expect(await within(dlg).findByText('Phụ phí "Phụ phí ngày lễ" đang ngừng hoạt động')).toBeTruthy();
+    expect(within(dlg).getByLabelText(/^Phụ phí thu/).getAttribute('aria-invalid')).toBe('true');
+    fail[`POST ${PATH_RULES}`] = err(409, 'CONFLICT', 'Tên luật đã có trong tổ chức', { fields: ['name'] });
+    await user.click(within(dlg).getByRole('button', { name: 'Lưu' }));
+    expect(await within(dlg).findByText('Tên luật đã có trong tổ chức')).toBeTruthy();
+    expect(within(dlg).getByLabelText(/^Tên luật/).getAttribute('aria-invalid')).toBe('true');
+    fail[`POST ${PATH_RULES}`] = err(409, 'CONFLICT', 'Tối đa 50 luật đang bật');
+    await user.click(within(dlg).getByRole('button', { name: 'Lưu' }));
+    expect((await within(dlg).findByRole('alert')).textContent).toBe('Tối đa 50 luật đang bật');
+  });
+
+  it('chưa có phụ phí nào → câu "Chưa có phụ phí nào — thêm ở …" kèm liên kết sang Dịch vụ phụ & phụ phí', async () => {
+    const user = userEvent.setup();
+    setupServer(OWNER, (m, p) => {
+      if (m === 'GET' && p === PATH_OCC) return json(200, { items: OCCASIONS });
+      if (m === 'GET' && p === PATH_RULES) return json(200, { items: [] });
+      if (m === 'GET' && p === '/orgs/org-1/services') return json(200, { items: [], page: 1, pageSize: 100, total: 0 });
+      return undefined;
+    });
+    const dlg = await openNew(user);
+    expect(within(dlg).getByText(/Chưa có phụ phí nào — thêm ở/)).toBeTruthy();
+    expect(within(dlg).getByRole('link', { name: 'Dịch vụ phụ & phụ phí' }).getAttribute('href')).toBe('/chien/bang-gia/dich-vu');
+  });
+
+  it('sửa: hộp điền sẵn; đổi tên → PATCH chỉ { name }; bỏ tick giờ → startTime/endTime null; không đổi gì → đóng, không gọi', async () => {
+    const user = userEvent.setup();
+    const calls = dServer(OWNER);
+    renderAt('/chien/bang-gia/luat-phu-phi');
+    await user.click(await screen.findByRole('button', { name: 'Ca sớm trước 6 giờ' }));
+    let dlg = await screen.findByRole('dialog', { name: 'Sửa luật phụ phí' });
+    expect((within(dlg).getByLabelText(/^Tên luật/) as HTMLInputElement).value).toBe('Ca sớm trước 6 giờ');
+    expect((within(dlg).getByLabelText(/^Phụ phí thu/) as HTMLSelectElement).value).toBe('pple');
+    expect((within(dlg).getByLabelText('Giờ bắt đầu của khung, đến') as HTMLInputElement).value).toBe('06:00');
+    expect(within(dlg).getByRole('button', { name: 'Lễ cưới' }).getAttribute('aria-pressed')).toBe('true');
+    expect(within(dlg).getByRole('button', { name: 'Cô dâu – Ngày cưới' }).getAttribute('aria-pressed')).toBe('true');
+    await user.click(within(dlg).getByRole('button', { name: 'Lưu' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(writes(calls)).toEqual([]);
+
+    await user.click(screen.getByRole('button', { name: 'Ca sớm trước 6 giờ' }));
+    dlg = await screen.findByRole('dialog');
+    await user.type(within(dlg).getByLabelText(/^Tên luật/), ' (mới)');
+    await user.click(within(dlg).getByRole('checkbox', { name: 'Theo giờ bắt đầu' }));
+    await user.click(within(dlg).getByRole('button', { name: 'Lưu' }));
+    await waitFor(() => expect(bodyOf(calls, 'PATCH', `${PATH_RULES}/r1`)).toEqual({ name: 'Ca sớm trước 6 giờ (mới)', startTime: null, endTime: null }));
+  });
+
+  it('luật cũ có endTime 24:00 → hộp hiện 00:00; lưu không đổi gì thì không gọi máy chủ', async () => {
+    const user = userEvent.setup();
+    const calls = dServer(OWNER, { rules: [rule({ startTime: '22:00', endTime: '24:00' })] });
+    renderAt('/chien/bang-gia/luat-phu-phi');
+    await screen.findByText(/Giờ bắt đầu 22:00–24:00/);
+    await user.click(screen.getByRole('button', { name: 'Ca sớm trước 6 giờ' }));
+    const dlg = await screen.findByRole('dialog');
+    expect((within(dlg).getByLabelText('Giờ bắt đầu của khung, đến') as HTMLInputElement).value).toBe('00:00');
+    await user.click(within(dlg).getByRole('button', { name: 'Lưu' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(writes(calls)).toEqual([]);
+  });
+
+  it('thêm ngày: gõ dd/mm/yyyy rồi "Thêm ngày" → chip ngày; bỏ bằng ×; ngày trùng không thêm hai lần', async () => {
+    const user = userEvent.setup();
+    dServer(OWNER);
+    const dlg = await openNew(user);
+    await user.click(within(dlg).getByRole('checkbox', { name: 'Theo ngày' }));
+    const input = within(dlg).getByLabelText('Ngày cụ thể');
+    await user.type(input, '30/04/2027');
+    await user.click(within(dlg).getByRole('button', { name: 'Thêm ngày' }));
+    await user.type(within(dlg).getByLabelText('Ngày cụ thể'), '30/04/2027');
+    await user.click(within(dlg).getByRole('button', { name: 'Thêm ngày' }));
+    const list = within(dlg).getByRole('list', { name: 'Ngày cụ thể đã thêm' });
+    expect(within(list).getAllByRole('listitem').map((x) => x.textContent)).toEqual(['30/04/2027×']);
+    await user.click(within(list).getByRole('button', { name: 'Bỏ ngày 30/04/2027' }));
+    expect(within(dlg).queryByRole('list', { name: 'Ngày cụ thể đã thêm' })).toBeNull();
+  });
+
+  it('giải thích nằm trong tooltip "?", không viết ra màn: nhóm "Khi nào áp", giờ, ngày', async () => {
+    const user = userEvent.setup();
+    dServer(OWNER);
+    const dlg = await openNew(user);
+    // Chữ giải thích chỉ nằm trong phần mô tả ẩn của nút "?" (hiện khi rê / chạm), không phải dòng hiện trên hộp.
+    expect(within(dlg).getByText(/Điền điều kiện nào thì điều kiện đó phải đúng/).hasAttribute('hidden')).toBe(true);
+    const tips = within(dlg).getAllByRole('button', { name: 'Giải thích' });
+    expect(tips.length).toBeGreaterThanOrEqual(5);
+    expect(within(dlg).getByText(/"Đến" không tính/).hasAttribute('hidden')).toBe(true);
+    expect(within(dlg).getByText(/Đúng thứ đã chọn HOẶC đúng một ngày/).hasAttribute('hidden')).toBe(true);
+  });
+});

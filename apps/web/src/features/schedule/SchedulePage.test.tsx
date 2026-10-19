@@ -765,3 +765,198 @@ describe('K8: ca đã huỷ / nháp / khách không đến hiện mờ nhưng kh
     expect([...b.querySelectorAll('.ws-scale span')].map((x) => x.textContent)).toEqual(['4h', '8h', '12h', '16h', '18h']);
   });
 });
+
+// ---------------- Công tắc "Tô màu" (bản vẽ D 3.5, gói W4) ----------------
+// Mọi ca ở Thứ Tư 21/10 để cả lưới tuần, danh sách ngày, cột thợ và điện thoại cùng thấy. Màu loại sự kiện cố ý KHÁC màu nhân vật
+// của cùng ca (Cô dâu = rose nhưng Ăn hỏi = amber…) để hai cách tô không thể trùng nhau ngẫu nhiên.
+describe('công tắc "Tô màu"', () => {
+  const AN_HOI = { id: 'o-an-hoi', name: 'Ăn hỏi', color: 'amber' as const };
+  const TIEC = { id: 'o-tiec', name: 'Tiệc', color: 'violet' as const };
+  const PRE = { id: 'o-pre', name: 'Pre-wedding', color: 'green' as const };
+  const E1 = a('e1', 'L-0501', '2026-10-21T08:00:00+07:00', '2026-10-21T09:30:00+07:00', ['m-ha'], { title: 'Makeup cô dâu', subjectName: 'Cô dâu', occasion: AN_HOI, contractLineId: 'ln-1' });
+  const E2 = a('e2', 'L-0502', '2026-10-21T06:00:00+07:00', '2026-10-21T07:00:00+07:00', ['m-anh'], { title: 'Makeup phù dâu', subjectName: 'Phù dâu', quantity: 2, occasion: TIEC, contractLineId: 'ln-2' });
+  const E3 = a('e3', 'L-0503', '2026-10-21T10:00:00+07:00', '2026-10-21T11:00:00+07:00', ['m-vy'], { title: 'Makeup chú rể', subjectName: 'Chú rể' });
+  const E4 = a('e4', 'L-0504', '2026-10-21T14:00:00+07:00', '2026-10-21T15:00:00+07:00', [], { title: 'Makeup ngoại cảnh', occasion: PRE, contractLineId: 'ln-3' });
+  const ITEMS = [E1, E2, E3, E4];
+  // Cùng 4 ca nhưng chưa ca nào có sự kiện — dữ liệu "như hôm nay" trước khi có loại sự kiện.
+  const NO_OCC = ITEMS.map((x) => ({ ...x, occasion: null }));
+
+  const phone = (q: string) => ({ matches: q === '(max-width: 640px)', media: q, addEventListener: () => undefined, removeEventListener: () => undefined });
+  const sw = (el: Element | null) => [...(el?.classList ?? [])].filter((c) => c.startsWith('ws-sw-')).join(' ');
+  const appt = (id: string) => document.querySelector(`[data-appt="${id}"]`);
+  const colorSwitch = () => screen.getByRole('radiogroup', { name: 'Tô màu' });
+  const pick = (name: string) => fireEvent.click(within(colorSwitch()).getByRole('radio', { name }));
+  // HTML phần thân + chú thích, bỏ id sinh tự động (useId) để so hai lần dựng.
+  const bodyHtml = () => [...document.querySelectorAll('.ws-body, .ws-legend')].map((el) => el.outerHTML).join('\n').replace(/\s(id|aria-describedby|aria-labelledby|for)="[^"]*"/g, '');
+  const legendTexts = () => [...document.querySelectorAll('.ws-legend__i')].map((el) => el.textContent);
+
+  it('BẮT: công tắc có hai nút "Sự kiện" / "Nhân vật" trước nhóm chế độ, mặc định "Nhân vật"; đổi được; không nhớ (mở lại là "Nhân vật", localStorage trống)', async () => {
+    setupServer({ items: ITEMS });
+    const setItem = vi.spyOn(Storage.prototype, 'setItem');
+    const first = renderScreen(OWNER);
+    await screen.findByTestId('che-do-C');
+    const radios = within(colorSwitch()).getAllByRole('radio');
+    expect(radios.map((r) => r.textContent)).toEqual(['Sự kiện', 'Nhân vật']);
+    expect(within(colorSwitch()).getByRole('radio', { name: 'Nhân vật' }).getAttribute('aria-checked')).toBe('true');
+    expect(within(colorSwitch()).getByRole('radio', { name: 'Sự kiện' }).getAttribute('aria-checked')).toBe('false');
+    // Thứ tự trên thanh công cụ: công tắc đứng trước nhóm chế độ.
+    const tools = document.querySelector('.ws-tools') as HTMLElement;
+    expect(tools.querySelector('.ws-colorby')?.compareDocumentPosition(tools.querySelector('.ws-modes') as Element)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(document.querySelector('.ws-colorby__lbl')?.textContent).toBe('Tô màu');
+    pick('Sự kiện');
+    expect(within(colorSwitch()).getByRole('radio', { name: 'Sự kiện' }).getAttribute('aria-checked')).toBe('true');
+    expect(document.querySelector('.ws')?.getAttribute('data-color-by')).toBe('occasion');
+    first.unmount();
+    renderScreen(OWNER);
+    await screen.findByTestId('che-do-C');
+    expect(within(colorSwitch()).getByRole('radio', { name: 'Nhân vật' }).getAttribute('aria-checked')).toBe('true');
+    expect(window.localStorage.length).toBe(0);
+    expect(setItem).not.toHaveBeenCalled();
+    setItem.mockRestore();
+  });
+
+  it('BẮT (không đổi màu mặc định): công tắc ở "Nhân vật" — màu ca đúng swatchOf cũ, chữ ô ca và chú thích như hôm nay, dù ca có sự kiện', async () => {
+    setupServer({ items: ITEMS });
+    renderScreen(OWNER);
+    await screen.findByTestId('che-do-C');
+    expect(sw(appt('e1'))).toBe('ws-sw-rose'); // Cô dâu
+    expect(sw(appt('e2'))).toBe('ws-sw-amber'); // Phù dâu
+    expect(sw(appt('e3'))).toBe('ws-sw-blue'); // Chú rể
+    expect(sw(appt('e4'))).toBe('ws-sw-other'); // không nhân vật
+    expect([...document.querySelectorAll('.ws-chip__kind')].map((el) => el.textContent).sort()).toEqual(['Chú rể', 'Cô dâu', 'Ngoại cảnh', 'Phù dâu']);
+    expect(legendTexts()).toEqual(['Chú rể', 'Cô dâu', 'Phù dâu', 'Khác', 'Chưa có thợ', 'Không chặn lịch']);
+    expect(document.querySelector('.ws-legend')?.getAttribute('data-color-by')).toBe('subject');
+  });
+
+  it('BẮT (không đổi màu mặc định): công tắc ở "Nhân vật" — HTML thân lịch giống HệT khi ca có sự kiện và khi không có; đổi sang "Sự kiện" rồi về lại cũng giống hệt', async () => {
+    setupServer({ items: ITEMS });
+    const withOcc = renderScreen(OWNER);
+    await screen.findByTestId('che-do-C');
+    const before = bodyHtml();
+    pick('Sự kiện');
+    expect(bodyHtml()).not.toBe(before);
+    pick('Nhân vật');
+    expect(bodyHtml()).toBe(before);
+    withOcc.unmount();
+
+    setupServer({ items: NO_OCC });
+    renderScreen(OWNER);
+    await screen.findByTestId('che-do-C');
+    expect(bodyHtml()).toBe(before);
+  });
+
+  it('BẮT: lưới C tô theo "Sự kiện" — màu loại, ca không sự kiện "other" (trắng viền, không phải màu đầu danh sách), chữ "Ăn hỏi · Cô dâu", thẻ "× 2" giữ nguyên', async () => {
+    setupServer({ items: ITEMS });
+    renderScreen(OWNER);
+    await screen.findByTestId('che-do-C');
+    pick('Sự kiện');
+    expect(sw(appt('e1'))).toBe('ws-sw-amber');
+    expect(sw(appt('e2'))).toBe('ws-sw-violet');
+    expect(sw(appt('e3'))).toBe('ws-sw-other');
+    expect(sw(appt('e3'))).not.toBe('ws-sw-rose'); // rose = màu đầu của danh sách 12 màu
+    expect(sw(appt('e4'))).toBe('ws-sw-green');
+    const kind = (id: string) => appt(id)?.querySelector('.ws-chip__kind')?.textContent;
+    expect(kind('e1')).toBe('Ăn hỏi · Cô dâu');
+    expect(kind('e2')).toBe('Tiệc · Phù dâu');
+    expect(appt('e2')?.querySelector('.ws-chip__qty')?.textContent).toBe('× 2');
+    expect(kind('e3')).toBe('Chú rể'); // chưa có sự kiện: chữ như cũ
+    expect(kind('e4')).toBe('Pre-wedding · Makeup ngoại cảnh'); // không có nhân vật → tên ca
+    // Ca chưa có thợ vẫn có lớp "is-na" (viền đứt) song song với màu sự kiện.
+    expect(appt('e4')?.classList.contains('is-na')).toBe(true);
+  });
+
+  it('BẮT: chú thích đổi theo công tắc — Sự kiện: loại đang có ca + "Chưa chọn sự kiện" + "Chưa có thợ" + "Không chặn lịch"; Nhân vật: như hôm nay', async () => {
+    setupServer({ items: ITEMS });
+    renderScreen(OWNER);
+    await screen.findByTestId('che-do-C');
+    const subjectLegend = legendTexts();
+    pick('Sự kiện');
+    expect(legendTexts()).toEqual(['Ăn hỏi', 'Pre-wedding', 'Tiệc', 'Chưa chọn sự kiện', 'Chưa có thợ', 'Không chặn lịch']);
+    expect(document.querySelector('.ws-legend')?.getAttribute('data-color-by')).toBe('occasion');
+    const dot = (label: string) => [...document.querySelectorAll('.ws-legend__i')].find((el) => el.textContent === label) ?? null;
+    expect(sw(dot('Ăn hỏi'))).toBe('ws-sw-amber');
+    expect(sw(dot('Pre-wedding'))).toBe('ws-sw-green');
+    expect(sw(dot('Chưa chọn sự kiện'))).toBe('ws-sw-other');
+    pick('Nhân vật');
+    expect(legendTexts()).toEqual(subjectLegend);
+  });
+
+  it('BẮT: chế độ Ngày (B) — ô ca và thanh "Thợ trong ngày" theo công tắc; chữ "Ăn hỏi · Cô dâu"', async () => {
+    setupServer({ items: ITEMS });
+    renderScreen(OWNER);
+    await screen.findByTestId('che-do-C');
+    fireEvent.click(modeButton('Ngày'));
+    const b = await screen.findByTestId('che-do-B');
+    const item = (text: string) => [...b.querySelectorAll('.ws-item')].find((el) => el.textContent?.includes(text)) ?? null;
+    expect(sw(item('Khách L-0501'))).toBe('ws-sw-rose');
+    const bars = () => [...b.querySelectorAll('.ws-track i')].map(sw).sort();
+    expect(bars()).toEqual(['ws-sw-amber', 'ws-sw-blue', 'ws-sw-rose'].sort());
+    pick('Sự kiện');
+    expect(sw(item('Khách L-0501'))).toBe('ws-sw-amber');
+    expect(sw(item('Khách L-0502'))).toBe('ws-sw-violet');
+    expect(sw(item('Khách L-0503'))).toBe('ws-sw-other');
+    expect(item('Khách L-0501')?.querySelector('.ws-item__sv')?.textContent).toContain('Ăn hỏi · Cô dâu');
+    expect(item('Khách L-0502')?.querySelector('.ws-item__sv')?.textContent).toContain('Tiệc · Phù dâu × 2');
+    expect(item('Khách L-0503')?.querySelector('.ws-item__sv')?.textContent).toContain('Makeup chú rể');
+    expect(bars()).toEqual(['ws-sw-amber', 'ws-sw-other', 'ws-sw-violet']);
+  });
+
+  it('BẮT: chế độ Cột thợ (A) — ô ca theo công tắc, chữ đổi', async () => {
+    setupServer({ items: ITEMS });
+    renderScreen(OWNER);
+    await screen.findByTestId('che-do-C');
+    fireEvent.click(modeButton('Cột thợ'));
+    await screen.findByTestId('che-do-A');
+    expect(sw(appt('e1'))).toBe('ws-sw-rose');
+    expect(appt('e1')?.querySelector('.ws-ev__kind')?.textContent).toBe('Makeup cô dâu');
+    pick('Sự kiện');
+    expect(sw(appt('e1'))).toBe('ws-sw-amber');
+    expect(sw(appt('e3'))).toBe('ws-sw-other');
+    expect(appt('e1')?.querySelector('.ws-ev__kind')?.textContent).toBe('Ăn hỏi · Cô dâu');
+    expect(appt('e3')?.querySelector('.ws-ev__kind')?.textContent).toBe('Makeup chú rể');
+  });
+
+  it('BẮT: điện thoại — nút biểu tượng mở ngăn kéo hai lựa chọn; chọn "Sự kiện" đổi ô giờ, danh sách ngày và hiện chú thích; công tắc ở "Nhân vật" không có chú thích như cũ', async () => {
+    vi.stubGlobal('matchMedia', phone);
+    setupServer({ items: ITEMS });
+    renderScreen(OWNER);
+    await waitFor(() => expect(document.querySelectorAll('.ws-ag').length).toBeGreaterThan(0));
+    expect(screen.queryByRole('radiogroup', { name: 'Tô màu' })).toBeNull(); // không có nhóm nút trên điện thoại
+    expect(document.querySelector('.ws-legend')).toBeNull(); // như hôm nay: điện thoại không có chú thích khi tô theo nhân vật
+    const pt = (lane: string) => document.querySelector(`[data-cell="${lane}|2026-10-21"] .ws-pt`);
+    expect(sw(pt('m-ha'))).toBe('ws-sw-rose');
+    const btn = screen.getByTestId('to-mau-nut');
+    expect(btn.getAttribute('aria-label')).toContain('nhân vật');
+    fireEvent.click(btn);
+    const sheet = screen.getByRole('radiogroup', { name: 'Tô màu ca theo' });
+    expect(within(sheet).getAllByRole('radio').map((r) => r.querySelector('b')?.textContent)).toEqual(['Sự kiện', 'Nhân vật']);
+    expect(within(sheet).getByRole('radio', { name: /Nhân vật/ }).getAttribute('aria-checked')).toBe('true');
+    fireEvent.click(within(sheet).getByRole('radio', { name: /Sự kiện/ }));
+    expect(screen.queryByRole('radiogroup', { name: 'Tô màu ca theo' })).toBeNull(); // chọn xong ngăn kéo đóng
+    expect(sw(pt('m-ha'))).toBe('ws-sw-amber');
+    expect(sw(pt('m-vy'))).toBe('ws-sw-other');
+    expect(sw(pt('chua-co-tho'))).toBe('ws-sw-green');
+    const ag = [...document.querySelectorAll('.ws-ag')];
+    const row = (code: string) => ag.find((el) => el.textContent?.includes(code) || el.querySelector('.ws-ag__kh')?.textContent === `Khách ${code}`);
+    expect(sw(row('L-0501') ?? null)).toBe('ws-sw-amber');
+    expect(row('L-0501')?.querySelector('.ws-ag__kind')?.textContent).toContain('Ăn hỏi · Cô dâu');
+    expect(legendTexts()).toContain('Chưa chọn sự kiện'); // ô giờ không có chữ → cần chú thích
+    expect(screen.getByTestId('to-mau-nut').getAttribute('aria-label')).toContain('sự kiện');
+  });
+
+  it('BẮT: hộp chi tiết ca có dòng "Sự kiện: tên" kèm chấm màu; ca chưa có sự kiện không có dòng này', async () => {
+    setupServer({ items: ITEMS });
+    renderScreen(OWNER);
+    await screen.findByTestId('che-do-C');
+    fireEvent.click(appt('e1') as Element);
+    let dlg = await screen.findByRole('dialog');
+    const row = [...dlg.querySelectorAll('.ws-info__row')].find((r) => r.querySelector('dt')?.textContent === 'Sự kiện') as HTMLElement;
+    expect(row.querySelector('dd')?.textContent).toBe('Ăn hỏi');
+    expect(sw(row.querySelector('.ws-info__dot'))).toBe('ws-sw-amber');
+    fireEvent.click(within(dlg).getAllByRole('button', { name: 'Đóng' })[0] as Element);
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    fireEvent.click(appt('e3') as Element);
+    dlg = await screen.findByRole('dialog');
+    expect([...dlg.querySelectorAll('.ws-info__row dt')].map((x) => x.textContent)).not.toContain('Sự kiện');
+  });
+});
