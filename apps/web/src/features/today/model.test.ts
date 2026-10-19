@@ -55,7 +55,7 @@ describe('ca kế tiếp, gom theo thợ / theo ngày', () => {
   });
   it('gom ca theo thợ: ca nhiều thợ có mặt ở mỗi thợ; ca chưa có thợ ở nhóm "Chưa có thợ" CUỐI', () => {
     const v = fullView();
-    const groups = groupByStaff(v.appointments.tomorrow);
+    const groups = groupByStaff(v.appointments?.tomorrow ?? []);
     expect(groups.map((g) => [g.name, g.appointments.map((a) => hhmm(a.startsAt, TZ))])).toEqual([
       ['Linh Trần', ['05:00', '13:00']],
       ['Mai', ['13:00']],

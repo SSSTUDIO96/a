@@ -1,5 +1,6 @@
 import { Link } from 'react-router';
 import type { TodayView } from '../../api/types';
+import type { StaffNaming } from '../../ui/staffName';
 import { StatGrid, StatTile } from '../../ui';
 import { money } from '../payments/money';
 import { hhmm, leadStaffName, nextAppointment } from './model';
@@ -7,10 +8,10 @@ import { hhmm, leadStaffName, nextAppointment } from './model';
 // 4 ô số đầu trang (chỉ giao diện ALL). Số lấy nguyên từ `counts` máy chủ trả — web không cộng.
 // Bấm ô → cuộn tới thẻ tương ứng (con trỏ chuột; bàn phím đi thẳng tới thẻ bằng Tab — ô có dấu "?" nên không bọc nút). Ô "Ca hôm nay" mở Lịch hôm nay.
 // Ô tiền chỉ vẽ khi máy chủ trả counts.overdue / counts.dueSoon (không có quyền xem tiền → null → ô ẩn, không "0 ₫").
-export function TodayTiles({ view, orgSlug, onJump }: { view: TodayView; orgSlug: string; onJump: (cardId: string) => void }) {
+export function TodayTiles({ view, orgSlug, naming, onJump }: { view: TodayView; orgSlug: string; naming: StaffNaming; onJump: (cardId: string) => void }) {
   const { counts } = view;
   const next = nextAppointment(view);
-  const nextNote = next ? `${hhmm(next.startsAt, view.timezone)} ${leadStaffName(next) ?? 'chưa có thợ'}` : counts.appointmentsToday === 0 ? 'Không có ca' : 'Đã qua giờ bắt đầu hết các ca';
+  const nextNote = next ? `${hhmm(next.startsAt, view.timezone)} ${leadStaffName(next, naming) ?? 'chưa có thợ'}` : counts.appointmentsToday === 0 ? 'Không có ca' : 'Đã qua giờ bắt đầu hết các ca';
   // Không có quyền xem lịch: máy chủ trả số ca = null → không vẽ hai ô ca (không hiện 0).
   const { appointmentsToday, appointmentsTomorrow } = counts;
   const unassigned = counts.unassignedSoon;

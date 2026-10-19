@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { Avatar, ListRow, type ListRowProps } from '../../ui';
+import type { StaffNaming } from '../../ui/staffName';
 
 /** Liên kết trông như nút (ui-btn) — nút trong dòng danh sách là đường dẫn thật, bấm giữa mở tab mới được. */
 export function LinkButton({ to, children, primary = false, label }: { to: string; children: ReactNode; primary?: boolean; label?: string }) {
@@ -29,9 +30,9 @@ export function RoundIcon({ children, tone = 'default' }: { children?: ReactNode
   );
 }
 
-export function StaffAvatar({ membershipId, name }: { membershipId: string | null; name: string }) {
+export function StaffAvatar({ membershipId, name, naming }: { membershipId: string | null; name: string; naming: StaffNaming }) {
   if (membershipId === null) return <RoundIcon tone="unknown">?</RoundIcon>;
-  return <Avatar name={name} colorKey={membershipId} />;
+  return <Avatar name={name} colorKey={naming.colorKey(membershipId)} />;
 }
 
 /** Dòng mờ cuối thẻ khi máy chủ cắt bớt danh sách. */

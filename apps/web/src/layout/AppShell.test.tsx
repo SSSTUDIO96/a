@@ -3,7 +3,7 @@ import { createMemoryRouter, matchRoutes, RouterProvider } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SYSTEM_ROLES, type Permission } from '@makeup/shared';
 import { routes } from '../app/routes';
-import { activeBottomKey, activeNavChild, activeNavItem, bottomNav, homeNavItem, NAV_ITEMS, navEntryAllowed, PENDING_BANG_GIA_CHILDREN, visibleNav, type VisibleNavItem } from './nav';
+import { activeBottomKey, activeNavChild, activeNavItem, bottomNav, homeNavItem, NAV_ITEMS, navEntryAllowed, visibleNav, type VisibleNavItem } from './nav';
 
 // Chạy cả bộ thử song song thì máy bận: hạn chờ 1 giây mặc định không đủ cho chuỗi phiên → quyền → chuyển đường.
 configure({ asyncUtilTimeout: 5000 });
@@ -356,6 +356,8 @@ describe('nav.ts', () => {
           ['bang-gia/dich-vu', 'catalog.read'],
           ['bang-gia/di-chuyen', 'catalog.read'],
           ['bang-gia/nhan-vat', 'catalog.read'],
+          ['bang-gia/su-kien', 'catalog.read'],
+          ['bang-gia/luat-phu-phi', 'catalog.read'],
         ],
       ],
       ['khach-hang', 'customers.read', []],
@@ -478,14 +480,14 @@ describe('mục Hôm nay', () => {
     expect(homeNavItem(() => false, 'TEAM', { includePending: true })).toBeUndefined();
   });
 
-  it('hai mục con Bảng giá của bản vẽ D chờ W2 (chưa vào NAV_ITEMS vì logic.ts của W2 ném lỗi với nhóm lạ); cùng quyền catalog.read', () => {
-    expect(PENDING_BANG_GIA_CHILDREN.map((c) => [c.key, c.path, c.label, c.permission])).toEqual([
+  it('hai mục con Bảng giá của bản vẽ D (Loại sự kiện, Luật phụ phí) nằm trong NAV_ITEMS, cạnh Nhân vật, cùng quyền catalog.read', () => {
+    const bangGia = NAV_ITEMS.find((i) => i.key === 'bang-gia');
+    expect((bangGia?.children ?? []).slice(-2).map((c) => [c.key, c.path, c.label, c.permission])).toEqual([
       ['bang-gia-su-kien', 'bang-gia/su-kien', 'Loại sự kiện', undefined],
       ['bang-gia-luat-phu-phi', 'bang-gia/luat-phu-phi', 'Luật phụ phí', undefined],
     ]);
     const has = (p: Permission) => p === 'catalog.read';
-    expect(visibleNav(has, 'TEAM').find((i) => i.key === 'bang-gia')?.children.map((c) => c.path)).toEqual(['bang-gia/goi', 'bang-gia/dich-vu', 'bang-gia/di-chuyen', 'bang-gia/nhan-vat']);
-    expect(visibleNav(has, 'TEAM', { includePending: true }).find((i) => i.key === 'bang-gia')?.children.map((c) => c.path)).toEqual([
+    expect(visibleNav(has, 'TEAM').find((i) => i.key === 'bang-gia')?.children.map((c) => c.path)).toEqual([
       'bang-gia/goi',
       'bang-gia/dich-vu',
       'bang-gia/di-chuyen',
@@ -493,6 +495,8 @@ describe('mục Hôm nay', () => {
       'bang-gia/su-kien',
       'bang-gia/luat-phu-phi',
     ]);
+    // Không có catalog.read thì không thấy mục Bảng giá, kể cả hai mục con mới.
+    expect(visibleNav(() => false, 'TEAM').find((i) => i.key === 'bang-gia')).toBeUndefined();
   });
 
   it('khung thật, máy tính: Hôm nay là mục ĐẦU thanh bên (trỏ /hom-nay); thanh dưới điện thoại không đổi; "Thêm" bắt đầu bằng Hôm nay', async () => {

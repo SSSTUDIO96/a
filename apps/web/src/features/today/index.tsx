@@ -10,12 +10,14 @@ import { usePermissions } from '../../layout/usePermissions';
 import { Button, Card, EmptyState, ListRowSkeleton, StatGrid, StatTile } from '../../ui';
 import { IconRefresh } from './icons';
 import { DueSoonCard } from './DueSoonCard';
-import { hhmm, pageTitle, type TodayAccess } from './model';
+import { staffNaming } from '../../ui/staffName';
+import { hhmm, pageTitle, todayRoster, type TodayAccess } from './model';
 import { MyDayCards } from './MyDayCards';
 import { NeedsActionCard } from './NeedsActionCard';
 import { NewCard } from './NewCard';
 import { TodayTiles } from './TodayTiles';
 import { TomorrowCard } from './TomorrowCard';
+import { useStaffRoster } from './useStaffRoster';
 import { useToday } from './useToday';
 import './today.css';
 
@@ -24,7 +26,7 @@ export function TodayPage() {
   const { organizations } = useSession();
   const has = usePermissions();
   const org = organizations.find((o) => o.slug === orgSlug);
-  const access = useMemo<TodayAccess>(() => ({ paymentsWrite: has('payments.write'), scheduleWrite: has('schedule.write') }), [has]);
+  const access = useMemo<TodayAccess>(() => ({ paymentsWrite: has('payments.write'), scheduleWrite: has('schedule.write'), staffRead: has('staff.read') }), [has]);
   if (!org) return null;
   return <TodayScreen orgId={org.id} orgSlug={org.slug} access={access} />;
 }
@@ -32,6 +34,9 @@ export function TodayPage() {
 export function TodayScreen({ orgId, orgSlug, access }: { orgId: string; orgSlug: string; access: TodayAccess }) {
   const { state, refreshing, refreshError, reload, retry } = useToday(orgId);
   const view = state.status === 'ready' ? state.view : null;
+  // Sổ thợ chung (tên ngắn xử lý trùng + màu ảnh) — cùng hàm với Lịch và Hợp đồng.
+  const roster = useStaffRoster(orgId, access.staffRead);
+  const naming = useMemo(() => staffNaming([...roster, ...(view ? todayRoster(view) : [])]), [roster, view]);
   const title = view ? pageTitle(view.today) : 'Hôm nay';
 
   const jump = useCallback((id: string) => {
@@ -71,14 +76,14 @@ export function TodayScreen({ orgId, orgSlug, access }: { orgId: string; orgSlug
     const v = state.view;
     body = (
       <>
-        <TodayTiles view={v} orgSlug={orgSlug} onJump={jump} />
+        <TodayTiles view={v} orgSlug={orgSlug} naming={naming} onJump={jump} />
         <div className="td-grid">
           <div className="td-col">
             <NeedsActionCard view={v} orgSlug={orgSlug} access={access} />
             <DueSoonCard view={v} orgSlug={orgSlug} />
           </div>
           <div className="td-col">
-            <TomorrowCard view={v} orgSlug={orgSlug} />
+            <TomorrowCard view={v} orgSlug={orgSlug} naming={naming} />
             <NewCard view={v} orgSlug={orgSlug} />
           </div>
         </div>

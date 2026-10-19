@@ -9,8 +9,8 @@ import type { TodayAccess } from './model';
 // Màn Hôm nay chạy thật (src/api/today.ts, router) với máy chủ giả lập qua fetch. Số trên màn phải là số máy chủ trả.
 
 const ORG = 'org-1';
-const ALL: TodayAccess = { paymentsWrite: true, scheduleWrite: true };
-const READ_ONLY: TodayAccess = { paymentsWrite: false, scheduleWrite: false };
+const ALL: TodayAccess = { paymentsWrite: true, scheduleWrite: true, staffRead: false };
+const READ_ONLY: TodayAccess = { paymentsWrite: false, scheduleWrite: false, staffRead: false };
 
 function json(status: number, body: unknown) {
   return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });

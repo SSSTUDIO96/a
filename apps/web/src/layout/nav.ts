@@ -77,6 +77,9 @@ export const NAV_ITEMS: readonly NavItem[] = [
       { key: 'bang-gia-dich-vu', path: 'bang-gia/dich-vu', label: 'Dịch vụ phụ & phụ phí' },
       { key: 'bang-gia-di-chuyen', path: 'bang-gia/di-chuyen', label: 'Phí di chuyển & studio' },
       { key: 'bang-gia-nhan-vat', path: 'bang-gia/nhan-vat', label: 'Nhân vật' },
+      // Bản vẽ D mục 3.0: đặt cạnh "Nhân vật" và "Dịch vụ phụ & phụ phí" (cùng loại dữ liệu, cùng quyền catalog.*).
+      { key: 'bang-gia-su-kien', path: 'bang-gia/su-kien', label: 'Loại sự kiện' },
+      { key: 'bang-gia-luat-phu-phi', path: 'bang-gia/luat-phu-phi', label: 'Luật phụ phí' },
     ],
   },
   { key: 'khach-hang', path: 'khach-hang', label: 'Khách hàng', shortLabel: 'Khách', icon: 'khach', permission: 'customers.read' },
@@ -116,15 +119,6 @@ export const NAV_ITEMS: readonly NavItem[] = [
   },
 ];
 
-// Hai mục con Bảng giá của bản vẽ D mục 3.0 (đặt cạnh "Nhân vật" và "Dịch vụ phụ & phụ phí": cùng loại dữ liệu, cùng quyền
-// catalog.*). CHƯA nằm trong NAV_ITEMS: features/pricing/logic.ts (gói W2) dựng PRICING_GROUPS từ children của 'bang-gia' và
-// NÉM LỖI khi gặp nhóm lạ — thêm vào đây trước khi W2 sửa logic.ts + index.tsx là làm sập cả ứng dụng. W2 xong thì chuyển
-// hai dòng này vào children của 'bang-gia' (và xoá hằng này).
-export const PENDING_BANG_GIA_CHILDREN: readonly NavChild[] = [
-  { key: 'bang-gia-su-kien', path: 'bang-gia/su-kien', label: 'Loại sự kiện' },
-  { key: 'bang-gia-luat-phu-phi', path: 'bang-gia/luat-phu-phi', label: 'Luật phụ phí' },
-];
-
 // Thanh dưới điện thoại theo loại tổ chức (C3 mục 1.0; nhật ký quyết định 19:42). Mỗi ô trỏ tới khoá của một mục
 // hoặc một mục con; ô trỏ tới mục chưa có trong NAV_ITEMS (chưa có màn) hoặc người xem không được thấy thì không hiện.
 // Ô cuối luôn là "Thêm" (mục còn lại, đổi tổ chức, đăng xuất).
@@ -152,13 +146,6 @@ export const BOTTOM_NAV: Record<'ACADEMY' | 'DEFAULT', readonly BottomSlot[]> = 
 
 type Has = (p: Permission) => boolean;
 
-// Bảng điều hướng sau khi đã (hoặc chưa) tính các mục chờ màn. includePending chỉ dành cho bài thử / kiểm tra "sau khi
-// các gói web xong": thêm mục `pending` và hai mục con Bảng giá chờ.
-function navSource(includePending: boolean): readonly NavItem[] {
-  if (!includePending) return NAV_ITEMS.filter((i) => i.pending !== true);
-  return NAV_ITEMS.map((i) => (i.key === 'bang-gia' ? { ...i, children: [...(i.children ?? []), ...PENDING_BANG_GIA_CHILDREN] } : i));
-}
-
 // Mục đã lọc theo quyền: chỉ còn mục con được thấy; href = đường mặc định (mục con đầu tiên được thấy nếu thiếu quyền mục).
 export interface VisibleNavItem extends NavItem {
   href: string;
@@ -176,7 +163,9 @@ function kindAllowed(item: NavItem, kind: OrgKind | undefined): boolean {
 
 export function visibleNav(has: Has, kind?: OrgKind, opts: { includePending?: boolean } = {}): VisibleNavItem[] {
   const out: VisibleNavItem[] = [];
-  for (const item of navSource(opts.includePending === true)) {
+  // Mục `pending` (chưa có màn) ẩn khỏi mọi thanh; includePending chỉ dành cho bài thử / chặn đường theo quyền.
+  const source = opts.includePending === true ? NAV_ITEMS : NAV_ITEMS.filter((i) => i.pending !== true);
+  for (const item of source) {
     if (!kindAllowed(item, kind)) continue;
     const children = (item.children ?? []).filter((c) => childAllowed(item, c, has));
     const own = item.permission !== undefined && has(item.permission);

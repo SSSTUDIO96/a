@@ -3,6 +3,7 @@
 // Tiền: web không cộng, không trừ; số nào cũng lấy nguyên từ máy chủ (counts.*, outstanding, total).
 import { localDateAndMinute, type OccasionColor } from '@makeup/shared';
 import type { TodayAppointment, TodayInstallment, TodayView } from '../../api/types';
+import type { StaffNaming, StaffRosterEntry } from '../../ui/staffName';
 
 // Chỉ số 1..7 = Thứ Hai … Chủ nhật (cùng quy ước localDateAndMinute ở @makeup/shared).
 const WEEKDAY_NAMES = ['Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy', 'Chủ nhật'] as const;
@@ -63,9 +64,9 @@ export function nextAppointment(view: TodayView): TodayAppointment | null {
 }
 
 /** Tên thợ đứng đầu của ca (thợ chính trước); ca chưa có thợ → null (không bịa tên). */
-export function leadStaffName(a: TodayAppointment): string | null {
+export function leadStaffName(a: TodayAppointment, naming: StaffNaming): string | null {
   const lead = a.staff.find((s) => s.role === 'PRIMARY') ?? a.staff[0];
-  return lead ? lead.displayName : null;
+  return lead ? naming.shortName({ membershipId: lead.membershipId, displayName: lead.displayName }) : null;
 }
 
 export interface StaffGroup {
@@ -187,4 +188,17 @@ export interface TodayAccess {
   paymentsWrite: boolean;
   /** schedule.write: có nút "Phân thợ"; không có thì bấm cả dòng để xem ca trên Lịch. */
   scheduleWrite: boolean;
+  /** staff.read: tải sổ thợ của tổ chức để tên ngắn / màu ảnh trùng với Lịch (không có thì chỉ biết thợ đang hiện trên màn). */
+  staffRead: boolean;
+}
+
+/** Thợ đang hiện trên màn (ca hôm nay / ngày mai / sau đó / chưa có thợ, người phụ trách đợt thu) — phần của sổ thợ chung. */
+export function todayRoster(view: TodayView): StaffRosterEntry[] {
+  const out: StaffRosterEntry[] = [];
+  const lists = [view.appointments?.today, view.appointments?.tomorrow, view.appointments?.later, view.unassigned];
+  for (const l of lists) for (const a of l ?? []) for (const s of a.staff) out.push({ membershipId: s.membershipId, displayName: s.displayName });
+  for (const i of [...(view.installments?.overdue ?? []), ...(view.installments?.dueSoon ?? [])]) {
+    if (i.owner) out.push({ membershipId: i.owner.membershipId, displayName: i.owner.displayName });
+  }
+  return out;
 }
