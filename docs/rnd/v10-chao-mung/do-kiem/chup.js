@@ -23,6 +23,7 @@ for(const m of mau)for(const bn of bienArg){const [ten,q]=BIEN[bn];const vuong=q
     // chữ tràn khỏi hộp của nó / khỏi thẻ
     document.querySelectorAll('#c [data-do]').forEach(el=>{if(el.scrollWidth>el.clientWidth+2&&!el.classList.contains('vang'))loi.push('tran-ngang:'+el.className+':'+el.textContent.trim().slice(0,20));});
     const cr=c.getBoundingClientRect();
+    if(w){const wb=w.getBoundingClientRect();[...w.children].forEach(e=>{const r=e.getBoundingClientRect();if(r.height&&getComputedStyle(e).position!=='absolute'&&r.bottom>wb.bottom+2)loi.push('tran-khung-noi-dung:'+e.className+' '+Math.round(r.bottom-wb.bottom)+'px');});}
     document.querySelectorAll('#c [data-do]').forEach(el=>{const r=el.getBoundingClientRect();if(r.width&&(r.left<cr.left+8||r.right>cr.right-8||r.top<cr.top+8||r.bottom>cr.bottom-8))loi.push('sat-mep:'+el.className);});
     return {do:window.CM_DO(),W:c.offsetWidth,H:c.offsetHeight,ds:{...document.body.dataset},loi,
       ten:(document.querySelector('.ten')||{}).style?.fontSize||getComputedStyle(document.querySelector('.ten')).fontSize,

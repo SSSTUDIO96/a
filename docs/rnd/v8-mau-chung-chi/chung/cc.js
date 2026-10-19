@@ -32,7 +32,9 @@
   chung.dong = 'Đã hoàn thành khoá ' + [chung.khoa, lopTxt].filter(Boolean).join(' · ');
   const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(chung.ngay || '');
   chung.ngayChu = m ? `Ngày ${+m[1]} tháng ${+m[2]} năm ${m[3]}` : '';
+  chung.khoaLop = [chung.khoa, lopTxt].filter(Boolean).join(' · ').toUpperCase();
   chung.nam = m ? m[3] : '';
+  chung.lopNam = [lopTxt.toUpperCase(), chung.nam].filter(Boolean).join(' · ');
   chung.ngaySo = chung.ngay;
 
   const NS = 'http://www.w3.org/2000/svg';
@@ -111,7 +113,7 @@
     el.innerHTML = `<svg viewBox="0 0 200 ${duoi ? 245 : 200}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
       <defs>${grad(id + 'g', KIM[kim])}${grad(id + 'h', KIM[kim], '1', '1', '0', '0')}
         <path id="${id}a" d="M100 100 m-54 0 a54 54 0 1 1 108 0"/></defs>
-      <circle cx="104" cy="105" r="93" fill="#000" opacity=".2"/>
+      <circle cx="102" cy="104" r="90" fill="#000" opacity=".13"/>
       ${tails}${vien}
       <circle cx="100" cy="100" r="78" fill="url(#${id}h)"/>
       <circle cx="100" cy="100" r="74" fill="${nen}"/>
@@ -128,12 +130,13 @@
   // ===== Chữ SVG: tiêu đề và tên — chữ phẳng hoặc vàng kim (bong/noi/dap/hong/dam) =====
   // Vẽ bằng <text> + linearGradient + lớp bóng/viền/khối. Không dùng background-clip:text (html-to-image và vài trình đọc PDF vẽ sai).
   const VANG = {
-    bong: { face: [[0, '#FFF3C0'], [.3, '#EBC65A'], [.48, '#A87B2A'], [.56, '#D4A640'], [.82, '#F6DE94'], [1, '#B88A35']], rim: '#6B4812', rimK: 0.014, sh: 0.4, depth: 0.012, ext: ['#9C7428', '#5A3C0C'] },
-    noi: { face: [[0, '#FFF3C0'], [.3, '#EBC65A'], [.48, '#B08430'], [.56, '#D9AB43'], [.82, '#F6DE94'], [1, '#C79A3C']], rim: '#6B4812', rimK: 0.012, sh: 0.5, depth: 0.065, ext: ['#B8892E', '#5A3A0A'] },
+    bong: { face: [[0, '#FFF3C0'], [.3, '#EBC65A'], [.48, '#BC9036'], [.56, '#D9AE48'], [.82, '#F6DE94'], [1, '#C29636']], rim: '#6B4812', rimK: 0.014, sh: 0.4, depth: 0.012, ext: ['#9C7428', '#5A3C0C'] },
+    noi: { face: [[0, '#FFF3C0'], [.3, '#EBC65A'], [.48, '#BE9338'], [.56, '#DDB04A'], [.82, '#F6DE94'], [1, '#C99D3E']], rim: '#6B4812', rimK: 0.012, sh: 0.5, depth: 0.065, ext: ['#B8892E', '#5A3A0A'] },
     dap: { face: [[0, '#F6E0A0'], [.5, '#CDA64F'], [1, '#EBD18A']], rim: null, hi: ['#FFF1BC', 0.6], dsh: ['#000', 0.85] },
-    hong: { face: [[0, '#FFE8DA'], [.3, '#EDBBA3'], [.48, '#B97A62'], [.56, '#D9A38B'], [.82, '#F8D7C5'], [1, '#C48A70']], rim: '#7A4636', rimK: 0.012, sh: 0.4, depth: 0.05, ext: ['#C98E73', '#7A4636'] },
+    hong: { face: [[0, '#FFE8DA'], [.3, '#EDBBA3'], [.48, '#C48A70'], [.56, '#DDAA92'], [.82, '#F8D7C5'], [1, '#CC9479']], rim: '#7A4636', rimK: 0.012, sh: 0.4, depth: 0.05, ext: ['#C98E73', '#7A4636'] },
     xanh: { face: [[0, '#2A4C86'], [.45, '#1C3768'], [.6, '#0F2147'], [1, '#2B4F8E']], rim: '#08142E', rimK: 0.016, sh: 0.25, depth: 0.03, ext: ['#13264D', '#08142E'] },
-    dam: { face: [[0, '#8A6420'], [.35, '#B5882F'], [.55, '#7A5418'], [.8, '#A57A2A'], [1, '#6E4A12']], rim: '#34230A', rimK: 0.02, sh: 0.22, depth: 0.04, ext: ['#5A3C0C', '#34230A'] },
+    hongdam: { face: [[0, '#8F4F3C'], [.35, '#B5715A'], [.55, '#7A4030'], [.8, '#A56450'], [1, '#6E3A2B']], rim: '#40200F', rimK: 0.02, sh: 0.2, depth: 0.04, ext: ['#5A2E20', '#3A1C10'] },
+    dam: { face: [[0, '#8A6420'], [.35, '#A27622'], [.55, '#74500F'], [.8, '#94691E'], [1, '#6A470C']], rim: '#34230A', rimK: 0.02, sh: 0.22, depth: 0.04, ext: ['#5A3C0C', '#34230A'] },
   };
   const VANG_DUONG = [[0, '#8A6420'], [.22, '#E9CF86'], [.45, '#B88A35'], [.7, '#F3DE9C'], [1, '#9C7428']];
   const cv = document.createElement('canvas').getContext('2d');
@@ -258,7 +261,7 @@
     const W = box.clientWidth, H = box.clientHeight;
     let lines = [goc];
     if (ten) {
-      const minS = 44; // dưới 44 px (≈ 33 pt khi in) mới chuyển sang 2 dòng cân
+      const minS = 70; // dưới 70 px (≈ 52 pt khi in) mới chuyển sang 2 dòng cân
       const b1 = boCuc([goc], o, W, H);
       if (P.get('mot') !== '1' && b1.S < minS && goc.includes(' ')) {
         const L2 = chiaHai(goc, o, W, H);

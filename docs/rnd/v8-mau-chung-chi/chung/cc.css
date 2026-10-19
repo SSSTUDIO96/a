@@ -1,7 +1,6 @@
 /* Khung chung cho 15 mẫu giấy chứng nhận — A4 ngang (297×210 mm). R&D 08, bản 2.
    Mỗi <section class="cc"> = 1 trang in. Bố cục bên trong vẽ theo px trên khung 1123×794 (A4 ở 96 dpi).
    Tiêu đề và tên học viên là chữ SVG (.sv) do cc.js vẽ — chữ vàng nổi khối 3D vẽ bằng <text> + dải màu, KHÔNG dùng background-clip:text. */
-@import url('../phong/phong.css');
 @page { size: A4 landscape; margin: 0; }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{background:#E9E5E1}
@@ -9,7 +8,7 @@ body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 :root{
   --f-ten:var(--f-ky-1); --ten-co:var(--ky-co-1);
   /* Phông tiêu đề: đổi ở MỘT chỗ này (hoặc thử bằng ?ph=1..5 trên đường dẫn) */
-  --f-tt:'MP Tiêu đề 2',serif; --w-tt:400; --ls-tt:.05em;
+  --f-tt:'MP Tiêu đề 1',serif; --w-tt:400; --ls-tt:.07em;
   --vang:linear-gradient(115deg,#8A6420 0%,#E9CF86 22%,#B88A35 45%,#F3DE9C 70%,#9C7428 100%);
   --vang-dam:#8A6420;
 }

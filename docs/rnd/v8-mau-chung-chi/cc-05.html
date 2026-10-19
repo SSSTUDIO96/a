@@ -1,16 +1,15 @@
 <!doctype html>
 <html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>CC-05 Hoa văn vàng cổ điển (theo ảnh 5)</title>
-<link rel="stylesheet" href="chung/cc.css">
+<link rel="stylesheet" href="phong/phong.css"><link rel="stylesheet" href="chung/cc.css">
 <!-- Mẫu 05 — dựng sát ảnh anh Chiến gửi số 5: viền hoa văn vàng DÀY (ren tròn đan), khung trong có hoa văn góc, chữ xanh đậm,
      tiêu đề có dòng phụ + đường kẻ, "trân trọng trao cho", tên chữ ký nghiêng xanh có gạch dưới, đường cuộn xanh giữa trang,
      hai chữ ký, HUY HIỆU NHỎ CÓ RUY BĂNG xanh ở giữa đáy. Tất cả vẽ SVG (không chép ảnh).
      BIẾN THỂ BẠC (như nửa dưới ảnh gốc): thêm ?vien=bac vào đường dẫn — viền ngoài bạc, hoa văn trong vẫn vàng.
      Ô ảnh học viên (tròn, nhỏ ~25 mm): bên TRÁI tên, trong khung (chỗ trống ở ảnh gốc). ?anh=an để ẩn. -->
 <style>
-.c5{--f-ten:var(--f-ky-2);--ten-co:var(--ky-co-2);--xanh:#14284B;background:#FFFDF8;color:var(--xanh);
-  --o-pat:#A97C2C;--o-dot:#8A6420;--o-bg:#FBF3DF;--o-a:#8A6420;--o-b:#E9CF86;--o-c:#A97C2C;--o-d:#F3DE9C}
-.c5.vien-bac{--o-pat:#8F99A7;--o-dot:#6F7B89;--o-bg:#F2F4F7;--o-a:#6E7B89;--o-b:#EEF1F5;--o-c:#98A3B0;--o-d:#FAFBFC}
+.c5{--f-ten:var(--f-ky-2);--ten-co:var(--ky-co-2);--xanh:#14284B;background:#FFFDF8;color:var(--xanh);}
+.c5 .ob{display:none}.c5.vien-bac .og{display:none}.c5.vien-bac .ob{display:inline}
 .c5 .vien{inset:0}
 .c5 .o-logo{left:525px;top:62px;width:36px;height:36px}
 .c5 .thg{left:0;width:1123px;top:104px;text-align:center;font-size:10px;color:#3B4A66}
@@ -33,15 +32,22 @@
   <svg class="vien" viewBox="0 0 1123 794" aria-hidden="true">
     <defs>
       <linearGradient id="v5" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8A6420"/><stop offset=".3" stop-color="#E9CF86"/><stop offset=".55" stop-color="#A97C2C"/><stop offset=".8" stop-color="#F3DE9C"/><stop offset="1" stop-color="#8A6420"/></linearGradient>
-      <linearGradient id="vo5" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:var(--o-a)"/><stop offset=".3" style="stop-color:var(--o-b)"/><stop offset=".55" style="stop-color:var(--o-c)"/><stop offset=".8" style="stop-color:var(--o-d)"/><stop offset="1" style="stop-color:var(--o-a)"/></linearGradient>
+      <linearGradient id="vo5" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8A6420"/><stop offset=".3" stop-color="#E9CF86"/><stop offset=".55" stop-color="#A97C2C"/><stop offset=".8" stop-color="#F3DE9C"/><stop offset="1" stop-color="#8A6420"/></linearGradient>
+      <linearGradient id="vb5" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6E7B89"/><stop offset=".3" stop-color="#EEF1F5"/><stop offset=".55" stop-color="#98A3B0"/><stop offset=".8" stop-color="#FAFBFC"/><stop offset="1" stop-color="#6E7B89"/></linearGradient>
       <pattern id="ren5" width="26" height="26" patternUnits="userSpaceOnUse">
-        <rect width="26" height="26" style="fill:var(--o-bg)"/>
-        <g fill="none" style="stroke:var(--o-pat)" stroke-width="1.3"><circle cx="13" cy="7.5" r="5.2"/><circle cx="13" cy="18.5" r="5.2"/><circle cx="7.5" cy="13" r="5.2"/><circle cx="18.5" cy="13" r="5.2"/></g>
-        <circle cx="13" cy="13" r="1.8" style="fill:var(--o-dot)"/><path d="M0 0 l3 0 -3 3z M26 0 l-3 0 3 3z M0 26 l3 0 -3 -3z M26 26 l-3 0 3 -3z" style="fill:var(--o-pat)"/>
+        <rect width="26" height="26" fill="#FBF3DF"/>
+        <g fill="none" stroke="#A97C2C" stroke-width="1.3"><circle cx="13" cy="7.5" r="5.2"/><circle cx="13" cy="18.5" r="5.2"/><circle cx="7.5" cy="13" r="5.2"/><circle cx="18.5" cy="13" r="5.2"/></g>
+        <circle cx="13" cy="13" r="1.8" fill="#8A6420"/><path d="M0 0 l3 0 -3 3z M26 0 l-3 0 3 3z M0 26 l3 0 -3 -3z M26 26 l-3 0 3 -3z" fill="#A97C2C"/>
+      </pattern>
+      <pattern id="ren5b" width="26" height="26" patternUnits="userSpaceOnUse">
+        <rect width="26" height="26" fill="#F2F4F7"/>
+        <g fill="none" stroke="#8F99A7" stroke-width="1.3"><circle cx="13" cy="7.5" r="5.2"/><circle cx="13" cy="18.5" r="5.2"/><circle cx="7.5" cy="13" r="5.2"/><circle cx="18.5" cy="13" r="5.2"/></g>
+        <circle cx="13" cy="13" r="1.8" fill="#6F7B89"/><path d="M0 0 l3 0 -3 3z M26 0 l-3 0 3 3z M0 26 l3 0 -3 -3z M26 26 l-3 0 3 -3z" fill="#8F99A7"/>
       </pattern>
     </defs>
-    <rect x="12" y="12" width="1099" height="770" rx="18" fill="url(#ren5)"/>
-    <rect x="12" y="12" width="1099" height="770" rx="18" fill="none" stroke="url(#vo5)" stroke-width="3.5"/>
+    <!-- viền ngoài: vàng (mặc định) hoặc bạc (?vien=bac). Không dùng biến CSS trong SVG để html-to-image xuất đúng. -->
+    <g class="og"><rect x="12" y="12" width="1099" height="770" rx="18" fill="url(#ren5)"/><rect x="12" y="12" width="1099" height="770" rx="18" fill="none" stroke="url(#vo5)" stroke-width="3.5"/></g>
+    <g class="ob"><rect x="12" y="12" width="1099" height="770" rx="18" fill="url(#ren5b)"/><rect x="12" y="12" width="1099" height="770" rx="18" fill="none" stroke="url(#vb5)" stroke-width="3.5"/></g>
     <rect x="46" y="46" width="1031" height="702" fill="#FFFDF8" stroke="url(#vo5)" stroke-width="3"/>
     <rect x="52" y="52" width="1019" height="690" fill="none" stroke="url(#v5)" stroke-width="2"/>
     <rect x="62" y="62" width="999" height="670" fill="none" stroke="#B88A35" stroke-width="1"/>

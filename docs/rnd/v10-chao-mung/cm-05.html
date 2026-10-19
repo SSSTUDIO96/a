@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=1080">
+<title>Thẻ chào mừng cm-05 – Khung cổ điển</title>
+<!-- Makeup Pro · R&D-10 (19/10/2026) · kiểu (e) "Khung vàng nâu cổ điển" của R&D-07 vòng 2: giấy trắng ngà, hai đường viền vàng nâu, bốn góc hoa huệ (fleur-de-lis) + dây cuốn, hai chỉ giữa cạnh.
+     Bố cục "bằng khen": logo + tên trung tâm → tên khoá chữ vàng → "Thân gửi" + TÊN chữ ký TO giữa thẻ → hàng dưới: ẢNH TRÒN (viền chấm ngọc) bên trái,
+     bên phải là LỚP / KHAI GIẢNG và HUY HIỆU MÃ SỐ hình thoi → lời chào + địa chỉ.
+     Ô dữ liệu: logo, th, anh (khung tròn), khoa, lop, ngay, ten, diachi + MÃ SỐ seatCode (đề xuất trường mới, lưu ở học viên-trong-lớp; chưa có trong database).
+     Phông: Ephesis (chữ ký, OFL) · Cormorant Garamond · Playfair Display · Montserrat. Khổ 1080×1350, ?kho=vuong → 1080×1080. ?ma=12 đổi mã số. -->
+<link rel="stylesheet" href="chung/phong.css"><link rel="stylesheet" href="chung/mau.css"><link rel="stylesheet" href="chung/cm.css">
+<style>
+:root{--chu:#2A2420;--phu:#5C4632;--nhan:#7E4A14;--vien:#A0601E;--f-tay-1:var(--f-tay-2);--tay-co-1:1}
+#c{background:#FFFDF8;color:var(--chu)}
+.w{left:92px;top:98px;width:896px;height:1160px;padding:30px 30px 0}
+.top{display:flex;align-items:center;justify-content:center;gap:16px;width:100%}
+.lg{width:62px;height:62px}
+.th{font:600 21px var(--f-sans);letter-spacing:.3em;color:var(--nhan);text-transform:uppercase;min-width:0}
+.or{display:flex;align-items:center;gap:16px;margin:18px 0 18px;color:var(--vien)}.or i{width:120px;height:1px;background:var(--vien)}.or b{width:10px;height:10px;transform:rotate(45deg);border:1px solid var(--vien)}
+.k1{font:500 19px var(--f-sans);letter-spacing:.4em;color:var(--nhan);text-transform:uppercase}
+.kh{font:600 62px/1.06 var(--f-chan);text-transform:uppercase;letter-spacing:.04em;margin-top:12px}
+.dg{font:italic 400 34px var(--f-chan);color:var(--phu);margin-top:26px}
+.ten{font-size:calc(124px*var(--tay-co-1));color:var(--chu)}
+.hl{height:1px;width:70%;background:linear-gradient(90deg,transparent,var(--vien),transparent);margin:10px 0 0}
+.low{display:flex;align-items:center;gap:56px;width:100%;margin-top:26px;justify-content:center}
+.av{width:296px;height:296px;box-shadow:0 0 0 7px #FFFDF8,0 0 0 9px var(--vien)}
+.info{display:flex;align-items:center;gap:34px;text-align:left}
+.kv{display:flex;flex-direction:column;gap:2px}
+.kv+.kv{margin-top:22px}
+.kv b{font:600 16px var(--f-sans);letter-spacing:.3em;color:var(--nhan);text-transform:uppercase}
+.kv span{font:600 38px/1.15 var(--f-chan2);color:var(--chu)}
+.seat{flex:none;position:relative;width:176px;height:176px;flex-direction:column}
+.seat::before{content:"";position:absolute;left:34px;top:34px;width:108px;height:108px;transform:rotate(45deg);border:2px solid var(--vien);background:#FFFDF8;box-shadow:inset 0 0 0 5px #FFFDF8,inset 0 0 0 6.5px var(--vien),0 0 0 7px #FFFDF8,0 0 0 8.5px var(--vien)}
+.seat>*{position:relative}
+.seat-l{font:600 15px var(--f-sans);letter-spacing:.34em;text-indent:.34em;color:var(--nhan)}
+.seat-n{font:600 52px/1 var(--f-chan2);color:var(--chu)}
+.by{font:italic 400 28px var(--f-chan);color:var(--phu);margin-top:40px}
+.ft{font:500 18px var(--f-sans);letter-spacing:.3em;text-transform:uppercase;color:var(--nhan)}
+.dc{font:400 26px var(--f-chan);color:var(--phu);margin-top:6px;max-width:100%;white-space:nowrap}
+.vuong .w{left:92px;top:96px;width:896px;height:894px;padding:14px 30px 0}
+.vuong .lg{width:46px;height:46px}.vuong .th{font-size:18px}.vuong .or{margin:10px 0}.vuong .k1{font-size:16px}
+.vuong .kh{font-size:46px;margin-top:6px}.vuong .dg{font-size:28px;margin-top:12px}.vuong .ten{font-size:calc(92px*var(--tay-co-1))}
+.vuong .low{margin-top:12px;gap:44px}.vuong .av{width:190px;height:190px}.vuong .kv span{font-size:32px}.vuong .kv+.kv{margin-top:14px}.vuong .seat{width:150px;height:150px}
+.vuong .seat::before{left:28px;top:28px;width:90px;height:90px}.vuong .seat-n{font-size:44px}.vuong .by{font-size:24px;margin-top:30px}.vuong .dc{font-size:23px}.vuong .ft{font-size:16px}
+</style></head><body><div id="c"><div class="w">
+<div class="top"><img class="lg" data-f="logo" alt=""><div class="th" data-f="th" data-fitw data-do></div></div>
+<div class="or"><i></i><b></b><i></i></div>
+<div class="k1" data-do>Chào mừng đến với lớp</div>
+<div class="kh vang" data-f="khoa" data-fit="2" data-do data-vang="#623A08,#92601A,#623A08,#92601A"></div>
+<div class="dg" data-do>Thân gửi</div>
+<div class="ten" data-f="ten" data-fit="2" data-do></div>
+<div class="hl"></div>
+<div class="sp"></div>
+<div class="low"><div class="av"><img data-f="anh" alt=""></div>
+ <div class="info"><div><div class="kv"><b data-do>Lớp</b><span data-f="lop" data-do></span></div><div class="kv"><b data-do>Khai giảng</b><span data-f="ngayCham" data-do></span></div></div>
+  <div class="seat"><span class="seat-l" data-do>SỐ</span><b class="seat-n" data-seat data-do></b></div></div></div>
+<div class="by" data-do>Thân ái, <span data-f="th"></span></div>
+<div class="sp"></div>
+<div class="ft" data-f="thangNam" data-do></div><div class="dc" data-f="diachi" data-fitw data-do></div>
+</div></div>
+<script>window.MAC_DINH={ten:'Đặng Quỳnh Như'};</script>
+<script src="chung/ve.js"></script><script src="chung/ve-moi.js"></script>
+<script src="chung/mau.js"></script><script src="chung/cm.js"></script>
+<script>(function(){const V=window.VE,vuong=new URLSearchParams(location.search).get('kho')==='vuong';V.kho(1080,vuong?1080:1350);
+ VE_MOUNT(V.khungCoDien('#A0601E','#FFFDF8'));
+ window.CM_SAU.push(()=>{const a=document.querySelector('.av').getBoundingClientRect(),c=document.getElementById('c').getBoundingClientRect();
+  const cx=a.left-c.left+a.width/2,cy=a.top-c.top+a.height/2,R=a.width/2+19;
+  let s=`<circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="#A0601E" stroke-width="5" stroke-dasharray="0.1 11" stroke-linecap="round"/>`;
+  for(const ag of [0,90,180,270]){const x=cx+Math.cos(ag*Math.PI/180)*(R+2),y=cy+Math.sin(ag*Math.PI/180)*(R+2);s+=`<path d="M${x},${y-8}L${x+8},${y}L${x},${y+8}L${x-8},${y}Z" fill="#A0601E"/>`;}
+  VE_MOUNT(s,true);});})();</script>
+<script src="chung/html-to-image.js"></script><script src="chung/xuat.js"></script></body></html>

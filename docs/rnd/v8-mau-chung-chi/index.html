@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>10 mẫu chứng nhận tốt nghiệp</title>
+<title>16 mẫu giấy chứng nhận</title>
 <link rel="stylesheet" href="phong/phong.css">
 <style>
 :root{--bg:#F6F4F2;--line:#E9E3DE;--text:#221C19;--muted:#716862;--accent:#A63D62}
@@ -12,12 +12,12 @@ h1{font:700 22px var(--f-sans);margin:0 0 4px}p{color:var(--muted);margin:0 0 16
 .m div{padding:10px 14px}.m b{display:block}.m a{color:var(--accent);margin-right:12px;font-size:13px}
 code{font-size:12px;background:#fff;border:1px solid var(--line);border-radius:4px;padding:1px 4px}
 </style></head><body>
-<h1>10 mẫu chứng nhận tốt nghiệp · A4 ngang</h1>
-<p>R&D 08 tự vẽ bằng HTML/CSS/SVG, phông OFL (thư mục <code>phong/</code>). Mở một mẫu để xem khổ thật; thêm tham số vào đường dẫn để thử dữ liệu:
-<code>?ten=Lê Thị Mai</code> · <code>&amp;anh=0</code> (chưa có ảnh) · <code>&amp;logo=0</code> (không logo) · <code>&amp;ky=1..4</code> (phông chữ ký) · <code>&amp;nhieu=1</code> (5 học viên = 5 trang, bấm Ctrl+P để in thử).</p>
+<h1>16 mẫu giấy chứng nhận · A4 ngang</h1>
+<p>R&D 08 (bản 2) tự vẽ bằng HTML/CSS/SVG, phông OFL (thư mục <code>phong/</code>). Mẫu 01–05 dựng sát 5 ảnh anh Chiến gửi, 16 dựng sát ảnh "Vinh danh kim cương", 06–10 và 11–15 là mẫu thêm. Tiêu đề "GIẤY CHỨNG NHẬN", dòng phụ "Hoàn thành khoá học". Mở một mẫu để xem khổ thật; thêm tham số vào đường dẫn để thử:
+<code>?ten=Lê Thị Mai</code> · <code>&amp;anh=0</code> (chưa có ảnh) · <code>&amp;anh=an</code> (ẩn ô ảnh) · <code>&amp;logo=0</code> (không logo) · <code>&amp;ky=1..4</code> (phông chữ ký) · <code>&amp;ph=1..5</code> (phông tiêu đề) · <code>&amp;kieu=bong|noi|dap|hong|dam</code> (kiểu chữ vàng của tiêu đề) · <code>&amp;vien=bac</code> (mẫu 05) · <code>&amp;mot=1</code> (ép tên một dòng) · <code>&amp;nhieu=1</code> (5 học viên = 5 trang, bấm Ctrl+P để in thử). Xem thêm <a href="chu-vang-3d.html">các kiểu chữ vàng 3D</a>.</p>
 <div class="g" id="g"></div>
 <script>
-const M=[['01','Xanh đêm dải vàng','học ảnh 1'],['02','Đen nhung mảng đỏ','học ảnh 2'],['03','Trắng sóng đỏ vàng','học ảnh 3'],['04','Kem sóng chìm, dải đen','học ảnh 4'],['05','Hoa văn vàng cổ điển','học ảnh 5'],['06','Guilloche bạc','tự sáng tác'],['07','Hồng mận vàng hồng','tự sáng tác'],['08','Đen Art Deco','tự sáng tác'],['09','Ngà nguyệt quế','tự sáng tác'],['10','Lục bảo khung vát','tự sáng tác']];
+const M=[['01','Xanh đêm dải vàng','theo ảnh 1'],['02','Đen nhung mảng đỏ','theo ảnh 2'],['03','Trắng sóng đỏ vàng','theo ảnh 3'],['04','Kem sóng chìm, dải đen','theo ảnh 4'],['05','Hoa văn vàng cổ điển (có biến thể bạc)','theo ảnh 5'],['06','Guilloche bạc','mẫu thêm'],['07','Hồng mận vàng hồng','mẫu thêm'],['08','Đen Art Deco','mẫu thêm'],['09','Ngà nguyệt quế','mẫu thêm'],['10','Lục bảo khung vát','mẫu thêm'],['11','Xanh hoàng gia tia sáng','mẫu thêm'],['12','Hồng phấn vòng hoa','mẫu thêm'],['13','Đen cẩm thạch vân vàng','mẫu thêm'],['14','Trắng hình học champagne','mẫu thêm'],['15','Đỏ nhung ren vàng','mẫu thêm'],['16','Vinh danh kim cương','theo ảnh 16']];
 document.getElementById('g').innerHTML=M.map(([n,t,g])=>`<div class="m"><a href="cc-${n}.html"><img src="png/cc-${n}-co-logo.png" alt="Mẫu ${n}" loading="lazy"></a><div><b>${n} · ${t}</b><span style="color:var(--muted);font-size:12.5px">${g}</span><br><a href="cc-${n}.html">Mở mẫu</a><a href="cc-${n}.html?logo=0&anh=0&ten=L%C3%AA%20Th%E1%BB%8B%20Mai">Không logo, chưa ảnh</a><a href="cc-${n}.html?nhieu=1">5 trang in thử</a></div></div>`).join('');
 </script>
 </body></html>

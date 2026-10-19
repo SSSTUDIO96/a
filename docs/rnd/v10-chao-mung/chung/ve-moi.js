@@ -22,7 +22,7 @@ V.duongXe=function(b,amp,step,seed,canh='tpdl'){const r=rng(seed);const pts=[];
 V.giayXe=function(b,seed,canh,rot){const sx=seed||5;
   const sợi=V.duongXe({x:b.x-9,y:b.y-9,w:b.w+18,h:b.h+18},8,11,sx,canh),tam=V.duongXe(b,4,9,sx+31,canh);
   return `<g ${rot?`transform="rotate(${rot} ${f(b.x+b.w/2)} ${f(b.y+b.h/2)})"`:''}><g filter="url(#bong)"><path d="${sợi}" fill="#FDFBF4"/></g><path d="${sợi}" fill="#EFE7D6" filter="url(#van2)"/>`+
-    `<path d="${tam}" fill="${V.GIAY_MAU}"/><path d="${tam}" fill="#fff" filter="url(#van2)"/><path d="${tam}" fill="#fff" filter="url(#van)"/></g>`;};
+    `<path d="${tam}" fill="${V.GIAY_MAU}"/><path d="${tam}" fill="#fff" filter="url(#van2)"/><path d="${tam}" fill="#fff" filter="url(#van)" opacity=".2"/></g>`;};
 
 /* ---- Băng dính washi ---- */
 let wid=0;
