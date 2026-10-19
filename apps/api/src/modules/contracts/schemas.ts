@@ -50,6 +50,20 @@ const placement = {
   addons: z.array(AddonInput).max(30).optional(),
   travel: TravelInputSchema.optional(),
   staff: z.array(StaffInput).max(20).optional(),
+  // Loại sự kiện của dòng (bản vẽ D 2.4): mã của tổ chức khác = mã bịa → 404; loại đang ẩn → 400.
+  occasionId: z.uuid().optional(),
+  // Sửa dòng phụ phí tự thêm (chỉ khi người lập đã sửa): không gửi = theo luật + bảng giá.
+  surchargeOverrides: z
+    .array(
+      strict({ ruleId: z.uuid(), quantity: Quantity.optional(), unitPrice: Money.optional(), note: Note.optional() }).refine(
+        (s) => s.unitPrice === undefined || s.note !== undefined,
+        { message: 'Ghi đè giá phụ phí phải kèm ghi chú lý do', path: ['note'] },
+      ),
+    )
+    .max(20)
+    .optional(),
+  // Luật người lập đã bỏ ở dòng này — không tự thêm lại (kể cả khi đổi giờ đi rồi đổi lại).
+  dismissedRuleIds: z.array(z.uuid()).max(50).optional(),
 };
 
 export const LineInputSchema = z.discriminatedUnion('kind', [
@@ -68,6 +82,7 @@ export type LineInput = z.infer<typeof LineInputSchema>;
 export type CourseLineInput = Extract<LineInput, { kind: 'COURSE' }>;
 export type PlacedLineInput = Extract<LineInput, { kind: 'PACKAGE' | 'SERVICE' }>;
 export type TravelInput = z.infer<typeof TravelInputSchema>;
+export type SurchargeOverrideInput = NonNullable<PlacedLineInput['surchargeOverrides']>[number];
 
 const Lines = z.array(LineInputSchema).min(1, 'Hợp đồng phải có ít nhất một dòng').max(100);
 
