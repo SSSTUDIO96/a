@@ -82,3 +82,4 @@ Danh sách việc các thợ, thợ chấm và R&D đã nêu nhưng **chưa làm
 | 62 | (L4) Hộp báo trùng giờ chỉ ghi mã lịch, không nói buổi học của lớp nào | chấm lần 5 |
 | 63 | (L5) 390px: chữ "2 giờ" trong chi tiết buổi học bị tách dòng | chấm lần 5 |
 | 64 | (L6) 5 tệp .bat hiện "đã sửa" ngay sau khi lấy mã (chỉ khác CRLF) — xem lại .gitattributes | chấm lần 5 |
+| 65 | apps/api/src/scripts/run-sync-system-roles.ts:11 chưa in `occasionSetsSeeded` (giá trị đã có trong báo cáo, chỉ thiếu dòng in) | thợ M3 → giao M7/D1 |
