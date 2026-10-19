@@ -81,5 +81,6 @@ Anh Chiến nhắn lúc khoảng 15:13 UTC ngày 18/10/2026: *"Tự làm vào ch
 | 01:40 | T2: gói Dùng thử có 0 khoá học; chưa nạp gói thì lưu khoá học báo lỗi 500 | Giữ nguyên số của gói (việc thương mại của anh); chỉ sửa **lời báo và mã lỗi** cho rõ "gói chưa có khoá học, liên hệ để nâng gói" | Luật 15 | Được |
 | 01:40 | T1: gợi ý tiến độ "Cọc + 2/3 đợt" cách nhau cố định 30 ngày, có đợt hạn sau ngày cưới | Chia đều các đợt từ hôm nay tới ngày sự kiện (khoá học: ngày kết thúc lớp); không có ngày thì giữ 30 ngày | Không đợt nào được hạn sau ngày cưới | Được |
 | 01:40 | L5: gói mặc định tắt "hiện trên trang công khai" | Giữ nguyên, ghi việc tồn cho anh | Có thể là chủ ý: anh chọn gói nào lộ giá | Được |
+| 09:30 | Tên ngắn của thợ trên lịch và hợp đồng | Studio đặt tên hiển thị thì dùng nguyên tên đó; chưa đặt thì lấy tiếng cuối của họ tên ("Nguyễn Thu Hà" → "Hà"). Chế độ lịch B (danh sách trong ngày) vẫn ghi tên đầy đủ vì đủ chỗ | Một người một tên trên mọi khổ màn | Được |
 
 **Cần anh xem lại nhất:** (1) cách anh vào thao tác thực tế (dòng 19:44): chạy trên máy anh hay cho phép đưa lên mạng; (2) phân quyền theo vai trò mẫu (dòng 15:16) — studio anh có thể muốn thợ chính thấy cả lịch của đội.
