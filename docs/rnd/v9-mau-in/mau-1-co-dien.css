@@ -25,7 +25,7 @@
 .g1 .ben dl{display:grid;grid-template-columns:19mm minmax(0,1fr);margin:.5mm 0 0;gap:0 1.5mm;font-size:9.4pt}
 .g1 .ben dt{color:#3b3430}
 .g1 .ben dd{margin:0}
-.g1 .dieu{font-size:10.2pt;font-weight:700;margin:2.6mm 0 .8mm}
+.g1 .dieu{font-size:10.2pt;font-weight:700;margin:1.8mm 0 .8mm;padding-top:.8mm}
 .g1 .tieu{font-size:10pt;font-weight:700;font-style:italic;margin:2mm 0 .5mm}
 .g1 .bang{margin:1mm 0 2mm;font-size:9.8pt}
 .g1 .bang th,.g1 .bang td{border:.6pt solid #3b3430;padding:.8mm 2mm}

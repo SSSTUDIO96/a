@@ -67,6 +67,14 @@ Mã ở `apps/api/src/`, bài thử ở `apps/api/test/` (trừ khi ghi khác).
 | 28 | Tải tệp: kiểm chữ ký đầu tệp, giới hạn dung lượng theo mục đích; đường đọc có hạn 10 phút | `modules/files/routes.ts` | **Chưa có bài thử trong kho ở `bc9633a`** (`files.test.ts` đang viết) |
 | 29 | Cửa gác bí mật cho bản web: quét `dist/` tìm tên/giá trị biến bí mật máy chủ, `postgresql://`, biến `VITE_*` lạ; có vi phạm thì build dừng | `apps/web/scripts/check-bundle-secrets.mjs` | `apps/web/scripts/check-bundle-secrets.test.ts` → 8 ca, gồm vế GIỮ "bản build thật của web sạch → exit 0" |
 | 30 | Log che header đăng nhập, cookie, mật khẩu, thẻ | `lib/logger.ts:7-17` | Không có bài thử |
+| 31 | **Quên mật khẩu không lộ tài khoản**: luôn 202 cùng thân, cùng bộ header (cả email lạ, tài khoản bị khoá, khác chữ hoa); thư gửi nền + mức sàn 300 ms nên thời gian không chênh dù dịch vụ thư chậm; lỗi cấu hình (503) kiểm TRƯỚC khi tra email | `modules/auth/password-reset.ts:61-73`, `:144-171` | `dat-lai-mat-khau.test.ts` → nhóm "chống dò tài khoản" (2 ca) |
+| 32 | **Thẻ đặt lại**: 32 byte ngẫu nhiên, database chỉ giữ sha256 (CHECK `^[0-9a-f]{64}$` ở migration `20261019110000_dat_lai_mat_khau`), hết hạn `PASSWORD_RESET_TTL_MINUTES` (30 phút), dùng một lần (giành thẻ có điều kiện trong transaction), thư mới vô hiệu thư cũ; thẻ sai/hết hạn/đã dùng → cùng một lời 400 `RESET_TOKEN_INVALID` | `modules/auth/password-reset.ts:31-38`, `:118-139`, `:174-228` | `dat-lai-mat-khau.test.ts` → nhóm "thẻ đặt lại" (7 ca: đúng thẻ, hết hạn, dùng lại, đồng thời, thẻ sai, thẻ của người khác, mật khẩu mới không hợp lệ) |
+| 33 | **Đặt lại xong thu hồi MỌI phiên** (refresh token, lý do `PASSWORD_RESET`) và mọi thẻ đặt lại còn lại; xoá cookie refresh | `modules/auth/password-reset.ts:42-56` (`revokeCredentialsAfterPasswordChange` — dùng lại cho "đổi mật khẩu" sau này) | `dat-lai-mat-khau.test.ts` → nhóm "thu hồi phiên và thẻ cũ" (2 ca) |
+| 34 | Giới hạn lượt quên mật khẩu: bộ đếm `auth` theo IP (chung với đăng nhập) ở cả hai đường; tối đa 3 thư/giờ/email, lần vượt vẫn trả 202 giống hệt và ghi audit `auth.password_reset_throttled` | `modules/auth/password-reset.ts:111-117`, `:151`, `:181`; `app.ts:71-77`, `:120` | `dat-lai-mat-khau.test.ts` → nhóm "giới hạn lượt" (2 ca) |
+| 35 | Thẻ đặt lại, bản băm, mật khẩu mới không vào nhật ký (mức trace), phản hồi (kể cả thẻ SAI gửi lên), audit; lời lỗi của dịch vụ thư bị che thẻ. Ngoại lệ có chủ đích: người gửi thư `console` (chỉ dev/test) in nguyên thư, dòng đánh dấu `[THƯ CHẠY THỬ — KHÔNG GỬI THẬT]` | `modules/auth/password-reset.ts:157-166`; `lib/mailer/console.ts`; `lib/mailer/index.ts:19-53` | `dat-lai-mat-khau.test.ts` → nhóm "không lộ thẻ" (3 ca) |
+| 36 | Production chưa cấu hình gửi thư / dùng `console` / thiếu `WEB_APP_URL` → 503 `NOT_CONFIGURED` có tên (`MAIL_NOT_CONFIGURED`, `MAIL_CONSOLE_IN_PRODUCTION`, `WEB_APP_URL_NOT_CONFIGURED`), không im lặng giả vờ "đã gửi"; `MAIL_DRIVER=http` thiếu biến → không khởi động; khoá API thư phải đi `https` ở production | `lib/mailer/index.ts:19-53`, `env.ts:43-54`, `:64-69` | `dat-lai-mat-khau.test.ts` → nhóm "cấu hình người gửi thư" (5 ca) |
+
+Đột biến của các chốt 31–36 (phá → đỏ → khôi phục, thợ K1 ngày 19/10/2026): máy chủ 26/26, web 11/11 (kịch bản đột biến nằm ngoài kho, liệt kê trong báo cáo của thợ K1).
 
 ### 2. Cửa gác cách ly tổ chức (`apps/api/test/tenant-isolation.test.ts` + `test/gate.ts`)
 **Nó làm gì.** Lấy toàn bộ đường từ bảng đường của máy chủ. Dựng hai tổ chức A, B có đủ mọi loại tài nguyên. Chạy 9 phép:
@@ -111,7 +119,7 @@ Mã ở `apps/api/src/`, bài thử ở `apps/api/test/` (trừ khi ghi khác).
 |---|---|---|---|
 | 1 | Đăng ký báo "Email này đã được đăng ký" → dò được email có thật | `modules/auth/routes.ts:31` | Chủ chấp nhận rủi ro (biên bản mốc 2, L8), giới hạn 10 lần/phút/IP |
 | 2 | Đổi thẻ thành công không ghi nhật ký | `modules/auth/routes.ts:94-104` | Còn lại từ L11 |
-| 3 | Đăng xuất không huỷ được thẻ truy cập đang cầm | thiết kế | Tối đa 15 phút |
+| 3 | Đăng xuất / **đặt lại mật khẩu** không huỷ được thẻ truy cập đang cầm (chỉ thu hồi refresh token) | thiết kế; `http/middleware.ts` `authenticate` chỉ kiểm trạng thái tài khoản | Tối đa `ACCESS_TOKEN_TTL_SECONDS` (15 phút). Muốn huỷ ngay: thêm mốc "đổi mật khẩu lúc" vào users và so với `iat` của thẻ trong `authenticate` |
 | 4 | Bộ đếm giới hạn tốc độ nằm trong bộ nhớ từng máy chủ | `app.ts:49-55` | Nhiều máy chủ thì bộ đếm tách |
 | 5 | Lời của trigger database trả thẳng cho người dùng (có thể lộ số tổng tiền nội bộ) | `http/middleware.ts:157-158` | Chấp nhận được trong một tổ chức; cần xem lại khi có đường công khai |
 | 6 | Máy chủ chết sau khi ghi và trước khi lưu kết quả chống gửi trùng → gửi lại tạo bản thứ hai | `app.ts:155-156` | Đã ghi trong mã |
@@ -123,7 +131,7 @@ Mã ở `apps/api/src/`, bài thử ở `apps/api/test/` (trừ khi ghi khác).
 |---|---|
 | RLS (luật lọc theo tổ chức trong PostgreSQL) | Xem `docs/ARCHITECTURE.md` quyết định 9 |
 | Xác thực hai lớp | Ít nhất cho chủ tài khoản và quản trị nền tảng, trước khi bán |
-| Quên mật khẩu, đổi mật khẩu, xác minh email | Trước khi có người dùng ngoài nhóm thử |
+| Đổi mật khẩu khi đã đăng nhập, xác minh email (quên mật khẩu qua email đã có — chốt 31–36; chưa gửi được thư thật cho tới khi có dịch vụ gửi thư) | Trước khi có người dùng ngoài nhóm thử |
 | Xuất / xoá dữ liệu cá nhân theo yêu cầu | Cần người hiểu luật Việt Nam về dữ liệu cá nhân xác nhận phạm vi; nhật ký và sổ tiền chặn xoá ở database, phải thiết kế ẩn danh hoá |
 | Quét thư viện có lỗ hổng (`pnpm audit`) và quét bí mật trong lịch sử git | Chưa thấy trong kho |
 | Kiểm thử xâm nhập độc lập trên máy thật | Trước khi bán |

@@ -24,7 +24,7 @@
 .g5 .ben b{display:block;font:600 13pt/1.25 'MP Cormorant',serif;margin:.5mm 0 1mm}
 .g5 .ben p{font-size:8.6pt;color:#4d423b;margin:0!important}
 .g5 .mo{text-align:center;font-style:italic;margin:2.5mm 8mm 0!important;color:#4d423b}
-.g5 .h{text-align:center;font:600 14pt 'MP Cormorant',serif;letter-spacing:.12em;text-transform:uppercase;margin-bottom:1mm}
+.g5 .h{text-align:center;font:600 14pt 'MP Cormorant',serif;letter-spacing:.12em;text-transform:uppercase;margin-bottom:1mm;padding-top:.8mm}
 .g5 .h.nho{font-size:11.5pt;margin-top:3mm}
 .g5 .sv td{padding:1.4mm 1mm;border-bottom:.5pt solid #e3d6bd}
 .g5 .sv td small{display:block;font-size:7.8pt;color:#6d5f55;font-style:italic;line-height:1.45}

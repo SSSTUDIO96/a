@@ -73,6 +73,38 @@ describe('khung ảnh (anh Chiến 19/10/2026: mẫu nào cũng có ảnh, khung
   });
 });
 
+// Chữ nhỏ (< 24px) trên nền phẳng phải đạt 4,5:1 (WCAG AA). Các dòng đã đo dưới chuẩn ngày 19/10/2026 và đã sửa màu
+// (shd-01 .k1 #8C7A5B 3,63 → #7A6340 4,98). Bài thử đọc màu chữ thật trong tệp vẽ; nền là nền phẳng ngay dưới dòng chữ.
+const lin = (x: number) => (x <= 0.04045 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4);
+const lum = (h: string) => {
+  const [r, g, b] = [1, 3, 5].map((i) => lin(parseInt(h.slice(i, i + 2), 16) / 255)) as [number, number, number];
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+};
+const contrast = (a: string, b: string) => {
+  const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x) as [number, number];
+  return (hi + 0.05) / (lo + 0.05);
+};
+const SMALL_TEXT: [code: string, rule: string, bg: string][] = [
+  ['shd-01', '.k1', '#F5EFE4'], ['shd-03', '.dt .l', '#FBF8F4'], ['shd-05', '.gr .l', '#FFFDF9'], ['shd-08', '.k1', '#FBFAF7'],
+  ['shd-08', '.dt', '#FBFAF7'], ['shd-09', '.th', '#F7ECE6'], ['shd-09', '.ft', '#F7ECE6'], ['fb-01', '.k1', '#F7E8E4'],
+  ['fb-02', '.ft i', '#EFE9E3'], ['fb-07', '.hd span', '#FFFFFF'], ['fb-09', '.pr span', '#F6F1EC'], ['lc-03', '.ft', '#FFFDF9'],
+  ['lc-06', '.th', '#F7ECE6'], ['lc-06', '.ft', '#F7ECE6'],
+];
+
+describe('tương phản chữ nhỏ trên mẫu', () => {
+  it('BẮT: các dòng chữ nhỏ đã sửa đạt ≥ 4,5:1 (shd-01 "Chào mừng đến với lớp" #7A6340 = 4,98:1)', () => {
+    for (const [code, rule, bg] of SMALL_TEXT) {
+      const esc = rule.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const m = new RegExp(`(?:^|[}\\n])${esc}\\{([^}]*)\\}`).exec(html(code));
+      expect(m, `${code} ${rule}`).not.toBeNull();
+      const color = /color:(#[0-9A-Fa-f]{6})/.exec(m![1] ?? '')?.[1] ?? '';
+      expect(color, `${code} ${rule}`).not.toBe('');
+      expect(contrast(color, bg), `${code} ${rule} ${color} trên ${bg}`).toBeGreaterThanOrEqual(4.5);
+    }
+    expect(contrast('#7A6340', '#F5EFE4')).toBeCloseTo(4.98, 1);
+  });
+});
+
 describe('mẫu chào mừng thứ 20 — shd-11 "Chữ ký mảnh nền đá"', () => {
   it('BẮT: có trên lưới thẻ chào mừng của hợp đồng khoá học — đủ 11 mẫu trong app (+ 9 mẫu đợt 1 của R&D = 20)', () => {
     const codes = templateChoices('WELCOME', 'COURSE', 'fit').map((c) => c.template.code);

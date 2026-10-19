@@ -52,6 +52,16 @@ API là "quầy giao dịch" của máy chủ. Web, app iPhone, website giới t
 
 Đăng xuất không gửi thẻ (thân rỗng, không có cookie hợp lệ) → 401 "Phiên đăng nhập không hợp lệ" (`modules/auth/transport.ts:48`). Có thẻ → 204 và xoá cookie.
 
+**Quên mật khẩu** (`modules/auth/password-reset.ts`, thợ K1 19/10/2026):
+
+| Bước | Gửi | Nhận |
+|---|---|---|
+| 1. Yêu cầu | `POST /api/v1/auth/password-reset/request` `{ "email": "..." }` | **Luôn** `202 { "message": "Nếu email này có tài khoản, chúng tôi đã gửi đường dẫn…" }` — giống hệt dù email có tài khoản hay không, sau ≥ 300 ms. Tối đa 3 thư/giờ/email (vượt vẫn 202). `429` theo bộ đếm `auth` của IP. `503 NOT_CONFIGURED` + `details.reason` khi máy chủ chưa cấu hình gửi thư (giống nhau cho mọi email) |
+| 2. Thư | Đường dẫn `<WEB_APP_URL>/dat-lai-mat-khau#the=<thẻ>` — hết hạn sau `PASSWORD_RESET_TTL_MINUTES` (30) phút; thư mới làm thư cũ hết tác dụng | |
+| 3. Đặt mật khẩu | `POST /api/v1/auth/password-reset/confirm` `{ "token": "<thẻ>", "password": "<10 ký tự – 72 byte>" }` | `204` + xoá cookie `mp_refresh`; mọi refresh token và mọi thẻ đặt lại khác của người đó bị thu hồi → đăng nhập lại bằng mật khẩu mới. Thẻ sai/hết hạn/đã dùng/tài khoản bị khoá → `400 VALIDATION_FAILED`, `details.reason = "RESET_TOKEN_INVALID"`, cùng một lời. Mật khẩu không hợp lệ → `400` theo ô `password`, thẻ chưa bị tiêu |
+
+Thẻ truy cập (access token) đang cầm vẫn sống tới hết hạn (≤ 15 phút) — xem `docs/SECURITY.md` phần rủi ro mục 3.
+
 ### 3. Dạng lỗi
 ```json
 { "error": { "code": "FORBIDDEN", "message": "Bạn không có quyền thực hiện thao tác này", "details": { "required": "members.invite" }, "requestId": "…" } }
@@ -98,6 +108,8 @@ Bảng đổi lỗi database: `http/middleware.ts:153-169`.
 | POST | `/auth/refresh` | — (công khai) | giới hạn tốc độ | Đổi refresh token lấy cặp thẻ mới |
 | POST | `/auth/logout` | — (công khai) |  | Đăng xuất: thu hồi phiên trên thiết bị này |
 | GET | `/auth/me` | — (chỉ cần đăng nhập) |  | Thông tin tài khoản và các tổ chức đang tham gia |
+| POST | `/auth/password-reset/request` | — (công khai) | giới hạn tốc độ | Quên mật khẩu: gửi đường dẫn đặt lại qua email. Luôn 202 cùng một lời; 503 `NOT_CONFIGURED` khi chưa cấu hình gửi thư (thợ K1, 19/10/2026) |
+| POST | `/auth/password-reset/confirm` | — (công khai) | giới hạn tốc độ | Đặt mật khẩu mới bằng thẻ trong thư (một lần). 204; thu hồi mọi phiên (thợ K1, 19/10/2026) |
 
 **Tổ chức** (3 đường)
 

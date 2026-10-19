@@ -645,7 +645,7 @@ export async function updateClass(tx: Tx, a: Actor, classId: string, body: Updat
     requestId: a.requestId,
   });
   // Lớp đã đưa buổi học lên Lịch: buổi chưa diễn ra đổi theo lịch mới, cùng transaction (trùng giờ → 409, lùi cả lệnh sửa).
-  void followClassUpdate;
+  await followClassUpdate(tx, a, after, timezone);
   return presentClass(after, (await calendarSummaries(tx, a.orgId, [classId])).get(classId) ?? NO_CALENDAR);
 }
 

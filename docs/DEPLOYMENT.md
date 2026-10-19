@@ -56,13 +56,13 @@ Kiểm ở `apps/api/src/env.ts` (bảng `EnvSchema`, luật đi kèm ở `super
 | `TRUST_PROXY_HOPS` | không | 0 | Số tầng proxy đứng trước máy chủ. 0 = không tin IP do máy khách khai. `.env.example` ghi Railway đặt 1 (xem mục 4 về tầng Vercel) |
 | `LOG_LEVEL` | không | `info` | Mức chi tiết log |
 
-**Gửi thư (quên mật khẩu)** — có trong `env.ts` của cây làm việc ngày 19/10/2026 (phần đặt lại mật khẩu đang được làm; **chưa có trong `apps/api/.env.example`**, kiểm lại trước khi triển khai):
+**Gửi thư (quên mật khẩu)** — khai và kiểm ở `apps/api/src/env.ts` (thợ K1, 19/10/2026), dựng người gửi thư ở `apps/api/src/lib/mailer/index.ts`. **Chưa có trong `apps/api/.env.example`** (tệp đó ngoài phạm vi thợ K1 — cần người giữ tệp thêm). Production thiếu cấu hình thì máy chủ VẪN khởi động, nhưng `POST /auth/password-reset/request` trả 503 `NOT_CONFIGURED` kèm `details.reason` (`MAIL_NOT_CONFIGURED` / `MAIL_CONSOLE_IN_PRODUCTION` / `WEB_APP_URL_NOT_CONFIGURED`) và log máy chủ ghi hướng dẫn cho người vận hành:
 
 | Tên | Bắt buộc | Mặc định | Ý nghĩa |
 |---|---|---|---|
 | `MAIL_DRIVER` | không | dev/test: `console`; production: bỏ trống | `console` = in thư ra nhật ký (production không nhận); `http` = gọi API gửi thư qua HTTPS. Production bỏ trống → đường quên mật khẩu trả 503 `NOT_CONFIGURED` |
-| `MAIL_FROM`, `MAIL_HTTP_URL`, `MAIL_HTTP_API_KEY` | cả 3, khi `MAIL_DRIVER=http` | — | Người gửi, địa chỉ API gửi thư (production phải `https`), khoá API (bí mật) |
-| `WEB_APP_URL` | production, để gửi thư | dev/test: `http://localhost:5173` | Địa chỉ trang web; đường dẫn trong thư = `<địa chỉ>/dat-lai-mat-khau#the=…` |
+| `MAIL_FROM`, `MAIL_HTTP_URL`, `MAIL_HTTP_API_KEY` | cả 3, khi `MAIL_DRIVER=http` (thiếu → máy chủ không khởi động, nêu tên biến) | — | Người gửi (vd `Makeup Pro <no-reply@makeup.vn>`, tên miền phải được nhà cung cấp xác minh), địa chỉ API gửi thư (production phải `https`), khoá API (bí mật — đặt thẳng trên Railway). Thân gửi đi theo dạng của Resend (`{ from, to: [..], subject, text, html }` + `Authorization: Bearer`); nhà cung cấp khác thì sửa `lib/mailer/http.ts` hàm `body()` |
+| `WEB_APP_URL` | production, để gửi thư | dev/test: `http://localhost:5173` | Địa chỉ trang web; đường dẫn trong thư = `<địa chỉ>/dat-lai-mat-khau#the=…` (thẻ sau dấu `#`: không đi lên Vercel, không lọt Referer) |
 | `PASSWORD_RESET_TTL_MINUTES` | không | 30 | Thẻ đặt lại mật khẩu sống bao lâu (5–1440 phút) |
 
 **Kho tệp** — khai và kiểm cùng chỗ với các biến trên (`apps/api/src/env.ts`, luật ở `superRefine`); `lib/storage/config.ts` chỉ dựng kho tệp từ cấu hình đã kiểm:

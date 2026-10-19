@@ -29,7 +29,7 @@
 .g3 .ben td{width:25%}
 .g3 .ben .nh{width:1%}
 .g3 .mo{margin:0 0 1.2mm!important}
-.g3 .h{font-size:8.6pt;font-weight:700;margin:2.4mm 0 1mm;letter-spacing:.02em}
+.g3 .h{font-size:8.6pt;font-weight:700;margin:1.6mm 0 1mm;padding-top:.8mm;letter-spacing:.02em}
 .g3 .h small{font-weight:400;font-size:7.6pt;color:#555}
 .g3 .sv .ct{font-size:7.4pt;color:#3d3d3d;line-height:1.4}
 .g3 .sv tr.cap1 td:nth-child(2){padding-left:4mm;color:#333}
