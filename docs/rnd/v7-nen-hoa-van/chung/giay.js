@@ -20,6 +20,9 @@ const P=new URLSearchParams(location.search);
 const c=document.getElementById('c');
 const VUONG=P.get('kho')==='vuong';
 let W=1080,H=VUONG?1080:1350;
+// Khổ thật của thẻ: thẻ chào mừng 1080×1350 / 1080×1080, giấy chứng nhận A4 ngang 1123×794 (như R&D-08).
+if(c&&!document.body.dataset.chiKhung&&c.offsetWidth){W=c.offsetWidth;H=c.offsetHeight;}
+const NGANG=W>H;
 const GIAY=P.get('giay')||'chu-nhat';
 const NEN=P.get('nen')||'khac-lam';
 const ANH=P.get('anhnen');
@@ -163,9 +166,9 @@ function khungBaTu(m){const kem='#F3E9D6',o=28,B=64;let s=`<rect width="${W}" he
 /* ---------------- Dựng lớp ---------------- */
 function svgLop(inner,z){const s=document.createElementNS(NS,'svg');s.setAttribute('width',W);s.setAttribute('height',H);s.setAttribute('viewBox',`0 0 ${W} ${H}`);
   s.style.cssText=`position:absolute;left:0;top:0;pointer-events:none`;s.innerHTML=inner;c.insertBefore(s,c.querySelector('.w'));return s;}
-const k=VUONG?{chu:{x:180,y:110,w:720,h:900},panel:{x:170,y:44,w:740,h:992},tem:{x:190,y:84,w:700,h:912}}:{chu:{x:120,y:150,w:840,h:1090},panel:{x:110,y:96,w:860,h:1158},tem:{x:130,y:130,w:820,h:1090}};
+const k=NGANG?{chu:{x:W*.08,y:H*.13,w:W*.84,h:H*.8},panel:{x:W*.06,y:H*.05,w:W*.88,h:H*.9},tem:{x:W*.08,y:H*.1,w:W*.84,h:H*.8}}:VUONG?{chu:{x:180,y:110,w:720,h:900},panel:{x:170,y:44,w:740,h:992},tem:{x:190,y:84,w:700,h:912}}:{chu:{x:120,y:150,w:840,h:1090},panel:{x:110,y:96,w:860,h:1158},tem:{x:130,y:130,w:820,h:1090}};
 // khung nội dung (.w) tính theo tấm giấy; --s = tỉ lệ thu chữ/ảnh so với shd-01 (khung 964×1234)
-function datKhung(b){const w=c.querySelector('.w');const s=Math.min(1,b.w/964,b.h/1234);
+function datKhung(b){const w=c.querySelector('.w');const G=window.GIAY_GOC||[964,1234];const s=Math.min(1,b.w/G[0],b.h/G[1]);
   Object.assign(w.style,{left:f(b.x)+'px',top:f(b.y)+'px',width:f(b.w)+'px',height:f(b.h)+'px'});w.style.setProperty('--s',f(s*1000)/1000);
   document.body.dataset.khungChu=[b.x,b.y,b.w,b.h].map(Math.round).join(',');}
 const inset=(b,l,t,r,bt)=>({x:b.x+l,y:b.y+t,w:b.w-l-r,h:b.h-t-bt});
@@ -173,15 +176,15 @@ const inset=(b,l,t,r,bt)=>({x:b.x+l,y:b.y+t,w:b.w-l-r,h:b.h-t-bt});
 let xong;window.GIAY_XONG=new Promise(r=>{xong=r;});
 let ve='';
 if(!ANH&&!['tran','co-dien','tien-giay','ba-tu'].includes(GIAY)){const [m,nn]=NEN_MAU[NEN]||NEN_MAU['khac-lam'];ve+=veKhac(m,nn);}
-if(GIAY==='chu-nhat'){const b=k.chu;ve+=`<defs>${LOC}</defs>`+giayVan(hinhChuNhat(b));if(DAU)ve+=dauSap(W/2,b.y+8,VUONG?50:58,DAU,P.get('maudau'));datKhung(inset(b,0,DAU?62:20,0,0));}
-if(GIAY==='panel'){const b=k.panel,r=40,a=VUONG?70:84,sh=36;const d=hinhPanel(b,r,a,sh),bi={x:b.x+16,y:b.y+16,w:b.w-32,h:b.h-32};
+if(GIAY==='chu-nhat'){const b=k.chu;ve+=`<defs>${LOC}</defs>`+giayVan(hinhChuNhat(b));if(DAU)ve+=dauSap(W/2,b.y+8,NGANG?44:VUONG?50:58,DAU,P.get('maudau'));datKhung(inset(b,0,DAU?(NGANG?44:62):20,0,0));}
+if(GIAY==='panel'){const b=k.panel,r=NGANG?30:40,a=NGANG?44:VUONG?70:84,sh=NGANG?60:36;const d=hinhPanel(b,r,a,sh),bi={x:b.x+16,y:b.y+16,w:b.w-32,h:b.h-32};
   ve+=`<defs>${LOC}</defs>`+giayVan(d)+`<path d="${hinhPanel(bi,r+16,a-6,sh-14)}" fill="none" stroke="#D3C5AC" stroke-width="2.2" transform="translate(1.2,1.8)"/><path d="${hinhPanel(bi,r+16,a-6,sh-14)}" fill="none" stroke="#FFFFFF" stroke-width="1.6"/>`;
   datKhung(inset(b,24,a+10,24,a-10));}
 if(GIAY==='tem'){const b=k.tem;ve+=`<defs>${LOC}<mask id="lo" maskUnits="userSpaceOnUse" x="0" y="0" width="${W}" height="${H}"><rect width="${W}" height="${H}" fill="#fff"/><g fill="#000">${loTem(b,14,40)}</g></mask></defs>`+
   giayVan(hinhChuNhat(b),'mask="url(#lo)"')+`<rect x="${b.x+30}" y="${b.y+30}" width="${b.w-60}" height="${b.h-60}" fill="none" style="stroke:var(--vien)" stroke-width="1"/>`;datKhung(inset(b,20,26,20,16));}
 if(GIAY==='tran'){const b={x:0,y:0,w:W,h:H};if(!ANH)ve+=`<defs>${LOC}</defs><rect width="${W}" height="${H}" fill="${GIAY_MAU}"/><rect width="${W}" height="${H}" fill="#fff" filter="url(#van2)"/><rect width="${W}" height="${H}" fill="#fff" filter="url(#van)"/>`;
   datKhung(inset(b,58,58,58,58));}
-if(GIAY==='co-dien'){ve+=khungCoDien('#A0601E','#FFFDF8');datKhung(inset({x:0,y:0,w:W,h:H},92,96,92,90));}
+if(GIAY==='co-dien'){ve+=khungCoDien('#A0601E','#FFFDF8');datKhung(NGANG?inset({x:0,y:0,w:W,h:H},104,92,104,88):inset({x:0,y:0,w:W,h:H},92,96,92,90));}
 if(GIAY==='tien-giay'){ve+=khungTienGiay('#1F4E8C');datKhung(inset({x:0,y:0,w:W,h:H},136,128,136,124));}
 if(GIAY==='ba-tu'){ve+=khungBaTu('#1E3A6E');datKhung(inset({x:0,y:0,w:W,h:H},116,112,116,108));}
 const lopVe=svgLop(ve);
@@ -199,9 +202,13 @@ function doVung(img,cat){// tự dò ô trống: điểm trong suốt hoặc r�
   const [x0,x1]=keo(cot,Math.round(sw/2));return [x0/sw,y0/sh,(x1+1)/sw,(y1+1)/sh];}
 function lum(r,g,b){const t=[r,g,b].map(v=>{v/=255;return v<=.04045?v/12.92:Math.pow((v+.055)/1.055,2.4)});return .2126*t[0]+.7152*t[1]+.0722*t[2];}
 function rgb(s){return s.match(/[\d.]+/g).slice(0,3).map(Number);}
-function ghep(img){const cat=so(P.get('cat'),[0,0,1,1]);const sx=cat[0]*img.width,sy=cat[1]*img.height,sw=(cat[2]-cat[0])*img.width,sh=(cat[3]-cat[1])*img.height;
+// Ảnh khung (có ô trống) khác chiều với khổ thẻ → xoay 90° (ví dụ khung tem dọc dùng cho giấy chứng nhận ngang).
+function xoay90(img){const cv=document.createElement('canvas');cv.width=img.height;cv.height=img.width;const x=cv.getContext('2d');
+  x.translate(cv.width,0);x.rotate(Math.PI/2);x.drawImage(img,0,0);return cv;}
+function ghep(img){if(GIAY==='trong-anh'&&P.get('xoay')!=='0'&&((img.height>img.width)!==(H>W))){img=xoay90(img);document.body.dataset.xoay='90';}
+  const cat=so(P.get('cat'),[0,0,1,1]);const sx=cat[0]*img.width,sy=cat[1]*img.height,sw=(cat[2]-cat[0])*img.width,sh=(cat[3]-cat[1])*img.height;
   let s,ox,oy,vungCard=null;
-  if(GIAY==='trong-anh'){let v=P.get('vung');v=(!v||v==='tu-dong')?doVung(img):so(v);document.body.dataset.vung=v.map(n=>n.toFixed(3)).join(',');
+  if(GIAY==='trong-anh'){let v=P.get('vung');v=(!v||v==='tu-dong')?doVung(img):so(v);if(document.body.dataset.xoay&&P.get('vung')&&P.get('vung')!=='tu-dong')v=[1-v[3],v[0],1-v[1],v[2]]; // vùng nhập theo ảnh gốc → đổi sang ảnh đã xoaydocument.body.dataset.vung=v.map(n=>n.toFixed(3)).join(',');
     // ô trống (toạ độ ảnh gốc) → toạ độ trong vùng cắt
     const vx=v[0]*img.width-sx,vy=v[1]*img.height-sy,vw=(v[2]-v[0])*img.width,vh=(v[3]-v[1])*img.height;const m=Math.max(30,W*.03);
     s=Math.min((W-2*m)/vw,(H-2*m)/vh);ox=W/2-(vx+vw/2)*s;oy=H/2-(vy+vh/2)*s;

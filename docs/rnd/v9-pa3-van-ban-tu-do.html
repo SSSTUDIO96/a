@@ -65,7 +65,7 @@ const THE = ['Bảng dịch vụ', 'Tiến độ thanh toán', 'Phiếu thu đã
 V4.man('c-sua', { shell: 'org', nav: 'cai-dat', kid: 'Mẫu in hợp đồng', kids: KIDS, title: 'Soạn mẫu in', back: '#c-quan-ly', act: 'Lưu' }, `
 ${PA('Màn soạn văn bản')}
 <div class="ph"><h1>Hợp đồng dịch vụ — bản luật sư soạn</h1><span class="tag">bản v5</span><span class="sp"></span><span class="seg sm"><button class="on">Soạn</button><button>Xem trước</button></span><button class="btn pri">Lưu thành bản v6</button></div>
-<div class="sua" style="grid-template-columns:minmax(0,1fr) 300px">
+<div class="sua van-ban">
   <div class="vstack">
     <div class="soan" data-f="MỚI: PrintTemplate.body (văn bản có định dạng + biến + thẻ khối)">
       <div class="cu"><select aria-label="Kiểu chữ"><option>Chữ có chân (Lora)</option></select><select aria-label="Cỡ chữ"><option>11</option></select><span class="ng"></span>
@@ -98,7 +98,7 @@ ${PA('Màn soạn văn bản')}
     <div class="card"><div class="ch2"><h2>Chèn khối dữ liệu</h2></div><div class="cb" style="padding-top:8px"><div class="bien-ds">${THE.map((x) => `<button class="bien khoi-dl" type="button">▦ ${x}</button>`).join('')}</div></div></div>
   </div>
 </div>
-<div class="card" style="margin-top:16px"><div class="ch2"><h2>Xem trước (bấm "Xem trước")</h2><small>bộ dựng thật đọc văn bản tự do · HĐDV-000128</small></div><div class="cb" style="padding-top:12px">${V9.xt('tudo=1&loai=dich-vu&ban=dai', 520, 2300)}</div></div>
+<div class="card" style="margin-top:16px"><div class="ch2"><h2>Xem trước</h2><small>HĐDV-000128</small></div><div class="cb" style="padding-top:12px">${V9.xt('tudo=1&loai=dich-vu&ban=dai', 520, 2300)}</div></div>
 <div class="rnd-note"><b>R&D:</b> phương án này cần một trình soạn chữ có định dạng (rich text) trên cả điện thoại; gõ trên điện thoại chỉ hợp sửa chữ nhỏ. Lỗi biến chỉ bắt được bằng bước "Kiểm tra mẫu" — không có lưới an toàn như bố cục có sẵn.</div>
 `);
 

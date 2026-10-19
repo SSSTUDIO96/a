@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=1123">
+<title>R&D 07 v2 · Giấy chứng nhận A4 ngang: nền và khung</title>
+<!-- Makeup Pro · R&D 07 vòng 2 · Áp các kiểu nền/khung (a)–(g) và đường "ảnh của tôi" lên GIẤY CHỨNG NHẬN tốt nghiệp A4 ngang
+     1123×794 (cùng khổ 297×210 mm @96 dpi của R&D-08, docs/rnd/v8-mau-chung-chi). Nội dung theo R&D-08: GIẤY CHỨNG NHẬN · Tốt nghiệp ·
+     Trân trọng trao cho · tên phông chữ ký · khoá/lớp · ngày · số · hai chỗ ký · ảnh tròn. Bản R&D để chụp ảnh, không phải mẫu chính thức.
+     Tham số nền/khung: giống the-giay.html (chung/giay.js). -->
+<link rel="stylesheet" href="../v3-mau-chao-mung/phong/phong.css"><link rel="stylesheet" href="chung/mau.css">
+<style>
+:root{--chu:#2A2420;--phu:#5C4E3E;--nhan:#7A6340;--vien:#B8975A}
+#c{width:1123px;height:794px;background:#F5EFE3;color:var(--chu)}
+.w{--s:1;position:absolute;display:grid;grid-template-columns:calc(220px*var(--s)) 1fr;column-gap:calc(36px*var(--s));align-items:center;padding:calc(26px*var(--s)) calc(40px*var(--s))}
+.trai{display:flex;flex-direction:column;align-items:center;gap:calc(14px*var(--s))}
+.anh{padding:calc(7px*var(--s));border:1.5px solid var(--vien);border-radius:50%}
+.anh img{width:calc(190px*var(--s));height:calc(190px*var(--s));border-radius:50%;object-fit:cover;object-position:50% 38%}
+.anh-vien-thuoc .anh{border-radius:999px}.anh-vien-thuoc .anh img{width:calc(160px*var(--s));height:calc(236px*var(--s));border-radius:999px}
+.so{font:500 calc(15px*var(--s)) var(--f-sans);letter-spacing:.14em;color:var(--nhan);text-transform:uppercase;text-align:center}
+.phai{display:flex;flex-direction:column;align-items:center;text-align:center;min-width:0}
+.dau{display:flex;align-items:center;gap:calc(12px*var(--s))}.lg{width:calc(44px*var(--s));height:calc(44px*var(--s))}.an-logo .lg{display:none}
+.th{font:600 calc(15px*var(--s)) var(--f-sans);letter-spacing:.3em;color:var(--nhan);text-transform:uppercase}
+.t1{font:600 calc(56px*var(--s))/1.05 var(--f-chan);letter-spacing:.06em;text-transform:uppercase;margin-top:calc(14px*var(--s))}
+.t2{font:500 calc(17px*var(--s)) var(--f-sans);letter-spacing:.45em;color:var(--nhan);text-transform:uppercase;margin-top:calc(8px*var(--s))}
+.tag{font:italic 400 calc(26px*var(--s)) var(--f-chan);color:var(--phu);margin-top:calc(18px*var(--s))}
+.ten{font-family:var(--f-tay-1);font-size:calc(84px*var(--s)*var(--tay-co-1));line-height:1.18;width:100%}
+.gach{width:70%;height:1px;background:var(--vien);margin:calc(4px*var(--s)) 0 calc(10px*var(--s))}
+.dong{font:400 calc(25px*var(--s)) var(--f-chan);color:var(--chu)}
+.ngay{font:italic 400 calc(22px*var(--s)) var(--f-chan);color:var(--phu);margin-top:calc(4px*var(--s))}
+.ky{display:flex;justify-content:space-between;width:86%;margin-top:calc(26px*var(--s))}
+.ky>div{width:42%;border-top:1px solid var(--vien);padding-top:calc(8px*var(--s))}
+.cv{font:600 calc(13px*var(--s)) var(--f-sans);letter-spacing:.2em;text-transform:uppercase;color:var(--nhan)}
+.nm{font:italic 400 calc(22px*var(--s)) var(--f-chan);color:var(--chu);margin-top:calc(2px*var(--s))}
+</style></head><body><div id="c"><div class="w">
+<div class="trai"><div class="anh"><img data-f="anh" alt=""></div><div class="so" data-do>Số CC-2026-0007</div></div>
+<div class="phai">
+<div class="dau"><img class="lg" data-f="logo" alt=""><div class="th" data-f="th" data-do></div></div>
+<div class="t1" data-do>Giấy chứng nhận</div><div class="t2" data-do>Tốt nghiệp</div>
+<div class="tag" data-do>Trân trọng trao cho</div>
+<div class="ten" data-f="ten" data-fit="2" data-do></div><div class="gach"></div>
+<div class="dong" data-do>Đã hoàn thành khoá <span data-f="khoa"></span> · Lớp <span data-f="lop"></span></div>
+<div class="ngay" data-do>Ngày 20 tháng 12 năm 2026</div>
+<div class="ky"><div><div class="cv" data-do>Giảng viên</div><div class="nm" data-f="gv" data-do></div></div><div><div class="cv" data-do>Giám đốc học viện</div><div class="nm" data-do>Nguyễn Trọng Chiến</div></div></div>
+</div></div></div>
+<script>(function(){const P=new URLSearchParams(location.search);window.MAC_DINH={};window.GIAY_GOC=[1000,660];document.body.classList.add('anh-'+(P.get('khunganh')||'tron'));
+ const a=P.get('anhnen');if(a){const i=document.createElement('img');i.id='nguon';i.style.display='none';i.src=a;document.body.appendChild(i);}})();</script>
+<script src="chung/giay.js"></script>
+<script src="chung/qrcode.js"></script><script src="chung/mau.js"></script>
+<script>document.body.classList.remove('k45');window.MAU_SAN_SANG=window.MAU_SAN_SANG.then(()=>window.GIAY_XONG).then(()=>{if(window.GIAY_DO)window.GIAY_DO();document.body.dataset.nenXong='1';});</script>
+<script src="chung/html-to-image.js"></script><script src="chung/xuat.js"></script></body></html>
