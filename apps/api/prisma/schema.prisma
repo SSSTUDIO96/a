@@ -61,6 +61,7 @@ model User {
   courseClassesCreated CourseClass[]              @relation("CourseClassCreatedBy")
   contractTextsUpdated ContractText[]             @relation("ContractTextUpdatedBy")
   designCardsCreated   DesignCard[]               @relation("DesignCardCreatedBy")
+  passwordResetTokens  PasswordResetToken[]
 
   @@map("users")
 }
@@ -69,6 +70,25 @@ enum RevokeReason {
   ROTATED
   LOGOUT
   REUSE_DETECTED
+  // Đặt lại mật khẩu qua email: mọi phiên đăng nhập cũ của người đó bị thu hồi.
+  PASSWORD_RESET
+}
+
+// Thẻ đặt lại mật khẩu (gửi qua email). Chỉ giữ BẢN BĂM sha256 (database chặn bằng CHECK: đúng 64 ký tự hex) —
+// lộ database không lộ thẻ. Dùng một lần (used_at), bị vô hiệu khi có thẻ mới / đặt lại xong (revoked_at), hết hạn (expires_at).
+model PasswordResetToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz(3)
+  usedAt    DateTime? @map("used_at") @db.Timestamptz(3)
+  revokedAt DateTime? @map("revoked_at") @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([userId, createdAt])
+  @@map("password_reset_tokens")
 }
 
 model RefreshToken {
@@ -432,6 +452,12 @@ model Appointment {
   // Lịch sinh từ hợp đồng thì trỏ về hợp đồng và dòng hợp đồng. Tiền nằm ở hợp đồng, lịch không giữ tiền.
   contractId      String?       @map("contract_id") @db.Uuid
   contractLineId  String?       @map("contract_line_id") @db.Uuid
+  // Buổi học sinh từ lớp (kind = COURSE_SESSION): lớp + ngày học (theo múi giờ tổ chức). Hai cột đi đôi (CHECK
+  // appointments_class_session_pair). Chống sinh trùng bằng chỉ mục duy nhất CÓ ĐIỀU KIỆN viết tay trong migration
+  // 20261019120000_buoi_hoc_len_lich: appointments_class_session_live_key (course_class_id, session_date)
+  // WHERE status <> 'CANCELLED' — Prisma không ghi được chỉ mục có điều kiện nên không có ở đây (giống chốt EXCLUDE).
+  courseClassId   String?       @map("course_class_id") @db.Uuid
+  sessionDate     DateTime?     @map("session_date") @db.Date
   notes           String?
   cancelReason    String?       @map("cancel_reason")
   createdById     String        @map("created_by_id") @db.Uuid
@@ -445,12 +471,15 @@ model Appointment {
   // Dòng hợp đồng phải thuộc CHÍNH hợp đồng của lịch (database tự chặn).
   contractLineInContract ContractLine?              @relation("AppointmentLineOfContract", fields: [contractLineId, contractId], references: [id, contractId], onDelete: Restrict)
   createdBy              User                       @relation("AppointmentCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  // Khoá ngoại kép: buổi học chỉ trỏ được tới lớp của CHÍNH tổ chức.
+  courseClass            CourseClass?               @relation(fields: [courseClassId, organizationId], references: [id, organizationId], onDelete: Restrict)
   staff                  AppointmentStaff[]
   statusHistory          AppointmentStatusHistory[]
 
   @@unique([organizationId, code])
   @@unique([id, organizationId])
   @@index([organizationId, startsAt])
+  @@index([courseClassId, sessionDate])
   @@map("appointments")
 }
 
@@ -1181,6 +1210,8 @@ model CourseClass {
   contractLines  ContractLine[]
   enrollments    Enrollment[]
   designCards    DesignCard[]
+  // Buổi học đã đưa lên Lịch (Appointment kind = COURSE_SESSION).
+  appointments   Appointment[]
 
   @@unique([id, organizationId])
   @@unique([courseId, name])

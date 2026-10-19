@@ -1,11 +1,15 @@
 import { useId } from 'react';
 import type { StaffMember, StaffTier } from '../../api/types';
+import type { StaffNaming } from '../../ui/staffName';
 import { Avatar, Button, Select, WithTooltip } from '../../ui';
 import { tierOptions } from './logic';
+import { staffInitials } from './useStaffNaming';
 
 // Một dòng thợ (C2 1.2): ảnh 32 · tên + vai trò (· tắt nhận lịch) · ô chọn bậc (đổi là lưu ngay) · "Hồ sơ".
 export interface StaffRowProps {
   row: StaffMember;
+  // L2: màu ảnh đại diện theo sổ thợ chung (ui/staffName.ts) — một người một màu ở mọi màn.
+  naming: StaffNaming;
   tiers: StaffTier[];
   roleText: string;
   // Không có quyền đổi bậc: ô chọn thành chữ.
@@ -19,7 +23,7 @@ export interface StaffRowProps {
   onOpenProfile: () => void;
 }
 
-export function StaffRow({ row, tiers, roleText, canSeeSelect, lockReason, saving, error, highlight, onTierChange, onOpenProfile }: StaffRowProps) {
+export function StaffRow({ row, naming, tiers, roleText, canSeeSelect, lockReason, saving, error, highlight, onTierChange, onOpenProfile }: StaffRowProps) {
   const errId = useId();
   const selectLabel = `Bậc lương của ${row.displayName}`;
   let tierCell;
@@ -40,7 +44,7 @@ export function StaffRow({ row, tiers, roleText, canSeeSelect, lockReason, savin
   }
   return (
     <div className={highlight ? 'st-row st-row--new' : 'st-row'} data-membership={row.membershipId}>
-      <Avatar name={row.displayName} initials={row.initials} avatarUrl={row.avatarUrl} colorKey={row.membershipId} />
+      <Avatar name={row.displayName} initials={staffInitials(row)} avatarUrl={row.avatarUrl} colorKey={naming.colorKey(row.membershipId)} />
       <div className="st-row__who">
         <div className="st-row__name">{row.displayName}</div>
         <div className="st-row__sub">

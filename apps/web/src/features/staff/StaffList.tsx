@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import type { RoleView } from '../../api/org';
 import type { StaffMember, StaffTier } from '../../api/types';
+import type { StaffNaming } from '../../ui/staffName';
 import { Button, Card, EmptyState, Skeleton } from '../../ui';
 import { roleNames, tierLockReason, type StaffPerms } from './logic';
 import { Strip } from './parts';
@@ -19,6 +20,8 @@ export interface StaffListProps {
   tiers: StaffTier[];
   roles: RoleView[] | null;
   perms: StaffPerms;
+  // L2: màu ảnh thợ theo sổ thợ chung (cùng màu với Lịch, Hợp đồng).
+  naming: StaffNaming;
   me: { membershipId: string; roleKeys: readonly string[] };
   search?: ReactNode;
   // Đang tìm mà không có ai khớp.
@@ -81,6 +84,7 @@ export function StaffList(p: StaffListProps) {
           <StaffRow
             key={row.membershipId}
             row={row}
+            naming={p.naming}
             tiers={p.tiers}
             roleText={roleNames(row.roleKeys, p.roles)}
             canSeeSelect={p.perms.changeTier}

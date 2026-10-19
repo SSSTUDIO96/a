@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=1080">
+<title>Thẻ chào mừng shd-11 – Chữ ký mảnh nền đá</title>
+<!-- Makeup Pro · Mẫu chào mừng thứ 20 (việc tồn 7) · cùng hệ "Sang trọng hiện đại" của R&D vòng 3 · Dùng cho: hợp đồng khoá học
+     Nguồn ý tưởng: Tự sáng tác — tên học viên viết bằng CHỮ KÝ nét mảnh đều đặt trên dòng ký tên (anh Chiến muốn
+     "viết tay" là kiểu chữ ký nét mảnh đều — docs/SO-Y-MUON.md 18/10/2026), ảnh khung viên thuốc, nền đá xám ấm, chỉ vàng sâm panh.
+     Ô dữ liệu: logo (Logo), th (Tên thương hiệu), anh (Ảnh học viên), ten (Tên học viên), khoa (Tên khoá), lop (Tên lớp),
+     ngay (Ngày khai giảng → thu, ngayCham), lich (Lịch học), gv (Giảng viên), diachi (Địa chỉ)
+     Phông: MP Chữ ký 1, MP Chữ có chân, MP Chữ không chân — khai báo ở phong/phong.css. Tên học viên dùng biến --f-tay-1
+     (mẫu đặt = chữ ký 1) nên ?ky=1..4 / DesignCard.fontOverride vẫn đổi được sang chữ ký khác.
+     Không có logo (?that=1, logo trống): mau.js ẩn hẳn vòng .ld (cách L6), tên thương hiệu đứng một mình.
+     Dòng thông tin nào trống (giảng viên, lịch, địa chỉ…) thì ẩn cả dòng (đoạn script cuối tệp).
+     Khổ: mặc định 1080×1350; thêm ?kho=vuong để ra 1080×1080. -->
+<link rel="stylesheet" href="phong/phong.css"><link rel="stylesheet" href="chung/mau.css">
+<style>
+/* Mẫu đặt chữ ký 1 cho phông viết tay; ?ky=N ghi đè bằng style trên <html> (mạnh hơn khối này). */
+:root{--f-tay-1:var(--f-ky-1);--tay-co-1:var(--ky-co-1)}
+#c{background:#ECE7E1;color:#2B2420}
+.fr{position:absolute;inset:34px;border:1px solid #B39A72}
+.w{position:absolute;inset:34px;display:flex;flex-direction:column;padding:56px 66px 54px}
+.top{display:flex;align-items:center;gap:16px;min-height:60px}
+.ld{width:60px;height:60px;border-radius:50%;background:#FBF8F4;display:grid;place-items:center;flex:none;box-shadow:0 0 0 1px #B39A72}
+.ld img{width:46px;height:46px;object-fit:contain}
+.th{font:600 18px var(--f-sans);letter-spacing:.3em;text-transform:uppercase;min-width:0;flex:1 1 auto;overflow-wrap:anywhere}
+.tag{font:500 15px var(--f-sans);letter-spacing:.34em;text-transform:uppercase;color:#6E5A3F;flex:none;white-space:nowrap}
+.hl{height:1px;background:#B39A72;flex:none}
+.top+.hl{margin-top:30px}
+.mid{display:flex;gap:50px;flex:none;align-items:center}
+.sp1{flex:.8 1 0;min-height:40px}
+.cap{width:384px;height:576px;border-radius:192px;overflow:hidden;flex:none;background:#DDD5CC;box-shadow:0 0 0 10px #ECE7E1,0 0 0 11px #B39A72}
+.info{flex:1 1 0;min-width:0;display:flex;flex-direction:column}
+.k1{font:500 16px var(--f-sans);letter-spacing:.32em;text-transform:uppercase;color:#6E5A3F}
+.kh{font:italic 500 52px/1.12 var(--f-chan);margin-top:18px;width:100%}
+.lop{font:600 17px var(--f-sans);letter-spacing:.3em;text-transform:uppercase;margin-top:16px}
+.info .hl{margin:34px 0 8px;width:84px}
+.r{display:flex;flex-direction:column;gap:6px;padding:16px 0 0}
+.r b{font:500 14px var(--f-sans);letter-spacing:.3em;text-transform:uppercase;color:#6E5A3F}
+.r span{font:500 27px/1.3 var(--f-chan);overflow-wrap:anywhere}
+.ky{flex:none;display:flex;flex-direction:column}
+.ten{font-family:var(--f-tay-1);font-size:calc(128px*var(--tay-co-1));line-height:1.12;width:100%;padding:0 6px;color:#231C19}
+.ky .hl{margin-top:16px}
+.duoi{display:flex;justify-content:space-between;gap:24px;margin-top:16px;font:500 15px var(--f-sans);letter-spacing:.32em;text-transform:uppercase;color:#6E5A3F}
+.duoi span:last-child{text-align:right}
+.vuong .w{padding:40px 60px 40px}
+.vuong .top+.hl{margin-top:22px}
+.vuong .mid{gap:50px}
+.vuong .sp1{min-height:30px}
+.vuong .cap{width:262px;height:366px;border-radius:131px}
+.vuong .kh{font-size:44px;margin-top:12px}
+.vuong .info .hl{margin:22px 0 2px}
+.vuong .r{padding-top:12px;gap:4px}
+.vuong .r span{font-size:24px}
+.vuong .ten{font-size:calc(108px*var(--tay-co-1))}
+.vuong .duoi{margin-top:12px}
+</style></head><body><div id="c"><div class="fr"></div><div class="w">
+<div class="top"><span class="ld"><img data-f="logo" alt=""></span><span class="th" data-f="th"></span><span class="tag">Thư chào mừng</span></div>
+<div class="hl"></div>
+<div class="sp sp1"></div>
+<div class="mid"><div class="cap"><img class="ph" data-f="anh" alt=""></div>
+<div class="info"><div class="k1">Chào mừng em đến với khoá</div>
+<div class="kh" data-f="khoa" data-fit="2"></div>
+<div class="lop" data-hang>Lớp <span data-f="lop"></span></div>
+<div class="hl"></div>
+<div class="r" data-hang><b>Khai giảng</b><span><span data-f="thu"></span> · <span data-f="ngayCham"></span></span></div>
+<div class="r" data-hang><b>Lịch học</b><span data-f="lich"></span></div>
+<div class="r" data-hang><b>Giảng viên</b><span data-f="gv"></span></div>
+<div class="r" data-hang><b>Địa điểm</b><span data-f="diachi" data-fit="2"></span></div>
+</div></div>
+<div class="sp"></div>
+<div class="ky"><div class="ten" data-f="ten" data-fit="2"></div><div class="hl"></div>
+<div class="duoi"><span>Học viên mới</span><span>Hẹn gặp em ở lớp</span></div></div>
+</div></div>
+<script>window.MAC_DINH={};</script>
+<script src="chung/qrcode.js"></script><script src="chung/mau.js"></script>
+<script>
+// Dòng thông tin (data-hang) mà mọi ô dữ liệu trong đó đều trống → ẩn cả dòng (không in nhãn "Giảng viên" rồi để trống).
+// Chạy ngay sau mau.js (đã điền chữ), trước lần co chữ data-fit (mau.js chờ phông rồi mới co).
+document.querySelectorAll('[data-hang]').forEach(function(r){
+  var o=r.querySelectorAll('[data-f]');var co=false;o.forEach(function(e){if(e.textContent.trim())co=true;});
+  if(o.length&&!co)r.style.display='none';});
+</script>
+<script src="chung/html-to-image.js"></script><script src="chung/xuat.js"></script></body></html>

@@ -16,6 +16,7 @@ import { TierList } from './TierList';
 import { TierManagerDialog } from './TierManagerDialog';
 import { type OrgInfo } from './useOrgInfo';
 import { useStaffData } from './useStaff';
+import { primeStaffRoster, rosterEntryOf, useStaffNaming } from './useStaffNaming';
 import { StaffSegmented } from './StaffSegmented';
 
 // Màn "Thợ & bậc lương" (C2 1.2): ListDetail hẹp — trái: bậc lương; phải: thợ của nhóm đang chọn.
@@ -79,6 +80,14 @@ export function StaffTiersScreen({ org, perms }: { org: OrgInfo; perms: StaffPer
   }, [q, org.orgId, searchAttempt]);
 
   const ready = data.state.status === 'ready' ? data.state.data : null;
+  // L2: màu + chữ tắt ảnh thợ qua sổ thợ chung (ui/staffName.ts staffNaming) — cùng màu với Lịch và Hợp đồng.
+  // Màn này đã có trọn GET /staff → đẩy vào kho chung để thanh trái, Tiền công, Khoá học dùng cùng bản.
+  const allStaff = ready?.staff ?? null;
+  useEffect(() => {
+    if (allStaff) primeStaffRoster(org.orgId, allStaff);
+  }, [org.orgId, allStaff]);
+  const shownStaff = useMemo(() => (allStaff ?? []).map(rosterEntryOf), [allStaff]);
+  const naming = useStaffNaming(org.orgId, perms.read, shownStaff);
   const title = ready ? groupTitle(group, ready.tiers) : null;
   const rows = useMemo(() => {
     if (!ready) return null;
@@ -170,6 +179,7 @@ export function StaffTiersScreen({ org, perms }: { org: OrgInfo; perms: StaffPer
         tiers={ready?.tiers ?? []}
         roles={ready?.roles ?? null}
         perms={perms}
+        naming={naming}
         me={{ membershipId: org.membershipId, roleKeys: org.roleKeys }}
         search={phone ? undefined : searchBox}
         query={found && q.trim() ? q.trim() : ''}
@@ -202,6 +212,7 @@ export function StaffTiersScreen({ org, perms }: { org: OrgInfo; perms: StaffPer
         tiers={ready.tiers}
         roles={ready.roles}
         perms={perms}
+        naming={naming}
         me={{ membershipId: org.membershipId, roleKeys: org.roleKeys }}
         query={q.trim()}
         savingId={savingId}
@@ -250,6 +261,7 @@ export function StaffTiersScreen({ org, perms }: { org: OrgInfo; perms: StaffPer
         <StaffProfileDialog
           orgId={org.orgId}
           row={profile}
+          naming={naming}
           tiers={ready.tiers}
           roleText={profile ? roleNames(profile.roleKeys, ready.roles) : ''}
           phone={phone}

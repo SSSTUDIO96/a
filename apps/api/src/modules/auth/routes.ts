@@ -8,17 +8,8 @@ import { writeAudit } from '../../lib/audit';
 import { DUMMY_HASH, hashPassword, verifyPassword } from '../../lib/password';
 import { issueTokens, revokeFamily, rotateRefreshToken } from './service';
 import { CLEAR_REFRESH_COOKIE, deliverTokens, presentedRefreshToken } from './transport';
-
-const Email = z
-  .string()
-  .trim()
-  .toLowerCase()
-  .pipe(z.email({ error: 'Email không hợp lệ' }).max(254));
-// bcrypt chỉ dùng 72 byte đầu: mật khẩu dài hơn sẽ bị cắt âm thầm, nên chặn ngay ở cửa (biên bản mốc 2, L9).
-const Password = z
-  .string()
-  .min(10, 'Mật khẩu tối thiểu 10 ký tự')
-  .refine((p) => Buffer.byteLength(p, 'utf8') <= 72, 'Mật khẩu tối đa 72 byte (khoảng 24–72 ký tự tuỳ dấu)');
+import { Email, Password } from './schemas';
+import { passwordResetRoutes } from './password-reset';
 
 const RegisterBody = z.object({ email: Email, password: Password, fullName: z.string().trim().min(1).max(120) });
 type RegisterInput = z.infer<typeof RegisterBody>;
@@ -233,4 +224,7 @@ export const authRoutes = [
       };
     },
   }),
+
+  // Quên mật khẩu → thư có đường dẫn → đặt mật khẩu mới (password-reset.ts).
+  ...passwordResetRoutes,
 ];

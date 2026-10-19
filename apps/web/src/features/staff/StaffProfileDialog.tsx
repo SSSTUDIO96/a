@@ -4,15 +4,19 @@ import { uploadFile } from '../../api/files';
 import { newIdempotencyKey } from '../../api/idempotency';
 import { updateStaff } from '../../api/staff';
 import type { StaffMember, StaffTier } from '../../api/types';
+import type { StaffNaming } from '../../ui/staffName';
 import { Avatar, Button, ImageUpload, Select, SettingRow, Switch, TextInput } from '../../ui';
 import { profileDraftOf, profilePatch, tierOptions, type ProfileDraft } from './logic';
 import { FormDialog, Strip } from './parts';
+import { staffInitials } from './useStaffNaming';
 
 // Hộp "Hồ sơ thợ" (C2 1.2): ảnh · Thông tin (tên hiển thị, số điện thoại) · Lương & lịch (bậc, nhận lịch).
 // Lưu = PATCH /staff/:membershipId chỉ trường đã đổi. Ảnh: tải lên (STAFF_AVATAR) giữ mã trong bản nháp, Lưu mới gửi.
 export interface StaffProfileDialogProps {
   orgId: string;
   row: StaffMember | null;
+  // L2: màu ảnh đại diện theo sổ thợ chung — cùng màu với dòng thợ, Lịch, Hợp đồng.
+  naming: StaffNaming;
   tiers: StaffTier[];
   roleText: string;
   phone: boolean;
@@ -106,7 +110,7 @@ export function StaffProfileDialog(p: StaffProfileDialogProps) {
       {banner && <Strip tone="danger" icon="warn">{banner}</Strip>}
       {readOnly || !p.canFiles ? (
         <div className="ui-img ui-img--inline st-prof__img">
-          <Avatar name={row.displayName} initials={row.initials} avatarUrl={row.avatarUrl} colorKey={row.membershipId} className="st-prof__av st-prof__av--ro" />
+          <Avatar name={row.displayName} initials={staffInitials(row)} avatarUrl={row.avatarUrl} colorKey={p.naming.colorKey(row.membershipId)} className="st-prof__av st-prof__av--ro" />
           <span className="ui-img__side">
             <span className="st-prof__name">{row.displayName}</span>
             <span className="st-prof__acc">Tên tài khoản: {row.fullName}</span>
@@ -121,7 +125,7 @@ export function StaffProfileDialog(p: StaffProfileDialogProps) {
           label={`Ảnh đại diện ${row.displayName}`}
           value={shownAvatar}
           disabled={saving}
-          emptyContent={<Avatar name={row.displayName} initials={row.initials} colorKey={row.membershipId} className="st-prof__av" />}
+          emptyContent={<Avatar name={row.displayName} initials={staffInitials(row)} colorKey={p.naming.colorKey(row.membershipId)} className="st-prof__av" />}
           errorMessage={userMessage}
           error={errors.avatarFileId || null}
           onUpload={async (file) => {

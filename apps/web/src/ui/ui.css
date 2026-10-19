@@ -507,6 +507,10 @@
 @keyframes ui-pulse { 50% { opacity: .55; } }
 
 /* ===== Dialog ===== */
+/* Lớp phủ của Dialog và BottomSheet CÙNG một tầng (z-index 50). Cả hai cổng ra cuối <body> lúc mở, nên khi cùng tầng
+   thì hộp mở SAU nằm TRÊN theo thứ tự DOM — kể cả ngăn kéo mở từ trong hộp (ô "Chọn thợ" ở hộp "Thêm phát sinh",
+   điện thoại; biên bản nghiệm thu lần 4, N2). Đừng cho một loại tầng cao hơn loại kia. Bóng chữ (Tooltip, tầng 80)
+   cổng ra body nên vẫn nổi trên hộp. */
 .ui-overlay {
   position: fixed;
   inset: 0;
@@ -554,7 +558,7 @@
 .ui-sheet-overlay {
   position: fixed;
   inset: 0;
-  z-index: 40;
+  z-index: 50;
   background: var(--overlay-sheet);
 }
 .ui-sheet {
