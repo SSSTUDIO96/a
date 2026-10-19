@@ -14,7 +14,7 @@ import { Button, EmptyState, IconPlus, Skeleton } from '../../ui';
 import { AppointmentDialog, type DialogTarget } from './AppointmentDialog';
 import { DayListB } from './DayListB';
 import { FilterDialog } from './FilterDialog';
-import { accessFrom, buildStaffLanes, conflictMarks, lanesRoster, DEFAULT_MODE, legendSubjects, type ScheduleAccess, type ScheduleMode } from './model';
+import { accessFrom, buildStaffLanes, conflictMarks, isCourseSession, lanesRoster, DEFAULT_MODE, legendSubjects, type ScheduleAccess, type ScheduleMode } from './model';
 import { cx, Legend, OrgSubjectsContext, StaffNamingContext } from './parts';
 import { staffNaming } from '../../ui/staffName';
 import { StaffColumnsA } from './StaffColumnsA';
@@ -200,7 +200,7 @@ export function ScheduleScreen({
             phone={phone}
           />
           <div className="ws-body">{body}</div>
-          {mode === 'C' && !phone && state.status === 'ready' && <Legend subjects={legendSubjects(appointments, orgSubjects)} showUnassigned={showUnassigned} />}
+          {mode === 'C' && !phone && state.status === 'ready' && <Legend subjects={legendSubjects(appointments, orgSubjects)} showUnassigned={showUnassigned} showCourse={appointments.some(isCourseSession)} />}
         </section>
 
         {filterOpen && (

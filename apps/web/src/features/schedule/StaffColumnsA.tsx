@@ -4,7 +4,7 @@
 import type { CSSProperties } from 'react';
 import type { Appointment } from '../../api/types';
 import { StatusTag } from '../../ui';
-import { appointmentsOfDay, axisHours, blockSpan, dayLoad, kindLabel, laneIdsOf, layoutLanes, quantityText, UNASSIGNED, type ConflictMarks, type StaffLane } from './model';
+import { appointmentsOfDay, axisHours, blockSpan, dayLoad, kindLabel, laneIdsOf, layoutLanes, quantityText, UNASSIGNED, whoText, type ConflictMarks, type StaffLane } from './model';
 import { apptClasses, apptTip, cx, LaneAvatar, placeText, timeRange, useSwatchOf, laneShort, useStaffNaming } from './parts';
 import { formatHours, minutesFromDayStart, type DayKey } from './time';
 
@@ -118,7 +118,7 @@ export function StaffColumnsA({
                           </>
                         )}
                       </span>
-                      {a.customer && <span className="ws-ev__kh">{a.customer.fullName}</span>}
+                      {whoText(a) && <span className="ws-ev__kh">{whoText(a)}</span>}
                       {placeText(a) && <span className="ws-ev__nc">{placeText(a)}</span>}
                     </span>
                     {afterPx > 0 && <span className="ws-ev__travel is-after" style={{ height: afterPx }} aria-hidden="true" />}

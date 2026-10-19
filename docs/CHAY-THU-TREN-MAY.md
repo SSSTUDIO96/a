@@ -222,7 +222,7 @@ All migrations have been successfully applied.
 
 **[Đã chạy trên Linux 18/10/2026]**: không có cờ → bị từ chối, mã thoát 1. Có cờ → áp đủ 15 migration vào `makeup_thu_z`, kiểm lại khớp.
 
-**Trên Windows nên dùng `pnpm db:deploy` thay cho `db:deploy-to`.** Đọc mã: `apps/api/scripts/deploy-to.mjs` gọi `execFileSync('npx', …)` không qua cửa sổ lệnh; trên Windows `npx` là tệp `npx.cmd`, cách gọi này thường báo `ENOENT` (không tìm thấy). **[CHƯA thử trên Windows — suy từ mã]**. Tệp `1-CAI-DAT-LAN-DAU` vì vậy dùng `pnpm db:deploy` rồi tự đếm lại trên đúng database.
+**Trên Windows vẫn nên dùng `pnpm db:deploy` thay cho `db:deploy-to`.** Bản cũ của `apps/api/scripts/deploy-to.mjs` gọi `execFileSync('npx', …)` không qua cửa sổ lệnh; trên Windows `npx` là tệp `npx.cmd`, cách gọi đó sẽ báo `ENOENT` (không tìm thấy) — **[CHƯA thử trên Windows — suy từ mã]**. Ghi chú: `deploy-to` **đã được sửa** để gọi được trên Windows (chạy thẳng `node` với tệp chạy của Prisma, không dùng `npx`, không qua shell; mọi chốt an toàn giữ nguyên), nhưng bản sửa **CHƯA thử trên Windows thật** — mới thử trên Linux, và bài thử giả lập `platform = win32` chỉ xác nhận lệnh được chọn đúng. Vì vậy lời khuyên vẫn là dùng `pnpm db:deploy`. Tệp `1-CAI-DAT-LAN-DAU` dùng `pnpm db:deploy` rồi tự đếm lại trên đúng database.
 
 Cách khác cũng chạy được: `pnpm db:deploy` (đọc địa chỉ từ tệp `.env` ở bước 4). **[Đã chạy trên Linux 18/10/2026]**: in `15 migrations found … No pending migrations to apply.` (vì đã áp ở trên).
 

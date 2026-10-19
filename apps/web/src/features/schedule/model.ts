@@ -99,10 +99,12 @@ export function swatchOf(subjectName: string | null | undefined, orgSubjects: re
 }
 
 // Chú thích màu: các nhân vật thật có trong tuần (theo thứ tự danh sách của tổ chức, rồi theo tên), cuối cùng là "Khác".
-export function legendSubjects(appointments: readonly Pick<Appointment, 'subjectName'>[], orgSubjects: readonly string[] = []): { name: string | null; label: string }[] {
+// Buổi học (sinh từ lớp) có màu riêng "Buổi học" — không tính vào nhân vật / "Khác".
+export function legendSubjects(appointments: readonly Pick<Appointment, 'subjectName' | 'kind'>[], orgSubjects: readonly string[] = []): { name: string | null; label: string }[] {
   const names = new Map<string, string>();
   let hasOther = false;
   for (const a of appointments) {
+    if (isCourseSession(a)) continue;
     if (a.subjectName && a.subjectName.trim()) names.set(norm(a.subjectName), a.subjectName.trim());
     else hasOther = true;
   }
@@ -139,6 +141,19 @@ export function kindLabel(a: Pick<Appointment, 'title' | 'kind'>): string {
 // bị cắt, chỉ tên loại ca được rút gọn "…".
 export function quantityText(a: Pick<Appointment, 'quantity'>): string | null {
   return a.quantity !== null && a.quantity !== undefined && a.quantity > 1 ? `× ${a.quantity}` : null;
+}
+
+// ---------------- Buổi học (việc tồn 6) ----------------
+// Buổi học sinh từ lớp (nút "Đưa buổi học lên Lịch" ở Khoá & lớp): màu và nhãn riêng "Buổi học", dòng tên là tên lớp.
+export const COURSE_SESSION_LABEL = KIND_LABELS.COURSE_SESSION;
+
+export function isCourseSession(a: Pick<Appointment, 'kind'>): boolean {
+  return a.kind === 'COURSE_SESSION';
+}
+
+// Dòng "ai" trên ô ca: tên khách; buổi học thì tên lớp. Không có → null.
+export function whoText(a: Pick<Appointment, 'customer' | 'courseClass'>): string | null {
+  return a.customer?.fullName ?? a.courseClass?.name ?? null;
 }
 
 // Ca không chặn lịch (nháp, đã huỷ, khách không đến) vẽ mờ, không báo đỏ (bản vẽ 4.1).

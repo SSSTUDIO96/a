@@ -122,7 +122,7 @@ async function handleResetRequest(deps: Deps, email: string, requestId: string, 
     // Chỉ thẻ MỚI NHẤT còn dùng được: thư cũ (có thể nằm trong hộp thư bị lộ) hết tác dụng.
     await tx.passwordResetToken.updateMany({ where: { userId: user.id, usedAt: null, revokedAt: null }, data: { revokedAt: now } });
     await tx.passwordResetToken.create({
-      data: { userId: user.id, tokenHash: hash, createdAt: now, expiresAt: new Date(now.getTime() + ttl * 60_000) },
+      data: { userId: user.id, tokenHash: token, createdAt: now, expiresAt: new Date(now.getTime() + ttl * 60_000) },
     });
     await writeAudit(tx, {
       organizationId: null,
@@ -158,7 +158,7 @@ export const passwordResetRoutes = [
         // Gửi NỀN, không chờ: thời gian gọi dịch vụ thư không được làm lộ email nào có tài khoản.
         // Lỗi gửi chỉ ghi log — không kèm nội dung thư, không kèm email; lời lỗi của driver bị che thẻ phòng khi driver chép thư vào.
         mail.mailer.send(outcome.message).catch((err: unknown) => {
-          const error = (err instanceof Error ? err.message : 'lỗi không rõ');
+          const error = (err instanceof Error ? err.message : 'lỗi không rõ').replaceAll(outcome.token, '[ẩn]');
           deps.logger.error(
             { requestId, userId: outcome.userId, mailDriver: mail.mailer.driver, error },
             'Gửi thư đặt lại mật khẩu thất bại',

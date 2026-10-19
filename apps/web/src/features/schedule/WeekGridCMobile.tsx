@@ -4,7 +4,7 @@
 import { useState, type CSSProperties } from 'react';
 import type { Appointment } from '../../api/types';
 import { StatusTag } from '../../ui';
-import { appointmentsOfDay, cellKey, countByDay, indexByCell, kindText, UNASSIGNED, type ConflictMarks, type StaffLane } from './model';
+import { appointmentsOfDay, cellKey, countByDay, indexByCell, kindText, UNASSIGNED, whoText, type ConflictMarks, type StaffLane } from './model';
 import { apptClasses, apptTip, cx, LaneAvatar, StaffAvatars, startLabel, useSwatchOf, laneShort, useStaffNaming } from './parts';
 import { dayKeyOf, dayNumber, ddmm, hhmm, isWeekend, weekDays, weekdayLong, weekdayShort, type DayKey } from './time';
 
@@ -155,7 +155,7 @@ function MobileAgendaRow({
           {kindText(a)}
           {conflict && <StatusTag tone="danger">Trùng giờ</StatusTag>}
         </span>
-        <span className="ws-ag__kh">{a.customer?.fullName ?? (a.staff.length === 0 ? 'Chưa có thợ' : '')}</span>
+        <span className="ws-ag__kh">{whoText(a) ?? (a.staff.length === 0 ? 'Chưa có thợ' : '')}</span>
       </span>
       <span className="ws-ag__who">
         <StaffAvatars a={a} size="sm" />

@@ -4,7 +4,7 @@ import { WORK_STATUS_LABELS } from '@makeup/shared';
 import type { Appointment } from '../../api/types';
 import { Avatar, Tooltip, WithTooltip } from '../../ui';
 import { staffNaming, type StaffNaming } from '../../ui/staffName';
-import { isBlocking, kindLabel, kindText, lanesRoster, quantityText, swatchOf, UNASSIGNED, type StaffLane, type Swatch } from './model';
+import { COURSE_SESSION_LABEL, isBlocking, isCourseSession, kindLabel, kindText, lanesRoster, quantityText, swatchOf, UNASSIGNED, whoText, type StaffLane, type Swatch } from './model';
 
 // Danh sách nhân vật của tổ chức (thứ tự cố định) — để nhân vật tự thêm có màu ổn định. Màn cung cấp qua ngữ cảnh này.
 export const OrgSubjectsContext = createContext<readonly string[]>([]);
@@ -47,6 +47,7 @@ export function timeRange(a: Pick<Appointment, 'startsAt' | 'endsAt'>): string {
 export function apptTip(a: Appointment): string {
   const parts = [timeRange(a), kindText(a)];
   if (a.customer) parts.push(a.customer.fullName);
+  if (a.courseClass) parts.push(`Lớp ${a.courseClass.name}`);
   if (a.subjectName) parts.push(a.subjectName);
   if (a.staff.length === 0) parts.push('Chưa có thợ');
   parts.push(WORK_STATUS_LABELS[a.status]);
@@ -59,6 +60,8 @@ export function apptClasses(a: Appointment, conflict: boolean, swatch: Swatch): 
     a.staff.length === 0 && 'is-na',
     !isBlocking(a) && 'is-off',
     a.kind === 'PERSONAL_BLOCK' && 'is-block',
+    // Buổi học: màu riêng (schedule.css .is-course) đè lên màu nhân vật "Khác".
+    isCourseSession(a) && 'is-course',
     conflict && 'is-x',
   );
 }
@@ -84,6 +87,7 @@ export function ApptChip({
 }) {
   const swatchOfName = useSwatchOf();
   const qty = quantityText(a);
+  const who = whoText(a);
   return (
     <WithTooltip text={apptTip(a)} className="ws-chip-wrap">
       <button type="button" className={cx('ws-chip', apptClasses(a, conflict, swatchOfName(a.subjectName)))} onClick={() => onOpen(a)} data-appt={a.id}>
@@ -92,7 +96,7 @@ export function ApptChip({
           <span className="ws-chip__kind">{chipKind(a)}</span>
           {qty && <span className="ws-chip__qty num">{qty}</span>}
         </span>
-        {a.customer && <span className="ws-chip__who">{a.customer.fullName}</span>}
+        {who && <span className="ws-chip__who">{who}</span>}
       </button>
     </WithTooltip>
   );
@@ -114,7 +118,16 @@ function LaneAvatarOf({ lane, size }: { lane: StaffLane; size: 'md' | 'sm' | 'xs
   return <Avatar name={lane.name} initials={lane.initials} avatarUrl={lane.avatarUrl} colorKey={naming.colorKey(lane.membershipId)} size={size} />;
 }
 
-export function Legend({ subjects, showUnassigned }: { subjects: { name: string | null; label: string }[]; showUnassigned: boolean }) {
+export function Legend({
+  subjects,
+  showUnassigned,
+  showCourse = false,
+}: {
+  subjects: { name: string | null; label: string }[];
+  showUnassigned: boolean;
+  // Có buổi học trong khoảng xem → thêm mục "Buổi học".
+  showCourse?: boolean;
+}) {
   const swatchOfName = useSwatchOf();
   return (
     <div className="ws-legend" aria-label="Chú thích màu">
@@ -124,6 +137,12 @@ export function Legend({ subjects, showUnassigned }: { subjects: { name: string 
           {s.label}
         </span>
       ))}
+      {showCourse && (
+        <span className="ws-legend__i is-course">
+          <i aria-hidden="true" />
+          {COURSE_SESSION_LABEL}
+        </span>
+      )}
       {showUnassigned && (
         <span className="ws-legend__i ws-legend__i--na">
           <i aria-hidden="true" />
@@ -135,7 +154,7 @@ export function Legend({ subjects, showUnassigned }: { subjects: { name: string 
         Không chặn lịch
       </span>
       <Tooltip
-        text="Màu theo nhân vật trên dòng hợp đồng gắn với ca. Ca không gắn nhân vật tô màu Khác. Ca nháp, đã huỷ, khách không đến không giữ giờ của thợ nên vẽ mờ."
+        text="Màu theo nhân vật trên dòng hợp đồng gắn với ca. Ca không gắn nhân vật tô màu Khác. Buổi học của lớp (đưa lên từ Khoá & lớp) có màu kẻ sọc riêng. Ca nháp, đã huỷ, khách không đến không giữ giờ của thợ nên vẽ mờ."
         label="Giải thích màu ca"
       />
     </div>

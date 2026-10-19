@@ -11,6 +11,7 @@ import {
   dayLoad,
   dayPartOf,
   kindText,
+  whoText,
   laneIdsOf,
   UNASSIGNED,
   type ConflictMarks,
@@ -111,7 +112,7 @@ export function DayListB({
                   <IconPerson />
                   <button type="button" className="ws-task__t" onClick={() => onOpen(a)}>
                     <b>Chưa có thợ</b>
-                    <span>{[startLabel(a, day), kindText(a), a.customer?.fullName].filter(Boolean).join(' · ')}</span>
+                    <span>{[startLabel(a, day), kindText(a), whoText(a)].filter(Boolean).join(' · ')}</span>
                   </button>
                   {canWrite && (
                     <Button size="sm" onClick={() => onAssign(a)}>
@@ -145,7 +146,7 @@ export function DayListB({
                         <span className="ws-item__sv">
                           {kindText(a)} <WorkStatusTag status={a.status} />
                         </span>
-                        {a.customer && <span className="ws-item__kh">{a.customer.fullName}</span>}
+                        {whoText(a) && <span className="ws-item__kh">{whoText(a)}</span>}
                         {placeText(a) && <span className="ws-item__nc">{placeText(a)}</span>}
                         {conflict && (
                           <span className="ws-item__warn">

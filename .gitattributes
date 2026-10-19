@@ -1,0 +1,4 @@
+# Tệp chạy trên Windows luôn xuống dòng kiểu Windows (CRLF) khi clone trên mọi máy.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
