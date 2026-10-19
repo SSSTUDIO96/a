@@ -51,8 +51,9 @@
   }
 
   // Hộp thoại In tại hợp đồng (dùng chung 3 phương án; khác ở danh sách mẫu và dòng ghi chú).
-  function dlgIn({ mau = 2, ten = 'Hiện đại — Chiến Makeup', ds = [], canhBao = '', ghiChu = '' }) {
-    const trang = [1, 2].map((t) => `<figure><img class="a4" src="${anh(mau, 'dich-vu', t)}" alt="Trang ${t}"><figcaption>Trang ${t}/2</figcaption></figure>`).join('');
+  function dlgIn({ mau = 2, ds = [], canhBao = '', ghiChu = '', anhTrang = null }) {
+    const ds2 = anhTrang || [1, 2].map((t) => anh(mau, 'dich-vu', t));
+    const trang = ds2.map((src, i) => `<figure><img class="a4" src="${src}" alt="Trang ${i + 1}"><figcaption>Trang ${i + 1}/${ds2.length}</figcaption></figure>`).join('');
     return `<div class="dlg-bg"><div class="dlg w" role="dialog" aria-label="In hợp đồng">
       <div class="dh"><div style="flex:1;min-width:0"><div class="fx">HĐDV-000128 · Nguyễn Thu Trang</div><h2>In hợp đồng</h2></div><button class="btn icon ghost" aria-label="Đóng">${I('x')}</button></div>
       <div class="db"><div class="in-lay">

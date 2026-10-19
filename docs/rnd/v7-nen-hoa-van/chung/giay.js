@@ -162,7 +162,7 @@ function svgLop(inner,z){const s=document.createElementNS(NS,'svg');s.setAttribu
 const k=VUONG?{chu:{x:180,y:110,w:720,h:900},panel:{x:170,y:44,w:740,h:992},tem:{x:190,y:84,w:700,h:912}}:{chu:{x:120,y:150,w:840,h:1090},panel:{x:110,y:96,w:860,h:1158},tem:{x:130,y:130,w:820,h:1090}};
 // khung nội dung (.w) tính theo tấm giấy; --s = tỉ lệ thu chữ/ảnh so với shd-01 (khung 964×1234)
 function datKhung(b){const w=c.querySelector('.w');const s=Math.min(1,b.w/964,b.h/1234);
-  Object.assign(w.style,{left:f(b.x)+'px',top:f(b.y)+'px',width:f(b.w)+'px',height:f(b.h)+'px',inset:'auto'});w.style.setProperty('--s',f(s*1000)/1000);
+  Object.assign(w.style,{left:f(b.x)+'px',top:f(b.y)+'px',width:f(b.w)+'px',height:f(b.h)+'px'});w.style.setProperty('--s',f(s*1000)/1000);
   document.body.dataset.khungChu=[b.x,b.y,b.w,b.h].map(Math.round).join(',');}
 const inset=(b,l,t,r,bt)=>({x:b.x+l,y:b.y+t,w:b.w-l-r,h:b.h-t-bt});
 

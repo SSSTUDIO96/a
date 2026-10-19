@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="ten" content="R&D 09 — PA2 Khối kéo-thả">
+<title>PA2 Khối kéo-thả — R&D 09</title>
+<!-- R&D 09 — Phương án 2 "TRÌNH SOẠN KHỐI KÉO-THẢ + BIẾN CHÈN". Mức tùy chỉnh VỪA.
+     Trang in là một chồng KHỐI có sẵn (đầu trang, thông tin hai bên, bảng dịch vụ, tiền, tiến độ, phiếu thu, chuyển khoản,
+     điều khoản, nội quy, chữ tự do, chỗ ký, chân trang). Studio kéo đổi thứ tự, thêm/bớt khối, chỉnh từng khối (cột bảng,
+     chữ tự do có biến {Tên khách}…). Kiểu chữ/trang trí lấy từ 1 trong 5 bố cục ("giao diện").
+     Token + component: v4-chung/v4.css. ?truong = hiện nguồn dữ liệu. Màn: #b-quan-ly · #b-sua · #b-in. Dữ liệu giả. -->
+<link rel="stylesheet" href="v4-chung/v4.css">
+<link rel="stylesheet" href="v9-chung/v9.css">
+</head>
+<body>
+<script src="v4-chung/v4.js"></script>
+<script src="v9-chung/v9.js"></script>
+<script>
+(function () {
+const I = V4.icon;
+const KIDS = 'Hồ sơ thương hiệu|Mẫu in hợp đồng|Mẫu điều khoản';
+const PA = (t) => `<div class="pa"><b>Phương án 2</b> · Trình soạn khối kéo-thả + biến chèn · ${t}</div>`;
+
+V4.mucLuc('R&D 09 — Phương án 2: Khối kéo-thả', 'Mức tùy chỉnh vừa: xếp lại các khối có sẵn, chỉnh từng khối, chèn biến vào khối chữ tự do. Thêm ?truong để hiện nguồn dữ liệu.', [
+  ['Màn', [
+    ['b-quan-ly', 'Quản lý mẫu in', 'Bảng mẫu in + ngăn lịch sử phiên bản (khôi phục bản cũ)'],
+    ['b-sua', 'Soạn mẫu bằng khối', 'Kho khối · trang (kéo đổi thứ tự) · xem trước'],
+    ['b-in', 'Bấm In ở hợp đồng', 'Chọn mẫu, cảnh báo khối thiếu dữ liệu, in / PDF'],
+  ]],
+]);
+
+// ---------- Màn 1: Quản lý (bảng) + ngăn lịch sử phiên bản ----------
+const DS = [
+  ['Hiện đại — Chiến Makeup', 'Dịch vụ', 2, 13, 3, 46, true],
+  ['Cổ điển có quốc hiệu', 'Dịch vụ', 1, 15, 1, 3, false],
+  ['Gọn 1 trang — tiệc nhỏ', 'Dịch vụ', 4, 9, 2, 9, false],
+  ['Hợp đồng đào tạo — Cổ điển', 'Khoá học', 1, 14, 2, 31, true],
+  ['Sang trọng — khoá cao cấp', 'Khoá học', 5, 12, 1, 4, false],
+];
+const LS = [
+  ['v3', '12/10/2026 · Chiến', 'Thêm khối "Chuyển khoản"; bảng dịch vụ hiện cột Thợ', '46 hợp đồng đã in bằng bản này', true],
+  ['v2', '02/09/2026 · Minh Anh', 'Đưa "Tiến độ thanh toán" lên trước "Điều khoản"', '12 hợp đồng', false],
+  ['v1', '15/08/2026 · Chiến', 'Tạo từ bố cục 2 — Hiện đại', '5 hợp đồng', false],
+];
+V4.man('b-quan-ly', { shell: 'org', nav: 'cai-dat', kid: 'Mẫu in hợp đồng', kids: KIDS, title: 'Mẫu in hợp đồng', act: '+' }, `
+${PA('Màn quản lý + lịch sử phiên bản')}
+<div class="ph"><h1>Mẫu in hợp đồng</h1><span class="sp"></span><button class="btn pri">${I('plus', 's')}Tạo mẫu in</button></div>
+<div class="card"><table class="tbl m-cards">
+  <thead><tr><th>Mẫu in</th><th>Dùng cho</th><th>Giao diện</th><th class="r">Số khối</th><th>Bản</th><th class="r">Đã in</th><th></th></tr></thead>
+  <tbody>${DS.map(([t, l, g, k, v, n, d], i) => `<tr class="${i === 0 ? 'sel' : ''}"><td><b data-f="MỚI: PrintTemplate.name">${t}</b> ${d ? '<span class="tag nv" data-f="MỚI: PrintTemplate.isDefault">Mặc định</span>' : ''}</td><td data-l="Dùng cho"><span data-f="MỚI: PrintTemplate.appliesTo">${l}</span></td><td data-l="Giao diện"><span data-f="MỚI: PrintTemplate.layout (kiểu chữ, trang trí)">${g}. ${V9.MAU[g][0]}</span></td><td class="r" data-l="Số khối"><span data-f="TÍNH: độ dài PrintTemplate.blocks">${k}</span></td><td data-l="Bản"><span class="tag" data-f="MỚI: PrintTemplate.version">v${v}</span></td><td class="r" data-l="Đã in"><span data-f="TÍNH: đếm ContractPrint (MỚI)">${n}</span></td><td class="r"><button class="btn sm">Soạn</button></td></tr>`).join('')}</tbody>
+</table></div>
+<div class="rnd-note"><b>R&D:</b> mỗi lần Lưu tạo một dòng phiên bản (bản chụp JSON các khối). Hợp đồng đã in nhớ "mẫu + bản" nên in lại vẫn ra như cũ; "Khôi phục" tạo bản mới bằng nội dung bản cũ, không xoá lịch sử.</div>
+<div class="drawer-bg"></div>
+<aside class="drawer" aria-label="Lịch sử phiên bản">
+  <div class="dh"><div style="flex:1;min-width:0"><div class="fx">Hiện đại — Chiến Makeup</div><h2>Lịch sử phiên bản</h2></div><button class="btn icon ghost" aria-label="Đóng">${I('x')}</button></div>
+  <div class="db" data-f="MỚI: PrintTemplateVersion (templateId, version, blocks JSON, createdAt, createdById)">
+    ${LS.map(([v, ai, gi, dung, cur]) => `<div class="lr noav"><div class="tx"><span class="n">Bản ${v} ${cur ? '<span class="tag ok">Đang dùng</span>' : ''}</span><span class="d">${ai}</span><span class="d">${gi}</span><span class="d" data-f="TÍNH: đếm ContractPrint theo templateVersion">${dung}</span></div><div class="rt"><button class="btn sm">Xem</button>${cur ? '' : '<button class="btn sm ghost">Khôi phục</button>'}</div></div>`).join('')}
+  </div>
+  <footer><button class="btn">Đóng</button></footer>
+</aside>
+`);
+
+// ---------- Màn 2: Soạn bằng khối ----------
+const KHO = [
+  ['Đầu trang', 'logo, tên, liên hệ'], ['Quốc hiệu – tiêu ngữ', 'chữ cố định'], ['Thông tin hai bên', 'studio + khách'],
+  ['Bảng dịch vụ', 'chọn cột'], ['Tổng tiền', 'tạm tính, giảm, tổng, bằng chữ'], ['Tiến độ thanh toán', 'các đợt'],
+  ['Phiếu thu đã nhận', 'mã phiếu, ngày'], ['Chuyển khoản + QR', 'cần số tài khoản'], ['Điều khoản', 'bản chụp'],
+  ['Nội quy', 'chỉ khoá học'], ['Chữ tự do', 'có biến {…}'], ['Ảnh / con dấu', 'tải ảnh lên'], ['Chỗ ký', '2 hoặc 3 bên'], ['Ngắt trang', 'sang trang mới'],
+];
+const TRANG = [
+  ['Đầu trang', 'Logo trái · liên hệ phải', 'OrganizationProfile'],
+  ['Tiêu đề', 'HỢP ĐỒNG DỊCH VỤ TRANG ĐIỂM · Số {Mã hợp đồng}', 'MỚI: block.title'],
+  ['Thông tin hai bên', 'Bên A 4 dòng · Bên B 5 dòng (có CCCD)', 'OrganizationProfile + Customer'],
+  ['Chữ tự do', '“Hai bên thoả thuận ký hợp đồng… ngày {Ngày sự kiện}…”', 'MỚI: block.text'],
+  ['Bảng dịch vụ', '', 'ContractLine'],
+  ['Tổng tiền', 'Tổng + bằng chữ + cọc', 'Contract.subtotal/discount/total/depositRequired'],
+  ['Tiến độ thanh toán', '2 đợt', 'PaymentInstallment'],
+  ['Chuyển khoản + QR', 'Vietcombank · 0011 0045 67890', 'MỚI: OrganizationProfile.bank*'],
+  ['Điều khoản', 'Điều khoản dịch vụ · bản v4', 'Contract.terms'],
+  ['Chỗ ký', 'Đại diện Bên A · Bên B', 'Customer.fullName + MỚI representative'],
+];
+const cot = ['Giờ', 'Địa điểm', 'Thợ', 'SL', 'Đơn giá', 'Giảm từng dòng', 'Thành tiền'];
+const caiBang = `<div class="cai-khoi" data-f="MỚI: block.settings (cột, gộp dòng phụ)">
+  <div class="sb small" style="margin-bottom:6px">Cột hiện trong bảng</div>
+  <div class="chips">${cot.map((c, i) => `<label class="chip${i === 5 ? '' : ' on'}"><input type="checkbox" ${i === 5 ? '' : 'checked'} style="width:14px;height:14px">${c}</label>`).join('')}</div>
+  <div class="row" style="margin-top:10px"><span class="small">Hiện công thức phí di chuyển (km)</span><span class="sp"></span><span class="sw on"></span></div>
+  <div class="row" style="margin-top:6px"><span class="small">Dịch vụ phụ nằm dưới dòng gói</span><span class="sp"></span><span class="sw on"></span></div>
+</div>`;
+const the = ([t, d, src], i) => {
+  const keo = i === 7;
+  return `${i === 6 ? '<div class="cho-tha" aria-hidden="true"></div>' : ''}<div class="the-khoi${i === 4 ? ' mo' : ''}${keo ? ' dang-keo' : ''}" data-f="${src}">
+  <span class="keo m-hide" title="Kéo để đổi thứ tự">${I('drag')}</span>
+  <span class="t">${t}${d ? `<small>${d}</small>` : ''}</span>
+  <span class="p-only"><button class="btn icon sm ghost" aria-label="Lên">↑</button><button class="btn icon sm ghost" aria-label="Xuống">↓</button></span>
+  <button class="btn icon sm ghost" aria-label="Bỏ khối">${I('x', 's')}</button></div>${i === 4 ? caiBang : ''}`;
+};
+V4.man('b-sua', { shell: 'org', nav: 'cai-dat', kid: 'Mẫu in hợp đồng', kids: KIDS, title: 'Soạn mẫu in', back: '#b-quan-ly', act: 'Lưu' }, `
+${PA('Màn soạn mẫu')}
+<div class="ph"><h1>Hiện đại — Chiến Makeup</h1><span class="tag">bản v3 → lưu thành v4</span><span class="sp"></span><span class="seg sm" data-f="MỚI: PrintTemplate.layout"><button>Cổ điển</button><button class="on">Hiện đại</button><button>Bảng kẻ</button><button>Gọn</button><button>Sang trọng</button></span><button class="btn pri">Lưu</button></div>
+<div class="sua ba">
+  <div class="card d-hide"><div class="ch2"><h2>Kho khối</h2></div><div class="cb" style="padding-top:12px"><div class="kho">${KHO.map(([t, d]) => `<button type="button"><span>${t}<small>${d}</small></span>${I('plus', 's')}</button>`).join('')}</div></div></div>
+  <div class="card"><div class="ch2"><h2>Trang in</h2><small>kéo để đổi thứ tự</small><button class="btn sm dashed p-only">${I('plus', 's')}Thêm khối</button></div><div class="cb" style="padding-top:12px" data-f="MỚI: PrintTemplate.blocks (JSON có thứ tự)">
+    ${TRANG.map(the).join('')}
+    <div class="bn grey" style="margin-top:8px">${I('lock', 's')}<span>Biến chèn trong khối chữ: <span class="bien">{Tên khách}</span> <span class="bien">{Ngày sự kiện}</span> <span class="bien">{Tổng tiền}</span> <span class="bien">{Tổng tiền bằng chữ}</span> <span class="bien">{Tên lớp}</span> …</span></div>
+  </div></div>
+  <div class="phai">${V9.xt('mau=2&loai=dich-vu&ban=dai&tat=quoc-hieu,ky-nhay,da-thu', 640, 2300)}<div class="xt-cap"><span>Xem trước: HĐDV-000128</span><span class="sp"></span><span class="tag ok">2 trang A4</span></div></div>
+</div>
+<div class="rnd-note"><b>R&D:</b> trên điện thoại không kéo-thả (dễ cuộn nhầm) — mỗi khối có nút ↑ ↓ và "Thêm khối" mở ngăn kho khối. Xem trước trong bản mẫu này dùng trang in mẫu 2 có sẵn, chưa đổi thứ tự theo các khối kéo.</div>
+`);
+
+// ---------- Màn 3: In ở hợp đồng ----------
+V4.man('b-in', { shell: 'org', nav: 'hd', kid: 'Danh sách hợp đồng', title: 'HĐDV-000128', back: '#b-quan-ly' }, `
+${PA('Bấm In ở hợp đồng')}
+${V9.nenHopDong()}
+${V9.dlgIn({
+  mau: 2,
+  ds: [
+    { on: true, t: 'Hiện đại — Chiến Makeup', d: 'Mặc định dịch vụ · bản v3 (bản đã in lần đầu)' },
+    { t: 'Cổ điển có quốc hiệu', d: '15 khối · bản v1' },
+    { t: 'Gọn 1 trang — tiệc nhỏ', d: '9 khối · bản v2' },
+  ],
+  canhBao: `<div class="bn ok" data-f="TÍNH: kiểm từng khối có đủ dữ liệu">${I('check', 's')}<span>Đủ dữ liệu cho 10/10 khối. (Nếu thiếu — ví dụ studio chưa nhập số tài khoản — khối đó báo vàng ở đây và in ra để trống, không in chữ "undefined".)</span></div>`,
+  ghiChu: `<p class="fx" data-f="MỚI: ContractPrint (contractId, templateId, templateVersion, printedAt, printedById)">In lại hợp đồng đã ký: mặc định dùng đúng mẫu + bản đã in lần đầu.</p>`,
+})}
+`);
+
+V4.boot();
+})();
+</script>
+</body>
+</html>
