@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CC-02 Đen nhung mảng đỏ</title>
+<link rel="stylesheet" href="chung/cc.css">
+<!-- Mẫu 02 — học tinh thần ảnh tham khảo 2 (nền đen, mảng đỏ cong bên trái, huy hiệu vàng có ruy băng). Tự vẽ.
+     Phông: tiêu đề Playfair Display, tên MP Chữ ký 2 (Whisper), chữ thường Cormorant Garamond, chữ hoa nhỏ Montserrat. -->
+<style>
+.c2{--f-ten:var(--f-ky-2);--ten-co:var(--ky-co-2);background:radial-gradient(120% 90% at 70% 40%,#2A2A2F 0%,#18181B 55%,#0E0E10 100%);color:#EDE6DA}
+.c2 .mang{left:0;top:0;width:430px;height:100%}
+.c2 .anh{right:70px;top:66px;width:150px;height:150px;box-shadow:0 0 0 4px #18181B,0 0 0 7px #C9A961}
+.c2 .huy{left:78px;top:250px;width:170px}
+.c2 .o-logo{left:440px;top:62px;width:40px;height:40px}
+.c2 .thg{left:492px;top:62px;line-height:40px;font-family:var(--f-sans);font-weight:600;font-size:12.5px;letter-spacing:.24em;text-transform:uppercase;color:#D9CDB6}
+.c2.khong-logo .thg{left:440px}
+.c2 .t1{left:438px;top:122px;font-family:var(--f-chan2);font-weight:800;font-size:64px;letter-spacing:.05em;line-height:1}
+.c2 .t2{left:442px;top:196px;font-size:19px;letter-spacing:.46em;color:#EDE6DA}
+.c2 .tag{left:442px;top:268px;font-size:12px;letter-spacing:.3em;color:#D9CDB6}
+.c2 .ten{left:426px;top:290px;width:650px;font-size:calc(80px * var(--ten-co))}
+.c2 .gach{left:442px;top:410px;width:620px;height:1px;background:linear-gradient(90deg,#C9A961,rgba(201,169,97,.1))}
+.c2 .dong{left:442px;top:428px;width:630px;font-size:25px;font-style:italic;color:#EDE6DA}
+.c2 .ngay{left:442px;top:476px;font-size:19px;font-style:italic;color:#CFC4B2}
+.c2 .so{left:442px;top:740px;color:#B9AC96}
+.c2 .ky1{left:442px;top:556px;width:250px;color:#EDE6DA}
+.c2 .ky2{left:800px;top:556px;width:250px;color:#EDE6DA}
+</style></head>
+<body class="xem"><main>
+<section class="cc c2">
+  <svg class="mang" viewBox="0 0 430 794" preserveAspectRatio="none" aria-hidden="true">
+    <defs>
+      <linearGradient id="do2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5E0F16"/><stop offset=".55" stop-color="#A3202B"/><stop offset="1" stop-color="#6E121A"/></linearGradient>
+      <linearGradient id="den2" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#232327"/><stop offset="1" stop-color="#151517"/></linearGradient>
+      <linearGradient id="vg2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8A6420"/><stop offset=".4" stop-color="#F3DE9C"/><stop offset=".7" stop-color="#B88A35"/><stop offset="1" stop-color="#E9CF86"/></linearGradient>
+    </defs>
+    <path d="M0 0 H300 C360 120 380 260 330 400 C290 520 300 660 360 794 H0Z" fill="#0B0B0C" opacity=".55" transform="translate(26 0)"/>
+    <path d="M0 0 H286 C340 120 356 260 310 400 C270 520 280 660 340 794 H0Z" fill="url(#den2)"/>
+    <path d="M0 40 H220 C268 140 282 260 244 380 C210 490 216 600 262 754 H0Z" fill="url(#do2)"/>
+    <path d="M286 0 C340 120 356 260 310 400 C270 520 280 660 340 794" fill="none" stroke="url(#vg2)" stroke-width="2.5"/>
+    <path d="M0 40 H220 C268 140 282 260 244 380 C210 490 216 600 262 754 H0" fill="none" stroke="#C9A961" stroke-width="1" opacity=".6"/>
+  </svg>
+  <div class="anh"><img data-f="anh" alt=""></div>
+  <div class="huy" data-huy-hieu data-kieu="rang" data-nen="#1A1A1D" data-duoi="1" data-ruy="#B88A35"></div>
+  <div class="o-logo"><img data-f="logo" alt=""></div>
+  <div class="thg" data-f="th"></div>
+  <div class="t1 vang-chu" data-td>CHỨNG NHẬN</div>
+  <div class="t2 caps">Tốt nghiệp</div>
+  <div class="tag caps">Trân trọng trao cho</div>
+  <div class="ten vang-chu" data-f="ten" data-fitw></div>
+  <div class="gach"></div>
+  <div class="dong" data-f="dong"></div>
+  <div class="ngay" data-f="ngayChu"></div>
+  <div class="ky ky1"><div class="cv">Giảng viên</div><div class="dl"></div><div class="nm" data-f="gv"></div></div>
+  <div class="ky ky2"><div class="cv">Giám đốc trung tâm</div><div class="dl"></div><div class="nm" data-f="gd"></div></div>
+  <div class="so meta">Số chứng chỉ <b data-f="so"></b></div>
+</section>
+</main><script src="chung/cc.js"></script></body></html>

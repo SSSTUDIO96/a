@@ -7,6 +7,8 @@ Tài liệu này dẫn anh từ một máy Windows chưa cài gì tới lúc: đ
 - **[Đã chạy trên Linux 18/10/2026]**: thợ đã gõ đúng lệnh này trên một máy Linux sạch và thấy kết quả ghi bên cạnh.
 - **[CHƯA thử trên Windows]**: bước riêng của Windows. Thợ không có máy Windows để thử. Anh làm theo trang chính thức được ghi tên. Tài liệu không đoán chi tiết của các bước này.
 
+**Cách nhanh (từ 19/10/2026):** sau bước 0 và bước 1, anh chỉ cần bấm đúp các tệp trong thư mục `scripts\windows` — xem mục **"Lối tắt: bấm-một-lần trên Windows"** ngay trước Bước 0. Các bước gõ lệnh tay ở dưới vẫn giữ nguyên để **dự phòng** khi tệp bấm-một-lần báo lỗi.
+
 Các lệnh của dự án (bắt đầu bằng `pnpm`, `git`, `pg_dump`…) giống nhau trên Windows và Linux. Chúng đã chạy trên Linux, nhưng **chưa chạy trên Windows lần nào**.
 
 ---
@@ -54,6 +56,56 @@ Cả ba chỉ chạy trên máy anh. Người khác không mở được, trừ 
 Thứ tự: cài phần mềm → lấy mã → cài thư viện → tạo database → tệp `.env` → áp migration → nạp gói → chạy máy chủ → chạy web → đăng ký → cấp quyền quản trị → cấp gói Academy → tạo khoá học.
 
 Ở dưới, chữ trong `<…>` là chỗ anh tự điền. Ví dụ `<mật khẩu của anh>`.
+
+### Lối tắt: bấm-một-lần trên Windows (thư mục `scripts\windows`)
+
+Làm bước 0 (cài phần mềm) và bước 1 (lấy mã về) như dưới. Sau đó mở thư mục mã trong File Explorer, vào `scripts\windows`, **bấm đúp** từng tệp:
+
+| Tệp | Làm gì | Khi nào bấm |
+|---|---|---|
+| `1-CAI-DAT-LAN-DAU.bat` | Kiểm Node 22, pnpm, PostgreSQL 16 (thiếu thì báo trang tải chính thức rồi dừng — **không tự tải, không tự cài**). Hỏi mật khẩu tài khoản `postgres` (gõ vào không hiện chữ). Tạo vai trò `makeup` (mật khẩu ngẫu nhiên), database `makeup_studio`, bật `btree_gist`. Tạo `apps\api\.env` với khoá ngẫu nhiên. Chạy `pnpm install`, áp migration (`pnpm db:deploy`, rồi đếm lại trên đúng database), nạp gói (`platform:seed-plans -- --with-trial`) | Một lần. Bấm lại lúc nào cũng được: cái đã có thì giữ, `.env` đã có thì không ghi đè, gói đã có thì giữ nguyên giá |
+| `2-CHAY-MAKEUP-PRO.bat` | Bật máy chủ (`pnpm dev`) và trang web (`pnpm exec vite`), chờ `/health` trả ok, rồi **tự mở trình duyệt** ở `http://localhost:5173` | Mỗi lần muốn dùng. **Để cửa sổ mở** (thu nhỏ được) |
+| `3-TAT.bat` | Tắt đúng hai chương trình mà tệp 2 đã bật (theo số tiến trình ghi lại, không tắt chương trình khác). PostgreSQL vẫn chạy ngầm | Khi xong việc. Hoặc bấm `Ctrl + C` trong cửa sổ của tệp 2 |
+| `4-SAO-LUU.bat` | `pg_dump` toàn bộ database + chép thư mục ảnh vào một thư mục mang ngày giờ, đọc lại tệp sao lưu để chắc nó dùng được, kèm tệp `DOC-TOI.txt` ghi cách khôi phục | Mỗi tuần, và **trước khi cập nhật mã mới** |
+| `5-CAP-QUYEN-QUAN-TRI.bat` | Hỏi email, chạy `platform:grant-admin -- --email <email>` | Một lần, **sau khi đã đăng ký** ở trang web (bước 9) |
+
+Dữ liệu của anh nằm **ngoài** thư mục mã, trong thư mục `makeup-pro-du-lieu` đặt cạnh nó (ví dụ mã ở `C:\MakeupPro\makeup-pro` thì dữ liệu ở `C:\MakeupPro\makeup-pro-du-lieu`):
+
+```
+makeup-pro-du-lieu\
+  anh-tai-len\          ảnh và tệp người dùng tải lên (STORAGE_LOCAL_DIR)
+  sao-luu\2026-10-19_20-15-03\   mỗi lần bấm 4-SAO-LUU một thư mục
+  nhat-ky\              nhật ký máy chủ và web, mỗi ngày một tệp
+```
+
+Tệp 1 dùng giá trị mặc định ở bảng dưới; trả lời `k` ở câu "Dùng các giá trị này?" để tự đặt.
+
+| Giá trị | Mặc định |
+|---|---|
+| Database / vai trò | `makeup_studio` / `makeup` (mật khẩu 48 ký tự ngẫu nhiên) |
+| PostgreSQL | `localhost:5432`, tài khoản quản trị `postgres` |
+| Cổng máy chủ / web | 4000 / 5173 |
+| `JWT_ACCESS_SECRET` | 64 ký tự ngẫu nhiên |
+
+**Không tệp nào in mật khẩu hay khoá ra màn hình**; mọi chữ từ chương trình con (pnpm, psql, nhật ký) đều được che trước khi in. Mật khẩu và khoá chỉ nằm trong `apps\api\.env`. Phần việc thật viết bằng Node (`scripts\windows\lib\*.mjs`); tệp `.bat` chỉ kiểm có Node chưa rồi gọi Node.
+
+**Đã chạy thật trên Linux 19/10/2026** (bản lấy mã mới của nhánh, database `makeup_thu_k4`, vai trò `makeup_k4`, cổng 4370/5430): phần Node của cả năm tệp.
+- Tệp 1: thiếu psql / thiếu pnpm → báo trang tải rồi dừng, mã thoát 1. Đủ phần mềm → tạo vai trò, database, `btree_gist` 1.7, `.env` (quyền 600), cài thư viện, áp đủ migration, đếm lại khớp, tạo 6 gói. Bấm lại lần hai → giữ nguyên mọi thứ, không cần mật khẩu quản trị. Xoá `.env` rồi bấm lại → báo vai trò và database đã có, đặt lại mật khẩu vai trò theo `.env` mới, dữ liệu giữ nguyên. Sai mật khẩu quản trị → báo "Không đăng nhập được bằng tài khoản postgres", không tạo gì. Gõ mật khẩu trong terminal → không hiện chữ.
+- Tệp 2: `/health` trả `{"ok":true}`, trang web mở được (Chromium không giao diện: vào `/dang-nhap`, đăng nhập, vào `/quan-tri` thấy "Trang chủ quản trị"). Bấm lần hai khi đang chạy → báo "đang chạy rồi". Cổng web bị chiếm → báo cổng bận, mã thoát 1.
+- Tệp 3: tắt theo số tiến trình, nhật ký máy chủ ghi `Đang tắt máy chủ`, hai cổng đóng, không còn tiến trình nào. `Ctrl + C` trong cửa sổ tệp 2 cũng vậy.
+- Tệp 4: tệp `.dump` 182 KB, `pg_restore --list` đọc lại được; khôi phục theo `DOC-TOI.txt` vào database mới → đếm lại khớp (1 tài khoản, 6 gói, 15 migration, có `btree_gist`).
+- Tệp 5: cấp quyền → `đã ghi nhật ký`; lần hai → `không đổi gì`; email chưa đăng ký → báo phải đăng ký trước; email có ký tự lạ (`&`) → từ chối.
+- Không thấy mật khẩu hay khoá trong bất kỳ dòng nào in ra, tệp nhật ký, hay `DOC-TOI.txt`.
+- **Chỗ chưa kiểm được trên Linux:** đăng nhập quản trị bằng mật khẩu qua `localhost` (máy thử không cho tạo tài khoản quản trị có mật khẩu, nên bước tạo database chạy dưới tài khoản hệ điều hành `postgres` qua một chỗ cắm chỉ dùng khi thử — biến `MAKEUP_PSQL_QUAN_TRI` và cờ `--may-quan-tri`; trên Windows **không** đặt hai thứ này). Nhánh "sai mật khẩu qua localhost" thì đã chạy thật.
+
+**[CHƯA chạy trên Windows lần nào]** — các tệp `.bat` và mọi chỗ riêng của Windows:
+- Bấm đúp `.bat`; tìm `psql.exe` ở `C:\Program Files\PostgreSQL\<bản>\bin` khi `psql` chưa nằm trong đường dẫn tìm lệnh; gọi `pnpm` qua `cmd`; tự mở trình duyệt bằng `start`; tắt bằng `taskkill /T /F`.
+- Trên Windows, `3-TAT` tắt **cứng** (Windows không gửi được `Ctrl + C` sang cửa sổ khác). PostgreSQL tự huỷ phần đang ghi dở của mỗi giao dịch nên database không hỏng, nhưng tắt êm nhất vẫn là bấm `Ctrl + C` trong cửa sổ tệp 2.
+- Sau `Ctrl + C`, Windows có thể hỏi `Terminate batch job (Y/N)?` — gõ `Y` rồi Enter.
+- Lần đầu chạy, Tường lửa Windows có thể hỏi cho Node.js dùng mạng. Máy chủ chỉ cần chạy trên chính máy anh: bấm **Hủy** (Cancel) là đủ. (Máy chủ API nghe trên mọi địa chỉ của máy, không chỉ `localhost` — `apps/api/src/server.ts` gọi `listen` không chỉ địa chỉ.)
+- Tệp `.bat` chỉ dùng chữ không dấu (cửa sổ lệnh cũ của Windows hiện sai chữ có dấu trong `.bat`); chữ tiếng Việt có dấu do Node in ra.
+
+Khi tệp nào báo `[DỪNG]`: đọc dòng ngay dưới, nó nói phải làm gì. Nếu không rõ, làm theo các bước gõ tay tương ứng ở dưới.
 
 ### Bước 0. Cài phần mềm (một lần)
 
@@ -169,6 +221,8 @@ All migrations have been successfully applied.
 **Vì sao phải có cờ `--khong-phai-database-thu`.** Lệnh `db:deploy-to` (tệp `apps/api/scripts/deploy-to.mjs`) được làm cho thợ lập trình áp migration vào database thử. Nó chỉ tự chạy với tên bắt đầu bằng `makeup_test` (dòng 14). Tên khác bị từ chối với câu: `Từ chối: "…" không phải database thử (makeup_test…). Database khác phải ghi rõ cờ --khong-phai-database-thu.` Đây là chốt an toàn: muốn đụng database không phải database thử thì phải nói rõ bằng cờ. Lệnh này còn tự đếm lại trên chính database đích để chắc đã áp đúng chỗ (sổ lỗi `docs/SO-LOI-DA-DO.md` mục 16 ghi lần migration đi nhầm database).
 
 **[Đã chạy trên Linux 18/10/2026]**: không có cờ → bị từ chối, mã thoát 1. Có cờ → áp đủ 15 migration vào `makeup_thu_z`, kiểm lại khớp.
+
+**Trên Windows nên dùng `pnpm db:deploy` thay cho `db:deploy-to`.** Đọc mã: `apps/api/scripts/deploy-to.mjs` gọi `execFileSync('npx', …)` không qua cửa sổ lệnh; trên Windows `npx` là tệp `npx.cmd`, cách gọi này thường báo `ENOENT` (không tìm thấy). **[CHƯA thử trên Windows — suy từ mã]**. Tệp `1-CAI-DAT-LAN-DAU` vì vậy dùng `pnpm db:deploy` rồi tự đếm lại trên đúng database.
 
 Cách khác cũng chạy được: `pnpm db:deploy` (đọc địa chỉ từ tệp `.env` ở bước 4). **[Đã chạy trên Linux 18/10/2026]**: in `15 migrations found … No pending migrations to apply.` (vì đã áp ở trên).
 
@@ -291,7 +345,7 @@ Database PostgreSQL vẫn chạy ngầm sau khi tắt; không cần tắt nó. B
 
 ### Chạy lại lần sau
 
-Không phải làm lại bước 0–6, 9–11. Chỉ cần:
+Không phải làm lại bước 0–6, 9–11. Cách nhanh: bấm `scripts\windows\2-CHAY-MAKEUP-PRO.bat`. Cách gõ tay:
 
 1. Cửa sổ 1: vào `apps\api`, gõ `pnpm dev`.
 2. Cửa sổ 2: vào `apps\web`, gõ `pnpm exec vite`.
@@ -302,6 +356,8 @@ Không phải làm lại bước 0–6, 9–11. Chỉ cần:
 Khi có bản mã mới: sao lưu trước (mục dưới), rồi ở gốc kho chạy `git pull`, `pnpm install --frozen-lockfile`, rồi làm lại bước 5. Thứ tự này **chưa diễn tập** với một bản mã mới thật.
 
 ### Sao lưu và khôi phục database
+
+**Cách nhanh:** bấm `scripts\windows\4-SAO-LUU.bat` — làm cả hai việc dưới (database + ảnh) vào `makeup-pro-du-lieu\sao-luu\<ngày-giờ>\`, xem mục "Lối tắt". Cách gõ tay:
 
 **Sao lưu** (một tệp chứa toàn bộ database):
 
@@ -348,12 +404,12 @@ Sau đó sửa hai dòng `DATABASE_URL`, `DIRECT_URL` trong `.env` sang `makeup_
 |---|---|
 | **Quên mật khẩu, đặt lại qua email** | Chưa có. Máy chủ chỉ có 5 đường đăng nhập: đăng ký, đăng nhập, đổi thẻ, đăng xuất, xem mình (`apps/api/src/modules/auth/routes.ts`). Không có đường đổi mật khẩu, không có phần gửi email nào trong mã. Quên mật khẩu thì hiện chưa có cách nào trong ứng dụng |
 | **Ảnh tải lên lưu ở đâu** | Không có kho S3 thì ảnh lưu trên ổ đĩa máy anh, ở thư mục `STORAGE_LOCAL_DIR` (bước 4). Đã thử trên Linux: tải logo ở **Cài đặt → Hồ sơ thương hiệu**, tệp nằm ở `<STORAGE_LOCAL_DIR>/org/<mã tổ chức>/org-logo/<mã>.png`. Nếu bỏ trống `STORAGE_LOCAL_DIR`, ở chế độ chạy thử ảnh vào thư mục tạm của máy, tên `makeup-files-development` (`apps/api/src/lib/storage/config.ts:55`). Windows có thể dọn thư mục tạm, nên **phải đặt** `STORAGE_LOCAL_DIR` |
-| Sao lưu tự động | Chưa có. Phải tự chạy `pg_dump` và tự chép thư mục ảnh |
+| Sao lưu tự động | Chưa có. Phải tự bấm `4-SAO-LUU` (hoặc tự chạy `pg_dump` và tự chép thư mục ảnh). Đặt lịch tự chạy bằng Task Scheduler của Windows chưa làm |
 | Mở từ điện thoại hoặc máy khác | Chưa thử. Web và máy chủ chỉ nghe trên chính máy anh (`localhost`) |
 | Chạy bản build chính thức | Tài liệu này chạy ở chế độ phát triển (`NODE_ENV=development`, `tsx`, `vite`). Bản build và các biến bắt buộc của bản thật nằm ở `docs/DEPLOYMENT.md` |
 | Nút qua lại giữa học viện và trang quản trị | Chưa có. Phải gõ địa chỉ `/quan-tri` hoặc `/<đường dẫn học viện>` |
 | Giá gói | Gói mẫu đều 0 ₫. Chưa có cổng thanh toán; cấp gói là ghi tay ở trang quản trị |
-| Mọi bước riêng của Windows | Cài Git, Node 22, pnpm, PostgreSQL 16 bản Windows; bật `btree_gist` qua SQL Shell; gõ lệnh trong PowerShell; đường dẫn Windows trong `.env`; `pg_dump` trên Windows — **chưa thử lần nào** |
+| Mọi bước riêng của Windows | Cài Git, Node 22, pnpm, PostgreSQL 16 bản Windows; bật `btree_gist` qua SQL Shell; gõ lệnh trong PowerShell; đường dẫn Windows trong `.env`; `pg_dump` trên Windows; bấm đúp các tệp `scripts\windows\*.bat` — **chưa thử lần nào** |
 
 ## Chỗ lệch với tài liệu khác (cho người giữ tài liệu)
 Các chỗ lệch ghi lúc viết tài liệu này đã sửa ngày 18/10/2026 (sổ lỗi `docs/SO-LOI-DA-DO.md` mục 25):

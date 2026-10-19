@@ -141,6 +141,8 @@
       t.style.left = Math.max(0, x) + 'px';
       t.style.top = Math.max(0, y) + 'px';
       document.body.appendChild(t);
+      const maxX = document.documentElement.clientWidth - t.offsetWidth - 2;
+      if (x > maxX) t.style.left = Math.max(0, maxX) + 'px';
     });
   }
 

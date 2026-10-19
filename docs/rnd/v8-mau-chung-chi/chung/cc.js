@@ -44,20 +44,21 @@
   const VANG = [['0', '#8A6420'], ['.22', '#E9CF86'], ['.45', '#B88A35'], ['.7', '#F3DE9C'], ['1', '#9C7428']];
   const grad = (id, stops, x2 = '1', y2 = '1') =>
     `<linearGradient id="${id}" x1="0" y1="0" x2="${x2}" y2="${y2}">${stops.map(([o, c]) => `<stop offset="${o}" stop-color="${c}"/>`).join('')}</linearGradient>`;
-  function nguyetQue(cx, cy, r, mau, so = 9, huong = 1, co = 1) {
-    // Một nhành nguyệt quế: lá hình giọt dọc theo cung tròn.
+  function nguyetQue(cx, cy, r, mau, a0, a1, so = 8, co = 1) {
+    // Một nhành nguyệt quế đi từ góc a0 tới góc a1 (độ, SVG: 90 = dưới), lá xen trong/ngoài.
     let s = '';
     for (let i = 0; i < so; i++) {
-      const a = (huong > 0 ? 200 : -20) + huong * (i * (110 / so));
-      const rad = (a * Math.PI) / 180;
-      const x = cx + r * Math.cos(rad), y = cy + r * Math.sin(rad);
-      const rot = a + (huong > 0 ? 90 : -90) + huong * 35;
-      const L = (8.5 - i * 0.25) * co, W = (3.6 - i * 0.08) * co;
-      s += `<ellipse cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" rx="${W.toFixed(1)}" ry="${L.toFixed(1)}" transform="rotate(${rot.toFixed(1)} ${x.toFixed(1)} ${y.toFixed(1)})" fill="${mau}"/>`;
-      const rot2 = a - (huong > 0 ? 90 : -90) - huong * 35 + 180;
-      const x2 = cx + (r + 9 * co) * Math.cos(rad), y2 = cy + (r + 9 * co) * Math.sin(rad);
-      if (i < so - 1) s += `<ellipse cx="${x2.toFixed(1)}" cy="${y2.toFixed(1)}" rx="${(W * 0.9).toFixed(1)}" ry="${(L * 0.9).toFixed(1)}" transform="rotate(${rot2.toFixed(1)} ${x2.toFixed(1)} ${y2.toFixed(1)})" fill="${mau}"/>`;
+      const t = i / (so - 1), a = a0 + (a1 - a0) * t, rad = (a * Math.PI) / 180;
+      const tiep = a + (a1 > a0 ? 90 : -90); // hướng đi của nhành
+      const L = (9 - t * 3) * co, W = (3.8 - t * 1.2) * co;
+      for (const [dr, lech] of [[-5 * co, -40], [5 * co, 40]]) {
+        const x = cx + (r + dr) * Math.cos(rad), y = cy + (r + dr) * Math.sin(rad);
+        const rot = tiep + 90 + (a1 > a0 ? lech : -lech);
+        s += `<ellipse cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" rx="${W.toFixed(1)}" ry="${L.toFixed(1)}" transform="rotate(${rot.toFixed(1)} ${x.toFixed(1)} ${y.toFixed(1)})" fill="${mau}"/>`;
+      }
     }
+    const p0 = (a) => [cx + r * Math.cos((a * Math.PI) / 180), cy + r * Math.sin((a * Math.PI) / 180)].map((v) => v.toFixed(1)).join(' ');
+    s += `<path d="M${p0(a0)} A${r} ${r} 0 0 ${a1 > a0 ? 1 : 0} ${p0(a1)}" fill="none" stroke="${mau}" stroke-width="${1.2 * co}"/>`;
     return s;
   }
   function vienRang(cx, cy, r1, r2, n) {
@@ -79,6 +80,7 @@
     const duoi = d.duoi === '1';
     const dong1 = d.dong1 || 'TỐT NGHIỆP', dong2 = d.dong2 || chung.nam || '';
     const ruy = d.ruy || '#8E1D24';
+    const lq = d.chu || `url(#${id}g)`;
     let vien = '';
     if (kieu === 'rang') vien = `<path d="${vienRang(100, 100, 92, 84, 36)}" fill="url(#${id}g)"/>`;
     else if (kieu === 'hoa') {
@@ -96,13 +98,10 @@
       ${tails}${vien}
       <circle cx="100" cy="100" r="76" fill="${nen}"/>
       <circle cx="100" cy="100" r="70" fill="none" stroke="url(#${id}g)" stroke-width="1.6"/>
-      <circle cx="100" cy="100" r="47" fill="none" stroke="url(#${id}g)" stroke-width="1" opacity=".8"/>
-      <g opacity=".95">${nguyetQue(100, 104, 40, chu.startsWith('url') ? `url(#${id}g)` : chu, 9, 1, 0.9)}${nguyetQue(100, 104, 40, chu.startsWith('url') ? `url(#${id}g)` : chu, 9, -1, 0.9)}</g>
-      <text font-family="MP Chữ không chân" font-weight="700" font-size="11.5" letter-spacing="2.6" fill="${chu}"><textPath href="#${id}a" startOffset="50%" text-anchor="middle">${d.vong || 'MAKEUP ACADEMY'}</textPath></text>
-      <text x="100" y="92" text-anchor="middle" font-family="MP Chữ không chân" font-weight="700" font-size="13" letter-spacing="1.2" fill="${chu}">${dong1}</text>
-      <text x="100" y="122" text-anchor="middle" font-family="MP Chữ đậm có chân" font-weight="700" font-size="26" fill="${chu}">${dong2}</text>
-      <path d="M86 132 h28" stroke="${chu}" stroke-width="1.2"/>
-      <g fill="${chu}">${[-14, 0, 14].map((x) => `<path d="M${100 + x} 62 l2.2 4.6 5 .6-3.7 3.4 1 5-4.5-2.5-4.5 2.5 1-5-3.7-3.4 5-.6z" transform="translate(0 -6) scale(1)"/>`).join('')}</g>
+      <g>${nguyetQue(100, 100, 52, lq, 168, 100, 7, 0.85)}${nguyetQue(100, 100, 52, lq, 12, 80, 7, 0.85)}</g>
+      <text font-family="MP Chữ không chân" font-weight="700" font-size="10.5" letter-spacing="2.4" fill="${chu}"><textPath href="#${id}a" startOffset="50%" text-anchor="middle">${d.vong || '★ CHỨNG NHẬN ★'}</textPath></text>
+      <text x="100" y="98" text-anchor="middle" font-family="MP Chữ không chân" font-weight="700" font-size="12.5" letter-spacing="1" fill="${chu}">${dong1}</text>
+      <text x="100" y="128" text-anchor="middle" font-family="MP Chữ đậm có chân" font-weight="700" font-size="27" fill="${chu}">${dong2}</text>
     </svg>`;
   }
 

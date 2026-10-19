@@ -1,0 +1,23 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>R&D 07 · Nền hoa văn chìm</title>
+<style>body{font:16px/1.55 system-ui,sans-serif;max-width:860px;margin:0 auto;padding:24px 16px;color:#2A2420;background:#fff}
+h1{font-size:24px}h2{font-size:18px;margin-top:28px}code{background:#f3eee6;padding:1px 5px;border-radius:4px}li{margin:4px 0}</style></head><body>
+<h1>R&D 07 · Nền / viền hoa văn chìm cho mẫu thẻ</h1>
+<p>Mở bằng máy chủ tĩnh (html-to-image cần http, không chạy được với file://): đứng ở <code>docs/rnd</code> chạy
+<code>python3 -m http.server 8707</code> rồi mở <code>http://127.0.0.1:8707/v7-nen-hoa-van/</code>. Báo cáo: <code>../BAO-CAO-RND-07-NEN-HOA-VAN.md</code>.</p>
+<h2>Mẫu thử shd-01 "Thư mời kem" (đã thêm ảnh khung tròn)</h2><ul>
+<li><a href="shd-01-hv.html?mauchu=goc">Gốc, màu chữ cũ</a> · <a href="shd-01-hv.html">Gốc, màu chữ nhỏ đã sửa</a></li></ul>
+<h2>Phương án 1 · Thư viện họa tiết dựng sẵn</h2><ul>
+<li><a href="shd-01-hv.html?nen=damask&dam=0.16">Damask</a> · <a href="shd-01-hv.html?nen=ren&dam=0.13">Ren lưới hoa</a> ·
+<a href="shd-01-hv.html?nen=la-canh&dam=0.2&khunganh=vien-thuoc">Lá cành + ảnh viên thuốc</a> · <a href="shd-01-hv.html?nen=song-nuoc&dam=0.14">Sóng nước</a> ·
+<a href="shd-01-hv.html?nen=may&dam=0.2">Mây lành</a> · <a href="shd-01-hv.html?nen=hoi-van&dam=0.12">Hồi văn</a></li>
+<li><a href="bang-chon-nen.html">Bảng chọn ô "Nền"</a></li></ul>
+<h2>Phương án 2 · Ảnh studio tải lên, app tự làm chìm</h2><ul>
+<li><a href="shd-01-hv.html?anhnen=anh-tai-len-gia-lap/hoa-mau-nuoc.jpg">Hoa màu nước</a> · <a href="shd-01-hv.html?anhnen=anh-tai-len-gia-lap/vai-ren.jpg">Vải ren</a> ·
+<a href="shd-01-hv.html?anhnen=anh-tai-len-gia-lap/vai-ren.jpg&chim=0.5">Vải ren, đòi đậm 0,5 (app tự hạ)</a></li>
+<li><a href="pa2-truoc-sau.html?c1=0,24&c2=0,24">Trước → sau</a> · <a href="anh-tai-len-gia-lap/ve-anh-gia-lap.html?a=hoa">Trang vẽ ảnh giả lập</a></li></ul>
+<h2>Phương án 3 · Khung trang trí thay hai đường viền</h2><ul>
+<li><a href="shd-01-hv.html?khung=goc-hoa">Góc hoa hồng</a> · <a href="shd-01-hv.html?khung=goc-hoa&kho=vuong">Góc hoa, khổ vuông</a> ·
+<a href="shd-01-hv.html?khung=khung-ren">Khung ren</a> · <a href="shd-01-hv.html?khung=hoi-van">Khung hồi văn</a></li></ul>
+<h2>Bộ đo</h2><p><code>do-kiem/chup.js</code> (xuất PNG bằng <code>window.MAU_XUAT_PNG</code>, như app) → <code>do-kiem/do.py</code> (đo tương phản, độ sạch) → <code>do-kiem/ket-qua.json</code>.</p>
+</body></html>

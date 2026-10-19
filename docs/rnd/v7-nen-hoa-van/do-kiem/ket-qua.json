@@ -1,0 +1,1708 @@
+{
+ "00-goc-shd01-anh-tron": {
+  "ds": {
+   "ready": "1",
+   "nenXong": "1"
+  },
+  "chu": [
+   {
+    "lop": "th",
+    "chu": "Chiến Makeup Academy",
+    "co": 21,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 4.98,
+    "giua": 4.98,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "k1",
+    "chu": "Chào mừng đến với lớp",
+    "co": 18,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 3.63,
+    "giua": 3.63,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "kh",
+    "chu": "Makeup chuyên nghiệp",
+    "co": 60,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 13.38,
+    "giua": 13.38,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "lo",
+    "chu": "Lớp K12 · khai giảng 02.11.2026",
+    "co": 30,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 7.02,
+    "giua": 7.02,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "dg",
+    "chu": "Thân gửi",
+    "co": 34,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 7.02,
+    "giua": 7.02,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "ten",
+    "chu": "Tôn Nữ Hoàng Bảo Ngọc Phương Thảo",
+    "co": 107.5,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 13.38,
+    "giua": 13.38,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "by",
+    "chu": "Thân ái, Chiến Makeup Academy",
+    "co": 28,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 7.02,
+    "giua": 7.02,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "ft",
+    "chu": "Tháng 11 · 2026",
+    "co": 18,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 4.98,
+    "giua": 4.98,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "dc",
+    "chu": "25 Hoàng Quốc Việt, Cầu Giấy, Hà Nội",
+    "co": 26,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 7.02,
+    "giua": 7.02,
+    "lech_max": 0,
+    "lech_p99": 0
+   }
+  ],
+  "vong_anh": {
+   "lech_max": 0,
+   "lech_p99": 0
+  },
+  "kich_thuoc": "1080x1350"
+ },
+ "01-goc-sua-mau-chu": {
+  "ds": {
+   "ready": "1",
+   "nenXong": "1"
+  },
+  "chu": [
+   {
+    "lop": "th",
+    "chu": "Chiến Makeup Academy",
+    "co": 21,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 4.98,
+    "giua": 4.98,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "k1",
+    "chu": "Chào mừng đến với lớp",
+    "co": 18,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 4.98,
+    "giua": 4.98,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "kh",
+    "chu": "Makeup chuyên nghiệp",
+    "co": 60,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 13.38,
+    "giua": 13.38,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "lo",
+    "chu": "Lớp K12 · khai giảng 02.11.2026",
+    "co": 30,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 7.02,
+    "giua": 7.02,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "dg",
+    "chu": "Thân gửi",
+    "co": 34,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 7.02,
+    "giua": 7.02,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "ten",
+    "chu": "Tôn Nữ Hoàng Bảo Ngọc Phương Thảo",
+    "co": 107.5,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 13.38,
+    "giua": 13.38,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "by",
+    "chu": "Thân ái, Chiến Makeup Academy",
+    "co": 28,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 7.02,
+    "giua": 7.02,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "ft",
+    "chu": "Tháng 11 · 2026",
+    "co": 18,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 4.98,
+    "giua": 4.98,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "dc",
+    "chu": "25 Hoàng Quốc Việt, Cầu Giấy, Hà Nội",
+    "co": 26,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 7.02,
+    "giua": 7.02,
+    "lech_max": 0,
+    "lech_p99": 0
+   }
+  ],
+  "vong_anh": {
+   "lech_max": 0,
+   "lech_p99": 0
+  },
+  "kich_thuoc": "1080x1350"
+ },
+ "pa1-damask": {
+  "ds": {
+   "ready": "1",
+   "nen": "damask",
+   "dam": "0.16",
+   "nenXong": "1"
+  },
+  "chu": [
+   {
+    "lop": "th",
+    "chu": "Chiến Makeup Academy",
+    "co": 21,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 4.98,
+    "giua": 4.98,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "k1",
+    "chu": "Chào mừng đến với lớp",
+    "co": 18,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 4.98,
+    "giua": 4.98,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "kh",
+    "chu": "Makeup chuyên nghiệp",
+    "co": 60,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 11.7,
+    "giua": 13.38,
+    "lech_max": 23,
+    "lech_p99": 23
+   },
+   {
+    "lop": "lo",
+    "chu": "Lớp K12 · khai giảng 02.11.2026",
+    "co": 30,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 6.14,
+    "giua": 7.02,
+    "lech_max": 23,
+    "lech_p99": 23
+   },
+   {
+    "lop": "dg",
+    "chu": "Thân gửi",
+    "co": 34,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 6.49,
+    "giua": 7.02,
+    "lech_max": 18,
+    "lech_p99": 14
+   },
+   {
+    "lop": "ten",
+    "chu": "Tôn Nữ Hoàng Bảo Ngọc Phương Thảo",
+    "co": 107.5,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 13.38,
+    "giua": 13.38,
+    "lech_max": 7,
+    "lech_p99": 0
+   },
+   {
+    "lop": "by",
+    "chu": "Thân ái, Chiến Makeup Academy",
+    "co": 28,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 6.36,
+    "giua": 7.02,
+    "lech_max": 19,
+    "lech_p99": 17
+   },
+   {
+    "lop": "ft",
+    "chu": "Tháng 11 · 2026",
+    "co": 18,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 4.98,
+    "giua": 4.98,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "dc",
+    "chu": "25 Hoàng Quốc Việt, Cầu Giấy, Hà Nội",
+    "co": 26,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 6.14,
+    "giua": 7.02,
+    "lech_max": 23,
+    "lech_p99": 23
+   }
+  ],
+  "vong_anh": {
+   "lech_max": 6,
+   "lech_p99": 4
+  },
+  "kich_thuoc": "1080x1350"
+ },
+ "pa1-la-canh-vien-thuoc": {
+  "ds": {
+   "ready": "1",
+   "nen": "la-canh",
+   "dam": "0.2",
+   "nenXong": "1"
+  },
+  "chu": [
+   {
+    "lop": "th",
+    "chu": "Chiến Makeup Academy",
+    "co": 21,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 4.98,
+    "giua": 4.98,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "k1",
+    "chu": "Chào mừng đến với lớp",
+    "co": 18,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 4.98,
+    "giua": 4.98,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "kh",
+    "chu": "Makeup chuyên nghiệp",
+    "co": 60,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 11.92,
+    "giua": 13.38,
+    "lech_max": 29,
+    "lech_p99": 20
+   },
+   {
+    "lop": "lo",
+    "chu": "Lớp K12 · khai giảng 02.11.2026",
+    "co": 30,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 5.98,
+    "giua": 7.02,
+    "lech_max": 29,
+    "lech_p99": 28
+   },
+   {
+    "lop": "dg",
+    "chu": "Thân gửi",
+    "co": 34,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 6.89,
+    "giua": 7.02,
+    "lech_max": 20,
+    "lech_p99": 3
+   },
+   {
+    "lop": "ten",
+    "chu": "Tôn Nữ Hoàng Bảo Ngọc Phương Thảo",
+    "co": 107.5,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 13.38,
+    "giua": 13.38,
+    "lech_max": 5,
+    "lech_p99": 0
+   },
+   {
+    "lop": "by",
+    "chu": "Thân ái, Chiến Makeup Academy",
+    "co": 28,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 6.66,
+    "giua": 7.02,
+    "lech_max": 24,
+    "lech_p99": 9
+   },
+   {
+    "lop": "ft",
+    "chu": "Tháng 11 · 2026",
+    "co": 18,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 4.98,
+    "giua": 4.98,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "dc",
+    "chu": "25 Hoàng Quốc Việt, Cầu Giấy, Hà Nội",
+    "co": 26,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 6.15,
+    "giua": 7.02,
+    "lech_max": 29,
+    "lech_p99": 23
+   }
+  ],
+  "vong_anh": {
+   "lech_max": 5,
+   "lech_p99": 1
+  },
+  "kich_thuoc": "1080x1350"
+ },
+ "pa1-may": {
+  "ds": {
+   "ready": "1",
+   "nen": "may",
+   "dam": "0.2",
+   "nenXong": "1"
+  },
+  "chu": [
+   {
+    "lop": "th",
+    "chu": "Chiến Makeup Academy",
+    "co": 21,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 4.98,
+    "giua": 4.98,
+    "lech_max": 1,
+    "lech_p99": 0
+   },
+   {
+    "lop": "k1",
+    "chu": "Chào mừng đến với lớp",
+    "co": 18,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 4.98,
+    "giua": 4.98,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "kh",
+    "chu": "Makeup chuyên nghiệp",
+    "co": 60,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 11.49,
+    "giua": 13.38,
+    "lech_max": 29,
+    "lech_p99": 27
+   },
+   {
+    "lop": "lo",
+    "chu": "Lớp K12 · khai giảng 02.11.2026",
+    "co": 30,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 7.02,
+    "giua": 7.02,
+    "lech_max": 29,
+    "lech_p99": 0
+   },
+   {
+    "lop": "dg",
+    "chu": "Thân gửi",
+    "co": 34,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 6.53,
+    "giua": 7.02,
+    "lech_max": 22,
+    "lech_p99": 13
+   },
+   {
+    "lop": "ten",
+    "chu": "Tôn Nữ Hoàng Bảo Ngọc Phương Thảo",
+    "co": 107.5,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 13.38,
+    "giua": 13.38,
+    "lech_max": 6,
+    "lech_p99": 0
+   },
+   {
+    "lop": "by",
+    "chu": "Thân ái, Chiến Makeup Academy",
+    "co": 28,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 7.02,
+    "giua": 7.02,
+    "lech_max": 1,
+    "lech_p99": 0
+   },
+   {
+    "lop": "ft",
+    "chu": "Tháng 11 · 2026",
+    "co": 18,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 4.98,
+    "giua": 4.98,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "dc",
+    "chu": "25 Hoàng Quốc Việt, Cầu Giấy, Hà Nội",
+    "co": 26,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 5.99,
+    "giua": 7.02,
+    "lech_max": 29,
+    "lech_p99": 27
+   }
+  ],
+  "vong_anh": {
+   "lech_max": 7,
+   "lech_p99": 3
+  },
+  "kich_thuoc": "1080x1350"
+ },
+ "pa1-ren": {
+  "ds": {
+   "ready": "1",
+   "nen": "ren",
+   "dam": "0.13",
+   "nenXong": "1"
+  },
+  "chu": [
+   {
+    "lop": "th",
+    "chu": "Chiến Makeup Academy",
+    "co": 21,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 4.98,
+    "giua": 4.98,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "k1",
+    "chu": "Chào mừng đến với lớp",
+    "co": 18,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 4.98,
+    "giua": 4.98,
+    "lech_max": 1,
+    "lech_p99": 0
+   },
+   {
+    "lop": "kh",
+    "chu": "Makeup chuyên nghiệp",
+    "co": 60,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 12.01,
+    "giua": 13.38,
+    "lech_max": 19,
+    "lech_p99": 19
+   },
+   {
+    "lop": "lo",
+    "chu": "Lớp K12 · khai giảng 02.11.2026",
+    "co": 30,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 6.3,
+    "giua": 7.02,
+    "lech_max": 19,
+    "lech_p99": 19
+   },
+   {
+    "lop": "dg",
+    "chu": "Thân gửi",
+    "co": 34,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 6.49,
+    "giua": 7.02,
+    "lech_max": 15,
+    "lech_p99": 14
+   },
+   {
+    "lop": "ten",
+    "chu": "Tôn Nữ Hoàng Bảo Ngọc Phương Thảo",
+    "co": 107.5,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 13.38,
+    "giua": 13.38,
+    "lech_max": 8,
+    "lech_p99": 0
+   },
+   {
+    "lop": "by",
+    "chu": "Thân ái, Chiến Makeup Academy",
+    "co": 28,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 6.43,
+    "giua": 7.02,
+    "lech_max": 16,
+    "lech_p99": 15
+   },
+   {
+    "lop": "ft",
+    "chu": "Tháng 11 · 2026",
+    "co": 18,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 4.98,
+    "giua": 4.98,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "dc",
+    "chu": "25 Hoàng Quốc Việt, Cầu Giấy, Hà Nội",
+    "co": 26,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 6.3,
+    "giua": 7.02,
+    "lech_max": 19,
+    "lech_p99": 19
+   }
+  ],
+  "vong_anh": {
+   "lech_max": 5,
+   "lech_p99": 4
+  },
+  "kich_thuoc": "1080x1350"
+ },
+ "pa1-song-nuoc": {
+  "ds": {
+   "ready": "1",
+   "nen": "song-nuoc",
+   "dam": "0.14",
+   "nenXong": "1"
+  },
+  "chu": [
+   {
+    "lop": "th",
+    "chu": "Chiến Makeup Academy",
+    "co": 21,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 4.98,
+    "giua": 4.98,
+    "lech_max": 1,
+    "lech_p99": 0
+   },
+   {
+    "lop": "k1",
+    "chu": "Chào mừng đến với lớp",
+    "co": 18,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 4.98,
+    "giua": 4.98,
+    "lech_max": 1,
+    "lech_p99": 0
+   },
+   {
+    "lop": "kh",
+    "chu": "Makeup chuyên nghiệp",
+    "co": 60,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 11.92,
+    "giua": 13.38,
+    "lech_max": 20,
+    "lech_p99": 20
+   },
+   {
+    "lop": "lo",
+    "chu": "Lớp K12 · khai giảng 02.11.2026",
+    "co": 30,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 6.26,
+    "giua": 7.02,
+    "lech_max": 20,
+    "lech_p99": 20
+   },
+   {
+    "lop": "dg",
+    "chu": "Thân gửi",
+    "co": 34,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 6.54,
+    "giua": 7.02,
+    "lech_max": 15,
+    "lech_p99": 12
+   },
+   {
+    "lop": "ten",
+    "chu": "Tôn Nữ Hoàng Bảo Ngọc Phương Thảo",
+    "co": 107.5,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 13.38,
+    "giua": 13.38,
+    "lech_max": 8,
+    "lech_p99": 0
+   },
+   {
+    "lop": "by",
+    "chu": "Thân ái, Chiến Makeup Academy",
+    "co": 28,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 6.49,
+    "giua": 7.02,
+    "lech_max": 16,
+    "lech_p99": 14
+   },
+   {
+    "lop": "ft",
+    "chu": "Tháng 11 · 2026",
+    "co": 18,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 4.98,
+    "giua": 4.98,
+    "lech_max": 1,
+    "lech_p99": 0
+   },
+   {
+    "lop": "dc",
+    "chu": "25 Hoàng Quốc Việt, Cầu Giấy, Hà Nội",
+    "co": 26,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 6.26,
+    "giua": 7.02,
+    "lech_max": 20,
+    "lech_p99": 20
+   }
+  ],
+  "vong_anh": {
+   "lech_max": 5,
+   "lech_p99": 3
+  },
+  "kich_thuoc": "1080x1350"
+ },
+ "pa2-hoa-mau-nuoc-doi-dam": {
+  "ds": {
+   "ready": "1",
+   "chim": "0.425",
+   "chimLan": "1",
+   "dao": "0",
+   "nenXong": "1"
+  },
+  "chu": [
+   {
+    "lop": "th",
+    "chu": "Chiến Makeup Academy",
+    "co": 21,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 4.98,
+    "giua": 4.98,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "k1",
+    "chu": "Chào mừng đến với lớp",
+    "co": 18,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 4.98,
+    "giua": 4.98,
+    "lech_max": 2,
+    "lech_p99": 0
+   },
+   {
+    "lop": "kh",
+    "chu": "Makeup chuyên nghiệp",
+    "co": 60,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 8.25,
+    "giua": 13.38,
+    "lech_max": 66,
+    "lech_p99": 66
+   },
+   {
+    "lop": "lo",
+    "chu": "Lớp K12 · khai giảng 02.11.2026",
+    "co": 30,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 4.64,
+    "giua": 5.76,
+    "lech_max": 61,
+    "lech_p99": 57
+   },
+   {
+    "lop": "dg",
+    "chu": "Thân gửi",
+    "co": 34,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 7.02,
+    "giua": 7.02,
+    "lech_max": 5,
+    "lech_p99": 0
+   },
+   {
+    "lop": "ten",
+    "chu": "Tôn Nữ Hoàng Bảo Ngọc Phương Thảo",
+    "co": 107.5,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 13.38,
+    "giua": 13.38,
+    "lech_max": 10,
+    "lech_p99": 0
+   },
+   {
+    "lop": "by",
+    "chu": "Thân ái, Chiến Makeup Academy",
+    "co": 28,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 4.79,
+    "giua": 6.65,
+    "lech_max": 56,
+    "lech_p99": 53
+   },
+   {
+    "lop": "ft",
+    "chu": "Tháng 11 · 2026",
+    "co": 18,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 4.98,
+    "giua": 4.98,
+    "lech_max": 1,
+    "lech_p99": 0
+   },
+   {
+    "lop": "dc",
+    "chu": "25 Hoàng Quốc Việt, Cầu Giấy, Hà Nội",
+    "co": 26,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 7.02,
+    "giua": 7.02,
+    "lech_max": 0,
+    "lech_p99": 0
+   }
+  ],
+  "vong_anh": {
+   "lech_max": 15,
+   "lech_p99": 12
+  },
+  "kich_thuoc": "1080x1350"
+ },
+ "pa2-hoa-mau-nuoc": {
+  "ds": {
+   "ready": "1",
+   "chim": "0.240",
+   "chimLan": "0",
+   "dao": "0",
+   "nenXong": "1"
+  },
+  "chu": [
+   {
+    "lop": "th",
+    "chu": "Chiến Makeup Academy",
+    "co": 21,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 4.98,
+    "giua": 4.98,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "k1",
+    "chu": "Chào mừng đến với lớp",
+    "co": 18,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 4.98,
+    "giua": 4.98,
+    "lech_max": 1,
+    "lech_p99": 0
+   },
+   {
+    "lop": "kh",
+    "chu": "Makeup chuyên nghiệp",
+    "co": 60,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 10.26,
+    "giua": 13.38,
+    "lech_max": 37,
+    "lech_p99": 37
+   },
+   {
+    "lop": "lo",
+    "chu": "Lớp K12 · khai giảng 02.11.2026",
+    "co": 30,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 5.59,
+    "giua": 6.3,
+    "lech_max": 35,
+    "lech_p99": 32
+   },
+   {
+    "lop": "dg",
+    "chu": "Thân gửi",
+    "co": 34,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 7.02,
+    "giua": 7.02,
+    "lech_max": 3,
+    "lech_p99": 0
+   },
+   {
+    "lop": "ten",
+    "chu": "Tôn Nữ Hoàng Bảo Ngọc Phương Thảo",
+    "co": 107.5,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 13.38,
+    "giua": 13.38,
+    "lech_max": 6,
+    "lech_p99": 0
+   },
+   {
+    "lop": "by",
+    "chu": "Thân ái, Chiến Makeup Academy",
+    "co": 28,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 5.7,
+    "giua": 6.78,
+    "lech_max": 32,
+    "lech_p99": 30
+   },
+   {
+    "lop": "ft",
+    "chu": "Tháng 11 · 2026",
+    "co": 18,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 4.98,
+    "giua": 4.98,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "dc",
+    "chu": "25 Hoàng Quốc Việt, Cầu Giấy, Hà Nội",
+    "co": 26,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 7.02,
+    "giua": 7.02,
+    "lech_max": 0,
+    "lech_p99": 0
+   }
+  ],
+  "vong_anh": {
+   "lech_max": 9,
+   "lech_p99": 7
+  },
+  "kich_thuoc": "1080x1350"
+ },
+ "pa2-vai-ren-doi-dam": {
+  "ds": {
+   "ready": "1",
+   "chim": "0.361",
+   "chimLan": "2",
+   "dao": "1",
+   "nenXong": "1"
+  },
+  "chu": [
+   {
+    "lop": "th",
+    "chu": "Chiến Makeup Academy",
+    "co": 21,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 4.98,
+    "giua": 4.98,
+    "lech_max": 4,
+    "lech_p99": 0
+   },
+   {
+    "lop": "k1",
+    "chu": "Chào mừng đến với lớp",
+    "co": 18,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 4.98,
+    "giua": 4.98,
+    "lech_max": 2,
+    "lech_p99": 0
+   },
+   {
+    "lop": "kh",
+    "chu": "Makeup chuyên nghiệp",
+    "co": 60,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 8.87,
+    "giua": 10.98,
+    "lech_max": 56,
+    "lech_p99": 56
+   },
+   {
+    "lop": "lo",
+    "chu": "Lớp K12 · khai giảng 02.11.2026",
+    "co": 30,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 4.66,
+    "giua": 5.76,
+    "lech_max": 56,
+    "lech_p99": 56
+   },
+   {
+    "lop": "dg",
+    "chu": "Thân gửi",
+    "co": 34,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 5.13,
+    "giua": 6.78,
+    "lech_max": 45,
+    "lech_p99": 44
+   },
+   {
+    "lop": "ten",
+    "chu": "Tôn Nữ Hoàng Bảo Ngọc Phương Thảo",
+    "co": 107.5,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 13.28,
+    "giua": 13.38,
+    "lech_max": 12,
+    "lech_p99": 1
+   },
+   {
+    "lop": "by",
+    "chu": "Thân ái, Chiến Makeup Academy",
+    "co": 28,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 5.18,
+    "giua": 6.78,
+    "lech_max": 48,
+    "lech_p99": 43
+   },
+   {
+    "lop": "ft",
+    "chu": "Tháng 11 · 2026",
+    "co": 18,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 4.98,
+    "giua": 4.98,
+    "lech_max": 3,
+    "lech_p99": 0
+   },
+   {
+    "lop": "dc",
+    "chu": "25 Hoàng Quốc Việt, Cầu Giấy, Hà Nội",
+    "co": 26,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 4.66,
+    "giua": 6.59,
+    "lech_max": 56,
+    "lech_p99": 56
+   }
+  ],
+  "vong_anh": {
+   "lech_max": 14,
+   "lech_p99": 11
+  },
+  "kich_thuoc": "1080x1350"
+ },
+ "pa2-vai-ren": {
+  "ds": {
+   "ready": "1",
+   "chim": "0.240",
+   "chimLan": "0",
+   "dao": "1",
+   "nenXong": "1"
+  },
+  "chu": [
+   {
+    "lop": "th",
+    "chu": "Chiến Makeup Academy",
+    "co": 21,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 4.98,
+    "giua": 4.98,
+    "lech_max": 3,
+    "lech_p99": 0
+   },
+   {
+    "lop": "k1",
+    "chu": "Chào mừng đến với lớp",
+    "co": 18,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 4.98,
+    "giua": 4.98,
+    "lech_max": 1,
+    "lech_p99": 0
+   },
+   {
+    "lop": "kh",
+    "chu": "Makeup chuyên nghiệp",
+    "co": 60,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 10.26,
+    "giua": 11.72,
+    "lech_max": 37,
+    "lech_p99": 37
+   },
+   {
+    "lop": "lo",
+    "chu": "Lớp K12 · khai giảng 02.11.2026",
+    "co": 30,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 5.38,
+    "giua": 6.14,
+    "lech_max": 37,
+    "lech_p99": 37
+   },
+   {
+    "lop": "dg",
+    "chu": "Thân gửi",
+    "co": 34,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 5.7,
+    "giua": 6.85,
+    "lech_max": 30,
+    "lech_p99": 29
+   },
+   {
+    "lop": "ten",
+    "chu": "Tôn Nữ Hoàng Bảo Ngọc Phương Thảo",
+    "co": 107.5,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 13.37,
+    "giua": 13.38,
+    "lech_max": 8,
+    "lech_p99": 1
+   },
+   {
+    "lop": "by",
+    "chu": "Thân ái, Chiến Makeup Academy",
+    "co": 28,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 5.76,
+    "giua": 6.84,
+    "lech_max": 32,
+    "lech_p99": 28
+   },
+   {
+    "lop": "ft",
+    "chu": "Tháng 11 · 2026",
+    "co": 18,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 4.98,
+    "giua": 4.98,
+    "lech_max": 2,
+    "lech_p99": 0
+   },
+   {
+    "lop": "dc",
+    "chu": "25 Hoàng Quốc Việt, Cầu Giấy, Hà Nội",
+    "co": 26,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 5.38,
+    "giua": 6.72,
+    "lech_max": 37,
+    "lech_p99": 37
+   }
+  ],
+  "vong_anh": {
+   "lech_max": 9,
+   "lech_p99": 7
+  },
+  "kich_thuoc": "1080x1350"
+ },
+ "pa3-goc-hoa-vuong": {
+  "ds": {
+   "ready": "1",
+   "khung": "goc-hoa",
+   "nenXong": "1"
+  },
+  "chu": [
+   {
+    "lop": "th",
+    "chu": "Chiến Makeup Academy",
+    "co": 21,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 4.98,
+    "giua": 4.98,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "k1",
+    "chu": "Chào mừng đến với lớp",
+    "co": 18,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 4.98,
+    "giua": 4.98,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "kh",
+    "chu": "Makeup chuyên nghiệp",
+    "co": 48,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 13.38,
+    "giua": 13.38,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "lo",
+    "chu": "Lớp K12 · khai giảng 02.11.2026",
+    "co": 30,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 7.02,
+    "giua": 7.02,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "dg",
+    "chu": "Thân gửi",
+    "co": 34,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 7.02,
+    "giua": 7.02,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "ten",
+    "chu": "Tôn Nữ Hoàng Bảo Ngọc Phương Thảo",
+    "co": 88,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 13.38,
+    "giua": 13.38,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "by",
+    "chu": "Thân ái, Chiến Makeup Academy",
+    "co": 28,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 7.02,
+    "giua": 7.02,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "ft",
+    "chu": "Tháng 11 · 2026",
+    "co": 18,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 4.98,
+    "giua": 4.98,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "dc",
+    "chu": "25 Hoàng Quốc Việt, Cầu Giấy, Hà Nội",
+    "co": 26,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 7.02,
+    "giua": 7.02,
+    "lech_max": 0,
+    "lech_p99": 0
+   }
+  ],
+  "vong_anh": {
+   "lech_max": 0,
+   "lech_p99": 0
+  },
+  "kich_thuoc": "1080x1080"
+ },
+ "pa3-goc-hoa": {
+  "ds": {
+   "ready": "1",
+   "khung": "goc-hoa",
+   "nenXong": "1"
+  },
+  "chu": [
+   {
+    "lop": "th",
+    "chu": "Chiến Makeup Academy",
+    "co": 21,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 4.98,
+    "giua": 4.98,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "k1",
+    "chu": "Chào mừng đến với lớp",
+    "co": 18,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 4.98,
+    "giua": 4.98,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "kh",
+    "chu": "Makeup chuyên nghiệp",
+    "co": 60,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 13.38,
+    "giua": 13.38,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "lo",
+    "chu": "Lớp K12 · khai giảng 02.11.2026",
+    "co": 30,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 7.02,
+    "giua": 7.02,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "dg",
+    "chu": "Thân gửi",
+    "co": 34,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 7.02,
+    "giua": 7.02,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "ten",
+    "chu": "Tôn Nữ Hoàng Bảo Ngọc Phương Thảo",
+    "co": 107.5,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 13.38,
+    "giua": 13.38,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "by",
+    "chu": "Thân ái, Chiến Makeup Academy",
+    "co": 28,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 7.02,
+    "giua": 7.02,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "ft",
+    "chu": "Tháng 11 · 2026",
+    "co": 18,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 4.98,
+    "giua": 4.98,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "dc",
+    "chu": "25 Hoàng Quốc Việt, Cầu Giấy, Hà Nội",
+    "co": 26,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 7.02,
+    "giua": 7.02,
+    "lech_max": 0,
+    "lech_p99": 0
+   }
+  ],
+  "vong_anh": {
+   "lech_max": 0,
+   "lech_p99": 0
+  },
+  "kich_thuoc": "1080x1350"
+ },
+ "pa3-hoi-van": {
+  "ds": {
+   "ready": "1",
+   "khung": "hoi-van",
+   "nenXong": "1"
+  },
+  "chu": [
+   {
+    "lop": "th",
+    "chu": "Chiến Makeup Academy",
+    "co": 21,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 4.98,
+    "giua": 4.98,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "k1",
+    "chu": "Chào mừng đến với lớp",
+    "co": 18,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 4.98,
+    "giua": 4.98,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "kh",
+    "chu": "Makeup chuyên nghiệp",
+    "co": 60,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 13.38,
+    "giua": 13.38,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "lo",
+    "chu": "Lớp K12 · khai giảng 02.11.2026",
+    "co": 30,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 7.02,
+    "giua": 7.02,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "dg",
+    "chu": "Thân gửi",
+    "co": 34,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 7.02,
+    "giua": 7.02,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "ten",
+    "chu": "Tôn Nữ Hoàng Bảo Ngọc Phương Thảo",
+    "co": 107.5,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 13.38,
+    "giua": 13.38,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "by",
+    "chu": "Thân ái, Chiến Makeup Academy",
+    "co": 28,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 7.02,
+    "giua": 7.02,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "ft",
+    "chu": "Tháng 11 · 2026",
+    "co": 18,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 4.98,
+    "giua": 4.98,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "dc",
+    "chu": "25 Hoàng Quốc Việt, Cầu Giấy, Hà Nội",
+    "co": 26,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 7.02,
+    "giua": 7.02,
+    "lech_max": 0,
+    "lech_p99": 0
+   }
+  ],
+  "vong_anh": {
+   "lech_max": 0,
+   "lech_p99": 0
+  },
+  "kich_thuoc": "1080x1350"
+ },
+ "pa3-khung-ren": {
+  "ds": {
+   "ready": "1",
+   "khung": "khung-ren",
+   "nenXong": "1"
+  },
+  "chu": [
+   {
+    "lop": "th",
+    "chu": "Chiến Makeup Academy",
+    "co": 21,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 4.98,
+    "giua": 4.98,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "k1",
+    "chu": "Chào mừng đến với lớp",
+    "co": 18,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 4.98,
+    "giua": 4.98,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "kh",
+    "chu": "Makeup chuyên nghiệp",
+    "co": 60,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 13.38,
+    "giua": 13.38,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "lo",
+    "chu": "Lớp K12 · khai giảng 02.11.2026",
+    "co": 30,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 7.02,
+    "giua": 7.02,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "dg",
+    "chu": "Thân gửi",
+    "co": 34,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 7.02,
+    "giua": 7.02,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "ten",
+    "chu": "Tôn Nữ Hoàng Bảo Ngọc Phương Thảo",
+    "co": 107.5,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 13.38,
+    "giua": 13.38,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "by",
+    "chu": "Thân ái, Chiến Makeup Academy",
+    "co": 28,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 7.02,
+    "giua": 7.02,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "ft",
+    "chu": "Tháng 11 · 2026",
+    "co": 18,
+    "nguong": 4.5,
+    "wcag": 4.5,
+    "xau": 4.98,
+    "giua": 4.98,
+    "lech_max": 0,
+    "lech_p99": 0
+   },
+   {
+    "lop": "dc",
+    "chu": "25 Hoàng Quốc Việt, Cầu Giấy, Hà Nội",
+    "co": 26,
+    "nguong": 4.5,
+    "wcag": 3.0,
+    "xau": 7.02,
+    "giua": 7.02,
+    "lech_max": 0,
+    "lech_p99": 0
+   }
+  ],
+  "vong_anh": {
+   "lech_max": 0,
+   "lech_p99": 0
+  },
+  "kich_thuoc": "1080x1350"
+ }
+}

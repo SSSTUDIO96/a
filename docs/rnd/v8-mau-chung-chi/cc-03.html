@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CC-03 Trắng sóng đỏ vàng</title>
+<link rel="stylesheet" href="chung/cc.css">
+<!-- Mẫu 03 — học tinh thần ảnh tham khảo 3 (nền trắng, dải đỏ–vàng cong ở hai góc, khung mảnh, huy hiệu). Tự vẽ.
+     Phông: tiêu đề Cormorant Garamond đậm, tên MP Chữ ký 1 (Send Flowers), chữ hoa nhỏ Montserrat. -->
+<style>
+.c3{background:#FFFFFF;color:#1E1A18}
+.c3 .song{inset:0}
+.c3 .khung{left:46px;top:40px;right:46px;bottom:40px;border:1.5px solid #3A3431}
+.c3 .anh{left:50%;top:62px;width:132px;height:132px;margin-left:-66px;box-shadow:0 0 0 4px #fff,0 0 0 6px #B88A35}
+.c3 .huy{left:120px;top:548px;width:150px}
+.c3 .o-logo{left:96px;top:78px;width:40px;height:40px}
+.c3 .thg{left:146px;top:78px;line-height:40px;font-family:var(--f-sans);font-weight:700;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:#3A3431;max-width:300px;white-space:nowrap;overflow:hidden}
+.c3.khong-logo .thg{left:96px}
+.c3 .so{right:200px;top:90px;color:#6B625C}
+.c3 .t1{left:0;right:0;top:214px;text-align:center;font-family:var(--f-chan);font-weight:600;font-size:54px;letter-spacing:.2em;line-height:1}
+.c3 .t2{left:0;right:0;top:276px;text-align:center;font-size:15px;letter-spacing:.32em;color:#3A3431;display:flex;justify-content:center;align-items:center;gap:18px}
+.c3 .t2::before,.c3 .t2::after{content:"";width:70px;height:1px;background:#3A3431}
+.c3 .tag{left:0;right:0;top:318px;text-align:center;font-family:var(--f-chan);font-size:21px;letter-spacing:.14em;text-transform:uppercase;color:#5A524C}
+.c3 .ten{left:190px;right:190px;top:346px;text-align:center;font-size:calc(76px * var(--ten-co));color:#1E1A18}
+.c3 .dong{left:0;right:0;top:456px;text-align:center;font-size:24px;font-style:italic;font-weight:500}
+.c3 .ngay{left:0;right:0;top:494px;text-align:center;font-size:18px;font-style:italic;color:#5A524C}
+.c3 .ky1{left:330px;top:556px;width:220px}
+.c3 .ky2{left:620px;top:556px;width:220px}
+</style></head>
+<body class="xem"><main>
+<section class="cc c3">
+  <svg class="song" viewBox="0 0 1122 794" preserveAspectRatio="none" aria-hidden="true">
+    <defs>
+      <linearGradient id="do3" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6E0E12"/><stop offset=".5" stop-color="#A81E22"/><stop offset="1" stop-color="#6E0E12"/></linearGradient>
+      <linearGradient id="vg3" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8A6420"/><stop offset=".35" stop-color="#F3DE9C"/><stop offset=".65" stop-color="#B88A35"/><stop offset="1" stop-color="#E9CF86"/></linearGradient>
+    </defs>
+    <!-- góc trên phải -->
+    <path d="M640 0 H1122 V560 C1060 360 930 150 640 0Z" fill="url(#do3)"/>
+    <path d="M700 0 C960 120 1080 320 1122 470" fill="none" stroke="url(#vg3)" stroke-width="10"/>
+    <path d="M760 0 C990 110 1095 280 1122 380" fill="none" stroke="url(#vg3)" stroke-width="3"/>
+    <path d="M600 0 C880 140 1040 340 1122 600" fill="none" stroke="#fff" stroke-width="22"/>
+    <!-- góc dưới trái -->
+    <path d="M0 330 C80 560 260 720 560 794 H0Z" fill="url(#do3)"/>
+    <path d="M0 400 C110 600 270 730 460 794" fill="none" stroke="url(#vg3)" stroke-width="10"/>
+    <path d="M0 470 C110 640 240 750 380 794" fill="none" stroke="url(#vg3)" stroke-width="3"/>
+    <path d="M0 290 C90 540 290 720 640 794" fill="none" stroke="#fff" stroke-width="22"/>
+  </svg>
+  <div class="khung"></div>
+  <div class="anh"><img data-f="anh" alt=""></div>
+  <div class="huy" data-huy-hieu data-kieu="hoa" data-nen="#2A1414"></div>
+  <div class="o-logo"><img data-f="logo" alt=""></div>
+  <div class="thg" data-f="th"></div>
+  <div class="t1" data-td>CHỨNG CHỈ</div>
+  <div class="t2 caps">Hoàn thành khoá học</div>
+  <div class="tag">Trân trọng trao cho</div>
+  <div class="ten" data-f="ten" data-fitw></div>
+  <div class="dong" data-f="dong"></div>
+  <div class="ngay"><span data-f="ngayChu"></span> · Số <span data-f="so"></span></div>
+  <div class="ky ky1"><div class="cv">Giảng viên</div><div class="dl"></div><div class="nm" data-f="gv"></div></div>
+  <div class="ky ky2"><div class="cv">Giám đốc trung tâm</div><div class="dl"></div><div class="nm" data-f="gd"></div></div>
+</section>
+</main><script src="chung/cc.js"></script></body></html>

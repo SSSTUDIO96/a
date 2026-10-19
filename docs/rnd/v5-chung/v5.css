@@ -160,3 +160,6 @@
   .v5-dg__row { padding: 7px 14px; }
 }
 .ws-legend.moi { outline-offset: -3px; }
+.v5-nt__ic { grid-row: span 3; }
+.v5-nt__t { grid-column: 2; grid-row: 1; }
+.v5-nt__tm { grid-column: 3; grid-row: 1; }
