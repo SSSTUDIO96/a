@@ -179,3 +179,11 @@ Mỗi lỗi ghi đủ: triệu chứng · gốc bệnh · số đo · cách ch�
 - **Gốc:** điều phối gọi thợ bằng mã máy dài, chép mã từ danh sách 8 thợ giao cùng lúc mà không đối chiếu tên.
 - **Cách chặn:** trước mỗi tin giao thêm việc, đối chiếu mã thợ với mô tả lúc giao (tên thợ + phạm vi tệp); câu đầu tin nhắn ghi rõ "Gửi thợ K3 (mẫu thiết kế)" để thợ nhận nhầm thấy ngay.
 - **Bài giảng cho nghề:** thợ từ chối việc ngoài phạm vi tệp chính là cửa gác chặn được lỗi điều phối. Luật "mỗi thợ chỉ sửa tệp của mình" không chỉ tránh giẫm chân mà còn bắt được giao nhầm.
+
+## 27. Ảnh chụp cả trang làm chủ studio tưởng giao diện lỗi
+
+- **Triệu chứng:** anh Chiến thấy ảnh màn Lịch ở khổ điện thoại có thanh điều hướng dưới nằm giữa danh sách ca, đè lên thẻ ca, và báo "Lỗi giao diện này".
+- **Gốc:** ảnh do thợ chụp bằng `fullPage: true`. Thanh dưới là `position: fixed; bottom: 0` (`apps/web/src/layout/layout.css:308-316`); khi chụp cả trang, Chromium vẽ phần tử cố định tại đáy khung nhìn đầu tiên (y = 844 − 64 = 780) rồi vẽ tiếp phần trang còn lại bên dưới, nên thanh lơ lửng giữa ảnh.
+- **Số đo (thợ đào, app thật):** 390×844 và 375×667, ba chế độ Lịch, cuộn tới cuối: thanh dưới luôn sát đáy khung, chồng lấn 0 px, nội dung cuối cách thanh 22–25 px. Hợp đồng, Khách, Bảng giá cũng 0 px.
+- **Cách chặn:** ảnh nộp cho anh Chiến hoặc dùng làm bằng chứng giao diện **phải là ảnh khung màn hình** (`fullPage: false`), cuộn từng đoạn nếu cần. Ảnh cả trang chỉ dùng nội bộ và phải ghi chữ "ảnh cả trang — thanh cố định hiện sai chỗ" ngay trên tên tệp.
+- **Phát hiện kèm (lỗi thật, nhỏ):** mã chưa có `env(safe-area-inset-bottom)` cho thanh dưới; iPhone có thanh Home thì thanh dưới sát mép vuốt. Đã giao sửa.
