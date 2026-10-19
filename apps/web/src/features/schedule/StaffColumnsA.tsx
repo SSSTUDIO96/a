@@ -4,7 +4,7 @@
 import type { CSSProperties } from 'react';
 import type { Appointment } from '../../api/types';
 import { StatusTag } from '../../ui';
-import { appointmentsOfDay, axisHours, blockSpan, dayLoad, kindText, laneIdsOf, laneShortNames, layoutLanes, UNASSIGNED, type ConflictMarks, type StaffLane } from './model';
+import { appointmentsOfDay, axisHours, blockSpan, dayLoad, kindLabel, laneIdsOf, laneShortNames, layoutLanes, quantityText, UNASSIGNED, type ConflictMarks, type StaffLane } from './model';
 import { apptClasses, apptTip, cx, LaneAvatar, placeText, timeRange, useSwatchOf } from './parts';
 import { formatHours, minutesFromDayStart, type DayKey } from './time';
 
@@ -49,6 +49,7 @@ export function StaffColumnsA({
             <div key={id} role="columnheader" className={cx('ws-a__colh', !lane && 'is-na')}>
               <LaneAvatar lane={lane} />
               <span className="ws-a__who">
+                {/* Cột "Chưa có thợ" hẹp (1024): xuống 2 dòng thay vì cắt "Chưa có t…" (biên bản M4, như L3 ở lưới C). */}
                 <span className="ws-a__nm" title={lane?.name}>
                   {lane ? (short.get(lane.membershipId) ?? lane.name) : 'Chưa có thợ'}
                 </span>
@@ -107,7 +108,16 @@ export function StaffColumnsA({
                         {timeRange(a)}
                         {conflict && <StatusTag tone="danger">Trùng</StatusTag>}
                       </span>
-                      <span className="ws-ev__sv">{kindText(a)}</span>
+                      {/* L7 (biên bản M2): "× n" là thẻ riêng không co (như ws-chip__qty của lưới C) — chỉ tên loại ca rút "…". */}
+                      <span className="ws-ev__sv">
+                        <span className="ws-ev__kind">{kindLabel(a)}</span>
+                        {quantityText(a) && (
+                          <>
+                            {' '}
+                            <span className="ws-ev__qty num">{quantityText(a)}</span>
+                          </>
+                        )}
+                      </span>
                       {a.customer && <span className="ws-ev__kh">{a.customer.fullName}</span>}
                       {placeText(a) && <span className="ws-ev__nc">{placeText(a)}</span>}
                     </span>

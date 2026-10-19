@@ -322,6 +322,35 @@ describe('L7: ca phù dâu 2 người ghi "× 2" ở mọi chế độ lịch', 
     expect(rules.some((r) => r.sel === '.ws-chip__kind' && /text-overflow:\s*ellipsis/.test(r.body))).toBe(true);
   });
 
+  it('BẮT (M2): chế độ "Cột thợ" — "× 2" là thẻ riêng ws-ev__qty, tên loại ca là phần riêng ws-ev__kind; ca số lượng 1 / không gắn dòng không có thẻ', async () => {
+    setupServer({ items: ITEMS });
+    renderScreen(OWNER);
+    await screen.findByTestId('che-do-C');
+    fireEvent.click(modeButton('Cột thợ'));
+    await screen.findByTestId('che-do-A');
+    const sv = document.querySelector('[data-appt="a4"] .ws-ev__sv') as HTMLElement;
+    expect(sv.querySelector('.ws-ev__kind')?.textContent).toBe('Makeup phù dâu');
+    expect(sv.querySelector(':scope > .ws-ev__qty')?.textContent).toBe('× 2');
+    // GIỮ: chữ đọc liền vẫn là "Makeup phù dâu × 2" (có dấu cách cho trình đọc màn hình).
+    expect(sv.textContent).toBe('Makeup phù dâu × 2');
+    expect(document.querySelectorAll('[data-appt="q1"] .ws-ev__qty, [data-appt="free"] .ws-ev__qty')).toHaveLength(0);
+    expect(document.querySelector('[data-appt="free"] .ws-ev__kind')?.textContent).toBe('Makeup tiệc');
+  });
+
+  it('BẮT (M2, CSS): ô ca chế độ "Cột thợ" — thẻ "× n" không co, không cắt ở mọi khổ; ô chứa không cắt; chỉ tên loại ca rút "…"', () => {
+    const css = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'schedule.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+    const rules = [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((m) => ({ sel: (m[1] ?? '').trim(), body: m[2] ?? '' }));
+    const ending = (cls: string) => rules.filter((r) => r.sel.split(',').some((x) => x.trim().endsWith(cls)));
+    const qty = ending('.ws-ev__qty');
+    expect(qty.length).toBeGreaterThan(0);
+    expect(qty.some((r) => /flex:\s*none/.test(r.body))).toBe(true);
+    for (const r of qty) expect(r.body).not.toMatch(/display:\s*none|overflow:\s*hidden|text-overflow/);
+    const sv = ending('.ws-ev__sv');
+    expect(sv.some((r) => /display:\s*flex/.test(r.body))).toBe(true);
+    for (const r of sv) expect(r.body).not.toMatch(/overflow:\s*hidden|text-overflow/);
+    expect(ending('.ws-ev__kind').some((r) => /text-overflow:\s*ellipsis/.test(r.body) && /min-width:\s*0/.test(r.body))).toBe(true);
+  });
+
   it('BẮT: lưới C trên điện thoại (WeekGridCMobile) cũng ghi "× 2"', async () => {
     vi.stubGlobal('matchMedia', (q: string) => ({
       matches: q === '(max-width: 640px)',
@@ -336,6 +365,34 @@ describe('L7: ca phù dâu 2 người ghi "× 2" ở mọi chế độ lịch', 
     const kinds = textOf('.ws-ag__kind');
     expect(kinds.filter((t) => t.includes('Makeup phù dâu × 2')).length).toBeGreaterThan(0);
     expect(kinds.filter((t) => t.includes('×')).every((t) => t.includes('Makeup phù dâu × 2'))).toBe(true);
+  });
+});
+
+describe('M4: đầu cột "Chưa có thợ" ở chế độ "Cột thợ" không bị cắt "Chưa có t…"', () => {
+  it('BẮT: đầu cột ca chưa phân thợ là is-na, ghi đủ "Chưa có thợ"', async () => {
+    setupServer();
+    renderScreen(OWNER);
+    await screen.findByTestId('che-do-C');
+    fireEvent.click(modeButton('Cột thợ'));
+    await screen.findByTestId('che-do-A');
+    const heads = [...document.querySelectorAll('.ws-a__colh')];
+    const na = heads.filter((h) => h.classList.contains('is-na'));
+    expect(na).toHaveLength(1);
+    expect(na[0]?.querySelector('.ws-a__nm')?.textContent).toBe('Chưa có thợ');
+    expect(heads.at(-1)).toBe(na[0]);
+  });
+
+  it('BẮT (CSS): tên "Chưa có thợ" được xuống dòng (white-space: normal, không cắt); GIỮ: tên thợ vẫn một dòng rút "…"', () => {
+    const css = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'schedule.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+    const rules = [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((m) => ({ sel: (m[1] ?? '').trim(), body: m[2] ?? '' }));
+    const na = rules.filter((r) => r.sel.split(',').some((x) => x.trim() === '.ws-a__colh.is-na .ws-a__nm'));
+    expect(na.length).toBeGreaterThan(0);
+    const last = na.at(-1)?.body ?? '';
+    expect(last).toMatch(/white-space:\s*normal/);
+    expect(last).not.toMatch(/text-overflow:\s*ellipsis|white-space:\s*nowrap/);
+    const base = rules.find((r) => r.sel === '.ws-a__nm')?.body ?? '';
+    expect(base).toMatch(/white-space:\s*nowrap/);
+    expect(base).toMatch(/text-overflow:\s*ellipsis/);
   });
 });
 
