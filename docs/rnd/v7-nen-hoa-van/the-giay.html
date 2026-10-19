@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=1080">
+<title>R&D 07 v2 · Thẻ chào mừng: nền ảnh và tấm giấy</title>
+<!-- Makeup Pro · R&D 07 vòng 2 (19/10/2026). Cùng nội dung shd-01 "Thư mời kem", bố cục mới: NỀN ẢNH ĐẬM tràn trang +
+     TẤM GIẤY ở giữa (hoặc khung trang trí toàn trang). Ô ảnh học viên khung tròn (?khunganh=vien-thuoc = viên thuốc).
+     Hình vẽ: chung/giay.js (tham số ghi ở đầu tệp). Cỡ chữ/ảnh tự co theo khung nội dung (biến --s). Bản R&D, không phải tệp vẽ chính thức. -->
+<link rel="stylesheet" href="../v3-mau-chao-mung/phong/phong.css"><link rel="stylesheet" href="chung/mau.css">
+<style>
+:root{--chu:#2A2420;--phu:#5C4E3E;--nhan:#7A6340;--vien:#B8975A}
+#c{background:#F5EFE3;color:var(--chu)}
+.w{--s:1;position:absolute;display:flex;flex-direction:column;align-items:center;text-align:center;padding:calc(40px*var(--s)) calc(60px*var(--s)) calc(36px*var(--s))}
+.lg{width:calc(72px*var(--s));height:calc(72px*var(--s))}.an-logo .lg{display:none}
+.th{font:500 calc(21px*var(--s)) var(--f-sans);letter-spacing:.32em;color:var(--nhan);margin-top:calc(12px*var(--s));text-transform:uppercase;width:100%}
+.anh{margin-top:calc(28px*var(--s));padding:calc(8px*var(--s));border:1.5px solid var(--vien);border-radius:50%;flex-shrink:0}
+.anh img{width:calc(264px*var(--s));height:calc(264px*var(--s));border-radius:50%;object-fit:cover;object-position:50% 38%}
+.anh-vien-thuoc .anh{border-radius:999px}.anh-vien-thuoc .anh img{width:calc(214px*var(--s));height:calc(318px*var(--s));border-radius:999px;object-position:50% 40%}
+.k1{font:500 calc(18px*var(--s)) var(--f-sans);letter-spacing:.42em;color:var(--nhan);text-transform:uppercase;margin-top:calc(32px*var(--s))}
+.kh{font:600 calc(60px*var(--s))/1.08 var(--f-chan);text-transform:uppercase;letter-spacing:.04em;margin-top:calc(12px*var(--s));width:100%}
+.lo{font:italic 400 calc(30px*var(--s)) var(--f-chan);color:var(--phu);margin-top:calc(10px*var(--s))}
+.or{display:flex;align-items:center;gap:16px;margin:calc(22px*var(--s)) 0 calc(12px*var(--s))}
+.or i{width:calc(120px*var(--s));height:1px;background:var(--vien)}.or b{width:10px;height:10px;transform:rotate(45deg);border:1px solid var(--vien)}
+.dg{font:italic 400 calc(34px*var(--s)) var(--f-chan);color:var(--phu)}
+.ten{font-family:var(--f-tay-1);font-size:calc(112px*var(--s)*var(--tay-co-1));line-height:1.16;width:100%;margin-top:2px;padding:0 6px}
+.by{font:italic 400 calc(28px*var(--s)) var(--f-chan);color:var(--phu);margin-top:calc(10px*var(--s))}
+.ft{font:500 calc(18px*var(--s)) var(--f-sans);letter-spacing:.32em;text-transform:uppercase;color:var(--nhan)}
+.dc{font:400 calc(26px*var(--s)) var(--f-chan);color:var(--phu);margin-top:calc(8px*var(--s))}
+.vuong .anh img{width:calc(200px*var(--s));height:calc(200px*var(--s))}.vuong.anh-vien-thuoc .anh img{width:calc(160px*var(--s));height:calc(236px*var(--s))}
+.vuong .k1{margin-top:calc(20px*var(--s))}.vuong .or{margin:calc(12px*var(--s)) 0 calc(6px*var(--s))}
+</style></head><body><div id="c"><div class="w">
+<img class="lg" data-f="logo" alt=""><div class="th" data-f="th" data-fitw data-do></div>
+<div class="anh"><img data-f="anh" alt=""></div>
+<div class="k1" data-do>Chào mừng đến với lớp</div>
+<div class="kh" data-f="khoa" data-fit="2" data-do></div>
+<div class="lo" data-do>Lớp <span data-f="lop"></span> · khai giảng <span data-f="ngayCham"></span></div>
+<div class="or"><i></i><b></b><i></i></div>
+<div class="dg" data-do>Thân gửi</div>
+<div class="ten" data-f="ten" data-fit="2" data-do></div>
+<div class="by" data-do>Thân ái, <span data-f="th"></span></div>
+<div class="sp"></div>
+<div class="ft" data-f="thangNam" data-do></div><div class="dc" data-f="diachi" data-fitw style="max-width:100%;white-space:nowrap" data-do></div>
+</div></div>
+<script>(function(){const P=new URLSearchParams(location.search);window.MAC_DINH={};document.body.classList.add('anh-'+(P.get('khunganh')||'tron'));if(P.get('kho')==='vuong')document.body.classList.add('vuong');
+ const a=P.get('anhnen');if(a){const i=document.createElement('img');i.id='nguon';i.style.display='none';i.src=a;document.body.appendChild(i);}})();</script>
+<script src="chung/giay.js"></script>
+<script src="chung/qrcode.js"></script><script src="chung/mau.js"></script>
+<script>window.MAU_SAN_SANG=window.MAU_SAN_SANG.then(()=>window.GIAY_XONG).then(()=>{if(window.GIAY_DO)window.GIAY_DO();document.body.dataset.nenXong='1';});</script>
+<script src="chung/html-to-image.js"></script><script src="chung/xuat.js"></script></body></html>

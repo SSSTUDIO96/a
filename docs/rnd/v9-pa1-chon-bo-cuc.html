@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="ten" content="R&D 09 — PA1 Chọn bố cục">
+<title>PA1 Chọn bố cục — R&D 09</title>
+<!-- R&D 09 — Phương án 1 "CHỌN BỐ CỤC + BẬT/TẮT KHỐI + SỬA CHỮ". Mức tùy chỉnh THẤP, an toàn nhất.
+     Studio chọn 1 trong 5 bố cục (v9-mau-in/), bật/tắt từng khối, sửa tiêu đề + chữ mở đầu + chữ kết thúc (có biến),
+     lưu thành "Mẫu in của studio". Xem trước = trang in thật v9-mau-in/in.html (đổi công tắc là đổi tham số).
+     Token + component: v4-chung/v4.css (chép đúng apps/web/src/styles/tokens.css). ?truong = hiện nguồn dữ liệu từng ô
+     (tím = trường có sẵn trong apps/api/prisma/schema.prisma, xanh TÍNH = tính từ trường có sẵn, nâu MỚI = cần trường mới).
+     Màn: #a-quan-ly · #a-sua · #a-in. Ngày giả định 19/10/2026; dữ liệu giả. -->
+<link rel="stylesheet" href="v4-chung/v4.css">
+<link rel="stylesheet" href="v9-chung/v9.css">
+</head>
+<body>
+<script src="v4-chung/v4.js"></script>
+<script src="v9-chung/v9.js"></script>
+<script>
+(function () {
+const I = V4.icon;
+const KIDS = 'Hồ sơ thương hiệu|Mẫu in hợp đồng|Mẫu điều khoản';
+const PA = (t) => `<div class="pa"><b>Phương án 1</b> · Chọn bố cục + bật/tắt khối + sửa chữ · ${t}</div>`;
+
+V4.mucLuc('R&D 09 — Phương án 1: Chọn bố cục', 'Mức tùy chỉnh thấp: chọn 1 trong 5 bố cục, bật/tắt khối, sửa chữ đầu/cuối, lưu thành "Mẫu in của studio". Thêm ?truong để hiện nguồn dữ liệu.', [
+  ['Màn', [
+    ['a-quan-ly', 'Quản lý mẫu in', 'Cài đặt › Mẫu in hợp đồng — danh sách, mặc định theo loại, phiên bản'],
+    ['a-sua', 'Sửa mẫu in', 'Chọn bố cục, bật/tắt khối, sửa chữ; xem trước bản in thật'],
+    ['a-in', 'Bấm In ở hợp đồng', 'Chọn mẫu, xem từng trang, in / tải PDF; hợp đồng đã in giữ bản cũ'],
+  ]],
+]);
+
+// ---------- Màn 1: Quản lý mẫu in ----------
+const ROWS = {
+  'dich-vu': [
+    { n: 2, t: 'Hiện đại — Chiến Makeup', v: 3, def: true, used: 46, d: '12 khối bật · sửa 12/10/2026 bởi Chiến' },
+    { n: 1, t: 'Cổ điển có quốc hiệu', v: 1, used: 3, d: 'Dùng cho khách cần hợp đồng giấy đóng dấu' },
+    { n: 4, t: 'Gọn 1 trang — tiệc nhỏ', v: 2, used: 9, d: 'Ẩn CCCD, ẩn ô ký nháy' },
+  ],
+  'khoa-hoc': [
+    { n: 1, t: 'Hợp đồng đào tạo — Cổ điển', v: 2, def: true, used: 31, d: 'Có quốc hiệu + nội quy' },
+    { n: 5, t: 'Sang trọng — khoá cao cấp', v: 1, used: 4, d: 'Logo lớn, khung viền vàng' },
+  ],
+};
+const dong = (r, loai) => `<div class="lr" style="grid-template-columns:56px minmax(0,1fr) auto">
+  <span style="grid-row:span 2;width:56px">${V9.thumb(r.n, loai)}</span>
+  <span class="n"><span data-f="MỚI: PrintTemplate.name">${r.t}</span> ${r.def ? '<span class="tag nv" data-f="MỚI: PrintTemplate.isDefault (mỗi loại hợp đồng 1 mẫu)">Mặc định</span>' : ''}</span>
+  <span class="rt" style="grid-row:span 2"><span class="tag" data-f="MỚI: PrintTemplate.version">bản v${r.v}</span><button class="btn sm m-hide">Sửa</button></span>
+  <span class="d"><span data-f="MỚI: PrintTemplate.layout">Bố cục ${r.n} · ${V9.MAU[r.n][0]}</span> · ${r.d} · <span data-f="TÍNH: đếm ContractPrint theo templateId (MỚI)">đã in ${r.used} hợp đồng</span></span></div>`;
+
+V4.man('a-quan-ly', { shell: 'org', nav: 'cai-dat', kid: 'Mẫu in hợp đồng', kids: KIDS, title: 'Mẫu in hợp đồng', act: '+' }, `
+${PA('Màn quản lý')}
+<div class="ph"><h1>Mẫu in hợp đồng</h1><span class="sub">Mẫu nào dùng khi bấm In ở hợp đồng</span><span class="sp"></span><button class="btn pri">${I('plus', 's')}Tạo mẫu in</button></div>
+<div class="g2">
+  <div class="card"><div class="ch2"><h2>Hợp đồng dịch vụ</h2><small>3 mẫu</small></div>${ROWS['dich-vu'].map((r) => dong(r, 'dich-vu')).join('')}</div>
+  <div class="card"><div class="ch2"><h2>Hợp đồng khoá học</h2><small>2 mẫu</small></div>${ROWS['khoa-hoc'].map((r) => dong(r, 'khoa-hoc')).join('')}</div>
+</div>
+<div class="card" style="margin-top:16px"><div class="ch2"><h2>5 bố cục có sẵn</h2><small>Bấm một bố cục để tạo mẫu mới từ nó</small></div><div class="cb" style="padding-top:12px">${V9.boCuc(0)}</div></div>
+<div class="bn grey" style="margin-top:16px">${I('lock', 's')}<span>Thông tin studio trên bản in (logo, tên, địa chỉ, SĐT, tài khoản ngân hàng, người đại diện) lấy từ <a href="#">Hồ sơ thương hiệu</a>. Điều khoản và nội quy lấy từ <a href="#">Mẫu điều khoản</a> — mẫu in chỉ quyết định cách trình bày.</span></div>
+<div class="rnd-note"><b>R&D:</b> mỗi loại hợp đồng có đúng 1 mẫu mặc định (giống mẫu điều khoản đang làm — contract_texts_one_default). Lưu trữ thay cho xoá vì hợp đồng cũ còn trỏ tới mẫu.</div>
+`);
+
+// ---------- Màn 2: Sửa mẫu in ----------
+const KHOI = [
+  ['dau-trang', 'Đầu trang', 'Logo, tên, địa chỉ, SĐT — Hồ sơ thương hiệu', 1, 'OrganizationProfile.logoFileId/brandName/address/phone'],
+  ['quoc-hieu', 'Quốc hiệu – tiêu ngữ', 'CỘNG HOÀ XÃ HỘI CHỦ NGHĨA VIỆT NAM…', 0, 'chữ cố định'],
+  ['hai-ben', 'Thông tin hai bên', 'Bên A studio · Bên B khách', 1, 'OrganizationProfile + Customer'],
+  ['giay-to', 'CCCD + địa chỉ khách', 'Trống thì in dòng chấm để điền tay', 1, 'MỚI: Customer.idNumber, Customer.address'],
+  ['chi-tiet', 'Giờ, địa điểm từng dòng', '05:00–07:30 · Tại nhà khách: …', 1, 'ContractLine.scheduledStart/End, locationType, address'],
+  ['tho', 'Tên thợ', 'Thợ chính / thợ phụ', 1, 'ContractLineStaff + StaffProfile.displayName'],
+  ['bang-chu', 'Số tiền bằng chữ', '“Bảy triệu một trăm năm mươi hai nghìn đồng”', 1, 'TÍNH: đọc Contract.total thành chữ'],
+  ['tien-do', 'Tiến độ thanh toán', 'Các đợt + hạn + đã thu', 1, 'PaymentInstallment'],
+  ['da-thu', 'Phiếu thu đã nhận', 'Mã phiếu, ngày, hình thức', 1, 'Payment'],
+  ['chuyen-khoan', 'Tài khoản chuyển khoản + QR', 'Cần nhập ở Hồ sơ thương hiệu', 1, 'MỚI: OrganizationProfile.bank*'],
+  ['dieu-khoan', 'Điều khoản', 'Bản chụp lúc xác nhận', 1, 'Contract.terms'],
+  ['ghi-chu', 'Ghi chú hợp đồng', '', 1, 'Contract.notes'],
+  ['ky-nhay', 'Ô ký nháy cuối mỗi trang', 'Ký nháy A ___ B ___', 0, 'chữ cố định'],
+  ['so-trang', 'Số hợp đồng + số trang cuối trang', 'HĐDV-000128 · Trang 1/2', 1, 'Contract.code + số trang'],
+];
+const sw = (on) => `<span class="sw${on ? ' on' : ''}" role="switch" aria-checked="${!!on}"></span>`;
+const bien = ['Tên khách', 'Ngày sự kiện', 'Mã hợp đồng', 'Tổng tiền', 'Tiền cọc', 'Tên studio'].map((b) => `<button class="bien" type="button">{${b}}</button>`).join(' ');
+
+V4.man('a-sua', { shell: 'org', nav: 'cai-dat', kid: 'Mẫu in hợp đồng', kids: KIDS, title: 'Sửa mẫu in', back: '#a-quan-ly', act: 'Lưu' }, `
+${PA('Màn sửa mẫu')}
+<div class="ph"><h1>Hiện đại — Chiến Makeup</h1><span class="tag nv">Mặc định · dịch vụ</span><span class="tag">đang là bản v3</span><span class="sp"></span><button class="btn">Huỷ</button><button class="btn pri">Lưu thành bản v4</button></div>
+<div class="sua">
+  <div class="vstack">
+    <div class="card"><div class="ch2"><h2>Mẫu</h2></div><div class="cb">
+      <div class="set"><label>Tên mẫu</label><input class="ctl" value="Hiện đại — Chiến Makeup" data-f="MỚI: PrintTemplate.name"></div>
+      <div class="set"><label>Dùng cho</label><span class="r"><span class="seg sm" data-f="MỚI: PrintTemplate.appliesTo (ContractKind[] như ContractText)"><button class="on">Dịch vụ</button><button>Khoá học</button><button>Cả hai</button></span></span></div>
+      <div class="set"><label>Mặc định cho hợp đồng dịch vụ</label><span class="r">${sw(1)}</span></div>
+    </div></div>
+    <div class="card"><div class="ch2"><h2>Bố cục</h2><small>chọn 1 trong 5</small></div><div class="cb" style="padding-top:12px">${V9.boCuc(2)}</div></div>
+    <div class="card"><div class="ch2"><h2>Khối hiện trên bản in</h2></div><div class="cb" data-f="MỚI: PrintTemplate.blocks (JSON: khối nào bật)">
+      ${KHOI.map(([k, t, d, on, src]) => `<div class="khoi${on ? '' : ' tat'}"><span class="t">${t}${d ? `<small>${d}</small>` : ''}</span><span class="fx m-hide" title="Nguồn dữ liệu">${src.startsWith('MỚI') ? '<span class="tag ps">trường mới</span>' : ''}</span>${sw(on)}</div>`).join('')}
+    </div></div>
+    <div class="card"><div class="ch2"><h2>Chữ trên bản in</h2></div><div class="cb">
+      <div class="set stack"><label>Tiêu đề</label><input class="ctl" value="HỢP ĐỒNG DỊCH VỤ TRANG ĐIỂM" data-f="MỚI: PrintTemplate.title"></div>
+      <div class="set stack"><label>Chữ mở đầu</label><textarea class="ctl" rows="3" data-f="MỚI: PrintTemplate.openingText">Hai bên thoả thuận ký hợp đồng dịch vụ trang điểm cho sự kiện ngày {Ngày sự kiện} với các nội dung sau:</textarea><div class="bien-ds">${bien}</div></div>
+      <div class="set stack"><label>Chữ kết thúc</label><textarea class="ctl" rows="2" data-f="MỚI: PrintTemplate.closingText">Hợp đồng có hiệu lực từ ngày ký, lập thành 02 bản có giá trị như nhau, mỗi bên giữ 01 bản.</textarea></div>
+    </div></div>
+  </div>
+  <div class="phai">
+    ${V9.xt('mau=2&loai=dich-vu&ban=dai&tat=quoc-hieu,ky-nhay', 720, 2300)}
+    <div class="xt-cap"><span>Xem trước bằng hợp đồng mẫu</span><span class="seg sm"><button class="on">HĐDV-000128</button><button>HĐDV-000129 (ngắn)</button></span><span class="sp"></span><span class="tag ok">2 trang A4</span></div>
+    <div class="bn yel" style="margin-top:10px">${I('warn', 's')}<span>Lưu là tạo <b>bản v4</b>. 46 hợp đồng đã in bằng bản v3 vẫn in lại đúng như cũ; hợp đồng chưa in sẽ dùng bản v4.</span></div>
+  </div>
+</div>
+<div class="rnd-note"><b>R&D:</b> công tắc khối chỉ ẩn/hiện, không đổi thứ tự (thứ tự do bố cục quyết định) — nên không thể tạo ra bản in hỏng. Biến chèn chỉ có ở 3 ô chữ.</div>
+`);
+
+// ---------- Màn 3: In ở hợp đồng ----------
+V4.man('a-in', { shell: 'org', nav: 'hd', kid: 'Danh sách hợp đồng', title: 'HĐDV-000128', back: '#a-quan-ly' }, `
+${PA('Bấm In ở hợp đồng')}
+${V9.nenHopDong()}
+${V9.dlgIn({
+  mau: 2,
+  ds: [
+    { on: true, t: 'Hiện đại — Chiến Makeup · bản v3', d: 'Bản đã dùng lần in đầu 20/10/2026 (giữ nguyên)' },
+    { t: 'Hiện đại — Chiến Makeup · bản v4 (mới nhất)', d: 'Sửa 19/10/2026: thêm ô tài khoản ngân hàng' },
+    { t: 'Cổ điển có quốc hiệu', d: 'Bố cục 1 · bản v1' },
+    { t: 'Gọn 1 trang — tiệc nhỏ', d: 'Bố cục 4 · bản v2' },
+  ],
+  canhBao: `<div class="bn yel">${I('warn', 's')}<span>Hợp đồng này đã in ngày 20/10/2026 bằng bản v3. Khách đã ký bản đó — in lại nên giữ v3.</span></div>`,
+  ghiChu: `<p class="fx" data-f="MỚI: ContractPrint (contractId, templateId, templateVersion, printedAt, printedById)">Lần in được ghi lại: ai in, lúc nào, mẫu nào, bản mấy.</p>`,
+})}
+`);
+
+V4.boot();
+})();
+</script>
+</body>
+</html>

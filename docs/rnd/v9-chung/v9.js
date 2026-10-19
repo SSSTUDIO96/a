@@ -19,7 +19,7 @@
 
   // Khung xem trước: nhúng in.html, thu nhỏ theo bề ngang khung. h = chiều cao nội dung (px ở tỉ lệ 1).
   function xt(q, cao = 560, h = 2300) {
-    return `<div class="xt" style="height:${cao}px" data-q="${q}" data-h="${h}"><div class="in"><iframe title="Xem trước bản in" src="v9-mau-in/in.html?${q}&chup" loading="eager"></iframe></div></div>`;
+    return `<div class="xt" style="height:${cao}px" data-q="${q}" data-h="${h}"><div class="in"><iframe title="Xem trước bản in" data-src="v9-mau-in/in.html?${q}&chup"></iframe></div></div>`;
   }
   function coXt() {
     document.querySelectorAll('.xt').forEach((box) => {
@@ -35,7 +35,8 @@
   }
   window.addEventListener('resize', coXt);
   window.addEventListener('hashchange', () => setTimeout(coXt, 0));
-  window.addEventListener('load', coXt);
+  // Gắn src SAU khi khung C dời các màn vào chỗ (dời iframe trong DOM làm nó tải lại và huỷ lần tải đầu).
+  window.addEventListener('load', () => { document.querySelectorAll('.xt iframe[data-src]').forEach((f) => { f.src = f.dataset.src; }); coXt(); });
 
   // Nền: chi tiết hợp đồng dịch vụ HĐDV-000128 (rút gọn) — để hộp thoại In có ngữ cảnh.
   function nenHopDong() {
@@ -59,8 +60,8 @@
         <div class="vstack" style="gap:12px">
           <div><div class="sb" style="margin-bottom:6px">Mẫu in</div><div class="lua">${ds.map((x) => `<label class="${x.on ? 'on' : ''}"><input type="radio" name="mi" ${x.on ? 'checked' : ''}><span><b>${x.t}</b><small>${x.d}</small></span></label>`).join('')}</div></div>
           ${canhBao}
-          <div class="set" style="padding:0;border:0"><label>Kèm phiếu thu đã nhận</label><span class="r"><span class="sw on" data-f="Payment (RECEIPT chưa huỷ)"></span></span></div>
-          <div class="set" style="padding:0;border:0"><label>Ô ký nháy cuối mỗi trang</label><span class="r"><span class="sw"></span></span></div>
+          <div class="row"><span>Kèm phiếu thu đã nhận</span><span class="sp"></span><span class="sw on" data-f="Payment (RECEIPT chưa huỷ)"></span></div>
+          <div class="row"><span>Ô ký nháy cuối mỗi trang</span><span class="sp"></span><span class="sw"></span></div>
           ${ghiChu}
         </div>
       </div></div>
