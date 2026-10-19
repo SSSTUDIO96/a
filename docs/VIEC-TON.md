@@ -86,3 +86,5 @@ Danh sách việc các thợ, thợ chấm và R&D đã nêu nhưng **chưa làm
 | 66 | Màu "xanh lá" mặc định của nhân vật (#2F7D72, ví dụ "Mẹ chú rể") trên nền nhạt của chính nó chỉ đạt tương phản 4,29:1 (ngưỡng 4,5). Đang bị khoá "6 màu đầu giữ nguyên". Khi tô theo Sự kiện đã chỉnh chữ thành #2C786A (4,61). Đổi màu mặc định cần anh quyết | thợ W4 |
 | 67 | 12 màu sự kiện đang nằm 3 chỗ (schedule.css, pricing.css .pr-sw--*, today.css), có bài thử so khớp nhưng vẫn là bản sao — đưa vào tokens.css dùng chung (luật 6: cấm bản sao) | thợ W2 |
 | 68 | Bài hom-nay.test.ts ca "số câu truy vấn không tăng" chập chờn (lần 1: 24/24 câu, lần 2: 22/25) khi chạy cùng bộ lớn — tìm gốc, đừng nới ngưỡng | thợ M4 báo |
+| 69 | Giấy chứng nhận: học viên đã huỷ ghi danh (hoặc lớp đã huỷ) sau khi được cấp thì KHÔNG cấp lại được để sửa tên (trigger đòi ghi danh ACTIVE cả với bản cấp lại). Muốn cho cấp lại thì nới trigger bằng migration sau — anh quyết | thợ F-S1a |
+| 70 | Trigger giấy chứng nhận có `COALESCE(tz, 'Asia/Ho_Chi_Minh')` — giá trị mặc định im lặng (luật 4); hiện không chạy tới được nhưng nên đổi thành ném lỗi ở migration kế | thợ F-S1a |
