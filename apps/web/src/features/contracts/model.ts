@@ -389,7 +389,7 @@ export function lineInput(l: DraftLine, eventDate: string, tz: string): Contract
     return { kind: 'CUSTOM', name: l.name.trim(), unitPrice: l.unitPrice ?? 0, quantity: l.quantity, ...(note ? { note } : {}) };
   }
   const address = l.address.trim();
-  const day = dayOfLine(l, eventDate);
+  const day = eventDate;
   const overrides = l.surchargeOverrides.filter((o) => o.quantity !== null || o.unitPrice !== null);
   const base = {
     quantity: l.quantity,
@@ -405,7 +405,7 @@ export function lineInput(l: DraftLine, eventDate: string, tz: string): Contract
     ...(needsTravel(l.locationType) ? { travel: travelInput(l.travel) } : {}),
     ...(l.staff.length > 0 ? { staff: l.staff.map((s) => ({ membershipId: s.membershipId, role: s.role })) } : {}),
     ...(overrides.length > 0 ? { surchargeOverrides: overrides.map(overrideInput) } : {}),
-    
+    ...(l.dismissedRuleIds.length > 0 ? { dismissedRuleIds: l.dismissedRuleIds } : {}),
   };
   const input: PlacedInput = l.kind === 'PACKAGE' ? { kind: 'PACKAGE', packageId: l.refId, ...base } : { kind: 'SERVICE', serviceId: l.refId, ...base };
   return input;
