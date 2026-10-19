@@ -4,6 +4,7 @@
 import { useState, type CSSProperties } from 'react';
 import type { Appointment } from '../../api/types';
 import { StatusTag } from '../../ui';
+import { staffShortName } from '../../ui/staffName';
 import { appointmentsOfDay, cellKey, countByDay, indexByCell, kindText, UNASSIGNED, type ConflictMarks, type StaffLane } from './model';
 import { apptClasses, apptTip, cx, LaneAvatar, StaffAvatars, startLabel, useSwatchOf } from './parts';
 import { dayKeyOf, dayNumber, ddmm, hhmm, isWeekend, weekDays, weekdayLong, weekdayShort, type DayKey } from './time';
@@ -12,10 +13,9 @@ const MAX_TIMES = 3;
 const MAX_LIST = 4;
 const MAX_COLS = 5;
 
-function shortName(name: string): string {
-  const words = name.trim().split(/\s+/);
-  return words[words.length - 1] ?? name;
-}
+// Tên ngắn đầu cột (M3): hàm chung staffShortName. Họ tên lấy từ ca trong tuần (máy chủ gửi fullName kèm displayName);
+// thợ chưa có ca thì làn không mang họ tên (StaffLane chỉ có tên hiển thị) → giữ nguyên tên hiển thị, không đoán.
+const fullNamesOf = (list: Appointment[]) => new Map(list.flatMap((a) => a.staff.map((s) => [s.membershipId, s.fullName] as const)));
 
 export function WeekGridCMobile({
   day,
@@ -38,6 +38,7 @@ export function WeekGridCMobile({
   const swatchOfName = useSwatchOf();
   const days = weekDays(day);
   const cells = indexByCell(appointments);
+  const fullNames = fullNamesOf(appointments);
   const perDay = countByDay(appointments, days);
   const cols: (StaffLane | null)[] = [...lanes, ...(showUnassigned ? [null] : [])];
   const scrolls = cols.length > MAX_COLS;
@@ -57,7 +58,7 @@ export function WeekGridCMobile({
             <div role="columnheader" key={lane?.membershipId ?? UNASSIGNED} className={cx('ws-cm__sh', !lane && 'is-na')}>
               <LaneAvatar lane={lane} size="xs" />
               {/* Cột ca chưa phân thợ ghi đủ "Chưa có thợ" (cột hẹp thì xuống 2 dòng, không cắt — biên bản L3). */}
-              <span className="ws-cm__tn">{lane ? shortName(lane.name) : 'Chưa có thợ'}</span>
+              <span className="ws-cm__tn" title={lane?.name}>{lane ? staffShortName({ displayName: lane.name, fullName: fullNames.get(lane.membershipId) }) : 'Chưa có thợ'}</span>
             </div>
           ))}
         </div>

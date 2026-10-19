@@ -28,6 +28,7 @@ import {
   SkeletonText,
   StatusTag,
   StickyTotalBar,
+  Tooltip,
   WithTooltip,
   formatVnd,
 } from '../../ui';
@@ -53,11 +54,15 @@ import {
   displayDate,
   displayDateTime,
   draftFromDetail,
+  draftIndexOfQuoteLine,
   errorLineOf,
+  hiddenSubjectBlockedReason,
+  hiddenSubjectOf,
   isPlaced,
   isStaleVersion,
   liveErrors,
   lineInput,
+  linesWithHiddenSubject,
   linesWithoutTime,
   matchQuote,
   displayWarnings,
@@ -72,11 +77,14 @@ import {
   patchBody,
   placedFromView,
   prettyMoneyText,
+  quotePlan,
+  remapLineFields,
   serverWarnings,
   staffGapText,
   staffGaps,
   timeOf,
   validateDraft,
+  viewsByDraft,
   weekdayShort,
   zonedIso,
   type ContractDraft,
@@ -239,10 +247,14 @@ export function ContractEditor({ orgId, slug, tz, has, contractId, kindSwitch, o
           const pkg = cat?.packages.find((p) => p.id === l.refId);
           return pkg?.includedKm ?? cat?.policy.freeKm ?? 0;
         },
+        // M1: dòng mang nhân vật đang ẩn (chỉ kiểm hợp đồng còn sửa được — hợp đồng đã chốt giữ nguyên tên đã chép).
+        hiddenSubjectName: (id) => (cat ? (hiddenSubjectOf(id, cat.subjects)?.name ?? null) : null),
       }),
     [draft, cat],
   );
-  const baseBody = draftMode && Object.keys(localErrors).length === 0 ? buildBody(draft, tz) : null;
+  // M5: lỗi chỉ về giờ không còn chặn bảng tính; dòng của nhân vật đang ẩn (M1) bỏ khỏi bảng tính (xem quotePlan).
+  const plan = useMemo(() => quotePlan(draft, localErrors), [draft, localErrors]);
+  const baseBody = draftMode && plan.draft ? buildBody(plan.draft, tz) : null;
   // Hợp đồng đã lưu: máy chủ bỏ giữ chỗ / lịch của CHÍNH nó khỏi cảnh báo thợ.
   const quoteBody: ContractQuoteBody | null = baseBody && detail ? { ...baseBody, excludeContractId: detail.id } : baseBody;
   const quote = useQuote(draftMode ? orgId : null, quoteBody);
@@ -257,22 +269,28 @@ export function ContractEditor({ orgId, slug, tz, has, contractId, kindSwitch, o
         ? null
         : (quote.data as ContractQuote | null)
     : null;
-  const views = matchQuote(draft, quoteData);
+  const views = plan.draft ? viewsByDraft(plan, matchQuote(plan.draft, quoteData)) : draft.lines.map(() => null);
+  // Tạm tính / Tổng / cọc chỉ lấy khi MỌI dòng có trong bảng tính (còn dòng nhân vật đang ẩn thì "—" kèm lý do ở thanh tổng).
+  const totalsQuote = plan.complete ? quoteData : null;
   const pending = quote.loading;
+  const quoteErrorLine = quoteBody ? draftIndexOfQuoteLine(plan, quote.errorLine) : null;
 
   // ---- Lỗi hiện dưới ô ----
   const quoteMoneyError = quoteBody && quote.error ? moneyFieldOf(quote.error) : null;
   const errors: Record<string, string> = {
     ...(showErrors ? localErrors : liveErrors(localErrors)),
-    ...(quoteBody ? quote.fieldErrors : {}),
+    ...(quoteBody ? remapLineFields(quote.fieldErrors, plan) : {}),
     ...(quoteMoneyError ? { [quoteMoneyError.field]: quoteMoneyError.message } : {}),
     ...serverErrors.fields,
   };
   const lineErrorAt = (i: number): string | null => {
     const noTime = serverNoTime.find((x) => x.index === i);
     if (noTime) return noTime.text;
+    // M1: nhân vật của dòng đang ẩn — báo ngay, không đợi Lưu.
+    const hidden = localErrors[`lines.${i}.subjectId`];
+    if (hidden && draftMode) return hidden;
     if (serverErrors.line === i) return serverErrors.message;
-    if (quoteBody && quote.errorLine === i) return prettyMoneyText(userMessage(quote.error));
+    if (quoteErrorLine === i) return prettyMoneyText(userMessage(quote.error));
     return null;
   };
   const quoteGeneralError =
@@ -296,8 +314,9 @@ export function ContractEditor({ orgId, slug, tz, has, contractId, kindSwitch, o
     const out = new Map<string, LineWarning[]>();
     if (!draftMode) return out;
     // Trùng giữa hai dòng của hợp đồng này: máy chủ so (staffWarnings[].sameContract) — web không tự so giờ nữa.
+    // index của máy chủ là vị trí dòng trong bảng tính (plan.draft), không phải draft.lines.
     const lineLabel = (index: number, name: string) => {
-      const o = draft.lines[index];
+      const o = plan.draft?.lines[index];
       return o && isPlaced(o) ? (subjectName(o.subjectId) ?? o.name) : name;
     };
     draft.lines.forEach((l, i) => {
@@ -308,10 +327,13 @@ export function ContractEditor({ orgId, slug, tz, has, contractId, kindSwitch, o
       out.set(l.key, shown);
     });
     return out;
-  }, [draft, views, draftMode, tz, subjectName]);
+  }, [draft, plan, views, draftMode, tz, subjectName]);
   // N2: còn dòng chưa có giờ → khoá "Xác nhận hợp đồng" (trùng giờ báo trước vì nặng hơn).
   const noTimeLines = draftMode && ab.canEdit ? linesWithoutTime(draft, subjectName) : [];
-  const blockedReason = confirmBlockedReason(overlapLineCount(warnings)) ?? noTimeBlockedReason(noTimeLines);
+  // M1: dòng mang nhân vật đang ẩn — thanh tổng kể đúng dòng (Tạm tính / Tổng "—" có lý do), khoá xác nhận.
+  const hiddenLines = draftMode && ab.canEdit ? linesWithHiddenSubject(draft, localErrors, subjectName) : [];
+  const blockedReason =
+    confirmBlockedReason(overlapLineCount(warnings)) ?? hiddenSubjectBlockedReason(hiddenLines) ?? noTimeBlockedReason(noTimeLines);
   const gapText = draftMode && ab.canEdit ? staffGapText(staffGaps(draft)) : null;
 
   // ---- Sửa nháp ----
@@ -606,14 +628,14 @@ export function ContractEditor({ orgId, slug, tz, has, contractId, kindSwitch, o
         {CONTRACT_STATUS_LABELS[status ?? 'DRAFT']}
       </StatusTag>
     );
-  const totals = draftMode ? quoteData : detail;
+  const totals = draftMode ? totalsQuote : detail;
   const depositInput = draftMode
     ? depositTouched
       ? draft.depositRequired
-      : (draft.depositRequired ?? quoteData?.depositRequired ?? null)
+      : (draft.depositRequired ?? totalsQuote?.depositRequired ?? null)
     : (detail?.depositRequired ?? null);
   // Thanh tổng: luôn số máy chủ trả.
-  const deposit = draftMode ? (quoteData?.depositRequired ?? null) : (detail?.depositRequired ?? null);
+  const deposit = draftMode ? (totalsQuote?.depositRequired ?? null) : (detail?.depositRequired ?? null);
 
   // Dòng hiện trên màn: nháp → các dòng đang nhập; đã xác nhận → dòng máy chủ (kể cả dòng đã huỷ, phát sinh).
   const placedCards = draftMode
@@ -943,7 +965,7 @@ export function ContractEditor({ orgId, slug, tz, has, contractId, kindSwitch, o
           <TotalsCard
             subtotal={totals?.subtotal ?? null}
             total={totals?.total ?? null}
-            suggestedDeposit={draftMode ? (quoteData?.suggestedDeposit ?? null) : null}
+            suggestedDeposit={draftMode ? (totalsQuote?.suggestedDeposit ?? null) : null}
             discount={draft.discount}
             deposit={depositInput}
             notes={draft.notes}
@@ -992,7 +1014,27 @@ export function ContractEditor({ orgId, slug, tz, has, contractId, kindSwitch, o
           {/* Thanh tổng kèm một dải trên:
               - N2: dòng chưa có giờ CHẶN xác nhận — dải đỏ kể đúng từng dòng, bấm tên dòng thì cuộn tới ô giờ của dòng đó.
               - S1: dòng chưa có thợ chỉ nhắc (vàng), KHÔNG chặn. */}
-          <div className={`ct-totbar${gapText || noTimeLines.length > 0 ? ' ct-totbar--note' : ''}`}>
+          <div className={`ct-totbar${gapText || noTimeLines.length > 0 || hiddenLines.length > 0 ? ' ct-totbar--note' : ''}`}>
+            {hiddenLines.length > 0 && (
+              <div className="ct-totbar__note ct-totbar__note--block" role="status" data-o="nhan-vat-an">
+                <IconWarn />
+                <span>
+                  Chưa tính được tổng — {hiddenLines.length} dòng dùng nhân vật đang ẩn:{' '}
+                  {hiddenLines.map((x, k) => (
+                    <span key={x.index}>
+                      {k > 0 && ', '}
+                      <button type="button" className="ct-gapln" title="Cuộn tới dòng này" onClick={() => scrollToLine(x.index)}>
+                        {x.label}
+                      </button>
+                    </span>
+                  ))}
+                  <Tooltip
+                    label="Vì sao chưa tính được tổng"
+                    text="Nhân vật đã bị tắt ở Bảng giá → Nhân vật. Máy chủ không nhận dòng của nhân vật đang ẩn, nên tổng và cọc chưa tính được, hợp đồng chưa lưu được. Bật lại nhân vật ở Bảng giá → Nhân vật, hoặc bỏ dòng đó. Các dòng khác vẫn hiện tiền của dòng."
+                  />
+                </span>
+              </div>
+            )}
             {noTimeLines.length > 0 && (
               <div className="ct-totbar__note ct-totbar__note--block" role="status" data-o="thieu-gio">
                 <IconWarn />

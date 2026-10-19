@@ -14,9 +14,11 @@ import {
   missingTimeOf,
   missingTimeWhat,
   newPackageLine,
+  quotePlan,
   serverWarnings,
   displayWarnings,
   validateDraft,
+  viewsByDraft,
   weekdayShort,
   zonedIso,
   type ContractDraft,
@@ -70,10 +72,14 @@ export function ExtraPackageDialog(p: ExtraPackageDialogProps) {
     () => validateDraft(draft, { includedKmOf: () => pkg?.includedKm ?? catalog.policy.freeKm }),
     [draft, pkg, catalog.policy.freeKm],
   );
-  const body: ContractBody | null =
-    line && Object.keys(local).length === 0 ? { customerId: detail.customer.id, lines: [lineInput(line, eventDate, tz)] } : null;
+  // M5: lỗi chỉ về giờ (có giờ bắt đầu, chưa có giờ kết thúc…) không chặn xem giá — dòng được tính không kèm giờ/thợ.
+  const plan = quotePlan(draft, local);
+  const quoteDraft = line && plan.complete ? plan.draft : null;
+  const body: ContractBody | null = quoteDraft
+    ? { customerId: detail.customer.id, lines: quoteDraft.lines.map((l) => lineInput(l, eventDate, tz)) }
+    : null;
   const quote = useQuote(pkg ? p.orgId : null, body);
-  const view = body ? (matchQuote(draft, quote.data as ContractQuote | null)[0] ?? null) : null;
+  const view = quoteDraft ? (viewsByDraft(plan, matchQuote(quoteDraft, quote.data as ContractQuote | null))[0] ?? null) : null;
   if (!pkg || !line) return null;
 
   // Dòng phát sinh của hợp đồng đã chốt được lên lịch ngay: thiếu giờ thì máy chủ chặn (409 LINES_MISSING_TIME) — chặn

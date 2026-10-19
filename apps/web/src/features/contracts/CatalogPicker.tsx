@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
-import { Button, Chip, IconCheck, IconPlus, TextInput, formatVnd } from '../../ui';
+import { Button, Chip, IconCheck, IconPlus, TextInput, Tooltip, formatVnd } from '../../ui';
 import type { LocationType, Service, ServicePackage } from '../../api/types';
-import { LOCATION_LABEL, LOCATION_ORDER } from './model';
+import { LOCATION_LABEL, LOCATION_ORDER, splitPackagesBySubject } from './model';
 import type { ContractCatalog } from './useContractCatalog';
 
 // Cột trái "Bảng giá" / "Thêm phát sinh" (bản vẽ 4.3) — dùng chung cho cột trái máy tính và ngăn kéo điện thoại.
@@ -30,14 +30,20 @@ export function CatalogPicker({ catalog, usedPackageIds, onAddPackage, onAddSurc
   const [q, setQ] = useState('');
   const [chip, setChip] = useState<string>(ALL);
   const subjectName = useMemo(() => new Map(catalog.subjects.map((s) => [s.id, s.name])), [catalog.subjects]);
+  // M1 (biên bản nghiệm thu lại): gói của nhân vật đang ẩn KHÔNG bày để chọn — máy chủ chặn lưu "Nhân vật … đang ẩn".
+  const sellable = useMemo(() => splitPackagesBySubject(catalog.packages, catalog.subjects), [catalog.packages, catalog.subjects]);
   const chips = useMemo(() => {
-    const used = new Set(catalog.packages.map((p) => p.subjectId));
-    const list = [...catalog.subjects].filter((s) => used.has(s.id)).sort((a, b) => a.sortOrder - b.sortOrder);
+    const used = new Set(sellable.shown.map((p) => p.subjectId));
+    const list = [...catalog.subjects].filter((s) => s.isActive && used.has(s.id)).sort((a, b) => a.sortOrder - b.sortOrder);
     return { list, hasNone: used.has(null) };
-  }, [catalog]);
+  }, [catalog.subjects, sellable]);
+  const hiddenSubjects = useMemo(
+    () => [...new Set(sellable.hidden.map((p) => (p.subjectId ? subjectName.get(p.subjectId) : null) ?? p.subject?.name ?? ''))].filter(Boolean),
+    [sellable, subjectName],
+  );
   const needle = fold(q.trim());
   const match = (name: string) => needle === '' || fold(name).includes(needle);
-  const packages = catalog.packages.filter(
+  const packages = sellable.shown.filter(
     (p) => match(p.name) && (chip === ALL || (chip === NONE ? p.subjectId === null : p.subjectId === chip)),
   );
   const surcharges = catalog.surcharges.filter((s) => match(s.name));
@@ -65,6 +71,15 @@ export function CatalogPicker({ catalog, usedPackageIds, onAddPackage, onAddSurc
       <div className="ct-cat__ls">
         <div className="ct-lbl">Gói</div>
         {packages.length === 0 && <div className="ct-cat__empty">Không có gói phù hợp.</div>}
+        {sellable.hidden.length > 0 && (
+          <div className="ct-cat__empty" data-o="goi-nhan-vat-an">
+            {sellable.hidden.length} gói của nhân vật đang ẩn ({hiddenSubjects.join(', ')}) không hiện ở đây.{' '}
+            <Tooltip
+              label="Vì sao có gói không hiện"
+              text="Nhân vật đã bị tắt ở Bảng giá → Nhân vật. Hợp đồng không nhận dòng của nhân vật đang ẩn. Muốn bán lại các gói này, bật nhân vật ở Bảng giá → Nhân vật."
+            />
+          </div>
+        )}
         {packages.map((p) => (
           <div className="ct-pk" key={p.id}>
             <div style={{ minWidth: 0 }}>

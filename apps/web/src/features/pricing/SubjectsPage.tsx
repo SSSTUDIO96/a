@@ -158,8 +158,13 @@ export function SubjectsPage() {
             <span className="pr-row__meta">{res.data.counts.get(s.id) ?? 0} gói</span>
             <Switch
               checked={s.isActive}
-              aria-label={`${s.name}: đang dùng`}
-              title="Đang dùng"
+              // M1: tên đọc và chữ nổi theo đúng trạng thái (trước đây luôn "đang dùng" dù đã tắt).
+              aria-label={`${s.name}: ${s.isActive ? 'đang dùng' : 'đang ẩn'}`}
+              title={
+                s.isActive
+                  ? 'Đang dùng — tắt để ẩn nhân vật: gói của nhân vật này sẽ không hiện khi lập hợp đồng'
+                  : 'Đang ẩn — gói của nhân vật này không hiện khi lập hợp đồng. Bật để dùng lại'
+              }
               disabled={!canWrite}
               onChange={(v) => void toggle(s, v)}
             />

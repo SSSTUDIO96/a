@@ -176,6 +176,13 @@ function minutes(hhmm: string): number {
 export interface ValidateContext {
   // Bán kính miễn phí (km một chiều) áp cho dòng: includedKm của gói, không có thì freeKm của tổ chức.
   includedKmOf: (line: PlacedDraft) => number;
+  // M1: tên nhân vật nếu nhân vật của dòng đang ẩn (Bảng giá → Nhân vật tắt), không thì null. Bỏ trống = không kiểm.
+  hiddenSubjectName?: (subjectId: string | null) => string | null;
+}
+
+// M1: lời báo ở dòng mang nhân vật đang ẩn (máy chủ chặn đúng: contracts/sheet.ts loadSubject "Nhân vật … đang ẩn").
+export function hiddenSubjectText(name: string): string {
+  return `Nhân vật "${name}" đang ẩn ở Bảng giá → Nhân vật nên dòng này chưa tính được tiền và hợp đồng chưa lưu được. Bật lại nhân vật hoặc bỏ dòng này.`;
 }
 
 export function lineKey(i: number, field: string): string {
@@ -189,6 +196,8 @@ export function validateDraft(draft: ContractDraft, ctx: ValidateContext): Recor
   if (draft.lines.length === 0) e.lines = 'Thêm ít nhất một gói hoặc một khoản.';
   draft.lines.forEach((l, i) => {
     if (isPlaced(l)) {
+      const hidden = ctx.hiddenSubjectName?.(l.subjectId) ?? null;
+      if (hidden) e[lineKey(i, 'subjectId')] = hiddenSubjectText(hidden);
       if (!l.locationType) e[lineKey(i, 'locationType')] = 'Chọn nơi làm.';
       if (needsTravel(l.locationType)) {
         const t = l.travel;
@@ -213,6 +222,107 @@ export function validateDraft(draft: ContractDraft, ctx: ValidateContext): Recor
     }
   });
   return e;
+}
+
+// ---------------------------------------------------------------------------------------------
+// M1: nhân vật đang ẩn. Gói của nhân vật đang ẩn KHÔNG bày để chọn vào hợp đồng (máy chủ sẽ chặn khi lưu).
+export interface SubjectState {
+  id: string;
+  name: string;
+  isActive: boolean;
+}
+
+export function hiddenSubjectOf(subjectId: string | null, subjects: readonly SubjectState[]): SubjectState | null {
+  if (!subjectId) return null;
+  const s = subjects.find((x) => x.id === subjectId);
+  return s && !s.isActive ? s : null;
+}
+
+/** Tách gói bán được / gói của nhân vật đang ẩn (theo danh sách nhân vật, hoặc subject.isActive máy chủ gửi kèm gói). */
+export function splitPackagesBySubject<P extends { subjectId: string | null; subject?: { isActive: boolean } | null }>(
+  packages: readonly P[],
+  subjects: readonly SubjectState[],
+): { shown: P[]; hidden: P[] } {
+  const shown: P[] = [];
+  const hidden: P[] = [];
+  for (const p of packages) {
+    if (p.subject?.isActive === false || hiddenSubjectOf(p.subjectId, subjects)) hidden.push(p);
+    else shown.push(p);
+  }
+  return { shown, hidden };
+}
+
+// ---------------------------------------------------------------------------------------------
+// M5 (biên bản nghiệm thu lại): GỐC — ContractEditor bỏ hẳn lời gọi quote khi validateDraft còn BẤT KỲ lỗi nào, kể cả lỗi
+// chỉ về giờ của một dòng (có giờ bắt đầu, giờ kết thúc trống) → Tạm tính / Tổng / "Cộng …" của mọi dòng thành "—".
+// Giờ không đổi tiền, nên bảng tính vẫn chạy: dòng có giờ chưa đủ / ngược / chưa có ngày sự kiện được gửi KHÔNG kèm giờ và
+// thợ (máy chủ đòi giờ khi có thợ — sheet.ts checkStaff), lỗi giờ hiện ở đúng ô. Dòng của nhân vật đang ẩn (M1) bỏ khỏi
+// bảng tính: các dòng khác vẫn có tiền, còn Tạm tính / Tổng chờ dòng đó được sửa (complete = false).
+export interface QuotePlan {
+  // Nháp đem đi tính; null = chưa tính được (lỗi làm đổi tiền: phí di chuyển thiếu số, chưa chọn nơi làm, thiếu khách…).
+  draft: ContractDraft | null;
+  // Vị trí dòng nháp → vị trí dòng trong bảng tính (null = dòng không đem đi tính).
+  toQuote: (number | null)[];
+  // Mọi dòng đều có trong bảng tính → Tạm tính / Tổng / cọc của bảng tính dùng được.
+  complete: boolean;
+}
+
+const TIME_ONLY_FIELDS = new Set(['scheduledStart', 'scheduledEnd', 'staff']);
+
+function timeUsable(l: PlacedDraft, eventDate: string): boolean {
+  return eventDate !== '' && l.start !== '' && l.end !== '' && minutes(l.end) > minutes(l.start);
+}
+
+export function quotePlan(draft: ContractDraft, errors: Record<string, string>): QuotePlan {
+  const skip = new Set<number>();
+  for (const k of Object.keys(errors)) {
+    const m = /^lines\.(\d+)\.subjectId$/.exec(k);
+    if (m) skip.add(Number(m[1]));
+  }
+  const blocking = Object.keys(errors).some((k) => {
+    if (k === 'eventDate') return false;
+    const m = /^lines\.(\d+)\.(.+)$/.exec(k);
+    if (!m) return true;
+    return !skip.has(Number(m[1])) && !TIME_ONLY_FIELDS.has(m[2] ?? '');
+  });
+  const toQuote: (number | null)[] = [];
+  const lines: DraftLine[] = [];
+  draft.lines.forEach((l, i) => {
+    if (skip.has(i)) {
+      toQuote.push(null);
+      return;
+    }
+    toQuote.push(lines.length);
+    lines.push(isPlaced(l) && !timeUsable(l, draft.eventDate) ? { ...l, start: '', end: '', staff: [] } : l);
+  });
+  return { draft: blocking ? null : { ...draft, lines }, toQuote, complete: skip.size === 0 };
+}
+
+/** Kết quả theo vị trí dòng bảng tính → theo vị trí dòng nháp. */
+export function viewsByDraft<T>(plan: QuotePlan, byQuote: readonly (T | null)[]): (T | null)[] {
+  return plan.toQuote.map((q) => (q === null ? null : (byQuote[q] ?? null)));
+}
+
+/** Vị trí dòng máy chủ báo lỗi (details.line, theo bảng tính) → vị trí dòng nháp. */
+export function draftIndexOfQuoteLine(plan: QuotePlan, q: number | null): number | null {
+  if (q === null) return null;
+  const i = plan.toQuote.indexOf(q);
+  return i >= 0 ? i : null;
+}
+
+/** Khoá lỗi "lines.{vị trí bảng tính}.…" của máy chủ → "lines.{vị trí nháp}.…" để hiện dưới đúng ô. */
+export function remapLineFields(fields: Record<string, string>, plan: QuotePlan): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(fields)) {
+    const m = /^lines\.(\d+)(\..*)?$/.exec(k);
+    if (!m) {
+      out[k] = v;
+      continue;
+    }
+    const i = draftIndexOfQuoteLine(plan, Number(m[1]));
+    if (i !== null) out[`lines.${i}${m[2] ?? ''}`] = v;
+  }
+  return out;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -712,22 +822,33 @@ export function moneyFieldOf(err: unknown): { field: 'discount' | 'depositRequir
 }
 
 // N7: lỗi "sai" (không phải "còn thiếu") hiện ngay khi gõ, không đợi bấm Lưu — giờ ngược, phí di chuyển còn thiếu số
-// làm tiền hiện "—". Lỗi "chưa nhập" khác vẫn đợi bấm Lưu.
+// làm tiền hiện "—". M5: dòng mới có MỘT trong hai ô giờ cũng báo ngay dưới ô còn trống (tiền các dòng vẫn tính).
+// M1: dòng mang nhân vật đang ẩn báo ngay. Lỗi "chưa nhập" khác vẫn đợi bấm Lưu.
 export function liveErrors(local: Record<string, string>): Record<string, string> {
   const out: Record<string, string> = {};
   for (const [k, v] of Object.entries(local)) {
-    if (/^lines\.\d+\.travel\./.test(k) || (/^lines\.\d+\.scheduledEnd$/.test(k) && v.includes('phải sau'))) out[k] = v;
+    if (/^lines\.\d+\.(travel\.|scheduledStart$|scheduledEnd$|subjectId$)/.test(k)) out[k] = v;
   }
   return out;
 }
 
-// Tên rút gọn trên hàng thợ: hai tiếng cuối ("Nguyễn Thu Hà" → "Thu Hà").
-export function shortName(full: string): string {
-  return full.trim().split(/\s+/).slice(-2).join(' ');
+export function hiddenSubjectBlockedReason(lines: NoTimeLine[]): string | null {
+  if (lines.length === 0) return null;
+  return `Còn ${lines.length} dòng dùng nhân vật đang ẩn (${lines.map((l) => l.label).join('; ')}). Bật lại nhân vật ở Bảng giá → Nhân vật hoặc bỏ dòng rồi mới xác nhận được.`;
 }
 
-export function lastName(full: string): string {
-  return full.trim().split(/\s+/).pop() ?? full;
+/** M1: các dòng mang nhân vật đang ẩn — "Dòng 2 · Mẹ cô dâu · Mẹ – Trang điểm nhẹ nhàng". */
+export function linesWithHiddenSubject(draft: ContractDraft, errors: Record<string, string>, subjectName: (id: string | null) => string | null): NoTimeLine[] {
+  const out: NoTimeLine[] = [];
+  let pos = 0;
+  draft.lines.forEach((l, i) => {
+    if (!isPlaced(l)) return;
+    pos += 1;
+    if (!errors[lineKey(i, 'subjectId')]) return;
+    const subject = subjectName(l.subjectId);
+    out.push({ index: i, label: `Dòng ${pos} · ${subject && subject !== l.name ? `${subject} · ` : ''}${l.name}` });
+  });
+  return out;
 }
 
 // ---------------------------------------------------------------------------------------------

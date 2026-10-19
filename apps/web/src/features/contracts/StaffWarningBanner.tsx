@@ -1,6 +1,7 @@
 import { Tooltip } from '../../ui';
 import { IconClock, IconWarn } from './icons';
-import { lastName, type LineWarning } from './model';
+import { staffShortName } from '../../ui/staffName';
+import type { LineWarning } from './model';
 
 // Dải cảnh báo thợ trong thẻ dòng (bản vẽ 4.3): đỏ "Trùng giờ …" / xám "Giữ chỗ nháp ở HĐ-…" (không chặn, quyết định
 // 15:14) / vàng "{tên} có lịch trong ngày · n ca".
@@ -11,6 +12,8 @@ export function StaffWarningBanner({ warnings, nameOf }: { warnings: LineWarning
     <>
       {warnings.map((w) => {
         const name = nameOf(w.membershipId);
+        // Tên ngắn theo hàm chung (M3); chỗ này máy chủ chỉ gửi tên hiển thị nên giữ nguyên tên hiển thị.
+        const short = staffShortName({ displayName: name });
         const detail = w.ranges.map((r) => `${r.start}–${r.end}${r.label ? ` ${r.label}` : ''}`).join('; ');
         if (w.level === 'OVERLAP') {
           const hours = w.ranges.map((r) => `${r.start}–${r.end}`).join(', ');
@@ -30,7 +33,7 @@ export function StaffWarningBanner({ warnings, nameOf }: { warnings: LineWarning
             <div key={w.membershipId} className="ct-wb ct-wb--hold" role="status" data-muc="DRAFT_HOLD">
               <IconClock />
               <span className="ct-wb__t">
-                {lastName(name)} · Giữ chỗ nháp ở {codes}
+                {short} · Giữ chỗ nháp ở {codes}
                 {w.holdSameDayOnly ? ' · cùng ngày, khác giờ' : ''}
               </span>
               <Tooltip
@@ -44,7 +47,7 @@ export function StaffWarningBanner({ warnings, nameOf }: { warnings: LineWarning
           <div key={w.membershipId} className="ct-wb ct-wb--yel" role="status" data-muc="SAME_DAY">
             <IconClock />
             <span className="ct-wb__t">
-              {lastName(name)} có lịch trong ngày · {w.count} ca
+              {short} có lịch trong ngày · {w.count} ca
             </span>
             <Tooltip label={`Lịch trong ngày của ${name}`} text={`${detail}. Không trùng giờ, chỉ để biết.`} />
           </div>

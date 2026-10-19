@@ -1,9 +1,12 @@
 import { Link } from 'react-router';
 import { Avatar, Button, Tooltip, WithTooltip } from '../../ui';
-import { shortName, type StaffAssignment } from './model';
+import { staffShortName } from '../../ui/staffName';
+import type { StaffAssignment } from './model';
 
 export interface StaffPerson extends StaffAssignment {
   displayName: string;
+  // Họ tên tài khoản — chỉ có khi máy chủ gửi (thợ của hợp đồng / ô chọn thợ hiện KHÔNG gửi → tên ngắn = nguyên tên hiển thị).
+  fullName?: string | null;
   initials?: string;
   avatarUrl?: string | null;
 }
@@ -24,7 +27,7 @@ const TIP = 'Dấu viền màu = thợ chính. Thợ phụ đi kèm hỗ trợ. 
 // Hàng "Thợ phụ trách" của thẻ dòng (bản vẽ 4.3, bổ sung 18/10/2026).
 export function StaffRow({ people, mode, onPick, pickBlockedReason, scheduleHref, error }: StaffRowProps) {
   const many = people.length > 1;
-  const names = people.map((p) => `${shortName(p.displayName)}${many && p.role === 'PRIMARY' ? ' (chính)' : ''}`).join(', ');
+  const names = people.map((p) => `${staffShortName(p)}${many && p.role === 'PRIMARY' ? ' (chính)' : ''}`).join(', ');
   return (
     <div className="ct-rw">
       <span className="ct-rw__l">

@@ -436,9 +436,21 @@ describe('Dịch vụ phụ & phụ phí, Nhân vật', () => {
     renderAt('/chien/bang-gia/nhan-vat');
     const sw = await screen.findByRole('switch', { name: 'Cô dâu: đang dùng' });
     expect(screen.getAllByText('1 gói')).toHaveLength(2);
+    expect(sw.getAttribute('title')).toMatch(/^Đang dùng/);
     await user.click(sw);
     await waitFor(() => expect(writes(calls)).toEqual(['PATCH /orgs/org-1/makeup-subjects/s1']));
     expect(calls.find((c) => c.method === 'PATCH')?.body).toEqual({ isActive: false });
+  });
+
+  it('M1: công tắc nhân vật đang tắt → tên đọc "đang ẩn", chữ nổi "Đang ẩn …" (aria-checked=false)', async () => {
+    setupServer(OWNER, (m, p) =>
+      m === 'GET' && p === '/orgs/org-1/makeup-subjects' ? json(200, { items: [{ ...SUBJECTS[0], isActive: false }, ...SUBJECTS.slice(1)] }) : undefined,
+    );
+    renderAt('/chien/bang-gia/nhan-vat');
+    const off = await screen.findByRole('switch', { name: 'Cô dâu: đang ẩn' });
+    expect(off.getAttribute('aria-checked')).toBe('false');
+    expect(off.getAttribute('title')).toMatch(/^Đang ẩn/);
+    expect(screen.queryByRole('switch', { name: 'Cô dâu: đang dùng' })).toBeNull();
   });
 
   it('nhân vật: mũi tên xuống trên tay nắm → đổi thứ tự, chỉ PATCH nhân vật đổi chỗ', async () => {
