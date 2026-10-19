@@ -144,8 +144,7 @@ export function SurchargeRulesPage() {
                 {r.usedLineCount > 0 && <span className="pr-rule__used">Đang dùng ở {r.usedLineCount} dòng</span>}
               </div>
               <div className="pr-rule__svc">
-                <span className="pr-rule__svcname">{r.service.name}</span>
-                <b className="num">{price}</b>
+                {r.service.name} · <b className="num">{price}</b>
               </div>
               <Switch
                 className="pr-rule__sv"

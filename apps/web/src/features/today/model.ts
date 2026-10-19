@@ -56,6 +56,7 @@ export function hhmm(iso: string, timezone: string): string {
 
 /** Ca kế tiếp trong ngày hôm nay: ca bắt đầu sớm nhất từ lúc máy chủ tạo số liệu trở đi; hết ca thì null. */
 export function nextAppointment(view: TodayView): TodayAppointment | null {
+  if (!view.appointments) return null;
   const now = Date.parse(view.generatedAt);
   const upcoming = view.appointments.today.filter((a) => Date.parse(a.startsAt) >= now).sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt));
   return upcoming[0] ?? null;

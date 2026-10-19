@@ -8,3 +8,4 @@ export * from './design-templates';
 export * from './greetings';
 export * from './occasions';
 export * from './surcharges';
+export * from './portal';

@@ -36,6 +36,8 @@ export const PERMISSIONS = {
   'courses.write': 'Thêm, sửa khoá, nhóm, mở/đóng lớp',
   'designs.read': 'Xem thẻ đã tạo',
   'designs.write': 'Tạo thẻ, tải ảnh thẻ, sửa câu chúc soạn sẵn',
+  // Bản vẽ E (cổng học viên). Tạo đường dẫn còn đòi thêm customers.read, contracts.read, payments.read (kiểm ở máy chủ).
+  'portal.manage': 'Gửi, thu hồi đường dẫn cổng học viên; xem, chặn máy đã mở',
 } as const;
 
 export type Permission = keyof typeof PERMISSIONS;
@@ -70,6 +72,7 @@ export const SYSTEM_ROLES: Record<SystemRoleKey, { name: string; permissions: Pe
       'contracts.adjust', 'staff.read', 'staff.write', 'payments.read', 'payments.write', 'payments.void',
       'reports.read', 'files.read', 'files.write',
       'contracts.texts', 'courses.read', 'courses.write', 'designs.read', 'designs.write',
+      'portal.manage',
     ],
   },
   artist: {
@@ -87,6 +90,7 @@ export const SYSTEM_ROLES: Record<SystemRoleKey, { name: string; permissions: Pe
       'schedule.read_own', 'schedule.read_all', 'schedule.write', 'contracts.read', 'contracts.write', 'staff.read',
       'payments.read', 'payments.write', 'files.read', 'files.write',
       'courses.read', 'designs.read', 'designs.write',
+      'portal.manage',
     ],
   },
   accountant: {

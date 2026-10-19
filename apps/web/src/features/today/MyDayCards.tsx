@@ -2,12 +2,14 @@ import { Link } from 'react-router';
 import type { TodayAppointment, TodayView } from '../../api/types';
 import { Card, WorkStatusTag } from '../../ui';
 import { dayLabel, eventLine, groupByDay, hhmm, localDateOf, locationLine, scheduleLink, swatchOf } from './model';
+import { NoScheduleCard } from './NoScheduleCard';
 import { EmptyLine, HeadLink, TruncatedNote } from './parts';
 
 // Giao diện "OWN" (thợ, giảng viên, trợ giảng — chỉ có schedule.read_own): ba thẻ ca của mình, không có 4 ô số.
 // Máy chủ đã lọc chỉ ca có mình; web không lọc lại.
 export function MyDayCards({ view, orgSlug }: { view: TodayView; orgSlug: string }) {
   const { appointments, counts, timezone } = view;
+  if (appointments === null || counts.appointmentsToday === null || counts.appointmentsTomorrow === null) return <NoScheduleCard />;
   const later = groupByDay(appointments.later, timezone);
   return (
     <div className="td-grid td-grid--own">

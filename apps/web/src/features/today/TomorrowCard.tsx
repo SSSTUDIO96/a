@@ -1,12 +1,16 @@
 import type { TodayView } from '../../api/types';
 import { Card, ListRow } from '../../ui';
 import { dayLabel, groupByStaff, hhmm } from './model';
+import { NoScheduleCard } from './NoScheduleCard';
 import { EmptyLine, HeadLink, StaffAvatar, TruncatedNote } from './parts';
 
 // Thẻ "Ngày mai · Thứ Hai 22/11 · N ca": ca của ngày mai gom theo thợ (ca chưa có thợ ở dòng "Chưa có thợ" cuối).
 // N = counts.appointmentsTomorrow máy chủ đếm (ca nhiều thợ không bị đếm hai lần).
 export function TomorrowCard({ view, orgSlug }: { view: TodayView; orgSlug: string }) {
-  const groups = groupByStaff(view.appointments.tomorrow);
+  const { appointments } = view;
+  // Không có quyền xem lịch: máy chủ trả null → thay thẻ bằng lời báo (không hiện "0 ca").
+  if (appointments === null || view.counts.appointmentsTomorrow === null) return <NoScheduleCard />;
+  const groups = groupByStaff(appointments.tomorrow);
   return (
     <Card
       id="td-tomorrow"
@@ -26,7 +30,7 @@ export function TomorrowCard({ view, orgSlug }: { view: TodayView; orgSlug: stri
           subtitle={g.appointments.map((a) => hhmm(a.startsAt, view.timezone)).join(' · ')}
         />
       ))}
-      {view.appointments.truncated && <TruncatedNote>Chỉ hiện {view.appointments.tomorrow.length} ca đầu — xem đủ ở Lịch.</TruncatedNote>}
+      {appointments.truncated && <TruncatedNote>Chỉ hiện {appointments.tomorrow.length} ca đầu — xem đủ ở Lịch.</TruncatedNote>}
     </Card>
   );
 }

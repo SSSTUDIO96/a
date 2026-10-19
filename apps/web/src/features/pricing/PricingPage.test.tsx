@@ -768,9 +768,9 @@ describe('Bảng giá › Loại sự kiện', () => {
   it('mỗi loại: tên · "N dòng hợp đồng đang dùng" · 12 ô màu có tên tiếng Việt · công tắc; ô đang chọn bấm-xuống', async () => {
     dServer(OWNER);
     renderAt('/chien/bang-gia/su-kien');
-    expect(await screen.findByRole('heading', { level: 2, name: /Loại sự kiện/ })).toBeTruthy();
+    expect(await screen.findByText('14 dòng hợp đồng đang dùng')).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 2, name: /Loại sự kiện/ })).toBeTruthy();
     expect(screen.getByText('3 loại · màu dùng chung 12 màu của Lịch')).toBeTruthy();
-    expect(screen.getByText('14 dòng hợp đồng đang dùng')).toBeTruthy();
     expect(screen.getByText('Chưa có dòng hợp đồng nào dùng')).toBeTruthy();
     const group = screen.getByRole('group', { name: 'Màu của Lễ cưới' });
     const titles = within(group).getAllByRole('button').map((b) => b.getAttribute('title'));
@@ -945,8 +945,8 @@ describe('Bảng giá › Luật phụ phí', () => {
   it('mỗi luật: tên · tóm tắt điều kiện đúng chữ · tên phụ phí + giá hiện hành · "Đang dùng ở N dòng" · công tắc', async () => {
     dServer(OWNER);
     renderAt('/chien/bang-gia/luat-phu-phi');
-    expect(await screen.findByText('Khớp luật thì hợp đồng tự thêm dòng phụ phí; người lập bỏ được')).toBeTruthy();
-    expect(screen.getByText('Giờ bắt đầu 00:00–06:00 · Lễ cưới, Lễ vu quy · Gói Cô dâu – Ngày cưới')).toBeTruthy();
+    expect(await screen.findByText('Giờ bắt đầu 00:00–06:00 · Lễ cưới, Lễ vu quy · Gói Cô dâu – Ngày cưới')).toBeTruthy();
+    expect(screen.getByText('Khớp luật thì hợp đồng tự thêm dòng phụ phí; người lập bỏ được')).toBeTruthy();
     expect(screen.getByText('Thứ 7, Chủ nhật hoặc ngày 02/09/2026')).toBeTruthy();
     const items = screen.getAllByRole('listitem');
     expect(items[0]?.textContent).toContain('Phụ phí ngày lễ · 200.000 ₫');

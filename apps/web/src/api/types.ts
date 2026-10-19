@@ -1117,16 +1117,18 @@ export interface TodayView {
   // "YYYY-MM-DD" theo múi giờ tổ chức (không theo đồng hồ máy).
   today: string;
   tomorrow: string;
-  // ALL: schedule.read_all (mọi ca); OWN: chỉ schedule.read_own (chỉ ca có mình).
-  scheduleScope: 'ALL' | 'OWN';
+  // ALL: schedule.read_all (mọi ca); OWN: chỉ schedule.read_own (chỉ ca có mình); null: không có quyền xem lịch (cả hai quyền đều thiếu).
+  scheduleScope: 'ALL' | 'OWN' | null;
   counts: {
-    appointmentsToday: number;
-    appointmentsTomorrow: number;
+    // null = không có quyền xem lịch (không phải 0).
+    appointmentsToday: number | null;
+    appointmentsTomorrow: number | null;
     unassignedSoon: number | null;
     overdue: { count: number; amount: Vnd } | null;
     dueSoon: { count: number; amount: Vnd } | null;
   };
-  appointments: { today: TodayAppointment[]; tomorrow: TodayAppointment[]; later: TodayAppointment[]; truncated: boolean };
+  // null = không có quyền xem lịch.
+  appointments: { today: TodayAppointment[]; tomorrow: TodayAppointment[]; later: TodayAppointment[]; truncated: boolean } | null;
   unassigned: TodayAppointment[] | null;
   installments: { overdue: TodayInstallment[]; dueSoon: TodayInstallment[]; truncated: boolean } | null;
   newContracts: TodayContract[] | null;
