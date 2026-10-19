@@ -1,4 +1,4 @@
-import { avatarColorIndex, initialsOf } from './Avatar';
+import { avatarColorIndex, initialsOf } from './avatarColor';
 
 // Tên ngắn của thợ (biên bản nghiệm thu lại M3) — MỘT hàm cho mọi chỗ rút tên ngắn trên web.
 //

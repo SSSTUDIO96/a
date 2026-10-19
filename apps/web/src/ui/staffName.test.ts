@@ -2,7 +2,7 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { avatarColorIndex } from './Avatar';
+import { avatarColorIndex } from './avatarColor';
 import { AVATAR_TONES, staffAvatarColorKeys, staffNaming, staffShortName, staffShortNames, type StaffRosterEntry } from './staffName';
 
 // Biên bản nghiệm thu lại M3: tên ngắn lấy tiếng cuối của TÊN HIỂN THỊ ("Linh Trần" → "Trần", "Hà Makeup" → "Makeup").
