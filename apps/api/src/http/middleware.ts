@@ -5,6 +5,7 @@ import { isPermission, type Permission } from '@makeup/shared';
 import { z } from 'zod';
 import { AppError } from '../lib/errors';
 import { PASSWORD_CHANGED_MESSAGE, tokenSurvivesPasswordChange, verifyAccessToken } from '../modules/auth/access-token';
+import { PORTAL_TOKEN_PREFIX } from '../modules/portal/tokens';
 import type { Deps, IdempotencyCtx, OrgContext } from './route';
 
 export function requestId(req: Request, res: Response, next: NextFunction): void {
@@ -20,7 +21,11 @@ export async function authenticate(req: Request, deps: Deps): Promise<string> {
   if (!header?.startsWith('Bearer ')) {
     throw new AppError('UNAUTHENTICATED', 'Chưa đăng nhập');
   }
-  const claims = verifyAccessToken(header.slice(7), deps.env.JWT_ACCESS_SECRET);
+  const raw = header.slice(7);
+  // Thẻ phiên cổng học viên (mpp_…) KHÔNG BAO GIỜ là thẻ nhân viên — từ chối trước khi đụng jwt (bản vẽ E 2.3).
+  // Đường nhân viên cũng không bao giờ đọc cookie mp_portal: chỉ header Authorization ở trên.
+  if (raw.startsWith(PORTAL_TOKEN_PREFIX)) throw new AppError('UNAUTHENTICATED', 'Thẻ đăng nhập không hợp lệ');
+  const claims = verifyAccessToken(raw, deps.env.JWT_ACCESS_SECRET);
   // Mốc đổi mật khẩu lấy KÈM câu tra user sẵn có (không thêm truy vấn) — xem modules/auth/access-token.ts.
   const user = await deps.db.user.findUnique({
     where: { id: claims.sub },

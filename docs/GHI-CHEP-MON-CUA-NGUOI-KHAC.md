@@ -323,3 +323,15 @@ Có 50 họ (52 mặt chữ).
 - Thư viện html-to-image (xuất ảnh) là MIT, giấy phép ở `apps/web/public/mau/chung/LICENSE-html-to-image.txt`.
 - Nếu sau này thêm phông mới vào bản bán: chép tệp giấy phép cùng thư mục, thêm một dòng vào bảng mục 2 của tệp này, và thêm thẻ `<link>` vào mẫu mới.
 
+## 7. Thư viện mã (không phải phông)
+
+Thêm ngày 19/10/2026 cho bản vẽ F (giấy chứng nhận). Cột giống mục 2.
+
+| Thư viện | Phiên bản | Giấy phép (nguyên văn ngắn) | Nguồn | Dùng ở đâu | Rời khỏi máy khách? |
+|---|---|---|---|---|---|
+| **pdf-lib** | 1.17.1 | "MIT License". Dòng bản quyền trong `LICENSE.md`: "Copyright (c) 2019 Andrew Dillon" | https://github.com/Hopding/pdf-lib (trang chính https://pdf-lib.js.org) | Bản vẽ F: xuất PDF giấy chứng nhận ngay trên máy người dùng (điện thoại làm PDF, mỗi người một trang A4 ngang, rồi bảng Chia sẻ In / Zalo / Lưu) | **Có** theo nghĩa mã thư viện được đóng vào bản web và tải về trình duyệt của người dùng. Thư viện chạy trong trình duyệt, không gọi mạng (bản `pdf-lib.min.js` không có `fetch` hay `XMLHttpRequest`). Dữ liệu chứng nhận không do thư viện gửi đi |
+
+- Phụ thuộc đi kèm: `@pdf-lib/standard-fonts` 1.0.0 (MIT), `@pdf-lib/upng` 1.0.1 (MIT), `pako` 1.0.11 (MIT AND Zlib), `tslib` 1.14.1 (0BSD). Giấy phép đều cho dùng thương mại; khi phân phối cần kèm bản văn MIT.
+- Dung lượng: bản đóng gói `dist/pdf-lib.min.js` 525 KB, khoảng 207 KB sau nén gzip. Gói npm đầy đủ (có mã nguồn, bản cjs/es) khoảng 19,5 MB, nhưng app chỉ tải bản min.
+- Thử cài bằng `pnpm add pdf-lib@1.17.1` qua proxy ở thư mục nháp, chạy được (19/10/2026).
+

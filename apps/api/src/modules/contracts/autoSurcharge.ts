@@ -161,7 +161,7 @@ export function lineFacts(
   let localDate: string | null = null;
   let startMinute: number | null = null;
   if (main.scheduledStart) {
-    const l = localDateAndMinute(main.scheduledStart, 'UTC');
+    const l = localDateAndMinute(main.scheduledStart, timezone);
     localDate = l.date;
     startMinute = l.minute;
   } else if (eventDate) {

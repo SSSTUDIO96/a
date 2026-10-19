@@ -8,6 +8,13 @@ export function isPlatformRoute(r: Pick<AnyRoute, 'scope' | 'path'>): boolean {
   return r.scope === 'platform' || r.path === '/platform' || r.path.startsWith('/platform/');
 }
 
+// public: không cần gì; portal: cookie phiên cổng (KHÔNG bearer — đường cổng từ chối Authorization); còn lại: bearer.
+function securityOf(r: Pick<AnyRoute, 'scope'>): Record<string, string[]>[] {
+  if (r.scope === 'public') return [];
+  if (r.scope === 'portal') return [{ portalCookie: [] }];
+  return [{ bearer: [] }];
+}
+
 // Tài liệu OpenAPI sinh thẳng từ bảng đường API — không có bản viết tay để lệch khỏi mã.
 export function buildOpenApi(routes: AnyRoute[]) {
   const paths: Record<string, Record<string, unknown>> = {};
@@ -38,7 +45,7 @@ export function buildOpenApi(routes: AnyRoute[]) {
       tags: [r.tag],
       parameters: params,
       'x-permission': r.permission ?? null,
-      security: r.scope === 'public' ? [] : [{ bearer: [] }],
+      security: securityOf(r),
       responses: {
         default: {
           description: 'Lỗi',
@@ -58,7 +65,11 @@ export function buildOpenApi(routes: AnyRoute[]) {
     openapi: '3.1.0',
     info: { title: 'Makeup Pro API', version: '0.1.0' },
     components: {
-      securitySchemes: { bearer: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' } },
+      securitySchemes: {
+        bearer: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
+        // Phiên cổng học viên: cookie httpOnly, kèm header bắt buộc X-Client: portal (bản vẽ E 4.1).
+        portalCookie: { type: 'apiKey', in: 'cookie', name: 'mp_portal' },
+      },
       schemas: {
         ErrorResponse: {
           type: 'object',

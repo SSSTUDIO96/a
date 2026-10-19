@@ -23,6 +23,9 @@ const EnvSchema = z
     // số lần đổi thẻ SAI (chống dò) = 3 × AUTH…; trần tổng mọi lần đổi thẻ = 30 × AUTH….
     REFRESH_PROBE_LIMIT_PER_MINUTE: optional(z.coerce.number().int().positive()),
     REFRESH_RATE_LIMIT_PER_MINUTE: optional(z.coerce.number().int().positive()),
+    // Mở cổng học viên (POST /portal/session, /portal/session/claim): bộ đếm RIÊNG theo IP mỗi phút (bản vẽ E 2.6).
+    // Khai sẵn 10 trong .env.example; khai sai (0, chữ, dòng rỗng) → máy chủ không khởi động, lỗi nêu tên biến.
+    PORTAL_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().positive().default(10),
     // Số tầng proxy đứng trước máy chủ (Railway: 1). 0 = không tin header X-Forwarded-For —
     // tránh bị lách giới hạn tốc độ bằng cách tự đổi IP trong header (biên bản mốc 2, L7).
     TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(5).default(0),

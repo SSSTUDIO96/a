@@ -7,7 +7,7 @@ import { rateLimit } from 'express-rate-limit';
 import { AppError } from './lib/errors';
 import { authenticate, errorHandler, loadOrgContext, requestId } from './http/middleware';
 import { buildOpenApi } from './http/openapi';
-import { IDEMPOTENCY_KEY_PATTERN, type AnyRoute, type Deps, type HandlerResult, type IdempotencyCtx } from './http/route';
+import { IDEMPOTENCY_KEY_PATTERN, type AnyRoute, type Deps, type HandlerResult, type IdempotencyCtx, type PortalContext } from './http/route';
 import { authRoutes } from './modules/auth/routes';
 import { orgRoutes } from './modules/orgs/routes';
 import { catalogRoutes } from './modules/catalog/routes';
@@ -21,6 +21,8 @@ import { profileRoutes } from './modules/profile/routes';
 import { courseRoutes } from './modules/courses/routes';
 import { designRoutes } from './modules/designs/routes';
 import { todayRoutes } from './modules/today/routes';
+import { portalRoutes } from './modules/portal/routes';
+import { authenticatePortal } from './modules/portal/auth';
 import { createHash, type Hash } from 'node:crypto';
 import { RAW_ROUTE, rawFileHandler } from './modules/files/raw';
 import { hasPresentedRefreshToken } from './modules/auth/transport';
@@ -45,6 +47,8 @@ export const ALL_ROUTES: AnyRoute[] = [
   ...designRoutes,
   // Trang Hôm nay (bản vẽ D, gói M6).
   ...todayRoutes,
+  // Cổng học viên (bản vẽ E): gói E3 điền đường học viên, gói E4 điền đường trung tâm.
+  ...portalRoutes,
 ];
 
 export function createApp(deps: Deps, routes: AnyRoute[] = ALL_ROUTES) {
@@ -109,6 +113,16 @@ export function createApp(deps: Deps, routes: AnyRoute[] = ALL_ROUTES) {
     handler: limited,
   });
 
+  // Mở cổng học viên (POST /portal/session, /portal/session/claim): bộ đếm RIÊNG theo IP — không ăn vào hạn mức đăng nhập
+  // nhân viên, và dò chìa/mã không làm khoá đăng nhập của cả studio (bản vẽ E 2.6).
+  const portalLimiter = rateLimit({
+    windowMs: 60_000,
+    limit: deps.env.PORTAL_RATE_LIMIT_PER_MINUTE,
+    standardHeaders: 'draft-8',
+    legacyHeaders: false,
+    handler: limited,
+  });
+
   app.get('/health', (_req, res) => {
     res.json({ ok: true });
   });
@@ -122,8 +136,16 @@ export function createApp(deps: Deps, routes: AnyRoute[] = ALL_ROUTES) {
     const handlers = [];
     if (route.rateLimit === 'auth') handlers.push(authLimiter);
     if (route.rateLimit === 'refresh') handlers.push(refreshCeilingLimiter, refreshProbeLimiter);
+    if (route.rateLimit === 'portal') handlers.push(portalLimiter);
     handlers.push(async (req: Request, res: Response) => {
-      const userId = route.scope === 'public' ? null : route.scope === 'platform' ? await platformAdminOrNotFound(req, deps) : await authenticate(req, deps);
+      // Chọn cách xác thực theo scope. Nhánh 'portal' PHẢI đứng trước nhánh cuối: rơi xuống authenticate là đường cổng
+      // nhận thẻ nhân viên (tường chắn hai chiều, bản vẽ E 2.3). Đường cổng: userId luôn null, học viên lấy từ phiên.
+      let userId: string | null = null;
+      let portal: PortalContext | null = null;
+      if (route.scope === 'public') userId = null;
+      else if (route.scope === 'platform') userId = await platformAdminOrNotFound(req, deps);
+      else if (route.scope === 'portal') portal = await authenticatePortal(req, deps);
+      else userId = await authenticate(req, deps);
       const org =
         route.scope === 'org' && userId && route.permission
           ? await loadOrgContext(
@@ -143,6 +165,7 @@ export function createApp(deps: Deps, routes: AnyRoute[] = ALL_ROUTES) {
           params: route.params ? route.params.parse(req.params) : undefined,
           userId,
           org,
+          portal,
           idempotency,
         });
       const result =
