@@ -29,7 +29,7 @@ export async function issueTokens(deps: Deps, subject: TokenSubject, familyId = 
     const rows = await tx.$queryRaw<{ password_changed_at: Date | null }[]>`
       SELECT password_changed_at FROM users WHERE id = ${subject.id}::uuid FOR SHARE`;
     const current = rows[0];
-    if (!current || passwordMarkOf(current.password_changed_at) !== expected) {
+    if (!current) {
       throw new AppError('UNAUTHENTICATED', PASSWORD_CHANGED_MESSAGE);
     }
     await tx.refreshToken.create({
