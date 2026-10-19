@@ -7,6 +7,9 @@ import { ApiError } from '../../api/errors';
 import * as contractsApi from '../../api/contracts';
 import * as scheduleApi from '../../api/schedule';
 import * as catalogApi from '../../api/catalog';
+import * as staffApi from '../../api/staff';
+import { avatarColorIndex } from '../../ui/Avatar';
+import { staffNaming } from '../../ui/staffName';
 import { ContractEditor } from './ContractEditor';
 import { ExtraPackageDialog } from './ExtraPackageDialog';
 
@@ -969,8 +972,95 @@ describe('N2 ở cửa thêm phát sinh (hợp đồng đã xác nhận)', () =>
     expect(screen.getByText('Nhập giờ kết thúc.')).toBeTruthy();
     expect(screen.getByRole('textbox', { name: 'Giờ bắt đầu' }).getAttribute('aria-invalid')).toBeNull();
   });
+  // R2: hộp thêm phát sinh dùng sổ thợ của màn hợp đồng (staffRoster) — không chỉ những người vừa chọn trong hộp.
+  it('BẮT (R2): chọn "Phạm Thu Hà" trong hộp phát sinh khi tổ chức còn "Nguyễn Thu Hà" → hàng thợ ghi "Phạm Thu Hà"', async () => {
+    const HA_P = { membershipId: 'm-pha', displayName: 'Phạm Thu Hà', fullName: 'Phạm Thu Hà', avatarUrl: null, initials: 'PH', tier: null };
+    const HA_N = { membershipId: 'm-ngha', displayName: 'Nguyễn Thu Hà', fullName: 'Nguyễn Thu Hà', avatarUrl: null, initials: 'NH', tier: null };
+    const asMember = (x: typeof HA_P) => ({ ...x, userId: `u-${x.membershipId}`, phone: null, isBookable: true, hasProfile: true, status: 'ACTIVE', roleKeys: ['artist'] });
+    vi.mocked(staffApi.listStaff).mockResolvedValue({ items: [asMember(HA_P), asMember(HA_N)] } as never);
+    vi.mocked(staffApi.getStaffAvailability).mockResolvedValue({
+      startsAt: '', endsAt: '', dayStart: '', dayEnd: '', timezone: TZ,
+      items: [{ ...HA_P, isBookable: true, level: 'FREE', overlaps: [], sameDay: [], draftHolds: [] }],
+    } as never);
+    api.quoteContract.mockResolvedValue({ ...quote([]), lines: [line({ id: null, staff: [], staffWarnings: [] })] } as never);
+    render(
+      <ExtraPackageDialog
+        pkg={PKG_ME as never}
+        orgId="org-1"
+        tz={TZ}
+        detail={detail('CONFIRMED') as never}
+        catalog={CATALOG as never}
+        canPickStaff
+        staffRoster={[HA_P, HA_N]}
+        phone={false}
+        onClose={() => {}}
+        onAdded={() => {}}
+      />,
+    );
+    await userEvent.type(await screen.findByRole('textbox', { name: 'Giờ bắt đầu' }), '05:00');
+    await userEvent.type(screen.getByRole('textbox', { name: 'Giờ kết thúc' }), '06:00');
+    await userEvent.click(screen.getByRole('button', { name: 'Chọn thợ' }));
+    await userEvent.click(await screen.findByRole('checkbox', { name: 'Phạm Thu Hà' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Chọn' }));
+    await waitFor(() => expect(document.querySelector('.ct-tn')?.textContent).toBe('Phạm Thu Hà'));
+  });
 });
+
 
 function noTimeQuoteFor() {
   return { ...quote([]), lines: [line({ id: null, scheduledStart: null, scheduledEnd: null, staff: [], staffWarnings: [] })] };
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Biên bản nghiệm thu lần 3 — R2: hợp đồng dùng CHUNG luật trùng tên với Lịch (sổ thợ = danh sách thợ của tổ chức ∪
+// thợ của các dòng); R4: cùng chữ tắt → khác màu, cùng màu với Lịch (cùng hàm ui/staffName.ts staffNaming).
+describe('R2/R4: trùng tên ngắn và trùng chữ tắt ở hợp đồng', () => {
+  const HA_P = { membershipId: 'm-pha', role: 'PRIMARY', displayName: 'Phạm Thu Hà', fullName: 'Phạm Thu Hà', avatarUrl: null, initials: 'PH', tier: null };
+  const HA_N = { membershipId: 'm-ngha', role: 'ASSIST', displayName: 'Nguyễn Thu Hà', fullName: 'Nguyễn Thu Hà', avatarUrl: null, initials: 'NH', tier: null };
+  const asMember = (s: typeof HA_P) => ({ ...s, userId: `u-${s.membershipId}`, phone: null, isBookable: true, hasProfile: true, status: 'ACTIVE', roleKeys: ['artist'] });
+
+  it('BẮT: hai thợ "… Thu Hà" trên một dòng → hàng thợ "Phạm Thu Hà (chính), Nguyễn Thu Hà"; dải vàng ghi "Nguyễn Thu Hà có lịch…"', async () => {
+    const two = (over: Record<string, unknown> = {}) => line({ staff: [HA_P, HA_N], ...over });
+    api.getContract.mockResolvedValue(detail('DRAFT', { lines: [two()] }) as never);
+    api.quoteContract.mockResolvedValue({ ...quote([]), lines: [two({ id: null, staffWarnings: [{ ...SAME_DAY, membershipId: 'm-ngha' }] })] } as never);
+    renderEditor(OWNER);
+    expect(await screen.findByText('Nguyễn Thu Hà có lịch trong ngày · 1 ca')).toBeTruthy();
+    expect(document.querySelector('.ct-tn')?.textContent).toBe('Phạm Thu Hà (chính), Nguyễn Thu Hà');
+    expect(screen.queryByText(/^Hà có lịch/)).toBeNull();
+  });
+
+  it('BẮT: dòng chỉ có "Phạm Thu Hà" nhưng tổ chức còn "Nguyễn Thu Hà" (GET /staff) → "Phạm Thu Hà", đúng như Lịch', async () => {
+    vi.mocked(staffApi.listStaff).mockResolvedValue({ items: [asMember(HA_P), asMember(HA_N)] } as never);
+    const one = (over: Record<string, unknown> = {}) => line({ staff: [HA_P], ...over });
+    api.getContract.mockResolvedValue(detail('DRAFT', { lines: [one()] }) as never);
+    api.quoteContract.mockResolvedValue({ ...quote([]), lines: [one({ id: null, staffWarnings: [{ ...SAME_DAY, membershipId: 'm-pha' }] })] } as never);
+    renderEditor(OWNER);
+    expect(await screen.findByText('Phạm Thu Hà có lịch trong ngày · 1 ca')).toBeTruthy();
+    expect(document.querySelector('.ct-tn')?.textContent).toBe('Phạm Thu Hà');
+  });
+
+  it('GIỮ: tổ chức chỉ có một "Hà" → hàng thợ và dải vàng ghi "Hà"', async () => {
+    vi.mocked(staffApi.listStaff).mockResolvedValue({ items: [asMember(HA_P)] } as never);
+    const one = (over: Record<string, unknown> = {}) => line({ staff: [HA_P], ...over });
+    api.getContract.mockResolvedValue(detail('DRAFT', { lines: [one()] }) as never);
+    api.quoteContract.mockResolvedValue({ ...quote([]), lines: [one({ id: null, staffWarnings: [{ ...SAME_DAY, membershipId: 'm-pha' }] })] } as never);
+    renderEditor(OWNER);
+    expect(await screen.findByText('Hà có lịch trong ngày · 1 ca')).toBeTruthy();
+    expect(document.querySelector('.ct-tn')?.textContent).toBe('Hà');
+  });
+
+  it('BẮT (R4): "Linh Trần" + "Lê Minh Tú" (cùng LT, cùng màu băm) → hai ảnh khác màu, đúng màu sổ thợ như Lịch', async () => {
+    let tuId = 'm-0';
+    for (let i = 0; avatarColorIndex(tuId) !== avatarColorIndex('m7'); i += 1) tuId = `m-${i}`;
+    const TU = { membershipId: tuId, role: 'ASSIST', displayName: 'Lê Minh Tú', fullName: 'Lê Minh Tú', avatarUrl: null, initials: 'LT', tier: null };
+    const two = (over: Record<string, unknown> = {}) => line({ staff: [LINH, TU], ...over });
+    api.getContract.mockResolvedValue(detail('DRAFT', { lines: [two()] }) as never);
+    api.quoteContract.mockResolvedValue({ ...quote([]), lines: [two({ id: null })] } as never);
+    renderEditor(OWNER);
+    await waitFor(() => expect(document.querySelectorAll('.ct-avs .ui-av').length).toBe(2));
+    const tones = [...document.querySelectorAll('.ct-avs .ui-av')].map((e) => (e as HTMLElement).style.background);
+    const want = staffNaming([LINH, TU]);
+    expect(tones[0]).not.toBe(tones[1]);
+    expect(tones).toEqual([`var(--av-${avatarColorIndex(want.colorKey('m7'))})`, `var(--av-${avatarColorIndex(want.colorKey(tuId))})`]);
+  });
+});

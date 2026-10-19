@@ -1,6 +1,6 @@
 # Chạy thử Makeup Pro trên máy tính của anh
 
-Cập nhật: 18/10/2026. Viết theo nhánh `claude/nen-mong-makeup` của kho `SSSTUDIO96/a`, commit `d417acf`.
+Cập nhật: 19/10/2026. Viết theo nhánh `claude/nen-mong-makeup` của kho `SSSTUDIO96/a`, đúng **từ commit `0802ee0` trở đi**. Từ bản này các lệnh trần (`pnpm dev`, `pnpm platform:…`) tự đọc tệp `apps/api/.env`; bản cũ hơn (ví dụ `d417acf`) sẽ báo `Thiếu DATABASE_URL`.
 
 Tài liệu này dẫn anh từ một máy Windows chưa cài gì tới lúc: đăng nhập được, có một học viện dùng gói Academy, và tạo được một khoá học. Mỗi bước có nhãn:
 
@@ -84,7 +84,7 @@ git clone --branch claude/nen-mong-makeup https://github.com/SSSTUDIO96/a.git ma
 cd makeup-pro
 ```
 
-**[Đã chạy trên Linux 18/10/2026]**: lệnh `git clone --branch …` tải về đúng nhánh, commit `d417acf`. Kho có thể là kho riêng tư. Khi đó Git sẽ hỏi đăng nhập GitHub; tài khoản của anh phải có quyền đọc kho. Thư mục `C:\MakeupPro` là ví dụ **[CHƯA thử trên Windows]**.
+**[Đã chạy trên Linux 18/10/2026]**: lệnh `git clone --branch …` tải về **bản mới nhất của nhánh** tại lúc anh chạy, nên số commit anh thấy sẽ mới hơn `0802ee0` (lần nghiệm thu 3 ra `6df580a`). Như vậy là đúng; anh không cần lấy một commit cụ thể nào. Kho có thể là kho riêng tư. Khi đó Git sẽ hỏi đăng nhập GitHub; tài khoản của anh phải có quyền đọc kho. Thư mục `C:\MakeupPro` là ví dụ **[CHƯA thử trên Windows]**.
 
 Từ đây trở đi, "**gốc kho**" là thư mục `makeup-pro` vừa tải.
 

@@ -76,7 +76,7 @@ describe('R2: staffShortNames — hai người trùng tên ngắn giữ tên đ�
   });
 
   it('BẮT: cùng một người đến từ hai nguồn (danh sách thợ + ca) không tính là trùng → vẫn "Hà"', () => {
-    expect(staffShortNames([PHAM_HA, { ...PHAM_HA, fullName: undefined }]).get('m-pha')).toBe('Hà');
+    expect(staffShortNames([PHAM_HA, { ...PHAM_HA }, P('m-vy', 'Phạm Bảo Vy')]).get('m-pha')).toBe('Hà');
   });
 
   it('BẮT: nguồn đầu thiếu họ tên, nguồn sau có → gộp lấy họ tên (rút được "Hà", không giữ nguyên "Phạm Thu Hà")', () => {
