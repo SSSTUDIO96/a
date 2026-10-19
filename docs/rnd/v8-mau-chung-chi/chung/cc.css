@@ -38,3 +38,4 @@ body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 
 /* Logo đặt trên nền tối: lót đế tròn sáng để logo màu nào cũng đọc được (logo là tệp trung tâm tải lên, không đổi màu được). */
 .o-logo.de-sang{background:#FFF9F0;border-radius:50%;padding:5px}
+.xuat .cc{margin:0;width:1123px;height:794px}

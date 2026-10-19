@@ -122,7 +122,7 @@ async function handleResetRequest(deps: Deps, email: string, requestId: string, 
     // Chỉ thẻ MỚI NHẤT còn dùng được: thư cũ (có thể nằm trong hộp thư bị lộ) hết tác dụng.
     await tx.passwordResetToken.updateMany({ where: { userId: user.id, usedAt: null, revokedAt: null }, data: { revokedAt: now } });
     await tx.passwordResetToken.create({
-      data: { userId: user.id, tokenHash: token, createdAt: now, expiresAt: new Date(now.getTime() + ttl * 60_000) },
+      data: { userId: user.id, tokenHash: hash, createdAt: now, expiresAt: new Date(now.getTime() + ttl * 60_000) },
     });
     await writeAudit(tx, {
       organizationId: null,

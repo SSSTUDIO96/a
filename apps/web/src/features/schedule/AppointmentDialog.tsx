@@ -33,7 +33,7 @@ import {
   WorkStatusTag,
 } from '../../ui';
 import { ConflictBanner } from './ConflictBanner';
-import { conflictsOf, isMakeupStaff, kindText, type ScheduleAccess, type StaffLane } from './model';
+import { conflictsOf, isMakeupStaff, kindText, whoText, type ScheduleAccess, type StaffLane } from './model';
 import { cx, LOCATION_LABELS, StaffAvatars, staffNames } from './parts';
 import { StatusActions } from './StatusActions';
 import { addDays, dayKeyOf, dayLabel, ddmm, formatDuration, hhmm, vnIso, weekdayLong, type DayKey } from './time';
@@ -179,7 +179,10 @@ export function AppointmentDialog({
   const pendingFocus = useRef<'staff' | 'time' | null>(target.kind === 'edit' ? (target.focus ?? null) : null);
 
   const terminal = appt ? isTerminalStatus(appt.status) : false;
-  const canEdit = access.write && !terminal;
+  // Buổi học sinh từ lớp: giờ / giảng viên / nơi học theo lịch lớp (sửa ở Khoá & lớp) — sửa tay ở đây sẽ bị lịch lớp ghi
+  // đè khi đồng bộ, nên không mở nút "Sửa". Đổi trạng thái (bắt đầu, hoàn thành, huỷ một buổi) vẫn làm được.
+  const fromClass = appt?.courseClass != null;
+  const canEdit = access.write && !terminal && !fromClass;
 
   useEffect(() => {
     if (mode === 'view' || !pendingFocus.current) return;
@@ -338,7 +341,7 @@ export function AppointmentDialog({
   }
 
   const title =
-    mode === 'create' ? 'Thêm lịch' : mode === 'edit' ? `Sửa lịch ${appt?.code ?? ''}` : (appt?.customer?.fullName ?? (appt ? kindText(appt) : ''));
+    mode === 'create' ? 'Thêm lịch' : mode === 'edit' ? `Sửa lịch ${appt?.code ?? ''}` : ((appt ? whoText(appt) : null) ?? (appt ? kindText(appt) : ''));
   const eyebrow = appt ? `${appt.code} · ${kindText(appt)}` : undefined;
 
   const footer =
@@ -482,17 +485,29 @@ function ViewBody({
             </span>
           </InfoRow>
         )}
-        <InfoRow label="Khách">
-          {appt.customer ? (
+        {appt.courseClass ? (
+          <InfoRow label="Lớp" tip="Buổi học sinh từ lịch học của lớp. Đổi giờ, thứ học, giảng viên hay nơi học thì sửa lớp ở Khoá & lớp — các buổi chưa diễn ra đổi theo.">
             <span>
-              <b className="ws-strong">{appt.customer.fullName}</b>
-              {appt.customer.phone && <span className="ws-fx num"> · {appt.customer.phone}</span>}
+              <b className="ws-strong">{appt.courseClass.name}</b>
+              <span className="ws-fx"> · {appt.courseClass.courseName}</span>{' '}
+              <Link to={`/${orgSlug}/dao-tao/${encodeURIComponent(appt.courseClass.courseId)}`} className="ws-link">
+                Mở khoá học
+              </Link>
             </span>
-          ) : (
-            <span className="ws-faint">Chưa gắn khách</span>
-          )}
-        </InfoRow>
-        <InfoRow label="Thợ">
+          </InfoRow>
+        ) : (
+          <InfoRow label="Khách">
+            {appt.customer ? (
+              <span>
+                <b className="ws-strong">{appt.customer.fullName}</b>
+                {appt.customer.phone && <span className="ws-fx num"> · {appt.customer.phone}</span>}
+              </span>
+            ) : (
+              <span className="ws-faint">Chưa gắn khách</span>
+            )}
+          </InfoRow>
+        )}
+        <InfoRow label={appt.courseClass ? 'Giảng viên' : 'Thợ'}>
           <span className="ws-info__staff">
             <StaffAvatars a={appt} size="sm" />
             <span className={cx(appt.staff.length === 0 && 'ws-warn-text')}>{staffNames(appt)}</span>

@@ -25,6 +25,17 @@
 /* "Khác" (ca không có nhân vật): nền trắng có viền, để không lẫn với ca mờ "Không chặn lịch" và màu Khách mời. */
 .ws-chip.ws-sw-other, .ws-pt.ws-sw-other { border: 1px solid var(--line); border-left: 3px solid var(--muted); }
 .ws-legend__i.ws-sw-other i { background: var(--surface); border: 1px solid var(--muted); }
+/* BUỔI HỌC (việc tồn 6): buổi học sinh từ lớp có màu riêng — chàm đậm trên nền KẺ SỌC chéo, để không lẫn với 12 màu nhân
+   vật (kể cả xanh dương / tím / xanh dầu) ngay cả khi nhìn lướt hay mù màu. Đặt SAU khối .ws-sw-* và sau luật viền của
+   "Khác" để đè được (cùng độ ưu tiên, đứng sau thì thắng). Chữ #283C7A trên nền trắng / nền 8–14% của chính màu ≥ 7:1. */
+.is-course {
+  --c: #283C7A;
+  --b: repeating-linear-gradient(135deg, color-mix(in srgb, #283C7A 8%, var(--surface)) 0 6px, color-mix(in srgb, #283C7A 14%, var(--surface)) 6px 9px);
+}
+.ws-chip.is-course, .ws-pt.is-course { border: 0; border-left: 3px solid var(--c); }
+.ws-ev.is-course, .ws-item.is-course, .ws-ag.is-course { background: var(--b); }
+.ws-track i.is-course { background: #283C7A; }
+.ws-legend__i.is-course i { background: repeating-linear-gradient(135deg, color-mix(in srgb, #283C7A 20%, var(--surface)) 0 3px, #283C7A 3px 5px); border: 1px solid #283C7A; }
 
 .ws { min-width: 0; }
 .ws-sp { flex: 1; }

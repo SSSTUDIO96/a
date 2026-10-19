@@ -467,7 +467,7 @@ export const TRANSITION_LABELS: Record<WorkStatus, string> = {
 export interface DayLoad {
   count: number;
   minutes: number;
-  bars: { id: string; startMin: number; endMin: number; subjectName: string | null; blocking: boolean }[];
+  bars: { id: string; startMin: number; endMin: number; subjectName: string | null; blocking: boolean; course: boolean }[];
 }
 
 export function dayLoad(appointments: readonly Appointment[], laneId: string, day: DayKey): DayLoad {
@@ -481,7 +481,7 @@ export function dayLoad(appointments: readonly Appointment[], laneId: string, da
     const workStart = Math.max(0, minutesFromDayStart(a.startsAt, day));
     const workEnd = Math.min(24 * 60, minutesFromDayStart(a.endsAt, day));
     minutes += Math.max(0, workEnd - workStart);
-    bars.push({ id: a.id, startMin: start, endMin: end, subjectName: a.subjectName, blocking: s ? s.isBlocking : isBlocking(a) });
+    bars.push({ id: a.id, startMin: start, endMin: end, subjectName: a.subjectName, blocking: s ? s.isBlocking : isBlocking(a), course: isCourseSession(a) });
   }
   return { count: mine.length, minutes, bars };
 }

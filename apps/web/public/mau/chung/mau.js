@@ -1,7 +1,7 @@
 /* Điền dữ liệu vào mẫu thẻ. Mỗi ô trên mẫu mang data-f="<khoá>" — khoá nào lấy từ trường nào ghi ở BAO-CAO-RND-03.md
    và packages/shared/src/design-templates.ts (SLOT_SOURCES).
    Bản chép từ docs/rnd/v3-mau-chao-mung/chung/mau.js, thêm chế độ DỮ LIỆU THẬT cho app (tham số ?that=1):
-   - ô không có tham số thì để TRỐNG (không lấy chữ mẫu của R&D, không bịa); ảnh trống thì ẩn khung ảnh; logo trống thì
+   - ô không có tham số thì để TRỐNG (không lấy chữ mẫu của R&D, không bịa); ảnh trống thì khung hiện gợi ý "Thêm ảnh …"; logo trống thì
      bỏ hẳn ô logo (kể cả vòng bọc .ld), body thêm lớp khong-logo;
    - dòng phụ `dv` ghép từ đúng các ô có giá trị (khoá học: khoa · Lớp lop; dịch vụ: nv · goi · nsk);
    - ngày trống thì các ô ngày suy ra (thứ, tháng, năm…) cũng trống.
@@ -56,9 +56,21 @@ if(P.get('ky')){const n=P.get('ky');const r=document.documentElement.style;for(l
 // Logo trống (học viện chưa có logo): ẩn HẲN ô logo — cả vòng tròn bọc ngoài (.ld) — để không in ra ô vuông / vòng tròn
 // trống và để chữ tên thương hiệu đứng giữa đúng chỗ; body có lớp khong-logo cho mẫu nào cần chỉnh thêm (biên bản L6).
 const anLogo=(el)=>{el.style.display='none';const w=el.closest('.ld');if(w)w.style.display='none';document.body.classList.add('khong-logo');};
+// Ô ảnh trống (chế độ dữ liệu thật, chưa có ảnh): khung vẫn hiện, bên trong là GỢI Ý "Thêm ảnh …" — để người dùng thấy
+// mẫu cần ảnh ở đâu (lời anh Chiến 19/10/2026: "Mẫu nào cũng phải có ảnh"). App chặn xuất PNG khi thiếu ảnh
+// ("Mẫu này cần đúng N ảnh"), nên gợi ý chỉ hiện ở khung xem trước. body.dataset.thieuAnh = số ô ảnh đang trống.
+const NHAN_ANH={anh:'ảnh học viên',a1:'ảnh 1',a2:'ảnh 2',a3:'ảnh 3'};
+const goiYAnh=(k)=>'data:image/svg+xml;charset=utf-8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400">'+
+  '<rect width="400" height="400" fill="#ECE6E0"/><circle cx="200" cy="150" r="52" fill="#CEC3B9"/>'+
+  '<path d="M106 290c10-58 50-90 94-90s84 32 94 90z" fill="#CEC3B9"/>'+
+  '<text x="200" y="338" text-anchor="middle" font-family="Montserrat,Arial,sans-serif" font-size="27" font-weight="600" fill="#5F564F">Thêm '+NHAN_ANH[k]+'</text></svg>');
+let thieuAnh=0;
 document.querySelectorAll('[data-f]').forEach(el=>{const v=D[el.dataset.f];
-  if(el.tagName==='IMG'){if(v)el.src=v;else{el.src=TRONG;if(el.dataset.f==='logo')anLogo(el);else el.style.visibility='hidden';}}
+  if(el.tagName==='IMG'){if(v)el.src=v;else if(el.dataset.f==='logo'){el.src=TRONG;anLogo(el);}
+    else if(NHAN_ANH[el.dataset.f]){el.src=goiYAnh(el.dataset.f);el.classList.add('goi-y-anh');thieuAnh++;}
+    else{el.src=TRONG;el.style.visibility='hidden';}}
   else el.textContent=v==null?'':v;});
+document.body.dataset.thieuAnh=String(thieuAnh);
 document.querySelectorAll('[data-chat]').forEach(el=>{const parts=D.nd.match(/[^.!?]+[.!?]*/g)||[D.nd];
   const n=+el.dataset.chat||3;const g=[];parts.forEach((s,i)=>{const k=Math.min(n-1,Math.floor(i*n/parts.length));g[k]=(g[k]||'')+s;});
   el.innerHTML=g.filter(Boolean).map(t=>`<div class="bb">${t.trim().replace(/&/g,'&amp;').replace(/</g,'&lt;')}</div>`).join('');});

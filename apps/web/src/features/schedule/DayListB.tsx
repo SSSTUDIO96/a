@@ -114,7 +114,8 @@ export function DayListB({
                     <b>Chưa có thợ</b>
                     <span>{[startLabel(a, day), kindText(a), whoText(a)].filter(Boolean).join(' · ')}</span>
                   </button>
-                  {canWrite && (
+                  {/* Buổi học chưa có giảng viên: gán giảng viên ở lớp (Khoá & lớp), không phân tay trên buổi. */}
+                  {canWrite && !a.courseClass && (
                     <Button size="sm" onClick={() => onAssign(a)}>
                       Phân thợ
                     </Button>
@@ -195,7 +196,7 @@ export function DayListB({
                       return (
                         <i
                           key={b.id}
-                          className={cx(`ws-sw-${swatchOfName(b.subjectName)}`, !b.blocking && 'is-off', marks.appointmentIds.has(b.id) && 'is-x')}
+                          className={cx(`ws-sw-${swatchOfName(b.subjectName)}`, !b.blocking && 'is-off', b.course && 'is-course', marks.appointmentIds.has(b.id) && 'is-x')}
                           style={{ left: `${((from - AXIS_FROM * 60) / span) * 100}%`, width: `${((to - from) / span) * 100}%` }}
                         />
                       );

@@ -138,6 +138,8 @@
     });
     root.querySelectorAll('[data-huy-hieu]').forEach(huyHieu);
   }
+  // ?xuat=1: bỏ lề trang xem để chụp ảnh đúng khổ (khung bắt đầu ở góc 0,0).
+  if (P.get('xuat') === '1') { document.body.classList.remove('xem'); document.body.classList.add('xuat'); }
   const mau = document.querySelector('.cc');
   const ds = P.get('nhieu') === '1' ? NHIEU : null;
   if (ds) {

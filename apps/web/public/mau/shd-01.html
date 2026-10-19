@@ -3,7 +3,7 @@
 <title>Thẻ chào mừng shd-01 – Thư mời kem</title>
 <!-- Makeup Pro · R&D vòng 3 · Mẫu chào mừng sang trọng hiện đại · Dùng cho: hợp đồng khoá học
      Nguồn ý tưởng: Học từ ảnh 6 (thư mời "Dear:", tháng/năm và địa chỉ ở chân)
-     Ô dữ liệu: logo (Logo), th (Tên thương hiệu), khoa (Tên khoá), lop (Mã lớp), ngay (Ngày khai giảng), ten (Tên học viên), diachi (Địa chỉ)
+     Ô dữ liệu: logo (Logo), th (Tên thương hiệu), anh (Ảnh học viên — khung tròn, thêm 19/10/2026), khoa (Tên khoá), lop (Mã lớp), ngay (Ngày khai giảng), ten (Tên học viên), diachi (Địa chỉ)
      Phông: MP Viết tay 1, MP Chữ có chân, MP Chữ không chân — khai báo ở phong/phong.css (phông viết tay là PHÔNG TẠM, thay một chỗ trong tệp đó).
      Khổ: mặc định 1080×1350; thêm ?kho=vuong để ra 1080×1080. Thay dữ liệu bằng tham số đường dẫn (xem chung/mau.js).
      Ảnh người và logo mặc định: vector do R&D tự vẽ. -->
@@ -15,7 +15,9 @@
 .w{position:absolute;inset:58px;display:flex;flex-direction:column;align-items:center;text-align:center;padding:70px 90px 64px}
 .lg{width:84px;height:84px}
 .th{font:500 21px var(--f-sans);letter-spacing:.32em;color:#7A6340;margin-top:18px;text-transform:uppercase}
-.k1{font:500 18px var(--f-sans);letter-spacing:.42em;color:#8C7A5B;text-transform:uppercase}
+.k1{font:500 18px var(--f-sans);letter-spacing:.42em;color:#7A6340;text-transform:uppercase}
+/* Ảnh học viên khung tròn (lời anh Chiến 19/10/2026: mẫu nào cũng có ảnh, khung mặc định tròn) — bố cục theo R&D-07 pa1, không nền hoa văn. */
+.av{width:250px;height:250px;border-radius:50%;overflow:hidden;flex:none;box-shadow:0 0 0 8px #F5EFE4,0 0 0 9.5px #B8975A}
 .kh{font:600 66px/1.08 var(--f-chan);text-transform:uppercase;letter-spacing:.04em;margin-top:18px;width:100%}
 .lo{font:italic 400 32px var(--f-chan);color:#5C4E3E;margin-top:14px}
 .or{display:flex;align-items:center;gap:16px;margin:34px 0 22px;color:#B8975A}
@@ -25,9 +27,11 @@
 .by{font:italic 400 30px var(--f-chan);color:#5C4E3E;margin-top:16px}
 .ft{font:500 18px var(--f-sans);letter-spacing:.32em;text-transform:uppercase;color:#7A6340}
 .dc{font:400 26px var(--f-chan);color:#5C4E3E;margin-top:8px}
-.vuong .w{padding:44px 80px 40px}.vuong .kh{font-size:54px}.vuong .ten{font-size:calc(104px*var(--tay-co-1))}.vuong .or{margin:22px 0 12px}
+.vuong .w{padding:36px 80px 32px}.vuong .lg{width:60px;height:60px}.vuong .th{margin-top:10px}.vuong .av{width:150px;height:150px}.vuong .kh{font-size:48px;margin-top:10px}.vuong .lo{font-size:28px;margin-top:8px}.vuong .ten{font-size:calc(92px*var(--tay-co-1))}.vuong .or{margin:14px 0 8px}.vuong .by{margin-top:8px;font-size:26px}.vuong .dg{font-size:30px}
 </style></head><body><div id="c"><div class="b1"></div><div class="b2"></div><div class="w">
 <img class="lg" data-f="logo" alt=""><div class="th" data-f="th" data-fitw></div>
+<div class="sp"></div>
+<div class="av"><img class="ph" data-f="anh" alt=""></div>
 <div class="sp"></div>
 <div class="k1">Chào mừng đến với lớp</div>
 <div class="kh" data-f="khoa" data-fit="2"></div>
