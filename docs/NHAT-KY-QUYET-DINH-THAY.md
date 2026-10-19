@@ -87,5 +87,8 @@ Anh Chiến nhắn lúc khoảng 15:13 UTC ngày 18/10/2026: *"Tự làm vào ch
 | 19/10 sáng | Việc tồn 4 (loại sự kiện), thông báo, cổng học viên, app iPhone, nền hoa văn | Đi R&D trước, bày 3 phương án có ảnh; anh vắng thì trợ lý chọn 1 và vẫn xuất ảnh cả 3 | Việc mới có giao diện mới (luật 8) | Được |
 | 19/10 sáng | Đặt lại mật khẩu qua email | Dựng sẵn với "người gửi thư" thay được: chạy thử thì in đường dẫn ra nhật ký máy chủ; gửi thư thật cần anh chọn dịch vụ email (có thể tốn phí) | Không tự mua dịch vụ trả phí | Được |
 | 19/10 sáng | Việc tồn 9 (phông SS-Album), 10 (ảnh màn ssnew) | Chờ anh gửi tệp | Máy đám mây không đọc được ổ H: | — |
+| 19/10 trưa | Buổi học lên Lịch cần đổi database (thêm liên kết ca ↔ lớp và ngày buổi học) | Duyệt migration `20261019120000_buoi_hoc_len_lich` theo đề xuất của thợ K2 | Không có liên kết thì không chặn được sinh trùng, không đổi/huỷ theo lớp được | Được: bỏ cột là lùi |
+| 19/10 trưa | Buổi học tạo ở trạng thái nào | **Đã xác nhận** (giữ giờ giảng viên) — ngoại lệ có chủ đích so với "lịch mới để Nháp" vốn áp cho ca makeup tự tạo | Buổi học là lịch cố định của lớp; Nháp không giữ giờ thì ca makeup chen vào giờ dạy | Được |
+| 19/10 trưa | Huỷ lớp khi có buổi đang diễn ra | Từ chối, báo rõ buổi nào | Giống cách huỷ hợp đồng đang làm | Được |
 
 **Cần anh xem lại nhất:** (1) cách anh vào thao tác thực tế (dòng 19:44): chạy trên máy anh hay cho phép đưa lên mạng; (2) phân quyền theo vai trò mẫu (dòng 15:16) — studio anh có thể muốn thợ chính thấy cả lịch của đội.
