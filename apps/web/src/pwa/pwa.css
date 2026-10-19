@@ -28,4 +28,4 @@
 .pwa-steps strong { font-weight: 600; }
 .pwa-steps span:not(.pwa-steps__n) { color: var(--muted); font-size: 13px; }
 .pwa-steps li .ui-btn { margin-top: 8px; }
-.pwa-inline-ico { width: 16px; height: 16px; vertical-align: -3px; }
+.pwa-inline-ico { display: inline-block; width: 16px; height: 16px; vertical-align: -3px; }

@@ -73,3 +73,5 @@ Danh sách việc các thợ, thợ chấm và R&D đã nêu nhưng **chưa làm
 | 53 | Lưu CCCD và địa chỉ khách để in lên hợp đồng (dữ liệu cá nhân) — anh quyết | bản vẽ G |
 | 54 | Mã QR chuyển khoản (VietQR) trên bản in hợp đồng | bản vẽ G |
 | 55 | Mã số trên thẻ chào mừng (anh 19/10): lưu mã ở học viên trong lớp, tự cấp theo thứ tự ghi danh (01, 02…), sửa tay được, không trùng trong một lớp; thẻ chào mừng hiện mã; sau này màn sắp ghế/vị trí dùng mã này | bản vẽ mới sau D-M1 (đụng schema.prisma, xếp hàng sau G-M1) |
+| 56 | Cài lên màn hình iPhone (chế độ toàn màn hình): khung app chưa chừa tai thỏ ở đỉnh (`env(safe-area-inset-top)`); trang ngoại tuyến đã chừa. Chưa thử iPhone thật | thợ E-W1 báo, làm cùng W3 |
+| 57 | Biểu tượng app: nhân viên = cây bút trắng nền đỏ mận, học viên = mũ cử nhân nền xanh ngọc (lệch bản vẽ E ghi chữ "M"/"HV") — anh xem lại | thợ E-W1 |
