@@ -1,5 +1,12 @@
 # Bản vẽ F: Giấy chứng nhận (chặng 2)
 
+> **ĐÍNH CHÍNH 19/10/2026 tối (điều phối, sau gói G0 tra lại — bản gốc bên dưới GIỮ NGUYÊN, chỗ nào đá nhau thì theo đính chính này):**
+> 1. Số mẫu: **16 mẫu** cc-01..cc-16 (anh Chiến duyệt 19/10: 01–05 dựng sát ảnh anh gửi, 16 "vinh danh kim cương"), không phải 10. R&D ở `docs/rnd/v8-mau-chung-chi/` (cc.js 339 dòng, cc.css 52 dòng, phông tiêu đề Prata, 5 kiểu chữ vàng SVG). Gói T1 chép 16 tệp + `chung/` (svg, js, css); KHÔNG chép TTF (dùng bộ phông app), KHÔNG chép `in-thu/`, `png/`.
+> 2. Migration: **`20261019210000_giay_chung_nhan`** (KY-DUYET-F câu 6). Mọi chỗ ghi 150000 trong bản này (mục 2.2, 2.4, dòng S1a) đọc là 210000. Mới nhất hiện có: 20261019200000_cong_hoc_vien (E1).
+> 3. Số dòng đã lệch sau bản vẽ D, E: dùng bảng tra lại của G0 ở `docs/rnd/BAN-VE-F-TRA-LAI-G0.md`. Hai chỗ SAI dòng: `types.ts` BrandProfile ở **1564** (không phải 1310); `nav.ts` mục Đào tạo ở **109** (không phải 97-98).
+> 4. pdf-lib 1.17.1 (MIT) đã thử cài qua proxy được, đã ghi vào `docs/GHI-CHEP-MON-CUA-NGUOI-KHAC.md` mục 7.
+
+
 - Sản phẩm: Makeup Pro
 - Ngày: 19/10/2026
 - Người làm: Trung tâm R&D, chặng 2. Đây là bản vẽ thông số cho thợ, không còn là bày phương án.
