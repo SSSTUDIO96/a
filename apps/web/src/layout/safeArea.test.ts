@@ -37,7 +37,7 @@ describe('thanh dưới điện thoại chừa vùng an toàn đáy', () => {
   });
 
   it('.sh chừa chỗ đáy bằng biến, không còn 64px cứng', () => {
-    expect(block('.sh')).toMatch(/padding-bottom:\s*var\(--h-bottomnav\)/);
+    expect(css).toMatch(/\.sh\s*\{[^}]*padding-bottom:\s*var\(--h-bottomnav\)/);
   });
 
   it('layout.css không còn số 64px cứng nào ngoài dòng khai biến', () => {

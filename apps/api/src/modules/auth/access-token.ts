@@ -60,7 +60,7 @@ export function verifyAccessToken(token: string, secret: string): AccessTokenCla
 
 // Thẻ còn được nhận với mốc đổi mật khẩu HIỆN HÀNH trong database không.
 export function tokenSurvivesPasswordChange(claims: Pick<AccessTokenClaims, 'iat' | 'pca'>, changedAt: Date | null): boolean {
-  if (changedAt === null) return claims.pca === undefined; // chưa đổi mật khẩu lần nào: mọi thẻ hợp lệ như trước
+  if (changedAt === null) return true; // chưa đổi mật khẩu lần nào: mọi thẻ hợp lệ như trước
   const mark = changedAt.getTime();
   if (claims.pca !== undefined) return claims.pca === mark;
   // Thẻ đời cũ: chỉ nhận khi cấp ở giây SAU giây của mốc (iat làm tròn xuống nên iat > ⌊mốc/1000⌋ ⇒ cấp sau mốc).
