@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CC-10 Lục bảo khung vát</title>
+<link rel="stylesheet" href="chung/cc.css">
+<!-- Mẫu 10 — tự sáng tác: nền xanh lục bảo có lưới hình thoi chìm, tấm kem vát góc viền vàng, huy hiệu đè mép dưới.
+     Học tinh thần ảnh 1 & 4: khối màu đậm + vàng kim + tấm sáng ở giữa.
+     Phông: tiêu đề Playfair Display, tên MP Chữ ký 1 (Send Flowers), chữ thường Cormorant Garamond, chữ hoa Montserrat. -->
+<style>
+.c10{--luc:#0F3D34;background:#0F3D34;color:#1E2A26}
+.c10 .nen{inset:0}
+.c10 .anh{left:118px;top:206px;width:200px;height:200px;box-shadow:0 0 0 5px #FBF7EE,0 0 0 7px #B88A35,0 0 0 13px #FBF7EE,0 0 0 14px #0F3D34}
+.c10 .so{left:118px;top:446px;width:200px;text-align:center;color:#3F5A52;line-height:1.7}
+.c10 .huy{left:50%;top:640px;width:134px;margin-left:-67px}
+.c10 .o-logo{left:376px;top:96px;width:40px;height:40px}
+.c10 .thg{left:426px;top:96px;line-height:40px;font-family:var(--f-sans);font-weight:700;font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--luc);max-width:560px;white-space:nowrap;overflow:hidden}
+.c10.khong-logo .thg{left:376px}
+.c10 .t1{left:372px;top:150px;font-family:var(--f-chan2);font-weight:800;font-size:56px;letter-spacing:.05em;line-height:1;color:var(--luc)}
+.c10 .t2{left:376px;top:216px;font-size:16px;letter-spacing:.42em}
+.c10 .tag{left:376px;top:268px;font-size:12px;letter-spacing:.28em;color:#3F5A52}
+.c10 .ten{left:362px;top:288px;width:690px;font-size:calc(76px * var(--ten-co));color:var(--luc)}
+.c10 .gach{left:376px;top:404px;width:640px;height:2px;background:var(--vang)}
+.c10 .dong{left:376px;top:418px;width:660px;font-size:24px;font-style:italic;font-weight:500}
+.c10 .ngay{left:376px;top:458px;font-size:18px;font-style:italic;color:#3F5A52}
+.c10 .ky1{left:376px;top:512px;width:230px}
+.c10 .ky2{left:800px;top:512px;width:230px}
+</style></head>
+<body class="xem"><main>
+<section class="cc c10">
+  <svg class="nen" viewBox="0 0 1122 794" aria-hidden="true">
+    <defs>
+      <pattern id="thoi10" width="36" height="36" patternUnits="userSpaceOnUse"><path d="M18 0 L36 18 L18 36 L0 18Z" fill="none" stroke="#1B5446" stroke-width="1"/></pattern>
+      <linearGradient id="v10" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8A6420"/><stop offset=".3" stop-color="#E9CF86"/><stop offset=".55" stop-color="#A97C2C"/><stop offset=".8" stop-color="#F3DE9C"/><stop offset="1" stop-color="#8A6420"/></linearGradient>
+    </defs>
+    <rect width="1122" height="794" fill="url(#thoi10)"/>
+    <path d="M86 40 H1036 L1082 86 V708 L1036 754 H86 L40 708 V86Z" fill="#FBF7EE" stroke="url(#v10)" stroke-width="3"/>
+    <path d="M94 52 H1028 L1070 94 V700 L1028 742 H94 L52 700 V94Z" fill="none" stroke="#B88A35" stroke-width="1"/>
+    <g stroke="url(#v10)" stroke-width="2" fill="none"><path d="M40 160 L160 40 M40 190 L190 40"/><path d="M1082 634 L962 754 M1082 604 L932 754"/></g>
+  </svg>
+  <div class="anh"><img data-f="anh" alt=""></div>
+  <div class="so meta">Số chứng chỉ<br><b data-f="so"></b></div>
+  <div class="huy" data-huy-hieu data-kieu="rang" data-nen="#0F3D34"></div>
+  <div class="o-logo"><img data-f="logo" alt=""></div>
+  <div class="thg" data-f="th"></div>
+  <div class="t1" data-td>CHỨNG NHẬN</div>
+  <div class="t2 caps vang-chu toi">Tốt nghiệp</div>
+  <div class="tag caps">Trân trọng trao cho</div>
+  <div class="ten" data-f="ten" data-fitw></div>
+  <div class="gach"></div>
+  <div class="dong" data-f="dong"></div>
+  <div class="ngay" data-f="ngayChu"></div>
+  <div class="ky ky1"><div class="cv">Giảng viên</div><div class="dl"></div><div class="nm" data-f="gv"></div></div>
+  <div class="ky ky2"><div class="cv">Giám đốc trung tâm</div><div class="dl"></div><div class="nm" data-f="gd"></div></div>
+</section>
+</main><script src="chung/cc.js"></script></body></html>

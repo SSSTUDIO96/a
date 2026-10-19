@@ -87,3 +87,25 @@ export function getMe(signal?: AbortSignal): Promise<Me> {
 export function createOrganization(input: CreateOrgInput, idempotencyKey: string): Promise<CreatedOrganization> {
   return api.create<CreatedOrganization>('/orgs', input, idempotencyKey);
 }
+
+// ---- Quên mật khẩu (apps/api/src/modules/auth/password-reset.ts) ----
+
+// Máy chủ LUÔN trả 202 cùng một lời dù email có tài khoản hay không (chống dò tài khoản) — màn hiện đúng lời đó.
+export interface PasswordResetRequested {
+  message: string;
+}
+
+export function requestPasswordReset(email: string): Promise<PasswordResetRequested> {
+  return api.post<PasswordResetRequested>('/auth/password-reset/request', { email }, { auth: false });
+}
+
+// 204: mật khẩu đã đổi, máy chủ đã thu hồi MỌI phiên đăng nhập (kể cả phiên trên trình duyệt này) → bỏ thẻ trong bộ nhớ.
+// Thẻ hỏng/hết hạn/đã dùng: 400 VALIDATION_FAILED, details.reason = 'RESET_TOKEN_INVALID'.
+export async function confirmPasswordReset(token: string, password: string): Promise<void> {
+  await api.post<undefined>('/auth/password-reset/confirm', { token, password }, { auth: false });
+  setAccessToken(null);
+}
+
+export function isResetTokenInvalid(err: unknown): boolean {
+  return err instanceof ApiError && (err.details as { reason?: unknown } | undefined)?.reason === 'RESET_TOKEN_INVALID';
+}

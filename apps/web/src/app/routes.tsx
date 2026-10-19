@@ -1,8 +1,10 @@
 import { lazy, Suspense, type ComponentType, type ReactNode } from 'react';
 import { createBrowserRouter, Navigate, Outlet, useParams, type RouteObject } from 'react-router';
 import { CreateOrgPage } from '../features/auth/CreateOrgPage';
+import { ForgotPasswordPage } from '../features/auth/ForgotPasswordPage';
 import { LoginPage } from '../features/auth/LoginPage';
 import { RegisterPage } from '../features/auth/RegisterPage';
+import { ResetPasswordPage } from '../features/auth/ResetPasswordPage';
 import { AppShell, NavSectionHome, OrgHome, RequireNavPermission } from '../layout/AppShell';
 import { NotFoundView, PageSkeleton } from '../layout/ErrorStates';
 import { GuestOnly, HomeRedirect, Loading, RequireAuth } from './guards';
@@ -108,6 +110,9 @@ export const routes: RouteObject[] = [
       { index: true, element: <HomeRedirect /> },
       { path: 'dang-nhap', element: <GuestOnly><LoginPage /></GuestOnly> },
       { path: 'dang-ky', element: <GuestOnly><RegisterPage /></GuestOnly> },
+      { path: 'quen-mat-khau', element: <GuestOnly><ForgotPasswordPage /></GuestOnly> },
+      // Mở từ thư: KHÔNG chặn người đang đăng nhập (mở thư trên máy đang dùng app); đặt xong máy chủ thu hồi mọi phiên.
+      { path: 'dat-lai-mat-khau', element: <ResetPasswordPage /> },
       { path: 'tao-to-chuc', element: <RequireAuth><CreateOrgPage /></RequireAuth> },
       // Quản trị nền tảng: trong đăng nhập, ngoài :orgSlug, khung riêng (PlatformShell) do gói quản trị làm — C2 mục 5.
       { path: 'quan-tri/*', element: <RequireAuth>{alone(<PlatformApp />)}</RequireAuth> },

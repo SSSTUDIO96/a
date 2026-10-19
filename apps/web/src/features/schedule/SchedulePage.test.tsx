@@ -50,6 +50,8 @@ function a(id: string, code: string, start: string, end: string, staff: string[]
     contractLineId: null,
     subjectName: null,
     quantity: null,
+    courseClass: null,
+    sessionDate: null,
     startsAt: start,
     endsAt: end,
     travelBeforeMin: 0,

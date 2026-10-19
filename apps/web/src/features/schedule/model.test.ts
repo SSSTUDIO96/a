@@ -38,6 +38,8 @@ function appt(p: Partial<Appointment> & { id: string; startsAt: string; endsAt: 
     contractLineId: null,
     subjectName: null,
     quantity: null,
+    courseClass: null,
+    sessionDate: null,
     travelBeforeMin: 0,
     travelAfterMin: 0,
     locationType: null,

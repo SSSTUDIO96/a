@@ -78,6 +78,11 @@ export function LoginPage() {
             onChange={(e) => setPassword(e.target.value)}
             error={errors.password}
           />
+          <div className="au-forgot">
+            <Link to="/quen-mat-khau" state={{ email: email.trim() }}>
+              Quên mật khẩu?
+            </Link>
+          </div>
         </SettingRow>
         <ErrorNotice error={submitError} className="au-alert" />
         <div className="au-submit">

@@ -172,3 +172,10 @@ Mỗi lỗi ghi đủ: triệu chứng · gốc bệnh · số đo · cách ch�
   3. Bài thử `apps/api/test/lenh-doc-env.test.ts`: lệnh `tsx` nào trong `package.json` thiếu cờ thì đỏ; lệnh bản thật lỡ có cờ thì đỏ; kiểm luôn hai hành vi trên của Node. Đã thử phá: bỏ cờ ở `platform:seed-plans` → đỏ; thêm cờ vào `start` → đỏ (2/2).
   4. Hướng dẫn (`docs/CHAY-THU-TREN-MAY.md`, `docs/BAN-GIAO-PHIEN.md` bước 4, `docs/DEPLOYMENT.md`) nay dùng đúng lệnh trần, đã chạy lại từng lệnh trước khi ghi.
 - **Bài học cho studio khác:** hướng dẫn phải được chạy thử trên một máy **mới tinh** theo đúng thứ tự trong hướng dẫn. Máy của người viết thường "có sẵn đồ từ trước" nên lỗi thứ tự không lộ ra. Và khi phải né một lỗi trong hướng dẫn, ghi lại chỗ né rồi giao sửa tận gốc — đừng để cách né thành hướng dẫn chính thức.
+
+## 26. Điều phối gửi việc nhầm thợ vì nhầm mã thợ
+
+- **Triệu chứng:** hai tin giao thêm việc mẫu thiết kế ("mẫu nào cũng có ảnh, khung tròn, một mẫu viên thuốc"; sửa tương phản shd-01) gửi tới thợ K4 (tệp chạy Windows) thay vì thợ K3 (mẫu thiết kế). K4 đọc thấy ngoài phạm vi tệp của mình nên **không làm** và báo lại trong phiếu vướng — đúng luật. Việc của K3 bị trễ tới khi K4 nộp báo cáo.
+- **Gốc:** điều phối gọi thợ bằng mã máy dài, chép mã từ danh sách 8 thợ giao cùng lúc mà không đối chiếu tên.
+- **Cách chặn:** trước mỗi tin giao thêm việc, đối chiếu mã thợ với mô tả lúc giao (tên thợ + phạm vi tệp); câu đầu tin nhắn ghi rõ "Gửi thợ K3 (mẫu thiết kế)" để thợ nhận nhầm thấy ngay.
+- **Bài giảng cho nghề:** thợ từ chối việc ngoài phạm vi tệp chính là cửa gác chặn được lỗi điều phối. Luật "mỗi thợ chỉ sửa tệp của mình" không chỉ tránh giẫm chân mà còn bắt được giao nhầm.

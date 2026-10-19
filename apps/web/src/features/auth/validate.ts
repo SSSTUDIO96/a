@@ -2,7 +2,7 @@
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export const SLUG_RE = /^[a-z0-9]([a-z0-9-]{1,46})[a-z0-9]$/;
 // Đường dẫn trùng tên trang của web sẽ che mất trang đó.
-export const RESERVED_SLUGS = new Set(['dang-nhap', 'dang-ky', 'tao-to-chuc', 'api']);
+export const RESERVED_SLUGS = new Set(['dang-nhap', 'dang-ky', 'tao-to-chuc', 'quen-mat-khau', 'dat-lai-mat-khau', 'api']);
 
 export type FieldErrors<K extends string> = Partial<Record<K, string>>;
 

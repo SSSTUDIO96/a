@@ -174,3 +174,8 @@
 }
 .sh-top .v5-badge { top: -3px; right: -6px; }
 @media (max-width: 640px) { .v5-pref .v5-ext { display: none; } }
+@media (max-width: 640px) {
+  .v5-dg__row { grid-template-columns: 66px minmax(0, 1fr); }
+  .v5-dg__row.v5-dg__row--2 { grid-template-columns: minmax(0, 1fr) auto; }
+  .v5-dg__row.v5-dg__row--2 > :nth-child(2) { grid-column: auto; }
+}

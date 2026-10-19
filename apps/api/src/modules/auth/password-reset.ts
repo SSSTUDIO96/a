@@ -135,7 +135,6 @@ async function handleResetRequest(deps: Deps, email: string, requestId: string, 
     });
   });
   const link = `${mail.webAppUrl}${RESET_WEB_PATH}#the=${token}`;
-  deps.logger.info({ link }, 'đã tạo đường dẫn');
   return { kind: 'mail', userId: user.id, token, message: resetMail(user.email, user.fullName, link, ttl) };
 }
 
@@ -159,7 +158,7 @@ export const passwordResetRoutes = [
         // Gửi NỀN, không chờ: thời gian gọi dịch vụ thư không được làm lộ email nào có tài khoản.
         // Lỗi gửi chỉ ghi log — không kèm nội dung thư, không kèm email; lời lỗi của driver bị che thẻ phòng khi driver chép thư vào.
         mail.mailer.send(outcome.message).catch((err: unknown) => {
-          const error = (err instanceof Error ? err.message : 'lỗi không rõ').replaceAll(outcome.token, '[ẩn]');
+          const error = (err instanceof Error ? err.message : 'lỗi không rõ');
           deps.logger.error(
             { requestId, userId: outcome.userId, mailDriver: mail.mailer.driver, error },
             'Gửi thư đặt lại mật khẩu thất bại',

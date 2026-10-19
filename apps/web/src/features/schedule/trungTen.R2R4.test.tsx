@@ -45,6 +45,8 @@ function appt(id: string, staff: StaffMember[]): Appointment {
     contractLineId: null,
     subjectName: null,
     quantity: null,
+    courseClass: null,
+    sessionDate: null,
     startsAt: start,
     endsAt: end,
     travelBeforeMin: 0,
