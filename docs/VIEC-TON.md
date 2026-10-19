@@ -70,3 +70,5 @@ Danh sách việc các thợ, thợ chấm và R&D đã nêu nhưng **chưa làm
 | 50 | Trang công khai lưu đệm 60 giây: tắt nhân vật xong, khách có thể còn thấy bản cũ tối đa 60 giây (web vẫn chặn gói đó) | thợ V1 |
 | 51 | Lịch chế độ B trục giờ cố định 04:00–18:00: ca từ 18:00 (buổi học tối) không hiện trên thanh "Thợ trong ngày" | thợ K2 |
 | 52 | Buổi học dùng chung nhãn nút trạng thái với ca makeup ("Bắt đầu làm", "Khách không đến") | thợ K2 |
+| 53 | Lưu CCCD và địa chỉ khách để in lên hợp đồng (dữ liệu cá nhân) — anh quyết | bản vẽ G |
+| 54 | Mã QR chuyển khoản (VietQR) trên bản in hợp đồng | bản vẽ G |

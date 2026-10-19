@@ -15,3 +15,5 @@ Bản vẽ: `docs/rnd/BAN-VE-E-CONG-HOC-VIEN-PWA.md`. **Ký, với các quyết 
 **Thứ tự:** các gói đụng `apps/api/prisma/schema.prisma` chạy **lần lượt**, không song song: K6 → D-M1 → E1 → F (giấy chứng nhận) → G (mẫu in). Gói W1 (PWA) chờ thợ K7 xong `apps/web/index.html`.
 
 **Cửa gác bắt buộc:** cửa gác từ 10 lên 14 phép đều xanh, 5 đột biến mới đỏ, phép chống tái phạm 3 lỗi Studio Pro (mục 2.8) có mặt; nghiệm thu N1 do thợ KHÁC người làm.
+
+**Mốc migration (sửa 19/10):** đổi `20261019140000_cong_hoc_vien` thành `20261019200000_cong_hoc_vien` để đứng sau migration K6 (160000) đã có.
