@@ -1,21 +1,30 @@
 import { Tooltip } from '../../ui';
 import { IconClock, IconWarn } from './icons';
-import { staffShortName, type StaffNameSource } from '../../ui/staffName';
+import type { StaffNameSource, StaffNaming } from '../../ui/staffName';
 import type { LineWarning } from './model';
 
 // Dải cảnh báo thợ trong thẻ dòng (bản vẽ 4.3): đỏ "Trùng giờ …" / xám "Giữ chỗ nháp ở HĐ-…" (không chặn, quyết định
 // 15:14) / vàng "{tên} có lịch trong ngày · n ca".
 // Chi tiết (giờ, tên ca, khách) chỉ nằm trong tooltip "?".
 // personOf: tên hiển thị + họ tên của thợ (máy chủ gửi cả hai ở thợ của hợp đồng và ô chọn thợ) → tên ngắn theo hàm chung.
-export function StaffWarningBanner({ warnings, personOf }: { warnings: LineWarning[]; personOf: (membershipId: string) => StaffNameSource }) {
+// naming: sổ thợ của màn (R2) — hai thợ trùng tên ngắn thì dải cảnh báo ghi tên đầy đủ, đúng như hàng thợ và Lịch.
+export function StaffWarningBanner({
+  warnings,
+  personOf,
+  naming,
+}: {
+  warnings: LineWarning[];
+  personOf: (membershipId: string) => StaffNameSource;
+  naming: StaffNaming;
+}) {
   if (warnings.length === 0) return null;
   return (
     <>
       {warnings.map((w) => {
         const person = personOf(w.membershipId);
         const name = person.displayName;
-        // Tên ngắn theo hàm chung (M3): tên hiển thị khác họ tên → nguyên; trùng họ tên → tiếng cuối; không biết họ tên → nguyên.
-        const short = staffShortName(person);
+        // Tên ngắn theo hàm chung (M3 + R2): như staffShortName, trùng tên ngắn với người khác trong sổ → tên đầy đủ.
+        const short = naming.shortName({ ...person, membershipId: w.membershipId });
         const detail = w.ranges.map((r) => `${r.start}–${r.end}${r.label ? ` ${r.label}` : ''}`).join('; ');
         if (w.level === 'OVERLAP') {
           const hours = w.ranges.map((r) => `${r.start}–${r.end}`).join(', ');

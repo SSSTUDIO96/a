@@ -59,8 +59,11 @@ export const publicRoutes = [
             category: { select: { name: true } },
           },
         }),
+        // R1 (biên bản nghiệm thu lần 3): gói của nhân vật đang ẩn KHÔNG lên trang công khai — studio không lập hợp đồng
+        // cho gói đó được (M1), khách thấy giá là sai. Gói không gắn nhân vật vẫn hiện. Lọc ở đây nên dịch vụ phụ
+        // (addonIds bên dưới) và giá gói cũng tự bỏ theo.
         deps.db.servicePackage.findMany({
-          where: { organizationId: orgId, isActive: true, isPublic: true },
+          where: { organizationId: orgId, isActive: true, isPublic: true, OR: [{ subjectId: null }, { subject: { isActive: true } }] },
           orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }, { id: 'asc' }],
           select: {
             id: true,

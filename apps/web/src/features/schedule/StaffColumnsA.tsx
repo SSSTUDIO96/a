@@ -4,8 +4,8 @@
 import type { CSSProperties } from 'react';
 import type { Appointment } from '../../api/types';
 import { StatusTag } from '../../ui';
-import { appointmentsOfDay, axisHours, blockSpan, dayLoad, kindLabel, laneIdsOf, laneShortNames, layoutLanes, quantityText, UNASSIGNED, type ConflictMarks, type StaffLane } from './model';
-import { apptClasses, apptTip, cx, LaneAvatar, placeText, timeRange, useSwatchOf } from './parts';
+import { appointmentsOfDay, axisHours, blockSpan, dayLoad, kindLabel, laneIdsOf, layoutLanes, quantityText, UNASSIGNED, type ConflictMarks, type StaffLane } from './model';
+import { apptClasses, apptTip, cx, LaneAvatar, placeText, timeRange, useSwatchOf, laneShort, useStaffNaming } from './parts';
 import { formatHours, minutesFromDayStart, type DayKey } from './time';
 
 export function StaffColumnsA({
@@ -30,7 +30,7 @@ export function StaffColumnsA({
   const [fromH, toH] = axisHours(dayItems.map(blockSpan), day);
   const hours = Array.from({ length: toH - fromH }, (_, i) => fromH + i);
   const cols: (StaffLane | null)[] = [...lanes, ...(showUnassigned ? [null] : [])];
-  const short = laneShortNames(lanes);
+  const naming = useStaffNaming(lanes);
   const height = (toH - fromH) * hourPx;
   const y = (min: number) => ((min - fromH * 60) / 60) * hourPx;
   const style = {
@@ -51,7 +51,7 @@ export function StaffColumnsA({
               <span className="ws-a__who">
                 {/* Cột "Chưa có thợ" hẹp (1024): xuống 2 dòng thay vì cắt "Chưa có t…" (biên bản M4, như L3 ở lưới C). */}
                 <span className="ws-a__nm" title={lane?.name}>
-                  {lane ? (short.get(lane.membershipId) ?? lane.name) : 'Chưa có thợ'}
+                  {lane ? laneShort(naming, lane) : 'Chưa có thợ'}
                 </span>
                 <span className="ws-a__meta">
                   {load.count} ca{lane ? ` · ${formatHours(load.minutes)}` : ''}

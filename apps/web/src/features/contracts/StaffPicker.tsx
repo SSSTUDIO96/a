@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { userMessage } from '../../api/errors';
 import type { StaffAvailability } from '../../api/types';
 import { Avatar, BottomSheet, Button, Dialog, Segmented, StatusTag, Tooltip } from '../../ui';
+import type { StaffNaming } from '../../ui/staffName';
 import { timeOf, type StaffAssignment, type WarnRange } from './model';
 import type { StaffPerson } from './StaffRow';
 import { groupByTier, pickableStaff, useStaffAvailability, type AvailabilityQueryArgs } from './useStaffAvailability';
@@ -22,6 +23,8 @@ export interface StaffPickerProps {
   // Thợ đang được gán cho dòng khác của CHÍNH hợp đồng này, chồng giờ với dòng đang chọn.
   localConflicts: Map<string, WarnRange[]>;
   phone: boolean;
+  // R4: màu ảnh đại diện theo sổ thợ của màn hợp đồng — cùng màu với hàng thợ của dòng và Lịch.
+  naming: StaffNaming;
 }
 
 export function toggleStaff(list: StaffAssignment[], membershipId: string): StaffAssignment[] {
@@ -83,6 +86,7 @@ export function StaffPicker(props: StaffPickerProps) {
                 key={s.membershipId}
                 s={s}
                 tz={props.tz}
+                colorKey={props.naming.colorKey(s.membershipId)}
                 local={props.localConflicts.get(s.membershipId) ?? []}
                 assignment={picked.find((p) => p.membershipId === s.membershipId) ?? null}
                 onToggle={() => setPicked((l) => toggleStaff(l, s.membershipId))}
@@ -118,6 +122,7 @@ export function StaffPicker(props: StaffPickerProps) {
 function PickerRow({
   s,
   tz,
+  colorKey,
   local,
   assignment,
   onToggle,
@@ -125,6 +130,7 @@ function PickerRow({
 }: {
   s: StaffAvailability;
   tz: string;
+  colorKey: string;
   local: WarnRange[];
   assignment: StaffAssignment | null;
   onToggle: () => void;
@@ -140,7 +146,7 @@ function PickerRow({
   return (
     <label className={`ct-pr${on ? ' ct-pr--on' : ''}${off ? ' ct-pr--off' : ''}`} data-tho={s.displayName}>
       <input type="checkbox" checked={on} disabled={off && !on} onChange={onToggle} aria-label={s.displayName} />
-      <Avatar size="sm" name={s.displayName} initials={s.initials} avatarUrl={s.avatarUrl} colorKey={s.membershipId} />
+      <Avatar size="sm" name={s.displayName} initials={s.initials} avatarUrl={s.avatarUrl} colorKey={colorKey} />
       <span className="ct-pr__tt">
         <b>{s.displayName}</b>
         <span className="ct-pr__nh">

@@ -2,7 +2,7 @@
 import { isBlockingStatus, STATUS_TRANSITIONS, type Permission, type WorkStatus } from '@makeup/shared';
 import { ApiError } from '../../api/errors';
 import type { Appointment, AppointmentConflict, StaffMember } from '../../api/types';
-import { staffShortName } from '../../ui/staffName';
+import { staffShortNames, type StaffRosterEntry } from '../../ui/staffName';
 import { dayKeyOf, dayStartMs, minutesFromDayStart, type DayKey } from './time';
 
 // ---------------- Chế độ xem ----------------
@@ -205,15 +205,21 @@ export function buildStaffLanes(input: {
 }
 
 /**
- * N3 + M3: tên ngắn trên đầu hàng / đầu cột thợ — MỘT luật cho lưới C (1440 và 390) và cột thợ A: hàm chung staffShortName
- * (tên hiển thị khác họ tên → nguyên; trùng họ tên → tiếng cuối của họ tên; không biết họ tên → nguyên, không đoán).
- * Hai thợ trùng tên ngắn thì giữ tên hiển thị đầy đủ cho cả hai (không đoán). Tên đầy đủ vẫn ở title / tên đọc.
+ * N3 + M3 + R2: tên ngắn trên đầu hàng / đầu cột thợ — MỘT luật cho lưới C (1440 và 390), cột thợ A và Hợp đồng:
+ * hàm chung ui/staffName.ts staffShortNames (staffShortName + hai người trùng tên ngắn thì giữ tên hiển thị đầy đủ).
+ * Màn Lịch xét trùng trên SỔ THỢ (danh sách thợ của tổ chức ∪ thợ của các ca — lanesRoster), không chỉ những hàng đang
+ * hiện, để bộ lọc thợ hay tuần đang xem không đổi tên một người. Hàm này là bản dự phòng khi chỉ có các hàng.
  */
 export function laneShortNames(lanes: readonly Pick<StaffLane, 'membershipId' | 'name' | 'fullName'>[]): Map<string, string> {
-  const short = (l: Pick<StaffLane, 'name' | 'fullName'>) => staffShortName({ displayName: l.name, fullName: l.fullName });
-  const count = new Map<string, number>();
-  for (const l of lanes) count.set(short(l), (count.get(short(l)) ?? 0) + 1);
-  return new Map(lanes.map((l) => [l.membershipId, (count.get(short(l)) ?? 0) > 1 ? l.name : short(l)]));
+  return staffShortNames(lanes.map((l) => ({ membershipId: l.membershipId, displayName: l.name, fullName: l.fullName })));
+}
+
+// Sổ thợ của màn Lịch (R2/R4): danh sách thợ của tổ chức (GET /staff, khi có staff.read) ∪ mọi hàng (gồm thợ của các ca).
+export function lanesRoster(staff: readonly StaffMember[] | null, lanes: readonly StaffLane[]): StaffRosterEntry[] {
+  return [
+    ...(staff ?? []).map((m) => ({ membershipId: m.membershipId, displayName: m.displayName, fullName: m.fullName, initials: m.initials })),
+    ...lanes.map((l) => ({ membershipId: l.membershipId, displayName: l.name, fullName: l.fullName, initials: l.initials })),
+  ];
 }
 
 // ---------------- Ca theo ngày ----------------

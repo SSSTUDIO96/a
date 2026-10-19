@@ -25,7 +25,7 @@ import {
   type PlacedDraft,
 } from './model';
 import { StaffRow, type StaffPerson } from './StaffRow';
-import type { StaffNameSource } from '../../ui/staffName';
+import type { StaffNameSource, StaffNaming } from '../../ui/staffName';
 import { StaffWarningBanner } from './StaffWarningBanner';
 import { TravelControl } from './TravelControl';
 
@@ -50,6 +50,8 @@ export interface PackageLineCardProps {
   warnings: LineWarning[];
   people: StaffPerson[];
   personOf: (membershipId: string) => StaffNameSource;
+  // R2/R4: sổ thợ của màn (ui/staffName.ts staffNaming) — tên ngắn + màu ảnh đại diện.
+  naming: StaffNaming;
   onChange: (patch: Partial<PlacedDraft>) => void;
   onRemove: () => void;
   onPickStaff: () => void;
@@ -173,8 +175,9 @@ export function PackageLineCard(p: PackageLineCardProps) {
         pickBlockedReason={p.pickBlockedReason}
         scheduleHref={p.scheduleHref}
         error={errors[lineKey(i, 'staff')]}
+        naming={p.naming}
       />
-      {!locked && <StaffWarningBanner warnings={p.warnings} personOf={p.personOf} />}
+      {!locked && <StaffWarningBanner warnings={p.warnings} personOf={p.personOf} naming={p.naming} />}
 
       {optional.length > 0 && (
         <div className="ct-rw">

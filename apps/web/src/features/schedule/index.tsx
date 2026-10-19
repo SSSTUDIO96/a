@@ -14,8 +14,9 @@ import { Button, EmptyState, IconPlus, Skeleton } from '../../ui';
 import { AppointmentDialog, type DialogTarget } from './AppointmentDialog';
 import { DayListB } from './DayListB';
 import { FilterDialog } from './FilterDialog';
-import { accessFrom, buildStaffLanes, conflictMarks, DEFAULT_MODE, legendSubjects, type ScheduleAccess, type ScheduleMode } from './model';
-import { cx, Legend, OrgSubjectsContext } from './parts';
+import { accessFrom, buildStaffLanes, conflictMarks, lanesRoster, DEFAULT_MODE, legendSubjects, type ScheduleAccess, type ScheduleMode } from './model';
+import { cx, Legend, OrgSubjectsContext, StaffNamingContext } from './parts';
+import { staffNaming } from '../../ui/staffName';
 import { StaffColumnsA } from './StaffColumnsA';
 import { addDays, dayKeyOf, dayLabel, isDayKey, todayKey, weekLabel, type DayKey } from './time';
 import { Toolbar } from './Toolbar';
@@ -72,6 +73,8 @@ export function ScheduleScreen({
     () => buildStaffLanes({ staff, appointments, readAll: access.readAll, self }),
     [staff, appointments, access.readAll, self],
   );
+  // R2/R4: tên ngắn + màu ảnh thợ xét trên sổ thợ (danh sách thợ của tổ chức ∪ thợ của các ca), TRƯỚC bộ lọc thợ.
+  const naming = useMemo(() => staffNaming(lanesRoster(staff, allLanes)), [staff, allLanes]);
   const lanes = filter.membershipId ? allLanes.filter((l) => l.membershipId === filter.membershipId) : allLanes;
   const showUnassigned = access.readAll && !filter.membershipId;
   const marks = useMemo(() => conflictMarks(conflicts), [conflicts]);
@@ -160,6 +163,7 @@ export function ScheduleScreen({
 
   return (
     <OrgSubjectsContext.Provider value={orgSubjects}>
+      <StaffNamingContext.Provider value={naming}>
       <div className={cx('ws', `ws--${mode}`)} data-mode={mode}>
         <PageHeader title="Lịch makeup" phoneAction={phoneAction} />
         {deepLinkError && (
@@ -224,6 +228,7 @@ export function ScheduleScreen({
           />
         )}
       </div>
+      </StaffNamingContext.Provider>
     </OrgSubjectsContext.Provider>
   );
 }

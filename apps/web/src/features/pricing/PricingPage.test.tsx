@@ -453,6 +453,17 @@ describe('Dịch vụ phụ & phụ phí, Nhân vật', () => {
     expect(screen.queryByRole('switch', { name: 'Cô dâu: đang dùng' })).toBeNull();
   });
 
+  it('R1: chữ nổi công tắc nhân vật nhắc cả hợp đồng lẫn trang công khai (bật và tắt)', async () => {
+    setupServer(OWNER, (m, p) =>
+      m === 'GET' && p === '/orgs/org-1/makeup-subjects' ? json(200, { items: [{ ...SUBJECTS[0], isActive: false }, ...SUBJECTS.slice(1)] }) : undefined,
+    );
+    renderAt('/chien/bang-gia/nhan-vat');
+    const off = await screen.findByRole('switch', { name: 'Cô dâu: đang ẩn' });
+    expect(off.getAttribute('title')).toBe('Đang ẩn — gói của nhân vật này không hiện khi lập hợp đồng và trên trang công khai. Bật để dùng lại');
+    const on = screen.getByRole('switch', { name: 'Mẹ cô dâu: đang dùng' });
+    expect(on.getAttribute('title')).toBe('Đang dùng — tắt để ẩn nhân vật: gói của nhân vật này sẽ không hiện khi lập hợp đồng và trên trang công khai');
+  });
+
   it('nhân vật: mũi tên xuống trên tay nắm → đổi thứ tự, chỉ PATCH nhân vật đổi chỗ', async () => {
     const user = userEvent.setup();
     const calls = setupServer(OWNER, (m, p, b) => (m === 'PATCH' ? json(200, { ...SUBJECTS[0], ...(b as object) }) : undefined));

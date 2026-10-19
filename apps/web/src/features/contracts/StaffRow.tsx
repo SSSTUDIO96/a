@@ -1,6 +1,6 @@
 import { Link } from 'react-router';
 import { Avatar, Button, Tooltip, WithTooltip } from '../../ui';
-import { staffShortName } from '../../ui/staffName';
+import type { StaffNaming } from '../../ui/staffName';
 import type { StaffAssignment } from './model';
 
 export interface StaffPerson extends StaffAssignment {
@@ -20,14 +20,16 @@ export interface StaffRowProps {
   pickBlockedReason?: string | null;
   scheduleHref?: string | null;
   error?: string;
+  // R2/R4: tên ngắn (đã xử lý trùng) và màu ảnh đại diện theo sổ thợ của màn — cùng hàm với Lịch (ui/staffName.ts).
+  naming: StaffNaming;
 }
 
 const TIP = 'Dấu viền màu = thợ chính. Thợ phụ đi kèm hỗ trợ. Khi xác nhận hợp đồng, máy sẽ tạo lịch cho các thợ này.';
 
 // Hàng "Thợ phụ trách" của thẻ dòng (bản vẽ 4.3, bổ sung 18/10/2026).
-export function StaffRow({ people, mode, onPick, pickBlockedReason, scheduleHref, error }: StaffRowProps) {
+export function StaffRow({ people, mode, onPick, pickBlockedReason, scheduleHref, error, naming }: StaffRowProps) {
   const many = people.length > 1;
-  const names = people.map((p) => `${staffShortName(p)}${many && p.role === 'PRIMARY' ? ' (chính)' : ''}`).join(', ');
+  const names = people.map((p) => `${naming.shortName(p)}${many && p.role === 'PRIMARY' ? ' (chính)' : ''}`).join(', ');
   return (
     <div className="ct-rw">
       <span className="ct-rw__l">
@@ -45,7 +47,7 @@ export function StaffRow({ people, mode, onPick, pickBlockedReason, scheduleHref
                   name={`${p.displayName} · ${p.role === 'PRIMARY' ? 'thợ chính' : 'thợ phụ'}`}
                   initials={p.initials}
                   avatarUrl={p.avatarUrl}
-                  colorKey={p.membershipId}
+                  colorKey={naming.colorKey(p.membershipId)}
                   className={p.role === 'PRIMARY' ? 'ct-av--chinh' : undefined}
                 />
               ))}

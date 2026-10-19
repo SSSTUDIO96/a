@@ -60,15 +60,17 @@ export interface PackageGroup<P> {
   packages: P[];
 }
 
-// Nhóm gói theo nhân vật, theo thứ tự subjects[]; gói không nhân vật (hoặc nhân vật không còn trong danh sách) vào "Gói khác" cuối.
+// Nhóm gói theo nhân vật, theo thứ tự subjects[] (chỉ nhân vật đang dùng); gói KHÔNG gắn nhân vật vào "Gói khác" cuối.
+// Gói gắn nhân vật không có trong subjects[] (nhân vật đã ẩn) thì BỎ, không đẩy sang "Gói khác" (R1, biên bản nghiệm
+// thu lần 3): studio không lập hợp đồng cho gói đó được nên khách không được thấy giá. Máy chủ đã lọc sẵn; chốt này giữ
+// cho khung "Xem trước" (dựng từ GET /packages, có cả gói của nhân vật đã ẩn) cùng luật với trang thật.
 export function groupPackages<P extends Pick<PublicPackage, 'subject'>>(packages: readonly P[], subjects: readonly { id: string; name: string }[]): PackageGroup<P>[] {
   const groups: PackageGroup<P>[] = [];
-  const known = new Set(subjects.map((s) => s.id));
   for (const s of subjects) {
     const list = packages.filter((p) => p.subject?.id === s.id);
     if (list.length) groups.push({ key: s.id, title: s.name, packages: list });
   }
-  const others = packages.filter((p) => !p.subject || !known.has(p.subject.id));
+  const others = packages.filter((p) => !p.subject);
   if (others.length) groups.push({ key: 'goi-khac', title: 'Gói khác', packages: others });
   return groups;
 }

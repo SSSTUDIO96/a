@@ -28,6 +28,7 @@ import {
 } from './model';
 import { PackageLineCard } from './PackageLineCard';
 import { StaffPicker } from './StaffPicker';
+import { staffNaming, type StaffRosterEntry } from '../../ui/staffName';
 import type { StaffPerson } from './StaffRow';
 import type { ContractCatalog } from './useContractCatalog';
 
@@ -40,6 +41,8 @@ export interface ExtraPackageDialogProps {
   detail: ContractDetail;
   catalog: ContractCatalog;
   canPickStaff: boolean;
+  // R2/R4: sổ thợ của màn hợp đồng (danh sách thợ của tổ chức ∪ thợ của các dòng) — tên ngắn + màu như hàng thợ khác.
+  staffRoster: StaffRosterEntry[];
   phone: boolean;
   onClose: () => void;
   onAdded: (d: ContractDetail) => void;
@@ -54,6 +57,7 @@ export function ExtraPackageDialog(p: ExtraPackageDialogProps) {
     const x = people.find((q) => q.membershipId === id);
     return { displayName: x?.displayName ?? '', fullName: x?.fullName };
   };
+  const naming = useMemo(() => staffNaming([...p.staffRoster, ...people]), [p.staffRoster, people]);
   const [picking, setPicking] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -170,6 +174,7 @@ export function ExtraPackageDialog(p: ExtraPackageDialogProps) {
             warnings={warnings}
             people={line.staff.map((s) => ({ ...s, ...personOf(s.membershipId) }))}
             personOf={personOf}
+            naming={naming}
             onChange={(patch) => {
               setLine({ ...line, ...patch });
               if ('start' in patch || 'end' in patch) setSaveError({ fields: {}, message: null });
@@ -193,6 +198,7 @@ export function ExtraPackageDialog(p: ExtraPackageDialogProps) {
         initial={line.staff}
         subtitle={`${subjectName(line.subjectId) ?? line.name} · ${line.start} – ${line.end} · ${weekdayShort(eventDate)}`}
         localConflicts={new Map()}
+        naming={naming}
         onConfirm={(staff, ppl) => {
           setLine({ ...line, staff });
           setPeople(ppl);

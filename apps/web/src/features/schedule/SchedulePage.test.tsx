@@ -388,17 +388,16 @@ describe('M4: đầu cột "Chưa có thợ" ở chế độ "Cột thợ" khôn
     expect(heads.at(-1)).toBe(na[0]);
   });
 
-  it('BẮT (CSS): tên "Chưa có thợ" được xuống dòng (white-space: normal, không cắt); GIỮ: tên thợ vẫn một dòng rút "…"', () => {
+  // R3 (biên bản lần 3) đổi luật: MỌI tên đầu cột xuống dòng giữa các chữ (tên đầy đủ khi trùng tiếng cuối từng bị cắt
+  // "Phạm Thu …"), nên "Chưa có thợ" xuống dòng nhờ chính luật chung .ws-a__nm.
+  it('BẮT (CSS): tên đầu cột — kể cả "Chưa có thợ" — xuống dòng (white-space: normal), không cắt "…"', () => {
     const css = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'schedule.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
     const rules = [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((m) => ({ sel: (m[1] ?? '').trim(), body: m[2] ?? '' }));
-    const na = rules.filter((r) => r.sel.split(',').some((x) => x.trim() === '.ws-a__colh.is-na .ws-a__nm'));
-    expect(na.length).toBeGreaterThan(0);
-    const last = na.at(-1)?.body ?? '';
-    expect(last).toMatch(/white-space:\s*normal/);
-    expect(last).not.toMatch(/text-overflow:\s*ellipsis|white-space:\s*nowrap/);
+    const hit = rules.filter((r) => r.sel.split(',').some((x) => ['.ws-a__nm', '.ws-a__colh.is-na .ws-a__nm'].includes(x.trim())));
+    expect(hit.length).toBeGreaterThan(0);
+    for (const r of hit) expect(r.body).not.toMatch(/text-overflow:\s*ellipsis|white-space:\s*nowrap/);
     const base = rules.find((r) => r.sel === '.ws-a__nm')?.body ?? '';
-    expect(base).toMatch(/white-space:\s*nowrap/);
-    expect(base).toMatch(/text-overflow:\s*ellipsis/);
+    expect(base).toMatch(/white-space:\s*normal/);
   });
 });
 

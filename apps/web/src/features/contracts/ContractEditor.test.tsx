@@ -45,6 +45,8 @@ vi.mock('../../api/catalog', () => ({
 vi.mock('../../api/staff', () => ({
   getStaffAvailability: vi.fn(),
   listStaffTiers: vi.fn(async () => ({ items: [] })),
+  // R2/R4: màn hợp đồng đọc danh sách thợ của tổ chức (sổ thợ để xét trùng tên ngắn / màu ảnh).
+  listStaff: vi.fn(async () => ({ items: [] })),
 }));
 
 vi.mock('../../api/schedule', () => ({ listCustomers: vi.fn(), getCustomer: vi.fn() }));
@@ -930,6 +932,7 @@ describe('N2 ở cửa thêm phát sinh (hợp đồng đã xác nhận)', () =>
         detail={detail('CONFIRMED') as never}
         catalog={CATALOG as never}
         canPickStaff
+        staffRoster={[]}
         phone={false}
         onClose={() => {}}
         onAdded={() => {}}

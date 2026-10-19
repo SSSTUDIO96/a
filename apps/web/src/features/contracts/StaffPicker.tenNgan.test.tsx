@@ -4,6 +4,7 @@ import * as staffApi from '../../api/staff';
 import type { StaffAvailability } from '../../api/types';
 import { StaffPicker } from './StaffPicker';
 import { StaffRow, type StaffPerson } from './StaffRow';
+import { staffNaming } from '../../ui/staffName';
 
 // M3: ô chọn thợ nhận họ tên từ máy chủ (staff/availability.ts StaffAvailability.fullName) và chuyển tiếp cho hàng thợ,
 // để tên ngắn ra đúng như mọi chỗ khác: "Linh Trần" giữ nguyên, "Nguyễn Thu Hà" (chưa đặt tên hiển thị) → "Hà".
@@ -44,6 +45,7 @@ describe('M3: ô chọn thợ → hàng thợ mang họ tên', () => {
         subtitle="Mẹ cô dâu"
         localConflicts={new Map()}
         phone={false}
+        naming={staffNaming([])}
       />,
     );
     fireEvent.click(await screen.findByRole('checkbox', { name: 'Linh Trần' }));
@@ -54,7 +56,7 @@ describe('M3: ô chọn thợ → hàng thợ mang họ tên', () => {
       ['m-linh', 'Linh Trần', 'Trần Khánh Linh'],
       ['m-ha', 'Nguyễn Thu Hà', 'Nguyễn Thu Hà'],
     ]);
-    const { container } = render(<StaffRow people={got} mode="view" />);
+    const { container } = render(<StaffRow people={got} mode="view" naming={staffNaming(got)} />);
     expect(container.querySelector('.ct-tn')?.textContent).toBe('Linh Trần (chính), Hà');
   });
 });

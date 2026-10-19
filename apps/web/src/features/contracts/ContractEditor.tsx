@@ -104,6 +104,8 @@ import type { StaffPerson } from './StaffRow';
 import { TotalsCard } from './TotalsCard';
 import { useContractCatalog } from './useContractCatalog';
 import { VoidLineDialog } from './VoidLineDialog';
+import { useStaffList } from '../schedule/useScheduleData';
+import { staffNaming, type StaffRosterEntry } from '../../ui/staffName';
 import './contracts.css';
 
 // Màn lập / sửa hợp đồng (bản vẽ C mục 4.3): bảng giá trái, hợp đồng phải, thanh tổng dính đáy.
@@ -145,6 +147,8 @@ export function ContractEditor({ orgId, slug, tz, has, contractId, kindSwitch, o
   const phone = useBreakpoint() === 'phone';
   const online = useOnline();
   const catalogState = useContractCatalog(orgId, has('catalog.read'));
+  // R2/R4: danh sách thợ của tổ chức (GET /staff, cần staff.read) — sổ thợ để xét trùng tên ngắn / màu, như màn Lịch.
+  const orgStaff = useStaffList(orgId, has('staff.read'));
   const cat = catalogState.status === 'ready' ? catalogState.data : null;
 
   const [load, setLoad] = useState<LoadState>(contractId ? { status: 'loading' } : { status: 'ready' });
@@ -311,6 +315,15 @@ export function ContractEditor({ orgId, slug, tz, has, contractId, kindSwitch, o
   const nameOf = (id: string) => people.get(id)?.displayName ?? 'Thợ';
   // Họ tên đi kèm tên hiển thị (máy chủ gửi ở thợ của dòng và ô chọn thợ) → tên ngắn theo hàm chung staffShortName.
   const personOf = (id: string) => ({ displayName: nameOf(id), fullName: people.get(id)?.fullName });
+  // Sổ thợ (R2/R4) = danh sách thợ của tổ chức ∪ thợ của các dòng / ô chọn thợ — CÙNG tập với màn Lịch khi có staff.read.
+  const staffRoster = useMemo<StaffRosterEntry[]>(
+    () => [
+      ...(orgStaff ?? []).map((m) => ({ membershipId: m.membershipId, displayName: m.displayName, fullName: m.fullName, initials: m.initials })),
+      ...[...people.values()].map((p) => ({ membershipId: p.membershipId, displayName: p.displayName, fullName: p.fullName, initials: p.initials })),
+    ],
+    [orgStaff, people],
+  );
+  const naming = useMemo(() => staffNaming(staffRoster), [staffRoster]);
 
   const warnings = useMemo(() => {
     const out = new Map<string, LineWarning[]>();
@@ -929,6 +942,7 @@ export function ContractEditor({ orgId, slug, tz, has, contractId, kindSwitch, o
                 warnings={warnings.get(l.key) ?? []}
                 people={l.staff.map((s) => ({ ...s, ...personOf(s.membershipId), initials: people.get(s.membershipId)?.initials, avatarUrl: people.get(s.membershipId)?.avatarUrl }))}
                 personOf={personOf}
+                naming={naming}
                 onChange={(patch) => patchLine(l.key, patch)}
                 onRemove={() => removeLine(l.key)}
                 onPickStaff={() => setPickerFor(l.key)}
@@ -1095,6 +1109,7 @@ export function ContractEditor({ orgId, slug, tz, has, contractId, kindSwitch, o
           initial={pickerLine.staff}
           subtitle={`${subjectName(pickerLine.subjectId) ?? pickerLine.name} · ${pickerLine.start} – ${pickerLine.end} · ${weekdayShort(draft.eventDate)}`}
           localConflicts={conflictsForLine(draft, pickerLine.key, subjectName)}
+          naming={naming}
           onConfirm={(staff, ppl) => {
             setPickedPeople((m) => {
               const next = new Map(m);
@@ -1131,6 +1146,7 @@ export function ContractEditor({ orgId, slug, tz, has, contractId, kindSwitch, o
           detail={detail}
           catalog={cat}
           canPickStaff={has('staff.read')}
+          staffRoster={staffRoster}
           phone={phone}
           onClose={() => setExtraPkg(null)}
           onAdded={(d) => {

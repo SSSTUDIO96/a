@@ -2,8 +2,9 @@
 import { createContext, useContext } from 'react';
 import { WORK_STATUS_LABELS } from '@makeup/shared';
 import type { Appointment } from '../../api/types';
-import { Avatar, AvatarStack, Tooltip, WithTooltip } from '../../ui';
-import { isBlocking, kindLabel, kindText, quantityText, swatchOf, UNASSIGNED, type StaffLane, type Swatch } from './model';
+import { Avatar, Tooltip, WithTooltip } from '../../ui';
+import { staffNaming, type StaffNaming } from '../../ui/staffName';
+import { isBlocking, kindLabel, kindText, lanesRoster, quantityText, swatchOf, UNASSIGNED, type StaffLane, type Swatch } from './model';
 
 // Danh sách nhân vật của tổ chức (thứ tự cố định) — để nhân vật tự thêm có màu ổn định. Màn cung cấp qua ngữ cảnh này.
 export const OrgSubjectsContext = createContext<readonly string[]>([]);
@@ -11,6 +12,21 @@ export const OrgSubjectsContext = createContext<readonly string[]>([]);
 export function useSwatchOf(): (subjectName: string | null) => Swatch {
   const subjects = useContext(OrgSubjectsContext);
   return (name) => swatchOf(name, subjects);
+}
+
+// R2 + R4: tên ngắn và màu ảnh đại diện của thợ, tính MỘT lần trên sổ thợ của màn (index.tsx: danh sách thợ của tổ chức
+// ∪ thợ của các ca — model.ts lanesRoster), rồi mọi chế độ / mọi ảnh thợ trên màn Lịch đọc từ đây.
+export const StaffNamingContext = createContext<StaffNaming | null>(null);
+
+// Không có ngữ cảnh (màn con dựng riêng trong bài thử) → sổ = chính các hàng đang có.
+export function useStaffNaming(lanes: readonly StaffLane[] = []): StaffNaming {
+  const ctx = useContext(StaffNamingContext);
+  return ctx ?? staffNaming(lanesRoster(null, lanes));
+}
+
+// Tên ngắn đầu hàng / đầu cột của một hàng thợ.
+export function laneShort(naming: StaffNaming, lane: StaffLane): string {
+  return naming.shortName({ membershipId: lane.membershipId, displayName: lane.name, fullName: lane.fullName });
 }
 import { dayKeyOf, hhmm, type DayKey } from './time';
 
@@ -90,7 +106,12 @@ export function LaneAvatar({ lane, size = 'md' }: { lane: StaffLane | null; size
       </span>
     );
   }
-  return <Avatar name={lane.name} initials={lane.initials} avatarUrl={lane.avatarUrl} colorKey={lane.membershipId} size={size} />;
+  return <LaneAvatarOf lane={lane} size={size} />;
+}
+
+function LaneAvatarOf({ lane, size }: { lane: StaffLane; size: 'md' | 'sm' | 'xs' }) {
+  const naming = useStaffNaming([lane]);
+  return <Avatar name={lane.name} initials={lane.initials} avatarUrl={lane.avatarUrl} colorKey={naming.colorKey(lane.membershipId)} size={size} />;
 }
 
 export function Legend({ subjects, showUnassigned }: { subjects: { name: string | null; label: string }[]; showUnassigned: boolean }) {
@@ -126,8 +147,26 @@ export function Legend({ subjects, showUnassigned }: { subjects: { name: string 
 // cùng nguồn với danh sách thợ (staffProfile.displayName ?? fullName) nên thẻ ca và đầu hàng ra cùng chữ (biên bản L2).
 export function StaffAvatars({ a, size = 'sm' }: { a: Appointment; size?: 'md' | 'sm' | 'xs' }) {
   if (a.staff.length === 0) return <LaneAvatar lane={null} size={size} />;
-  const people = a.staff.map((s) => ({ membershipId: s.membershipId, displayName: s.displayName, avatarUrl: s.avatarUrl }));
-  return <AvatarStack people={people} size={size} max={2} />;
+  return <StaffStack a={a} size={size} max={2} />;
+}
+
+// Chồng ảnh thợ của ca — cùng dáng ui AvatarStack (viền trắng, chồng, "+n") nhưng màu lấy từ sổ thợ của màn (R4).
+function StaffStack({ a, size, max }: { a: Appointment; size: 'md' | 'sm' | 'xs'; max: number }) {
+  const naming = useStaffNaming(a.staff.map((s) => ({ membershipId: s.membershipId, name: s.displayName, fullName: s.fullName, avatarUrl: s.avatarUrl, tierName: null })));
+  const shown = a.staff.length > max ? a.staff.slice(0, max) : a.staff;
+  const rest = a.staff.length - shown.length;
+  return (
+    <span className="ui-avs" role="group" aria-label={a.staff.map((s) => s.displayName).join(', ')}>
+      {shown.map((s) => (
+        <Avatar key={s.membershipId} name={s.displayName} avatarUrl={s.avatarUrl} colorKey={naming.colorKey(s.membershipId)} size={size} />
+      ))}
+      {rest > 0 && (
+        <span className={cx('ui-av', size !== 'md' && `ui-av--${size}`, 'ui-avs__more')} aria-hidden="true">
+          +{rest}
+        </span>
+      )}
+    </span>
+  );
 }
 
 // Tên thợ của ca: "Thu Hà", nhiều thợ thì "Thu Hà (chính), Bảo Vy".

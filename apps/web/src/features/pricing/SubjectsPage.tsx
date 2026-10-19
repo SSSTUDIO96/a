@@ -159,11 +159,12 @@ export function SubjectsPage() {
             <Switch
               checked={s.isActive}
               // M1: tên đọc và chữ nổi theo đúng trạng thái (trước đây luôn "đang dùng" dù đã tắt).
+              // R1: chữ nổi nhắc cả trang công khai — máy chủ cũng bỏ gói của nhân vật ẩn khỏi /public/sites/:slug.
               aria-label={`${s.name}: ${s.isActive ? 'đang dùng' : 'đang ẩn'}`}
               title={
                 s.isActive
-                  ? 'Đang dùng — tắt để ẩn nhân vật: gói của nhân vật này sẽ không hiện khi lập hợp đồng'
-                  : 'Đang ẩn — gói của nhân vật này không hiện khi lập hợp đồng. Bật để dùng lại'
+                  ? 'Đang dùng — tắt để ẩn nhân vật: gói của nhân vật này sẽ không hiện khi lập hợp đồng và trên trang công khai'
+                  : 'Đang ẩn — gói của nhân vật này không hiện khi lập hợp đồng và trên trang công khai. Bật để dùng lại'
               }
               disabled={!canWrite}
               onChange={(v) => void toggle(s, v)}
