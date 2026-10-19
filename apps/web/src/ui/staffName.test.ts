@@ -184,3 +184,97 @@ describe('R4: mọi chỗ tô màu ảnh thợ ở Lịch + Hợp đồng dùng 
     expect(bad).toEqual([]);
   });
 });
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Cửa gác L2/L3 + việc tồn 48 (biên bản nghiệm thu lần 4): MỌI chỗ vẽ ảnh đại diện thợ trên web — không riêng Lịch và
+// Hợp đồng — lấy màu qua sổ thợ chung (StaffNaming.colorKey của staffNaming) và chữ tắt từ TÊN.
+// Khác cửa gác R4 ở trên:
+//   - quét cả web (trừ ui/ — nơi định nghĩa Avatar/PersonChip — bài thử, trang xem thử);
+//   - soi MỌI thuộc tính colorKey={…} ở mọi thẻ, không chỉ thẻ <Avatar>: màu đi qua thuộc tính trung gian (ô chọn thợ:
+//     <PickerRow colorKey={…}>) cũng phải từ sổ thợ — đột biến D8 lọt vì bài cũ chỉ đọc thẻ <Avatar>;
+//   - <Avatar>/<PersonChip> của thợ phải có colorKey (thiếu = băm theo tên, khác Lịch); <AvatarStack> (băm thẳng mã) cấm;
+//   - name ghép thêm chữ (chuỗi mẫu `…`) thì phải truyền initials rút từ tên (staffInitials/initialsOf) — lỗi L3 "PC"/"NP".
+describe('L2/L3 (lần 4): MỌI ảnh thợ trên web qua sổ thợ chung', () => {
+  const root = fileURLToPath(new URL('..', import.meta.url));
+  // Ảnh KHÔNG phải thợ của tổ chức — ghi tường minh kèm lý do; chỗ mới phải tự khai ở đây.
+  const NOT_STAFF: Record<string, string> = {
+    'features/customers/CustomerInfoCard.tsx': 'ảnh khách hàng (màu theo mã khách)',
+    'features/customers/CustomerRow.tsx': 'ảnh khách hàng (màu theo mã khách)',
+    'features/platform/PlatformShell.tsx': 'quản trị viên nền tảng — không thuộc tổ chức nào, không có sổ thợ',
+  };
+  // Các chỗ biên bản lần 4 kê (L2/L3, việc tồn 48) — phải còn được quét (đổi tên tệp thì sửa danh sách này).
+  const MUST = [
+    'features/staff/StaffRow.tsx',
+    'features/staff/StaffProfileDialog.tsx',
+    'features/staff/PayRateRow.tsx',
+    'features/courses/ClassCard.tsx',
+    'features/courses/ScheduleRows.tsx',
+    'features/pricing/groups/PayRatesGroup.tsx',
+    'layout/Sidebar.tsx',
+    'layout/BottomNav.tsx',
+    'features/contracts/StaffRow.tsx',
+    'features/contracts/StaffPicker.tsx',
+    'features/schedule/parts.tsx',
+  ];
+  const files: string[] = [];
+  const walk = (dir: string) => {
+    for (const n of readdirSync(dir)) {
+      const p = join(dir, n);
+      if (statSync(p).isDirectory()) walk(p);
+      else if (/\.tsx$/.test(n) && !/\.test\./.test(n) && !/__in-thu__|__xem-thu__/.test(p)) files.push(p);
+    }
+  };
+  for (const n of readdirSync(root)) if (n !== 'ui' && statSync(join(root, n)).isDirectory()) walk(join(root, n));
+  const NAMING = /^(?:[\w$]+\.)*naming\.colorKey\(/;
+
+  it('mọi colorKey + mọi <Avatar>/<PersonChip> của thợ đi qua naming.colorKey; không AvatarStack; chữ tắt rút từ tên', () => {
+    const spots: string[] = [];
+    const bad: string[] = [];
+    const seen = new Set<string>();
+    for (const f of files) {
+      const rel = relative(root, f).split('\\').join('/');
+      const src = readFileSync(f, 'utf8').replace(/^\s*\/\/.*$/gm, '');
+      const staff = !(rel in NOT_STAFF);
+      // 1. Mọi thuộc tính colorKey={…} ở mọi thẻ (kể cả thẻ trung gian như <PickerRow>).
+      for (const m of src.matchAll(/\bcolorKey=\{([^}]*)\}/g)) {
+        if (!staff) continue;
+        const expr = (m[1] ?? '').trim();
+        spots.push(`${rel}: colorKey={${expr}}`);
+        seen.add(rel);
+        if (!NAMING.test(expr) && expr !== 'colorKey') bad.push(`${rel}: colorKey={${expr}} không qua naming.colorKey`);
+      }
+      // 2. Thẻ ảnh của thợ.
+      for (const m of src.matchAll(/<(Avatar|PersonChip|AvatarStack)\b([\s\S]*?)\/>/g)) {
+        if (!staff) continue;
+        const [whole, tag, attrs = ''] = m;
+        seen.add(rel);
+        const short = whole.replace(/\s+/g, ' ').slice(0, 140);
+        if (tag === 'AvatarStack') {
+          spots.push(`${rel}: <AvatarStack>`);
+          bad.push(`${rel}: <AvatarStack> băm thẳng mã thành viên — dựng <Avatar colorKey={naming.colorKey(…)}>`);
+          continue;
+        }
+        if (!/\bcolorKey=/.test(attrs)) {
+          spots.push(`${rel}: ${short}`);
+          bad.push(`${rel}: thiếu colorKey (màu băm theo tên, khác Lịch): ${short}`);
+        }
+        const name = /\bname=\{(`[^`]*`)\}/.exec(attrs)?.[1];
+        if (name && !/\binitials=\{[^}]*(staffInitials|initialsOf)\(/.test(attrs)) {
+          bad.push(`${rel}: name ghép chữ ${name} mà chữ tắt không rút từ tên (staffInitials/initialsOf): ${short}`);
+        }
+      }
+    }
+    const missing = MUST.filter((r) => !seen.has(r));
+    console.log(`L2/L3 ảnh thợ qua sổ thợ chung: ${spots.length - bad.length}/${spots.length} chỗ · ${seen.size} tệp · bỏ qua (không phải thợ): ${Object.keys(NOT_STAFF).length}`);
+    expect(missing, 'tệp phải được quét').toEqual([]);
+    expect(spots.length).toBeGreaterThanOrEqual(14);
+    expect(bad).toEqual([]);
+  });
+
+  it('danh sách "không phải thợ" chỉ gồm tệp còn tồn tại và thật sự có ảnh', () => {
+    for (const rel of Object.keys(NOT_STAFF)) {
+      const src = readFileSync(join(root, rel), 'utf8');
+      expect(/<Avatar\b/.test(src), rel).toBe(true);
+    }
+  });
+});

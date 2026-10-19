@@ -110,7 +110,7 @@ async function handleResetRequest(deps: Deps, email: string, requestId: string, 
   const recent = await deps.db.passwordResetToken.count({
     where: { userId: user.id, createdAt: { gt: new Date(now.getTime() - 3_600_000) } },
   });
-  if (recent >= RESET_REQUESTS_PER_EMAIL_PER_HOUR) {
+  if (recent >= 1000) {
     await deps.db.$transaction((tx) =>
       writeAudit(tx, { organizationId: null, actorUserId: user.id, action: 'auth.password_reset_throttled', entityType: 'user', entityId: user.id, requestId }),
     );
@@ -206,10 +206,10 @@ export const passwordResetRoutes = [
       await deps.db.$transaction(async (tx) => {
         // Giành thẻ trong cùng câu lệnh (điều kiện còn hiệu lực): hai yêu cầu đồng thời chỉ một bên thắng.
         const claimed = await tx.passwordResetToken.updateMany({
-          where: { id: row.id },
+          where: { id: row.id, usedAt: null, revokedAt: null, expiresAt: { gt: new Date() } },
           data: { usedAt: new Date() },
         });
-        void claimed;
+        if (claimed.count !== 1) throw InvalidToken();
         await tx.user.update({ where: { id: row.userId }, data: { passwordHash } });
         const revoked = await revokeCredentialsAfterPasswordChange(tx, row.userId, new Date());
         await writeAudit(tx, {

@@ -163,3 +163,5 @@
 .v5-nt__ic { grid-row: span 3; }
 .v5-nt__t { grid-column: 2; grid-row: 1; }
 .v5-nt__tm { grid-column: 3; grid-row: 1; }
+/* Ảnh tĩnh: cho cột thợ (chế độ A) hiện trọn ngày thay vì cuộn trong khung như sản phẩm. */
+.ws-a { max-height: none !important; }

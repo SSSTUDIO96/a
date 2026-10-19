@@ -1110,7 +1110,9 @@ describe('Lần 4 — N2/L3: hộp "Thêm phát sinh" chọn thợ', () => {
   const HA_N = { membershipId: 'm-ngha', displayName: 'Nguyễn Thu Hà', fullName: 'Nguyễn Thu Hà', avatarUrl: null, initials: 'NH', tier: null };
   const avail = (x: typeof HA_P) => ({ ...x, isBookable: true, level: 'FREE', overlaps: [], sameDay: [], draftHolds: [] });
 
+  const asMember = (x: typeof HA_P) => ({ ...x, userId: `u-${x.membershipId}`, phone: null, isBookable: true, hasProfile: true, status: 'ACTIVE', roleKeys: ['artist'] });
   async function openPicker(phone: boolean) {
+    vi.mocked(staffApi.listStaff).mockResolvedValue({ items: [asMember(HA_P), asMember(HA_N)] } as never);
     vi.mocked(staffApi.getStaffAvailability).mockResolvedValue({ startsAt: '', endsAt: '', dayStart: '', dayEnd: '', timezone: TZ, items: [avail(HA_P), avail(HA_N)] } as never);
     api.quoteContract.mockResolvedValue({ ...quote([]), lines: [line({ id: null, staff: [], staffWarnings: [] })] } as never);
     render(

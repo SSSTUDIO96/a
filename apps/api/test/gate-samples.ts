@@ -52,6 +52,8 @@ export const SAMPLES: Samples = {
   'POST /orgs/:orgId/courses/:courseId/classes': () => ({ name: 'Lớp thử', startDate: '2027-07-01', endDate: '2027-08-01', weekdays: [1] }),
   'PATCH /orgs/:orgId/classes/:classId': () => ({ note: 'Sửa thử' }),
   'POST /orgs/:orgId/classes/:classId/cancel': () => ({ reason: 'Thử cửa gác' }),
+  // Buổi học lên Lịch (thợ K2): ghi thật — đường dẫn mang mã lớp của tổ chức khác phải 404 trước khi sinh buổi nào.
+  'POST /orgs/:orgId/classes/:classId/sessions/sync': () => ({ dryRun: false }),
   // Mẫu thiết kế + thẻ (thợ S4)
   'PATCH /orgs/:orgId/greeting-phrases/:phraseId': () => ({ title: 'Đổi tiêu đề thử' }),
   'PATCH /orgs/:orgId/design-cards/:cardId': () => ({ title: 'Đổi tiêu đề thử' }),
