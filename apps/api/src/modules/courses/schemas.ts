@@ -179,3 +179,9 @@ export type FirstClassInput = z.infer<typeof FirstClassBody>;
 export type CreateClassInput = z.infer<typeof CreateClassBody>;
 export type UpdateClassInput = z.infer<typeof UpdateClassBody>;
 export type ListClassesInput = z.infer<typeof ListClassesQuery>;
+
+// Đưa buổi học lên Lịch. dryRun BẮT BUỘC (không mặc định): true = chỉ xem trước sẽ thêm / sửa / huỷ bao nhiêu buổi và trùng
+// giờ với lịch nào; false = ghi thật.
+export const SyncSessionsBody = strictBody({
+  dryRun: z.boolean({ error: 'dryRun phải là true (xem trước) hoặc false (ghi thật)' }),
+});

@@ -1,6 +1,8 @@
 import { configure, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import { SYSTEM_ROLES, type Permission } from '@makeup/shared';
 import { ApiError } from '../../api/errors';
@@ -12,6 +14,7 @@ import { avatarColorIndex } from '../../ui/Avatar';
 import { staffNaming } from '../../ui/staffName';
 import { ContractEditor } from './ContractEditor';
 import { ExtraPackageDialog } from './ExtraPackageDialog';
+import { StaffRow as ContractStaffRow } from './StaffRow';
 
 // Màn hợp đồng với tầng API giả (vi.mock): cảnh báo thợ 3 mức, chặn xác nhận khi đỏ, lỗi 400/403/409, ẩn/khoá theo quyền.
 
@@ -1062,5 +1065,106 @@ describe('R2/R4: trùng tên ngắn và trùng chữ tắt ở hợp đồng', (
     const want = staffNaming([LINH, TU]);
     expect(tones[0]).not.toBe(tones[1]);
     expect(tones).toEqual([`var(--av-${avatarColorIndex(want.colorKey('m7'))})`, `var(--av-${avatarColorIndex(want.colorKey(tuId))})`]);
+  });
+});
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Biên bản nghiệm thu lần 4.
+// N2: điện thoại — hộp "Thêm phát sinh" (Dialog) mở ô chọn thợ (BottomSheet); ô chọn thợ phải nằm TRÊN hộp.
+// Trước khi sửa: .ui-overlay z-index 50 > .ui-sheet-overlay z-index 40 → ngăn kéo mở sau nằm dưới, bấm "Chọn thợ" như chết.
+// Cách đo (jsdom không vẽ): các lớp phủ đều là con trực tiếp của <body>, position: fixed + z-index đọc từ ui/ui.css →
+// lớp trên cùng = z-index lớn nhất, bằng nhau thì phần tử sau trong DOM (đúng luật xếp lớp của trình duyệt).
+function overlayZ(): Record<'ui-overlay' | 'ui-sheet-overlay', number> {
+  // Dự án "dom" (jsdom) không cho import.meta.url dạng file: → tìm theo thư mục chạy (apps/web hoặc gốc kho).
+  const file = [join(process.cwd(), 'src/ui/ui.css'), join(process.cwd(), 'apps/web/src/ui/ui.css')].find((f) => existsSync(f));
+  if (!file) throw new Error('Không tìm thấy ui/ui.css');
+  const css = readFileSync(file, 'utf8');
+  const z = (cls: string) => Number(new RegExp(`\\.${cls}\\s*\\{[^}]*?z-index:\\s*(\\d+)`).exec(css)?.[1] ?? Number.NaN);
+  return { 'ui-overlay': z('ui-overlay'), 'ui-sheet-overlay': z('ui-sheet-overlay') };
+}
+export function topOverlay(): Element | null {
+  const z = overlayZ();
+  let top: Element | null = null;
+  let topZ = -Infinity;
+  for (const el of Array.from(document.body.children)) {
+    const cls = el.classList.contains('ui-sheet-overlay') ? 'ui-sheet-overlay' : el.classList.contains('ui-overlay') ? 'ui-overlay' : null;
+    if (!cls) continue;
+    expect(Number.isFinite(z[cls]), `z-index của .${cls} trong ui.css`).toBe(true);
+    if (z[cls] >= topZ) {
+      top = el;
+      topZ = z[cls];
+    }
+  }
+  return top;
+}
+
+describe('Lần 4 — N2/L3: hộp "Thêm phát sinh" chọn thợ', () => {
+  const CATALOG = {
+    packages: [PKG_ME],
+    surcharges: [],
+    subjects: [{ id: 's-me', name: 'Mẹ cô dâu', sortOrder: 1, isActive: true }],
+    studios: [{ id: 'st-1', name: 'Studio Chiến', address: '25 Hoàng Quốc Việt', isDefault: true, isActive: true }],
+    policy: { defaultMode: 'PER_KM', fixedAmount: 150_000, perKmAmount: 10_000, freeKm: 1.5, minimumAmount: 0, roundTrip: true, tiers: [], updatedAt: '' },
+  };
+  const HA_P = { membershipId: 'm-pha', displayName: 'Phạm Thu Hà', fullName: 'Phạm Thu Hà', avatarUrl: null, initials: 'PH', tier: null };
+  const HA_N = { membershipId: 'm-ngha', displayName: 'Nguyễn Thu Hà', fullName: 'Nguyễn Thu Hà', avatarUrl: null, initials: 'NH', tier: null };
+  const avail = (x: typeof HA_P) => ({ ...x, isBookable: true, level: 'FREE', overlaps: [], sameDay: [], draftHolds: [] });
+
+  async function openPicker(phone: boolean) {
+    vi.mocked(staffApi.getStaffAvailability).mockResolvedValue({ startsAt: '', endsAt: '', dayStart: '', dayEnd: '', timezone: TZ, items: [avail(HA_P), avail(HA_N)] } as never);
+    api.quoteContract.mockResolvedValue({ ...quote([]), lines: [line({ id: null, staff: [], staffWarnings: [] })] } as never);
+    render(
+      <ExtraPackageDialog
+        pkg={PKG_ME as never}
+        orgId="org-1"
+        tz={TZ}
+        detail={detail('CONFIRMED') as never}
+        catalog={CATALOG as never}
+        canPickStaff
+        staffRoster={[HA_P, HA_N]}
+        phone={phone}
+        onClose={() => {}}
+        onAdded={() => {}}
+      />,
+    );
+    await userEvent.type(await screen.findByRole('textbox', { name: 'Giờ bắt đầu' }), '15:00');
+    await userEvent.type(screen.getByRole('textbox', { name: 'Giờ kết thúc' }), '16:00');
+    await userEvent.click(screen.getByRole('button', { name: 'Chọn thợ' }));
+    return screen.findByRole('dialog', { name: /Chọn thợ phụ trách/ });
+  }
+
+  it('BẮT (N2, 390): bấm "Chọn thợ" trong hộp phát sinh → ngăn kéo chọn thợ nằm TRÊN hộp phát sinh', async () => {
+    const sheet = await openPicker(true);
+    expect(sheet.closest('.ui-sheet-overlay')).not.toBeNull();
+    const top = topOverlay();
+    console.log(`[N2] lớp trên cùng: ${top?.className} (z: ${JSON.stringify(overlayZ())}) ⇒ ${top?.contains(sheet) ? 'ĐÃ HẾT' : 'LỖI CÒN'}`);
+    expect(top?.contains(sheet)).toBe(true);
+  });
+
+  it('GIỮ (N2, máy tính): ô chọn thợ là hộp thoại mở sau → cũng nằm trên hộp phát sinh', async () => {
+    const picker = await openPicker(false);
+    expect(picker.closest('.ui-overlay')).not.toBeNull();
+    expect(topOverlay()?.contains(picker)).toBe(true);
+  });
+
+  it('BẮT (L3): chọn hai chị Hà trong hộp phát sinh → ảnh ghi "PH", "NH" (không "PC", "NP")', async () => {
+    await openPicker(false);
+    await userEvent.click(await screen.findByRole('checkbox', { name: 'Phạm Thu Hà' }));
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Nguyễn Thu Hà' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Chọn' }));
+    await waitFor(() => expect(document.querySelector('.ct-tn')?.textContent).toBe('Phạm Thu Hà (chính), Nguyễn Thu Hà'));
+    const ini = Array.from(document.querySelectorAll('.ct-avs .ui-av')).map((a) => a.textContent);
+    expect(ini).toEqual(['PH', 'NH']);
+  });
+
+  it('BẮT (L3, gốc ở hàng thợ): người thiếu chữ tắt → rút từ tên, không từ "tên · thợ chính/phụ"', () => {
+    const people = [
+      { membershipId: 'm-pha', role: 'PRIMARY' as const, displayName: 'Phạm Thu Hà' },
+      { membershipId: 'm-ngha', role: 'ASSIST' as const, displayName: 'Nguyễn Thu Hà' },
+    ];
+    const { container } = render(<ContractStaffRow people={people} mode="view" naming={staffNaming(people)} />);
+    expect(Array.from(container.querySelectorAll('.ui-av')).map((a) => a.textContent)).toEqual(['PH', 'NH']);
+    // Tên + vai trò vẫn đọc được ở chữ nổi của ảnh.
+    expect(container.querySelector('.ui-av')?.getAttribute('title')).toBe('Phạm Thu Hà · thợ chính');
   });
 });

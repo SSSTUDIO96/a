@@ -5,6 +5,7 @@ import { ErrorNotice } from '../app/ErrorNotice';
 import { Avatar, BottomSheet, Button } from '../ui';
 import { activeBottomKey, bottomNav, type NavChild, type NavItem, type VisibleNavItem } from './nav';
 import { NavIcon } from './navIcons';
+import { useSelfStaffAvatar } from '../features/staff/useStaffNaming';
 import { useLogout } from './useLogout';
 
 export interface BottomNavProps {
@@ -22,6 +23,8 @@ export function BottomNav({ user, org, organizations, items, active, activeChild
   const [moreOpen, setMoreOpen] = useState(false);
   const location = useLocation();
   const { logout, pending, error } = useLogout();
+  // L2: ảnh của chính mình cùng màu + chữ tắt với dòng của mình ở Thợ makeup, Lịch (sổ thợ chung, ui/staffName.ts).
+  const { naming, selfInitials } = useSelfStaffAvatar(org.membershipId);
   const base = `/${org.slug}`;
   const { main, rest } = bottomNav(items, org.kind);
   const onKey = activeBottomKey(main, active, activeChild);
@@ -74,7 +77,7 @@ export function BottomNav({ user, org, organizations, items, active, activeChild
             </li>
           </ul>
           <div className="sh-more__user">
-            <Avatar name={user.fullName} colorKey={org.membershipId} size="sm" />
+            <Avatar name={user.fullName} initials={selfInitials} colorKey={naming.colorKey(org.membershipId)} size="sm" />
             <span className="sh-more__name">{user.fullName}</span>
             <Button size="sm" icon={<NavIcon name="logout" />} loading={pending} onClick={logout}>
               Đăng xuất

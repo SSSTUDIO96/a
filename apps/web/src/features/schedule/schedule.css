@@ -12,6 +12,15 @@
 .ws-sw-green { --c: var(--ok); --b: var(--ok-bg); }
 .ws-sw-blue { --c: var(--av-5); --b: color-mix(in srgb, var(--av-5) 10%, var(--surface)); }
 .ws-sw-taupe { --c: var(--av-4); --b: color-mix(in srgb, var(--av-4) 10%, var(--surface)); }
+/* Sáu màu thêm (việc tồn 3) cho nhân vật tổ chức tự thêm, từ nhân vật thứ 7 tới thứ 12 — không có trong bản vẽ nên ghi
+   thẳng giá trị ở đây (chỉ dùng cho bảng màu nhân vật). Đã đo: ΔE2000 với mọi màu khác ≥ 14, chữ trên nền pha 10% ≥ 4,5:1
+   (bài thử subjectColors.test.ts đọc đúng khối này). Gạch, xanh dầu, ô liu, mận, xanh rừng, nâu. */
+.ws-sw-brick { --c: #AE3D2C; --b: color-mix(in srgb, #AE3D2C 10%, var(--surface)); }
+.ws-sw-petrol { --c: #046273; --b: color-mix(in srgb, #046273 10%, var(--surface)); }
+.ws-sw-olive { --c: #6E6A12; --b: color-mix(in srgb, #6E6A12 10%, var(--surface)); }
+.ws-sw-plum { --c: #841276; --b: color-mix(in srgb, #841276 10%, var(--surface)); }
+.ws-sw-forest { --c: #2F6E2C; --b: color-mix(in srgb, #2F6E2C 10%, var(--surface)); }
+.ws-sw-brown { --c: #5A3620; --b: color-mix(in srgb, #5A3620 10%, var(--surface)); }
 .ws-sw-other { --c: var(--muted); --b: var(--surface); }
 /* "Khác" (ca không có nhân vật): nền trắng có viền, để không lẫn với ca mờ "Không chặn lịch" và màu Khách mời. */
 .ws-chip.ws-sw-other, .ws-pt.ws-sw-other { border: 1px solid var(--line); border-left: 3px solid var(--muted); }

@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>R&amp;D 05 — Thông báo trong app</title>
+<link rel="stylesheet" href="v4-chung/phong.css">
+<link rel="stylesheet" href="v5-chung/san-pham.css">
+<link rel="stylesheet" href="v5-chung/v5.css">
+</head>
+<body>
+<!-- Hôm nay trong bản mẫu: Thứ Bảy 21/11/2026, 07:30. Tổ chức loại ACADEMY (có cả makeup lẫn đào tạo). -->
+
+<!-- ===================== A: Chuông + ngăn kéo danh sách ===================== -->
+<section class="v5-man" data-man="a" data-active="lich" data-title="Lịch makeup" data-bell="5" data-bellmoi="1" data-note="Phương án A — chuông + ngăn kéo (chủ studio đang mở chuông)" data-desc="A · Chuông + ngăn kéo — chủ studio">
+  <div class="v5-lich" data-mode="C" data-color="nv"></div>
+  <div class="v5-dr-ov"><aside class="v5-dr moi" data-moi="bảng mới Notification (người nhận, loại, trỏ tới, lúc tạo, lúc đọc)">
+    <div class="v5-dr__head"><span class="v5-dr__title">Thông báo</span><button type="button" class="ui-btn ui-btn--ghost ui-btn--sm">Đánh dấu đã đọc hết</button><button type="button" class="ui-btn ui-btn--ghost ui-btn--sm ui-btn--icon" aria-label="Đóng">__x__</button></div>
+    <div class="v5-dr__chips"><button type="button" class="ui-chip" aria-pressed="true">Tất cả <span class="ui-chip__count">7</span></button><button type="button" class="ui-chip">Lịch <span class="ui-chip__count">1</span></button><button type="button" class="ui-chip">Thu tiền <span class="ui-chip__count">2</span></button><button type="button" class="ui-chip">Hợp đồng <span class="ui-chip__count">2</span></button><button type="button" class="ui-chip">Đào tạo <span class="ui-chip__count">2</span></button></div>
+    <div class="v5-dr__body">
+      <h3 class="ui-lgh"><span class="ui-lgh__title">Chưa đọc</span><span class="ui-lgh__aside">5</span></h3>
+      <a class="v5-nt is-new" href="#"><span class="v5-nt__ic v5-k-tien-x">__money__</span><span class="v5-nt__t" data-f="PaymentInstallment.name · amount · dueDate → quá hạn">Đợt 2 quá hạn 3 ngày · 2.000.000 ₫</span><span class="v5-nt__tm">07:00</span><span class="v5-nt__s" data-f="Contract.code · Customer.fullName · Contract.ownerMembershipId">HD-000004 · Đỗ Thanh Mai · hạn 18/11 · phụ trách: Mai</span><span class="v5-nt__go">Mở Thu tiền →</span></a>
+      <a class="v5-nt is-new" href="#"><span class="v5-nt__ic v5-k-lich">__lich__</span><span class="v5-nt__t" data-f="đếm Appointment.startsAt ngày mai">Ngày mai 9 ca · 1 ca chưa có thợ</span><span class="v5-nt__tm">07:00</span><span class="v5-nt__s" data-f="AppointmentStaff (rỗng = chưa có thợ)">Chủ nhật 22/11 · sớm nhất 05:00 Vũ Thị Hồng Nhung</span><span class="v5-nt__go">Mở Lịch ngày 22/11 →</span></a>
+      <a class="v5-nt is-new" href="#"><span class="v5-nt__ic v5-k-hd">__hd__</span><span class="v5-nt__t" data-f="Contract.code · status=CONFIRMED · confirmedAt">Hợp đồng mới xác nhận: HD-000007</span><span class="v5-nt__tm">20:14 hôm qua</span><span class="v5-nt__s" data-f="Customer.fullName · Contract.total · eventDate · AuditLog.actor">Ngô Thảo Vy · 3.200.000 ₫ · ngày sự kiện 22/11 · Mai xác nhận</span><span class="v5-nt__go">Mở hợp đồng →</span></a>
+      <a class="v5-nt is-new" href="#"><span class="v5-nt__ic v5-k-hoc">__khoa-hoc__</span><span class="v5-nt__t" data-f="Enrollment.enrolledAt · Customer.fullName">Học viên mới: Nguyễn Hải Yến</span><span class="v5-nt__tm">19:40 hôm qua</span><span class="v5-nt__s" data-f="CourseClass.name · enrolledCount/capacity">Lớp Makeup cá nhân K12 · còn 3/12 chỗ</span><span class="v5-nt__go">Mở lớp →</span></a>
+      <a class="v5-nt is-new" href="#"><span class="v5-nt__ic v5-k-tien">__seat__</span><span class="v5-nt__t" data-f="CourseClass.enrolledCount ≥ 75% capacity (seatState)">Lớp sắp đầy: Chuyên nghiệp K5</span><span class="v5-nt__tm">19:40 hôm qua</span><span class="v5-nt__s">10/12 chỗ · khai giảng 01/12</span><span class="v5-nt__go">Mở lớp →</span></a>
+      <h3 class="ui-lgh"><span class="ui-lgh__title">Đã đọc</span></h3>
+      <a class="v5-nt" href="#"><span class="v5-nt__ic v5-k-tien">__money__</span><span class="v5-nt__t">Đợt cọc đến hạn 24/11 · 1.500.000 ₫</span><span class="v5-nt__tm">Thứ Năm</span><span class="v5-nt__s">HD-000009 · Phan Thu Trang · phụ trách: Mai</span></a>
+      <a class="v5-nt" href="#"><span class="v5-nt__ic v5-k-hd">__hd__</span><span class="v5-nt__t">Hợp đồng mới xác nhận: HD-000006</span><span class="v5-nt__tm">Thứ Tư</span><span class="v5-nt__s">Phạm Quỳnh Anh · 900.000 ₫ · ngày sự kiện 22/11</span></a>
+    </div>
+    <div class="v5-dr__foot"><span>Giữ 30 ngày gần nhất</span><a class="ct-lnk" href="#">Cài đặt thông báo</a></div>
+  </aside></div>
+</section>
+
+<section class="v5-man" data-man="a-tho" data-role="tho" data-active="lich" data-title="Lịch makeup" data-bell="3" data-bellmoi="1" data-note="Phương án A — chuông của THỢ (Linh Trần): chỉ ca của mình" data-desc="A · Chuông + ngăn kéo — thợ">
+  <div class="v5-lich" data-mode="B" data-color="nv"></div>
+  <div class="v5-dr-ov"><aside class="v5-dr moi" data-moi="Notification (người nhận = thợ được phân)">
+    <div class="v5-dr__head"><span class="v5-dr__title">Thông báo</span><button type="button" class="ui-btn ui-btn--ghost ui-btn--sm">Đánh dấu đã đọc hết</button><button type="button" class="ui-btn ui-btn--ghost ui-btn--sm ui-btn--icon" aria-label="Đóng">__x__</button></div>
+    <div class="v5-dr__body">
+      <h3 class="ui-lgh"><span class="ui-lgh__title">Chưa đọc</span><span class="ui-lgh__aside">3</span></h3>
+      <a class="v5-nt is-new" href="#"><span class="v5-nt__ic v5-k-lich">__clock__</span><span class="v5-nt__t" data-f="Appointment.startsAt · ContractLine.subjectName · Customer.fullName">Ngày mai 05:00 · Cô dâu · Vũ Thị Hồng Nhung</span><span class="v5-nt__tm">07:00</span><span class="v5-nt__s" data-f="Appointment.address · travelBeforeMin">Tại nhà khách – 25 Nguyễn Văn Cừ, Long Biên · đi trước 30 phút</span><span class="v5-nt__go">Mở ca →</span></a>
+      <a class="v5-nt is-new" href="#"><span class="v5-nt__ic v5-k-lich">__clock__</span><span class="v5-nt__t">Ngày mai 13:00 · Cô dâu · Hoàng Minh Thư</span><span class="v5-nt__tm">07:00</span><span class="v5-nt__s">Tại studio Cầu Giấy</span><span class="v5-nt__go">Mở ca →</span></a>
+      <a class="v5-nt is-new" href="#"><span class="v5-nt__ic v5-k-tho">__person__</span><span class="v5-nt__t" data-f="AppointmentStaff.membershipId (lúc được phân)">Bạn được phân 1 ca mới</span><span class="v5-nt__tm">21:05 hôm qua</span><span class="v5-nt__s">Chủ nhật 22/11 17:30 · Dặm makeup · Vũ Thị Hồng Nhung</span><span class="v5-nt__go">Mở ca →</span></a>
+      <h3 class="ui-lgh"><span class="ui-lgh__title">Đã đọc</span></h3>
+      <a class="v5-nt" href="#"><span class="v5-nt__ic v5-k-tien-x">__x__</span><span class="v5-nt__t" data-f="Appointment.status=CANCELLED · cancelReason">Ca đã huỷ: Thứ Sáu 20/11 10:00</span><span class="v5-nt__tm">Thứ Năm</span><span class="v5-nt__s">Lý do: khách đổi sang tháng 12</span></a>
+    </div>
+    <div class="v5-dr__foot"><span>Giữ 30 ngày gần nhất</span><a class="ct-lnk" href="#">Cài đặt thông báo</a></div>
+  </aside></div>
+</section>
+
+<section class="v5-man" data-man="a-cai-dat" data-active="cai-dat" data-child="cai-dat-tb" data-title="Thông báo" data-back="1" data-bell="5" data-bellmoi="1" data-h1="Cài đặt · Thông báo của tôi" data-note="Phương án A — mỗi người tự bật/tắt loại thông báo của MÌNH; cột Zalo/SMS/Email để trống đến khi anh chọn dịch vụ" data-desc="A · Cài đặt thông báo của tôi">
+  <div class="ui-card moi" data-moi="bảng mới NotificationPreference (người, loại, kênh, bật/tắt)" style="max-width:900px">
+    <div class="ui-card__head"><span class="ui-card__title">Nhận thông báo gì, qua đâu</span><span class="ui-card__sub">Chỉ đổi cho tài khoản của bạn</span></div>
+    <div class="ui-card__body ui-card__body--flush" style="overflow-x:auto">
+      <table class="v5-pref">
+        <thead><tr><th>Loại thông báo</th><th class="c">Trong app</th><th class="c">Zalo</th><th class="c">SMS</th><th class="c">Email</th></tr></thead>
+        <tbody>
+          <tr><td><span class="v5-pref__n">Ca makeup sắp tới của tôi</span><span class="v5-pref__s">Báo trước <select class="ui-input ui-input--sm ui-select" style="width:auto;display:inline-block" data-moi="NotificationPreference.leadMinutes"><option>1 ngày (7:00 sáng)</option></select></span></td><td class="c"><span class="ui-switch" role="switch" aria-checked="true"></span></td><td class="c"><span class="v5-off">—</span></td><td class="c"><span class="v5-off">—</span></td><td class="c"><span class="v5-off">—</span></td></tr>
+          <tr><td><span class="v5-pref__n">Được phân ca mới, ca đổi giờ, ca bị huỷ</span><span class="v5-pref__s">Chỉ ca có tên tôi</span></td><td class="c"><span class="ui-switch" role="switch" aria-checked="true"></span></td><td class="c"><span class="v5-off">—</span></td><td class="c"><span class="v5-off">—</span></td><td class="c"><span class="v5-off">—</span></td></tr>
+          <tr><td><span class="v5-pref__n">Đợt thu sắp đến hạn / quá hạn</span><span class="v5-pref__s">Cần quyền xem thu tiền · <select class="ui-input ui-input--sm ui-select" style="width:auto;display:inline-block"><option>Chỉ hợp đồng tôi phụ trách</option><option>Mọi hợp đồng</option></select></span></td><td class="c"><span class="ui-switch" role="switch" aria-checked="true"></span></td><td class="c"><span class="v5-off">—</span></td><td class="c"><span class="v5-off">—</span></td><td class="c"><span class="v5-off">—</span></td></tr>
+          <tr><td><span class="v5-pref__n">Hợp đồng mới được xác nhận</span><span class="v5-pref__s">Cần quyền xem hợp đồng</span></td><td class="c"><span class="ui-switch" role="switch" aria-checked="true"></span></td><td class="c"><span class="v5-off">—</span></td><td class="c"><span class="v5-off">—</span></td><td class="c"><span class="v5-off">—</span></td></tr>
+          <tr><td><span class="v5-pref__n">Học viên mới ghi danh</span><span class="v5-pref__s">Chỉ trung tâm đào tạo · cần quyền xem khoá</span></td><td class="c"><span class="ui-switch" role="switch" aria-checked="true"></span></td><td class="c"><span class="v5-off">—</span></td><td class="c"><span class="v5-off">—</span></td><td class="c"><span class="v5-off">—</span></td></tr>
+          <tr><td><span class="v5-pref__n">Lớp sắp đầy (từ 75% chỗ)</span><span class="v5-pref__s">Mốc 75% đang dùng ở màn Khoá &amp; lớp</span></td><td class="c"><span class="ui-switch" role="switch" aria-checked="false"></span></td><td class="c"><span class="v5-off">—</span></td><td class="c"><span class="v5-off">—</span></td><td class="c"><span class="v5-off">—</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="ui-card__foot"><span>Zalo, SMS, Email: <span class="v5-cost">cần dịch vụ ngoài · có phí</span> — chưa bật được cho đến khi chủ tài khoản chọn nhà cung cấp.</span></div>
+  </div>
+</section>
+
+<!-- ===================== B: Trang "Hôm nay" — việc cần làm ===================== -->
+<section class="v5-man" data-man="b" data-home="1" data-active="hom-nay" data-title="Hôm nay" data-h1="Hôm nay · Thứ Bảy 21/11" data-note="Phương án B — trang chủ &quot;Hôm nay&quot;: danh sách việc tự tính từ dữ liệu đang có, xong việc thì tự biến mất (không có &quot;đã đọc&quot;)" data-desc="B · Trang Hôm nay — chủ studio">
+  <div class="ui-stats" style="--stat-cols:4">
+    <div class="ui-stat" data-f="đếm Appointment hôm nay"><span class="ui-stat__label">Ca hôm nay</span><b class="ui-stat__value">1</b><span class="ui-stat__note">15:00 Thu Hà</span></div>
+    <div class="ui-stat ui-stat--highlight" data-f="đếm Appointment ngày mai"><span class="ui-stat__label">Ca ngày mai</span><b class="ui-stat__value">9</b><span class="ui-stat__note ui-stat__note--warn">1 ca chưa có thợ</span></div>
+    <div class="ui-stat ui-stat--danger" data-f="PaymentInstallment quá hạn (allocateToInstallments)"><span class="ui-stat__label">Đợt thu quá hạn</span><b class="ui-stat__value">2</b><span class="ui-stat__note ui-stat__note--danger">3.500.000 ₫</span></div>
+    <div class="ui-stat"><span class="ui-stat__label">Đến hạn 7 ngày tới</span><b class="ui-stat__value">3</b><span class="ui-stat__note">6.100.000 ₫</span></div>
+  </div>
+  <div class="v5-home">
+    <div class="v5-home__col">
+      <div class="ui-card">
+        <div class="ui-card__head"><span class="ui-card__title">Cần làm ngay <span class="ui-card__sub">4 việc</span></span><button type="button" class="ui-btn ui-btn--ghost ui-btn--sm v5-hide">Thu gọn</button></div>
+        <h3 class="ui-lgh ui-lgh--danger"><span class="ui-lgh__title">Tiền quá hạn</span><span class="ui-lgh__aside">3.500.000 ₫</span></h3>
+        <div class="ui-lrow"><span class="ui-lrow__lead"><span class="v5-ln-ic v5-k-tien-x">__money__</span></span><span class="ui-lrow__text"><span class="ui-lrow__title" data-f="PaymentInstallment.name · Contract.code · Customer.fullName">Đợt 2 · HD-000004 · Đỗ Thanh Mai</span><span class="ui-lrow__sub" data-f="dueDate · Contract.ownerMembershipId">Hạn 18/11 (quá 3 ngày) · phụ trách: Mai · 0901 222 333</span></span><span class="ui-lrow__right"><span class="ui-lrow__amt">2.000.000 ₫</span><button type="button" class="ui-btn ui-btn--sm ui-btn--primary">Ghi phiếu thu</button></span></div>
+        <div class="ui-lrow"><span class="ui-lrow__lead"><span class="v5-ln-ic v5-k-tien-x">__money__</span></span><span class="ui-lrow__text"><span class="ui-lrow__title">Còn lại · HD-000003 · Trần Bảo Ngọc</span><span class="ui-lrow__sub">Hạn 17/11 (quá 4 ngày) · phụ trách: Chiến</span></span><span class="ui-lrow__right"><span class="ui-lrow__amt">1.500.000 ₫</span><button type="button" class="ui-btn ui-btn--sm ui-btn--primary">Ghi phiếu thu</button></span></div>
+        <h3 class="ui-lgh"><span class="ui-lgh__title">Ca chưa có thợ</span><span class="ui-lgh__aside">1</span></h3>
+        <div class="ui-lrow"><span class="ui-lrow__lead"><span class="ws-av-na">?</span></span><span class="ui-lrow__text"><span class="ui-lrow__title" data-f="Appointment không có AppointmentStaff">Ngày mai 15:00 · Phù dâu · Hoàng Minh Thư</span><span class="ui-lrow__sub">HD-000002 · Tại studio</span></span><span class="ui-lrow__right"><button type="button" class="ui-btn ui-btn--sm">Phân thợ</button></span></div>
+        <h3 class="ui-lgh"><span class="ui-lgh__title">Lớp sắp đầy</span><span class="ui-lgh__aside">1</span></h3>
+        <div class="ui-lrow"><span class="ui-lrow__lead"><span class="v5-ln-ic v5-k-hoc">__seat__</span></span><span class="ui-lrow__text"><span class="ui-lrow__title" data-f="CourseClass.name · enrolledCount/capacity">Chuyên nghiệp K5 · 10/12 chỗ</span><span class="ui-lrow__sub" data-f="CourseClass.startDate">Khai giảng 01/12 · còn 2 chỗ</span></span><span class="ui-lrow__right"><button type="button" class="ui-btn ui-btn--sm">Mở lớp</button></span></div>
+      </div>
+      <div class="ui-card">
+        <div class="ui-card__head"><span class="ui-card__title">Thu tiền 7 ngày tới <span class="ui-card__sub">3 đợt</span></span><a class="ct-lnk" href="#">Mở Thu tiền</a></div>
+        <div class="ui-lrow ui-lrow--noav"><span class="ui-lrow__text"><span class="ui-lrow__title">Cọc · HD-000009 · Phan Thu Trang</span><span class="ui-lrow__sub">Hạn Thứ Ba 24/11 · phụ trách: Mai</span></span><span class="ui-lrow__right"><span class="ui-lrow__amt">1.500.000 ₫</span></span></div>
+        <div class="ui-lrow ui-lrow--noav"><span class="ui-lrow__text"><span class="ui-lrow__title">Còn lại · HD-000008 · Vũ Thị Hồng Nhung</span><span class="ui-lrow__sub">Hạn Chủ nhật 22/11 (ngày sự kiện)</span></span><span class="ui-lrow__right"><span class="ui-lrow__amt">3.347.000 ₫</span></span></div>
+        <div class="ui-lrow ui-lrow--noav"><span class="ui-lrow__text"><span class="ui-lrow__title">Học phí đợt 2 · HD-000011 · Nguyễn Hải Yến</span><span class="ui-lrow__sub">Hạn Thứ Sáu 27/11</span></span><span class="ui-lrow__right"><span class="ui-lrow__amt">1.253.000 ₫</span></span></div>
+      </div>
+    </div>
+    <div class="v5-home__col">
+      <div class="ui-card">
+        <div class="ui-card__head"><span class="ui-card__title">Ngày mai · Chủ nhật 22/11 <span class="ui-card__sub">9 ca</span></span><a class="ct-lnk" href="#">Mở Lịch</a></div>
+        <div class="ui-lrow"><span class="ui-lrow__lead">__av:LT:3__</span><span class="ui-lrow__text"><span class="ui-lrow__title" data-f="AppointmentStaff → StaffProfile.displayName">Linh Trần · 3 ca</span><span class="ui-lrow__sub" data-f="Appointment.startsAt">05:00 · 13:00 · 17:30</span></span></div>
+        <div class="ui-lrow"><span class="ui-lrow__lead">__av:LT:4__</span><span class="ui-lrow__text"><span class="ui-lrow__title">Lê Minh Tú · 2 ca</span><span class="ui-lrow__sub">07:00 · 09:00</span></span></div>
+        <div class="ui-lrow"><span class="ui-lrow__lead">__av:PH:0__</span><span class="ui-lrow__text"><span class="ui-lrow__title">Phạm Thu Hà · 1 ca</span><span class="ui-lrow__sub">06:00</span></span></div>
+        <div class="ui-lrow"><span class="ui-lrow__lead">__av:G:5__</span><span class="ui-lrow__text"><span class="ui-lrow__title">Giang · 2 ca</span><span class="ui-lrow__sub">08:30 · 17:00</span></span></div>
+      </div>
+      <div class="ui-card">
+        <div class="ui-card__head"><span class="ui-card__title">Mới trong 24 giờ <span class="ui-card__sub">3</span></span></div>
+        <div class="ui-lrow"><span class="ui-lrow__lead"><span class="v5-ln-ic v5-k-hd">__hd__</span></span><span class="ui-lrow__text"><span class="ui-lrow__title" data-f="Contract.code · confirmedAt (24 giờ qua)">HD-000007 xác nhận · Ngô Thảo Vy</span><span class="ui-lrow__sub" data-f="Contract.total · eventDate">3.200.000 ₫ · ngày sự kiện 22/11 · 20:14 hôm qua</span></span><span class="ui-lrow__right"><a class="ct-lnk" href="#">Mở</a></span></div>
+        <div class="ui-lrow"><span class="ui-lrow__lead"><span class="v5-ln-ic v5-k-hoc">__khoa-hoc__</span></span><span class="ui-lrow__text"><span class="ui-lrow__title" data-f="Enrollment.enrolledAt (24 giờ qua) · Customer.fullName">Nguyễn Hải Yến ghi danh</span><span class="ui-lrow__sub">Makeup cá nhân K12 · còn 3/12 chỗ · 19:40 hôm qua</span></span><span class="ui-lrow__right"><a class="ct-lnk" href="#">Mở</a></span></div>
+        <div class="ui-lrow"><span class="ui-lrow__lead"><span class="v5-ln-ic v5-k-hoc">__khoa-hoc__</span></span><span class="ui-lrow__text"><span class="ui-lrow__title">Trịnh Ngọc Ánh ghi danh</span><span class="ui-lrow__sub">Chuyên nghiệp K5 · 10/12 chỗ · 15:02 hôm qua</span></span><span class="ui-lrow__right"><a class="ct-lnk" href="#">Mở</a></span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="v5-man" data-man="b-tho" data-home="1" data-role="tho" data-active="hom-nay" data-title="Hôm nay" data-h1="Hôm nay · Thứ Bảy 21/11" data-note="Phương án B — trang &quot;Hôm nay&quot; của THỢ (Linh Trần): chỉ ca của mình" data-desc="B · Trang Hôm nay — thợ">
+  <div class="v5-home" style="margin-top:0">
+    <div class="v5-home__col">
+      <div class="ui-card">
+        <div class="ui-card__head"><span class="ui-card__title">Hôm nay <span class="ui-card__sub">không có ca</span></span></div>
+        <div class="v5-done">__check__ Bạn không có ca nào hôm nay.</div>
+      </div>
+      <div class="ui-card">
+        <div class="ui-card__head"><span class="ui-card__title">Ngày mai · Chủ nhật 22/11 <span class="ui-card__sub">3 ca</span></span><a class="ct-lnk" href="#">Mở Lịch</a></div>
+        <div class="ui-card__body ui-card__body--flush"><div class="ws-cm-day__list" style="border:0;border-radius:0">
+          <button type="button" class="ws-ag ws-sw-rose"><span class="ws-ag__tm num" data-f="Appointment.startsAt/endsAt">05:00<small>07:00</small></span><span class="ws-ag__main"><span class="ws-ag__kind" data-f="ServicePackage.name — ContractLine.subjectName">Cô dâu cao cấp — Cô dâu</span><span class="ws-ag__kh" data-f="Customer.fullName">Vũ Thị Hồng Nhung</span><span class="ws-item__nc" data-f="Appointment.address · travelBeforeMin">Tại nhà khách – 25 Nguyễn Văn Cừ · đi trước 30 phút</span></span><span class="ui-tag ui-tag--ok">Đã xác nhận</span></button>
+          <button type="button" class="ws-ag ws-sw-rose"><span class="ws-ag__tm num">13:00<small>15:00</small></span><span class="ws-ag__main"><span class="ws-ag__kind">Cô dâu cao cấp — Cô dâu</span><span class="ws-ag__kh">Hoàng Minh Thư</span><span class="ws-item__nc">Tại studio</span></span><span class="ui-tag ui-tag--ok">Đã xác nhận</span></button>
+          <button type="button" class="ws-ag ws-sw-rose"><span class="ws-ag__tm num">17:30<small>18:30</small></span><span class="ws-ag__main"><span class="ws-ag__kind">Dặm makeup — Cô dâu</span><span class="ws-ag__kh">Vũ Thị Hồng Nhung</span><span class="ws-item__nc">Nơi khác – Nhà hàng Riverside</span></span><span class="ui-tag ui-tag--ok">Đã xác nhận</span></button>
+        </div></div>
+      </div>
+    </div>
+    <div class="v5-home__col">
+      <div class="ui-card">
+        <div class="ui-card__head"><span class="ui-card__title">7 ngày tới <span class="ui-card__sub">5 ca</span></span></div>
+        <div class="ui-lrow ui-lrow--noav"><span class="ui-lrow__text"><span class="ui-lrow__title">Thứ Ba 24/11 · 1 ca</span><span class="ui-lrow__sub">08:00 Cô dâu · Phan Thu Trang</span></span></div>
+        <div class="ui-lrow ui-lrow--noav"><span class="ui-lrow__text"><span class="ui-lrow__title">Thứ Bảy 28/11 · 1 ca</span><span class="ui-lrow__sub">05:30 Cô dâu · Lý Hoài An</span></span></div>
+      </div>
+      <div class="ui-card">
+        <div class="ui-card__head"><span class="ui-card__title">Mới được phân <span class="ui-card__sub">24 giờ qua</span></span></div>
+        <div class="ui-lrow ui-lrow--noav moi" data-moi="cần giờ phân ca: AppointmentStaff.createdAt (chưa có) hoặc đọc AuditLog"><span class="ui-lrow__text"><span class="ui-lrow__title">Chủ nhật 22/11 17:30 · Dặm makeup</span><span class="ui-lrow__sub">Vũ Thị Hồng Nhung · phân lúc 21:05 hôm qua</span></span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== C: Bản tin hằng ngày ===================== -->
+<section class="v5-man" data-man="c" data-active="lich" data-title="Bản tin sáng" data-back="1" data-h1="Bản tin sáng · Thứ Bảy 21/11" data-note="Phương án C — mỗi sáng 7:00 mỗi người nhận MỘT bản tin gom mọi thứ; trong app mở từ dải hồng trên Lịch" data-desc="C · Bản tin sáng trong app — chủ studio">
+  <div class="v5-bt moi" data-moi="DigestRun (bản tin đã gửi: người, ngày, lúc gửi)"><span class="v5-ln-ic v5-k-tien">__sun__</span><span class="v5-bt__t"><b>Bản tin 7:00 đã gửi cho 6 người</b><span>Bạn nhận trong app và qua email. Lần tới: Chủ nhật 22/11 lúc 7:00.</span></span><a class="ct-lnk" href="#">Cài đặt bản tin</a></div>
+  <div class="ui-card v5-dg">
+    <div class="v5-dg__sec"><div class="v5-dg__h">Tiền <span>2 đợt quá hạn · 3 đợt đến hạn 7 ngày tới</span></div>
+      <div class="v5-dg__row" data-f="PaymentInstallment.dueDate · allocateToInstallments"><b class="ui-tag ui-tag--danger">Quá hạn</b><span>Đợt 2 · HD-000004 · Đỗ Thanh Mai <small>· hạn 18/11 · Mai</small></span><b>2.000.000 ₫</b></div>
+      <div class="v5-dg__row"><b class="ui-tag ui-tag--danger">Quá hạn</b><span>Còn lại · HD-000003 · Trần Bảo Ngọc <small>· hạn 17/11 · Chiến</small></span><b>1.500.000 ₫</b></div>
+      <div class="v5-dg__row"><b class="ui-tag ui-tag--warn">22/11</b><span>Còn lại · HD-000008 · Vũ Thị Hồng Nhung</span><b>3.347.000 ₫</b></div>
+      <div class="v5-dg__row"><b class="ui-tag ui-tag--neutral">24/11</b><span>Cọc · HD-000009 · Phan Thu Trang</span><b>1.500.000 ₫</b></div>
+    </div>
+    <div class="v5-dg__sec"><div class="v5-dg__h">Lịch makeup <span>hôm nay 1 ca · ngày mai 9 ca</span></div>
+      <div class="v5-dg__row" data-f="Appointment.startsAt · AppointmentStaff"><b>Hôm nay</b><span>15:00 Makeup đi tiệc · Lê Phương Anh <small>· Thu Hà</small></span><span></span></div>
+      <div class="v5-dg__row"><b>Ngày mai</b><span>Linh 3 ca (05:00, 13:00, 17:30) · Tú 2 ca · Thu Hà 1 ca · Giang 2 ca</span><span></span></div>
+      <div class="v5-dg__row"><b class="ui-tag ui-tag--warn">Thiếu</b><span>15:00 ngày mai · Phù dâu · Hoàng Minh Thư <small>· chưa có thợ</small></span><span></span></div>
+    </div>
+    <div class="v5-dg__sec"><div class="v5-dg__h">Hợp đồng &amp; học viên mới <span>24 giờ qua</span></div>
+      <div class="v5-dg__row v5-dg__row--2" data-f="Contract.confirmedAt · Enrollment.enrolledAt"><span>HD-000007 xác nhận · Ngô Thảo Vy · 3.200.000 ₫</span><small>20:14</small></div>
+      <div class="v5-dg__row v5-dg__row--2"><span>Nguyễn Hải Yến ghi danh Makeup cá nhân K12 (còn 3/12 chỗ)</span><small>19:40</small></div>
+      <div class="v5-dg__row v5-dg__row--2"><span>Lớp Chuyên nghiệp K5 sắp đầy: 10/12 chỗ</span><small>15:02</small></div>
+    </div>
+  </div>
+</section>
+
+<section class="v5-man" data-man="c-kenh" data-active="cai-dat" data-child="cai-dat-tb" data-title="Bản tin — xem trước" data-back="1" data-h1="Bản tin sáng — cùng nội dung, 3 kênh" data-note="Phương án C — MINH HOẠ bản tin của thợ Linh Trần gửi qua 3 kênh ngoài. Chưa kênh nào có: cả 3 cần dịch vụ ngoài và có phí" data-desc="C · Xem trước bản tin qua Email / Zalo / SMS">
+  <div class="v5-ch">
+    <div><div class="v5-ch__lbl">__mail__ Email <span class="v5-cost">cần nhà cung cấp gửi thư</span></div>
+      <div class="v5-mail moi" data-moi="nhà cung cấp email + DigestSetting.channels"><div class="v5-mail__hd">Từ: <b>Studio Chiến Makeup &amp; Academy</b><br>Đến: linh.tran@… <br>Tiêu đề: <b>Lịch của bạn ngày mai · 3 ca</b></div>
+        <div class="v5-mail__bd"><p>Chào Linh,</p><p>Ngày mai Chủ nhật 22/11 bạn có 3 ca:</p><ul><li><b>05:00</b> Cô dâu · Vũ Thị Hồng Nhung — tại nhà khách, 25 Nguyễn Văn Cừ (đi trước 30 phút)</li><li><b>13:00</b> Cô dâu · Hoàng Minh Thư — tại studio</li><li><b>17:30</b> Dặm makeup · Vũ Thị Hồng Nhung — Nhà hàng Riverside</li></ul><a class="v5-mail__btn" href="#">Mở Lịch trong Makeup Pro</a></div></div></div>
+    <div><div class="v5-ch__lbl">__chat__ Zalo (tin Zalo OA của studio) <span class="v5-cost">cần Zalo OA + mẫu tin được duyệt · tính phí mỗi tin</span></div>
+      <div class="v5-phone moi" data-moi="kết nối Zalo OA + số điện thoại người nhận (StaffProfile.phone)"><div class="v5-phone__top">Studio Chiến Makeup &amp; Academy · tài khoản chính thức</div>
+        <div class="v5-bub">Lịch ngày mai (CN 22/11) của Linh Trần: 3 ca
+05:00 Cô dâu · Vũ Thị Hồng Nhung · 25 Nguyễn Văn Cừ
+13:00 Cô dâu · Hoàng Minh Thư · Studio
+17:30 Dặm makeup · Vũ Thị Hồng Nhung · Riverside<span class="v5-bub__btn">Xem chi tiết</span></div></div></div>
+    <div><div class="v5-ch__lbl">__chat__ SMS <span class="v5-cost">cần SMS thương hiệu · tính phí mỗi tin</span></div>
+      <div class="v5-phone moi" data-moi="nhà cung cấp SMS + tên thương hiệu đã đăng ký"><div class="v5-phone__top">CHIENMAKEUP</div>
+        <div class="v5-bub v5-sms">CN 22/11 Linh co 3 ca: 05:00 CD V.T.H.Nhung (25 Nguyen Van Cu); 13:00 CD H.M.Thu (Studio); 17:30 Dam makeup (Riverside). Chi tiet: mkp.vn/l/8F2</div>
+        <div class="v5-meter">158 ký tự không dấu = 1 tin · có dấu thì ~2–3 tin</div></div></div>
+  </div>
+</section>
+
+<section class="v5-man" data-man="c-cai-dat" data-active="cai-dat" data-child="cai-dat-tb" data-title="Bản tin hằng ngày" data-back="1" data-h1="Cài đặt · Bản tin hằng ngày" data-note="Phương án C — chủ tài khoản đặt giờ gửi, ai nhận, qua kênh nào" data-desc="C · Cài đặt bản tin hằng ngày">
+  <div class="ui-card moi" data-moi="bảng mới DigestSetting (tổ chức: giờ gửi, bật/tắt từng vai trò, kênh)" style="max-width:820px">
+    <div class="ui-card__head"><span class="ui-card__title">Bản tin hằng ngày</span><span class="ui-switch" role="switch" aria-checked="true"></span></div>
+    <div class="ui-card__body">
+      <div class="ui-row" style="--row-ctl:260px"><span class="ui-row__label">Giờ gửi</span><span class="ui-row__ctl"><span class="ws-times" style="max-width:200px"><input class="ui-input num" value="07:00" data-moi="DigestSetting.sendAt"><span>giờ VN</span></span></span></div>
+      <div class="ui-row ui-row--stack"><span class="ui-row__label">Ai nhận gì</span><span class="ui-row__ctl" style="display:block">
+        <table class="v5-pref" style="margin-top:4px">
+          <thead><tr><th>Vai trò</th><th>Bản tin gồm</th><th class="c">Nhận</th></tr></thead>
+          <tbody>
+            <tr><td><span class="v5-pref__n" data-f="Role.name (vai trò có sẵn)">Chủ tài khoản, Quản lý</span></td><td class="v5-pref__s">Tiền quá hạn/đến hạn · lịch hôm nay &amp; ngày mai · ca thiếu thợ · hợp đồng &amp; học viên mới · lớp sắp đầy</td><td class="c"><span class="ui-switch" role="switch" aria-checked="true"></span></td></tr>
+            <tr><td><span class="v5-pref__n">Lễ tân, Kế toán</span></td><td class="v5-pref__s">Tiền quá hạn/đến hạn của hợp đồng mình phụ trách · ca thiếu thợ</td><td class="c"><span class="ui-switch" role="switch" aria-checked="true"></span></td></tr>
+            <tr><td><span class="v5-pref__n">Thợ makeup, Thợ phụ</span></td><td class="v5-pref__s">Ca của mình hôm nay &amp; ngày mai (giờ, khách, địa chỉ)</td><td class="c"><span class="ui-switch" role="switch" aria-checked="true"></span></td></tr>
+            <tr><td><span class="v5-pref__n">Giảng viên</span></td><td class="v5-pref__s">Học viên mới &amp; số chỗ của lớp mình dạy</td><td class="c"><span class="ui-switch" role="switch" aria-checked="false"></span></td></tr>
+          </tbody>
+        </table></span></div>
+      <div class="ui-row ui-row--stack"><span class="ui-row__label">Gửi qua</span><span class="ui-row__ctl" style="display:flex;flex-direction:column;gap:2px">
+        <label class="ui-check"><input type="checkbox" checked><span class="ui-check__label">Trong app (dải "Bản tin sáng" trên Lịch)</span><span class="ui-check__trail">miễn phí</span></label>
+        <label class="ui-check ui-check--disabled"><input type="checkbox" disabled><span class="ui-check__label">Email</span><span class="ui-check__trail"><span class="v5-cost">cần nhà cung cấp gửi thư</span></span></label>
+        <label class="ui-check ui-check--disabled"><input type="checkbox" disabled><span class="ui-check__label">Zalo (qua Zalo OA của studio)</span><span class="ui-check__trail"><span class="v5-cost">cần Zalo OA · phí mỗi tin</span></span></label>
+        <label class="ui-check ui-check--disabled"><input type="checkbox" disabled><span class="ui-check__label">SMS thương hiệu</span><span class="ui-check__trail"><span class="v5-cost">cần đăng ký thương hiệu · phí mỗi tin</span></span></label>
+      </span></div>
+    </div>
+    <div class="ui-card__foot"><span>Người nhận tự tắt được bản tin của mình trong "Thông báo của tôi". Không có gì mới thì không gửi.</span><button type="button" class="ui-btn ui-btn--primary ui-btn--sm">Lưu</button></div>
+  </div>
+</section>
+
+<script src="v5-chung/v5-lich.js"></script>
+<script>
+// Thay chỗ __tên__ bằng biểu tượng / ảnh đại diện trước khi khung dựng.
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.v5-man').forEach((s) => {
+    s.innerHTML = s.innerHTML
+      .replace(/__av:([^:]+):(\d)__/g, (_, i, c) => window.v5av(i, c))
+      .replace(/__([a-z-]+)__/g, (_, n) => window.v5ico(n));
+  });
+}, { capture: true });
+</script>
+<script src="v5-chung/v5.js"></script>
+</body>
+</html>

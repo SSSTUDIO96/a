@@ -56,17 +56,8 @@ export function docThamSo(argv = process.argv.slice(2)) {
 
 // ---------- Hỏi người dùng ----------
 let rl = null;
-let anChu = false;
 function giaoDien() {
-  if (!rl) {
-    rl = createInterface({ input: process.stdin, output: process.stdout, terminal: Boolean(process.stdin.isTTY) });
-    const goc = rl._writeToOutput.bind(rl);
-    // Khi đang gõ mật khẩu: không hiện chữ gõ vào.
-    rl._writeToOutput = (s) => {
-      if (!anChu) return goc(s);
-      if (s.includes('\n') || s.includes('\r')) return goc('\n');
-    };
-  }
+  if (!rl) rl = createInterface({ input: process.stdin, output: process.stdout, terminal: Boolean(process.stdin.isTTY) });
   return rl;
 }
 export function dongHoi() {
@@ -79,15 +70,37 @@ export function hoi(cauHoi, macDinh = '') {
     giaoDien().question(`  ${cauHoi}${goiY}: `, (tl) => res(tl.trim() || macDinh));
   });
 }
+// Hỏi mật khẩu: đọc từng phím (raw mode), không hiện chữ gõ vào. Không có terminal (chạy tự động) thì đọc một dòng.
 export function hoiAn(cauHoi) {
+  const loiHoi = `  ${cauHoi} (chữ gõ vào sẽ không hiện): `;
+  if (!process.stdin.isTTY) return hoi(cauHoi.replace(/:?$/, ''), '');
+  dongHoi();
+  process.stdout.write(loiHoi);
   return new Promise((res) => {
-    const r = giaoDien();
-    process.stdout.write(`  ${cauHoi} (chữ gõ vào sẽ không hiện): `);
-    anChu = true;
-    r.question('', (tl) => {
-      anChu = false;
-      res(tl);
-    });
+    let s = '';
+    const vao = process.stdin;
+    vao.setRawMode(true);
+    vao.setEncoding('utf8');
+    vao.resume();
+    const nhan = (chuoi) => {
+      for (const ch of chuoi) {
+        if (ch === '\r' || ch === '\n') {
+          vao.off('data', nhan);
+          vao.setRawMode(false);
+          vao.pause();
+          process.stdout.write('\n');
+          return res(s);
+        }
+        if (ch === '\u0003') {
+          vao.setRawMode(false);
+          process.stdout.write('\nĐã huỷ.\n');
+          process.exit(130);
+        }
+        if (ch === '\u007f' || ch === '\b') s = s.slice(0, -1);
+        else if (ch >= ' ') s += ch;
+      }
+    };
+    vao.on('data', nhan);
   });
 }
 export async function hoiCoKhong(cauHoi, macDinh = 'c') {

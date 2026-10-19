@@ -19,8 +19,11 @@ export const MODE_OPTIONS: readonly { value: ScheduleMode; label: string; short:
 
 // ---------------- Màu ca theo NHÂN VẬT ----------------
 // Quyết định của điều phối (thay anh Chiến): tô màu theo subjectName (nhân vật trên dòng hợp đồng gắn với ca),
-// KHÔNG đoán theo chữ trong tên ca. Ca không có nhân vật → "Khác". Bảng nhân vật → màu chỉ nằm ở đây.
-export const SWATCHES = ['rose', 'violet', 'amber', 'green', 'blue', 'taupe'] as const;
+// KHÔNG đoán theo chữ trong tên ca. Ca không có nhân vật → "Khác". Bảng nhân vật → màu chỉ nằm ở đây (tên màu) và
+// schedule.css khối ".ws-sw-*" (giá trị màu); mọi chỗ tô màu theo nhân vật trên màn Lịch đi qua swatchOf.
+// 12 màu (việc tồn 3): 6 màu đầu GIỮ NGUYÊN (người dùng đã quen), 6 màu thêm cho nhân vật tổ chức tự thêm — đã đo
+// ΔE2000 từng cặp ≥ 14 và độ tương phản chữ ≥ 4,5 trên nền nhạt của chính màu và trên nền trắng (subjectColors.test.ts).
+export const SWATCHES = ['rose', 'violet', 'amber', 'green', 'blue', 'taupe', 'brick', 'petrol', 'olive', 'plum', 'forest', 'brown'] as const;
 export type Swatch = (typeof SWATCHES)[number] | 'other';
 export const OTHER_SUBJECT_LABEL = 'Khác';
 
@@ -34,6 +37,10 @@ const FIXED_SWATCH: Record<string, Swatch> = {
   'khách mời': 'taupe',
 };
 
+// Thứ tự cấp màu cho nhân vật tổ chức tự thêm: 6 màu mới trước (xen nóng/lạnh để hai nhân vật liền nhau khác hẳn),
+// rồi tới màu cài sẵn mà tổ chức không dùng (đã xoá / đổi tên nhân vật cài sẵn).
+const CUSTOM_ORDER: readonly Swatch[] = ['brick', 'petrol', 'olive', 'plum', 'forest', 'brown', 'rose', 'violet', 'amber', 'green', 'blue', 'taupe'];
+
 const norm = (s: string) => s.trim().toLocaleLowerCase('vi');
 
 function hashIndex(s: string): number {
@@ -42,11 +49,45 @@ function hashIndex(s: string): number {
   return h % SWATCHES.length;
 }
 
+// Bảng nhân vật → màu của một tổ chức (nhớ theo chính mảng danh sách — màn giữ một mảng cho tới khi tải lại).
+const orgSwatchCache = new WeakMap<readonly string[], ReadonlyMap<string, Swatch>>();
+
+/**
+ * Bảng màu theo danh sách nhân vật của tổ chức (thứ tự cố định): 12 nhân vật ĐẦU TIÊN luôn khác màu nhau.
+ * - Nhân vật cài sẵn giữ màu cố định ở bất kỳ vị trí nào.
+ * - Nhân vật tự thêm trong 12 nhân vật đầu: lần lượt lấy màu còn trống theo CUSTOM_ORDER (bỏ màu của nhân vật cài sẵn
+ *   có trong 12 nhân vật đầu) — đủ màu vì 12 nhân vật dùng đúng 12 màu.
+ * - Từ nhân vật thứ 13: xoay vòng 12 màu theo vị trí.
+ */
+export function subjectSwatches(orgSubjects: readonly string[]): ReadonlyMap<string, Swatch> {
+  const hit = orgSwatchCache.get(orgSubjects);
+  if (hit) return hit;
+  const keys = [...new Set(orgSubjects.map(norm).filter(Boolean))];
+  const head = keys.slice(0, SWATCHES.length);
+  const map = new Map<string, Swatch>();
+  const used = new Set<Swatch>();
+  for (const k of head) {
+    const fixed = FIXED_SWATCH[k];
+    if (fixed) {
+      map.set(k, fixed);
+      used.add(fixed);
+    }
+  }
+  const free = CUSTOM_ORDER.filter((c) => !used.has(c));
+  let next = 0;
+  for (const k of head) if (!map.has(k)) map.set(k, free[next++] ?? 'other');
+  keys.slice(head.length).forEach((k, i) => {
+    if (!map.has(k)) map.set(k, FIXED_SWATCH[k] ?? SWATCHES[(head.length + i) % SWATCHES.length] ?? 'other');
+  });
+  orgSwatchCache.set(orgSubjects, map);
+  return map;
+}
+
 /**
  * Màu của một nhân vật. `orgSubjects`: tên nhân vật của tổ chức theo thứ tự cố định (sortOrder, GET /makeup-subjects).
  * - null / rỗng → 'other' ("Khác").
  * - Nhân vật cài sẵn → màu cố định ở FIXED_SWATCH.
- * - Nhân vật tổ chức tự thêm → màu theo vị trí trong danh sách nhân vật của tổ chức (xoay vòng 6 màu).
+ * - Nhân vật tổ chức tự thêm → theo bảng subjectSwatches (12 nhân vật đầu khác màu nhau).
  * - Không có trong danh sách (không có quyền xem danh sách, hoặc nhân vật đã bị xoá) → theo băm tên, luôn ra cùng một màu.
  */
 export function swatchOf(subjectName: string | null | undefined, orgSubjects: readonly string[] = []): Swatch {
@@ -54,8 +95,7 @@ export function swatchOf(subjectName: string | null | undefined, orgSubjects: re
   const key = norm(subjectName);
   const fixed = FIXED_SWATCH[key];
   if (fixed) return fixed;
-  const idx = orgSubjects.findIndex((n) => norm(n) === key);
-  return SWATCHES[(idx >= 0 ? idx : hashIndex(key)) % SWATCHES.length] ?? 'other';
+  return subjectSwatches(orgSubjects).get(key) ?? SWATCHES[hashIndex(key)] ?? 'other';
 }
 
 // Chú thích màu: các nhân vật thật có trong tuần (theo thứ tự danh sách của tổ chức, rồi theo tên), cuối cùng là "Khác".

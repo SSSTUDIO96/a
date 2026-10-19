@@ -62,6 +62,8 @@
 .br-pk { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 4px 12px; align-items: center; padding: 9px 0; border-top: 1px solid var(--line-2); }
 .br-grp + .br-pk { border-top: 0; }
 .br-pk__name { font-weight: 500; overflow-wrap: anywhere; }
+/* L1: gói của nhân vật đang ẩn — ghi chú ngắn dưới tên, lý do ở tooltip. */
+.br-pk__note { display: flex; align-items: center; gap: 4px; margin-top: 2px; font-size: 12px; font-weight: 400; color: var(--warn); }
 .br-pk__price { color: var(--muted); font-size: 12.5px; white-space: nowrap; }
 .br-pk__err { grid-column: 1 / -1; margin: 0; }
 .br-pk-skel { display: flex; flex-direction: column; gap: 10px; padding: 12px 0; }

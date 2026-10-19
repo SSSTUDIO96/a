@@ -90,3 +90,13 @@ export function useCurrentOrgStaffNaming(shown?: readonly StaffRosterEntry[]): S
 export function staffInitials(p: { displayName: string; initials?: string | null }): string {
   return (p.initials ?? '').trim() || initialsOf(p.displayName);
 }
+
+/**
+ * Ảnh của chính người đang đăng nhập (thanh trái, ngăn "Thêm" trên điện thoại): cùng màu + chữ tắt như dòng của họ ở
+ * Thợ makeup / Lịch. Chưa có sổ thợ (thiếu staff.read, đang tải) → màu băm theo mã thành viên, chữ tắt theo họ tên.
+ */
+export function useSelfStaffAvatar(membershipId: string): { naming: StaffNaming; selfInitials: string | undefined } {
+  const naming = useCurrentOrgStaffNaming();
+  const self = naming.roster?.find((m) => m.membershipId === membershipId);
+  return { naming, selfInitials: self ? staffInitials(self) : undefined };
+}

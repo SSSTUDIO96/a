@@ -5,6 +5,7 @@ import { ErrorNotice } from '../app/ErrorNotice';
 import { Avatar, Skeleton, WithTooltip } from '../ui';
 import type { NavChild, NavItem, VisibleNavItem } from './nav';
 import { NavIcon } from './navIcons';
+import { useSelfStaffAvatar } from '../features/staff/useStaffNaming';
 import { OrgSwitcher } from './OrgSwitcher';
 import { useBreakpoint } from './useBreakpoint';
 import { useLogout } from './useLogout';
@@ -26,6 +27,8 @@ export function Sidebar({ user, org, organizations, items, active, activeChild, 
   const base = `/${org.slug}`;
   const roleName = org.roles.map((r) => r.name).join(', ');
   const { logout, pending, error } = useLogout();
+  // L2: ảnh của chính mình cùng màu + chữ tắt với dòng của mình ở Thợ makeup, Lịch (sổ thợ chung, ui/staffName.ts).
+  const { naming, selfInitials } = useSelfStaffAvatar(org.membershipId);
 
   const label = (text: string, node: ReactElement) =>
     iconOnly ? (
@@ -44,7 +47,7 @@ export function Sidebar({ user, org, organizations, items, active, activeChild, 
           <span className="sh-hide-t">Makeup Pro</span>
         </div>
         <div className="sh-user">
-          <Avatar name={user.fullName} colorKey={org.membershipId} />
+          <Avatar name={user.fullName} initials={selfInitials} colorKey={naming.colorKey(org.membershipId)} />
           <div className="sh-hide-t sh-user__txt">
             <span className="sh-user__name">{user.fullName}</span>
             {roleName ? <small>{roleName}</small> : null}

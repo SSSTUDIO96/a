@@ -57,6 +57,11 @@ export function ExtraPackageDialog(p: ExtraPackageDialogProps) {
     const x = people.find((q) => q.membershipId === id);
     return { displayName: x?.displayName ?? '', fullName: x?.fullName };
   };
+  // L3: ảnh của thợ đã chọn mang đủ chữ tắt + ảnh từ ô chọn thợ, như ở màn lập hợp đồng.
+  const avatarOf = (id: string) => {
+    const x = people.find((q) => q.membershipId === id);
+    return { initials: x?.initials, avatarUrl: x?.avatarUrl ?? null };
+  };
   const naming = useMemo(() => staffNaming([...p.staffRoster, ...people]), [p.staffRoster, people]);
   const [picking, setPicking] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
@@ -172,7 +177,7 @@ export function ExtraPackageDialog(p: ExtraPackageDialogProps) {
               (quote.errorLine === 0 ? userMessage(quote.error) : null)
             }
             warnings={warnings}
-            people={line.staff.map((s) => ({ ...s, ...personOf(s.membershipId) }))}
+            people={line.staff.map((s) => ({ ...s, ...personOf(s.membershipId), ...avatarOf(s.membershipId) }))}
             personOf={personOf}
             naming={naming}
             onChange={(patch) => {

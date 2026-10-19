@@ -1,10 +1,11 @@
-import { useId, type ReactNode } from 'react';
+import { useId, useMemo, type ReactNode } from 'react';
 import { userMessage } from '../../api/errors';
 import { Avatar, Select, SettingRow, type SelectOption } from '../../ui';
 import { DateRange, TimeRange } from './DateRange';
 import type { FormErrors, ScheduleFields } from './logic';
 import type { Pickers } from './usePickers';
 import { WeekdayChips } from './WeekdayChips';
+import { rosterEntryOf, staffInitials, useCurrentOrgStaffNaming } from '../staff/useStaffNaming';
 
 // Các dòng lịch của một lớp — dùng chung cho Thêm / Sửa khoá (Một lớp, lớp đầu tiên của Nhiều lớp) và Mở / Sửa lớp.
 // Mỗi dòng = nhãn + điều khiển; giải thích trong tooltip "?".
@@ -39,6 +40,16 @@ export function ScheduleRows({
   const ci = current?.instructor;
   if (ci && !staffOptions.some((o) => o.value === ci.membershipId)) staffOptions.push({ value: ci.membershipId, label: ci.name });
   const selectedStaff = staffOptions.find((o) => o.value === value.instructorId && o.value !== '');
+  // L2: màu + chữ tắt ảnh giảng viên qua sổ thợ chung (ui/staffName.ts) — cùng màu với Thợ makeup, Lịch.
+  const shownStaff = useMemo(
+    () => [
+      ...(pickers.staff ?? []).map(rosterEntryOf),
+      ...(ci ? [{ membershipId: ci.membershipId, displayName: ci.name }] : []),
+    ],
+    [pickers.staff, ci],
+  );
+  const naming = useCurrentOrgStaffNaming(shownStaff);
+  const selectedMember = selectedStaff ? (pickers.staff ?? []).find((m) => m.membershipId === selectedStaff.value) : undefined;
 
   const locOptions: SelectOption[] = [{ value: '', label: 'Chưa chọn' }];
   for (const l of pickers.locations ?? []) locOptions.push({ value: l.id, label: l.name });
@@ -73,7 +84,14 @@ export function ScheduleRows({
       {can.staff && (
         <SettingRow label="Giảng viên" controlWidth={280} className="kc-row--phone-stack">
           <span className="kc-person">
-            {selectedStaff && <Avatar name={selectedStaff.label} colorKey={selectedStaff.value} size="sm" />}
+            {selectedStaff && (
+              <Avatar
+                name={selectedStaff.label}
+                initials={staffInitials(selectedMember ?? { displayName: selectedStaff.label })}
+                colorKey={naming.colorKey(selectedStaff.value)}
+                size="sm"
+              />
+            )}
             <Select
               aria-label="Giảng viên"
               options={staffOptions}

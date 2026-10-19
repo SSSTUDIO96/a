@@ -1,9 +1,13 @@
-import { useId } from 'react';
+import { useId, useMemo } from 'react';
 import type { PayRateSheet, Vnd } from '../../../api/types';
-import { AvatarStack, MoneyInput, Skeleton } from '../../../ui';
+import { Avatar, MoneyInput, Skeleton } from '../../../ui';
+import { staffInitials, useCurrentOrgStaffNaming, rosterEntryOf } from '../../staff/useStaffNaming';
 import type { Resource } from '../hooks';
 import type { FormErrors } from '../logic';
 import { Group, GroupError, LoadError } from '../parts';
+
+// Chồng ảnh: tối đa 3 ảnh rồi "+n" (như AvatarStack).
+const STACK_MAX = 3;
 
 export const TIP_PAY = 'Số tiền trả cho thợ mỗi lần làm, theo bậc lương của thợ. Bỏ trống = chưa đặt.';
 
@@ -22,6 +26,12 @@ export interface PayRatesGroupProps {
 // Người gọi chỉ dựng nhóm khi có payroll.read; thiếu payroll.write thì ô khoá.
 export function PayRatesGroup({ sheet, rates, onChange, errors, canWrite, onInputError, retry }: PayRatesGroupProps) {
   const id = useId();
+  // L2: màu ảnh thợ qua sổ thợ chung (ui/staffName.ts) — không dùng AvatarStack (băm thẳng mã thành viên).
+  const shownStaff = useMemo(
+    () => (sheet !== 'create' && sheet.status === 'ready' ? sheet.data.items.flatMap((r) => r.staff.map(rosterEntryOf)) : []),
+    [sheet],
+  );
+  const naming = useCurrentOrgStaffNaming(shownStaff);
   let body;
   if (sheet === 'create') {
     body = <p className="pr-muted">Lưu xong mới đặt được tiền công.</p>;
@@ -49,7 +59,18 @@ export function PayRatesGroup({ sheet, rates, onChange, errors, canWrite, onInpu
       return (
         <div key={row.tier.id} className="pr-tier">
           <span className="pr-tier__who">
-            {row.staff.length > 0 && <AvatarStack people={row.staff} size="sm" />}
+            {row.staff.length > 0 && (
+              <span className="ui-avs" role="group" aria-label={names}>
+                {row.staff.slice(0, STACK_MAX).map((s) => (
+                  <Avatar key={s.membershipId} name={s.displayName} initials={staffInitials(s)} avatarUrl={s.avatarUrl} colorKey={naming.colorKey(s.membershipId)} size="sm" />
+                ))}
+                {row.staff.length > STACK_MAX && (
+                  <span className="ui-av ui-av--sm ui-avs__more" aria-hidden="true">
+                    +{row.staff.length - STACK_MAX}
+                  </span>
+                )}
+              </span>
+            )}
             <span className="pr-tier__txt">
               <label className="pr-tier__name" htmlFor={`${id}-${row.tier.id}`}>
                 {row.tier.name}

@@ -99,6 +99,8 @@ function tpl(
 }
 
 const VT = (n: number) => `MP Viết tay ${n}`;
+// Nhóm phông chữ ký nét mảnh đều (phong.css 'MP Chữ ký N'); mẫu dùng chữ ký làm phông viết tay mặc định.
+const KY = (n: number) => `MP Chữ ký ${n}`;
 const CHAN = 'MP Chữ có chân';
 const CHAN_DAM = 'MP Chữ đậm có chân';
 const SANS = 'MP Chữ không chân';
@@ -128,6 +130,10 @@ export const DESIGN_TEMPLATES: readonly DesignTemplate[] = [
     ['logo', 'th', 'anh', 'ten', 'khoa', 'lop', 'ngay', 'gv'], [VT(3), CHAN, SANS], 'TU_SANG_TAC'),
   tpl('shd-10', 'WELCOME', 'Thư tay của giảng viên', COURSE,
     ['logo', 'th', 'anh', 'ten', 'khoa', 'lop', 'ngay', 'lich', 'diachi', 'gv'], [VT(1), VT(3), CHAN, SANS], 'TU_SANG_TAC'),
+  // Mẫu thứ 20 (9 mẫu đợt 1 của R&D + shd-01..10 + mẫu này; việc tồn 7): tên học viên viết CHỮ KÝ nét mảnh đều
+  // (docs/SO-Y-MUON.md 18/10/2026) trên dòng ký tên; dòng thông tin trống tự ẩn; không có logo thì ẩn ô logo (L6).
+  tpl('shd-11', 'WELCOME', 'Chữ ký mảnh nền đá', COURSE,
+    ['logo', 'th', 'anh', 'ten', 'khoa', 'lop', 'ngay', 'lich', 'gv', 'diachi'], [KY(1), CHAN, SANS], 'TU_SANG_TAC'),
 
   // ---------- Feedback (fb-09 chỉ dịch vụ; còn lại cả hai loại hợp đồng) ----------
   tpl('fb-01', 'FEEDBACK', 'Tin nhắn và ảnh polaroid', BOTH_KINDS,

@@ -1,6 +1,7 @@
 import { Link } from 'react-router';
 import { Avatar, Button, Tooltip, WithTooltip } from '../../ui';
 import type { StaffNaming } from '../../ui/staffName';
+import { staffInitials } from '../staff/useStaffNaming';
 import type { StaffAssignment } from './model';
 
 export interface StaffPerson extends StaffAssignment {
@@ -45,7 +46,8 @@ export function StaffRow({ people, mode, onPick, pickBlockedReason, scheduleHref
                   key={p.membershipId}
                   size="sm"
                   name={`${p.displayName} · ${p.role === 'PRIMARY' ? 'thợ chính' : 'thợ phụ'}`}
-                  initials={p.initials}
+                  // L3: chữ tắt rút từ TÊN (không từ chuỗi "tên · thợ chính" — từng ra "PC", "NP").
+                  initials={staffInitials(p)}
                   avatarUrl={p.avatarUrl}
                   colorKey={naming.colorKey(p.membershipId)}
                   className={p.role === 'PRIMARY' ? 'ct-av--chinh' : undefined}

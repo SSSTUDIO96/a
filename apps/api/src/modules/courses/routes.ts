@@ -13,6 +13,7 @@ import {
   ListClassesQuery,
   ListCoursesQuery,
   OrgParams,
+  SyncSessionsBody,
   UpdateClassBody,
   UpdateCourseBody,
   UpdateGroupBody,
@@ -29,11 +30,18 @@ import {
   listCourses,
   listEnrollments,
   listGroups,
+  lockClass,
   updateClass,
   updateCourse,
   updateGroup,
   type Actor,
 } from './service';
+import { calendarSummaries, syncClassSessions } from './sessions';
+import { AppError } from '../../lib/errors';
+import { presentClass, NO_CALENDAR } from './present';
+
+// Sửa / huỷ lớp có thể kéo theo hàng chục buổi học trên Lịch (mỗi buổi một lần ghi) — cho transaction rộng giờ hơn mặc định 5 giây.
+const TX_OPTS = { timeout: 30_000 };
 
 const TAG = 'Khoá & lớp';
 
@@ -214,8 +222,8 @@ export const courseRoutes: AnyRoute[] = [
     params: ClassParams,
     body: UpdateClassBody,
     handler: async (ctx) => {
-      const { actor } = await academy(ctx);
-      return { body: await ctx.deps.db.$transaction((tx) => updateClass(tx, actor, ctx.params.classId, ctx.body)) };
+      const { actor, timezone } = await academy(ctx);
+      return { body: await ctx.deps.db.$transaction((tx) => updateClass(tx, actor, ctx.params.classId, ctx.body, timezone), TX_OPTS) };
     },
   }),
 
@@ -225,12 +233,39 @@ export const courseRoutes: AnyRoute[] = [
     scope: 'org',
     permission: 'courses.write',
     tag: TAG,
-    summary: 'Huỷ lớp (cần lý do); lớp còn học viên → 409',
+    summary: 'Huỷ lớp (cần lý do); lớp còn học viên → 409; buổi học chưa diễn ra trên Lịch huỷ theo, còn buổi đang diễn ra → 409',
     params: ClassParams,
     body: CancelClassBody,
     handler: async (ctx) => {
-      const { actor } = await academy(ctx);
-      return { body: await ctx.deps.db.$transaction((tx) => cancelClass(tx, actor, ctx.params.classId, ctx.body.reason)) };
+      const { actor, timezone } = await academy(ctx);
+      return { body: await ctx.deps.db.$transaction((tx) => cancelClass(tx, actor, ctx.params.classId, ctx.body.reason, timezone), TX_OPTS) };
+    },
+  }),
+
+  // Buổi học lên Lịch (việc tồn 6): nút "Đưa buổi học lên Lịch" ở thẻ lớp. Bấm lại không sinh trùng.
+  defineRoute({
+    method: 'post',
+    path: '/orgs/:orgId/classes/:classId/sessions/sync',
+    scope: 'org',
+    permission: 'courses.write',
+    tag: TAG,
+    summary:
+      'Đưa buổi học của lớp lên Lịch theo lịch học (thứ trong tuần, từ hôm nay đến ngày kết thúc): thiếu thì thêm, lệch thì sửa, thừa thì huỷ; buổi đã qua giữ nguyên. dryRun = true chỉ xem trước. Cần thêm quyền schedule.write; trùng giờ giảng viên → 409 kèm details.conflicts',
+    params: ClassParams,
+    body: SyncSessionsBody,
+    handler: async (ctx) => {
+      const { o, actor, timezone } = await academy(ctx);
+      // Buổi học là lịch: ngoài courses.write (khai ở đường) cần cả quyền ghi lịch.
+      if (!o.permissions.has('schedule.write')) {
+        throw new AppError('FORBIDDEN', 'Bạn không có quyền ghi lịch', { required: 'schedule.write' });
+      }
+      const body = await ctx.deps.db.$transaction(async (tx) => {
+        const k = await lockClass(tx, o.id, ctx.params.classId);
+        const result = await syncClassSessions(tx, actor, k, timezone, { dryRun: ctx.body.dryRun, via: 'course_class.sessions_sync' });
+        const cal = (await calendarSummaries(tx, o.id, [k.id])).get(k.id) ?? NO_CALENDAR;
+        return { dryRun: ctx.body.dryRun, ...result, class: presentClass(k, cal) };
+      }, TX_OPTS);
+      return { body };
     },
   }),
 

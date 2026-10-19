@@ -74,8 +74,9 @@ export function thumbnailUrl(t: DesignTemplate, contractKind: ContractKindKey): 
   return `/mau/anh-nho/${t.code}${variant}.jpg`;
 }
 
+// Mẫu có chữ viết tay (phông "MP Viết tay N" hoặc mẫu đặt sẵn chữ ký "MP Chữ ký N", ví dụ shd-11) → hiện ô chọn chữ ký.
 export function templateUsesHandwriting(t: DesignTemplate): boolean {
-  return t.fonts.some((f) => f.startsWith('MP Viết tay'));
+  return t.fonts.some((f) => f.startsWith('MP Viết tay') || f.startsWith('MP Chữ ký'));
 }
 
 // Số ảnh người dùng tải lên theo mẫu (photos.min..max ở danh mục).

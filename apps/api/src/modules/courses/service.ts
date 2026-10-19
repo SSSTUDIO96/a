@@ -16,6 +16,7 @@ import {
   dateFromWire,
   groupSelect,
   hasSeats,
+  NO_CALENDAR,
   presentClass,
   presentCourse,
   presentGroup,
@@ -31,6 +32,7 @@ import type {
   UpdateClassInput,
   UpdateCourseInput,
 } from './schemas';
+import { calendarSummaries, cancelClassSessions, followClassUpdate } from './sessions';
 
 type Tx = Prisma.TransactionClient;
 
@@ -94,7 +96,7 @@ async function lockCourse(tx: Tx, orgId: string, courseId: string): Promise<Cour
   return tx.course.findUniqueOrThrow({ where: { id: courseId }, select: courseSelect });
 }
 
-async function lockClass(tx: Tx, orgId: string, classId: string): Promise<ClassRow> {
+export async function lockClass(tx: Tx, orgId: string, classId: string): Promise<ClassRow> {
   const rows = await tx.$queryRaw<{ id: string }[]>`
     SELECT id FROM course_classes WHERE id = ${classId}::uuid AND organization_id = ${orgId}::uuid FOR UPDATE`;
   if (rows.length === 0) throw notFound.class();
@@ -186,7 +188,8 @@ const classOrder = [{ startDate: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }] s
 
 async function classesOf(db: Tx, orgId: string, courseId: string) {
   const rows = await db.courseClass.findMany({ where: { organizationId: orgId, courseId }, select: classSelect, orderBy: classOrder });
-  return rows.map(presentClass);
+  const cal = await calendarSummaries(db, orgId, rows.map((k) => k.id));
+  return rows.map((k) => presentClass(k, cal.get(k.id) ?? NO_CALENDAR));
 }
 
 export async function courseWithClasses(db: Tx, orgId: string, courseId: string) {
@@ -237,6 +240,7 @@ export async function listCourses(
   const byCourse = new Map<string, ClassRow[]>();
   for (const k of classes) byCourse.set(k.courseId, [...(byCourse.get(k.courseId) ?? []), k]);
   const today = todayIn(timezone);
+  const cal = await calendarSummaries(db, orgId, classes.map((k) => k.id));
   return courses.map((c) => {
     const own = byCourse.get(c.id) ?? [];
     // Khoá Một lớp: kèm luôn lớp duy nhất chưa huỷ để dòng danh sách hiện "31/10–21/11 · 7/10 học viên".
@@ -244,7 +248,7 @@ export async function listCourses(
     return {
       ...presentCourse(c),
       classSummary: classSummary(own, today),
-      singleClass: live ? presentClass(live) : null,
+      singleClass: live ? presentClass(live, cal.get(live.id) ?? NO_CALENDAR) : null,
     };
   });
 }
@@ -265,9 +269,9 @@ export async function listClasses(db: Tx, orgId: string, q: ListClassesInput) {
     select: { ...classSelect, course: { select: { id: true, code: true, name: true, mode: true } } },
     orderBy: classOrder,
   });
-  return rows
-    .filter((k) => q.hasSeats === undefined || hasSeats(k) === q.hasSeats)
-    .map((k) => ({ ...presentClass(k), course: k.course }));
+  const kept = rows.filter((k) => q.hasSeats === undefined || hasSeats(k) === q.hasSeats);
+  const cal = await calendarSummaries(db, orgId, kept.map((k) => k.id));
+  return kept.map((k) => ({ ...presentClass(k, cal.get(k.id) ?? NO_CALENDAR), course: k.course }));
 }
 
 // Học viên của lớp. Số điện thoại khách chỉ trả cho người có quyền xem khách (customers.read); tiền hợp đồng chỉ trả
@@ -462,7 +466,7 @@ export async function createCourse(tx: Tx, a: Actor, body: CreateCourseInput) {
     },
     requestId: a.requestId,
   });
-  return { course: presentCourse(course), classes: firstClass ? [presentClass(firstClass)] : [] };
+  return { course: presentCourse(course), classes: firstClass ? [presentClass(firstClass, NO_CALENDAR)] : [] };
 }
 
 function liveClasses(tx: Tx, orgId: string, courseId: string) {
@@ -580,10 +584,10 @@ export async function createClass(tx: Tx, a: Actor, courseId: string, body: Crea
     data: { courseId, before: null, after: classValues(created) },
     requestId: a.requestId,
   });
-  return presentClass(created);
+  return presentClass(created, NO_CALENDAR);
 }
 
-export async function updateClass(tx: Tx, a: Actor, classId: string, body: UpdateClassInput) {
+export async function updateClass(tx: Tx, a: Actor, classId: string, body: UpdateClassInput, timezone: string) {
   const before = await lockClass(tx, a.orgId, classId);
   if (before.status === 'CANCELLED') throw new AppError('CONFLICT', 'Lớp đã huỷ — không sửa được');
   if (body.name !== undefined) {
@@ -640,10 +644,12 @@ export async function updateClass(tx: Tx, a: Actor, classId: string, body: Updat
     data: { courseId: before.courseId, before: cur, after: classValues(after) },
     requestId: a.requestId,
   });
-  return presentClass(after);
+  // Lớp đã đưa buổi học lên Lịch: buổi chưa diễn ra đổi theo lịch mới, cùng transaction (trùng giờ → 409, lùi cả lệnh sửa).
+  await followClassUpdate(tx, a, after, timezone);
+  return presentClass(after, (await calendarSummaries(tx, a.orgId, [classId])).get(classId) ?? NO_CALENDAR);
 }
 
-export async function cancelClass(tx: Tx, a: Actor, classId: string, reason: string) {
+export async function cancelClass(tx: Tx, a: Actor, classId: string, reason: string, timezone: string) {
   const before = await lockClass(tx, a.orgId, classId);
   if (before.status === 'CANCELLED') throw new AppError('CONFLICT', 'Lớp đã huỷ');
   const active = await tx.enrollment.count({ where: { organizationId: a.orgId, courseClassId: classId, status: 'ACTIVE' } });
@@ -654,6 +660,8 @@ export async function cancelClass(tx: Tx, a: Actor, classId: string, reason: str
       enrolledCount: students,
     });
   }
+  // Buổi học chưa diễn ra huỷ theo; còn buổi đang diễn ra → 409 nêu rõ buổi nào, lớp KHÔNG bị huỷ.
+  const sessionsCancelled = await cancelClassSessions(tx, a, classId, reason, timezone);
   const after = await tx.courseClass.update({ where: { id: classId }, data: { status: 'CANCELLED' }, select: classSelect });
   await writeAudit(tx, {
     organizationId: a.orgId,
@@ -661,8 +669,8 @@ export async function cancelClass(tx: Tx, a: Actor, classId: string, reason: str
     action: 'course_class.cancelled',
     entityType: 'course_class',
     entityId: classId,
-    data: { courseId: before.courseId, before: { status: before.status }, after: { status: after.status }, reason },
+    data: { courseId: before.courseId, before: { status: before.status }, after: { status: after.status }, reason, sessionsCancelled },
     requestId: a.requestId,
   });
-  return presentClass(after);
+  return presentClass(after, (await calendarSummaries(tx, a.orgId, [classId])).get(classId) ?? NO_CALENDAR);
 }

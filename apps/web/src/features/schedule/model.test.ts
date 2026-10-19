@@ -268,9 +268,9 @@ describe('màu ca theo nhân vật (subjectName)', () => {
     expect(swatchOf(a.subjectName, ORG)).toBe('other');
   });
 
-  it('nhân vật tổ chức tự thêm: màu theo vị trí trong danh sách của tổ chức (xoay vòng 6 màu); không có trong danh sách → cố định theo tên', () => {
-    expect(swatchOf('Bà nội', ORG)).toBe('rose'); // vị trí 6 → 6 % 6 = 0
-    expect(swatchOf('Em bé', ORG)).toBe('violet'); // vị trí 7 → 1
+  it('nhân vật tổ chức tự thêm: màu mới theo thứ tự trong danh sách của tổ chức (không trùng nhân vật cài sẵn); không có trong danh sách → cố định theo tên', () => {
+    expect(swatchOf('Bà nội', ORG)).toBe('brick'); // nhân vật thứ 7: màu mới đầu tiên (trước đây trùng "Cô dâu")
+    expect(swatchOf('Em bé', ORG)).toBe('petrol'); // thứ 8
     const lạ = swatchOf('Bạn thân cô dâu', ORG);
     expect(lạ).not.toBe('other');
     expect(swatchOf('Bạn thân cô dâu', [])).toBe(lạ);

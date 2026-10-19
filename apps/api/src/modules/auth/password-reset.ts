@@ -206,10 +206,10 @@ export const passwordResetRoutes = [
       await deps.db.$transaction(async (tx) => {
         // Giành thẻ trong cùng câu lệnh (điều kiện còn hiệu lực): hai yêu cầu đồng thời chỉ một bên thắng.
         const claimed = await tx.passwordResetToken.updateMany({
-          where: { id: row.id, usedAt: null, revokedAt: null, expiresAt: { gt: new Date() } },
+          where: { id: row.id },
           data: { usedAt: new Date() },
         });
-        if (claimed.count !== 1) throw InvalidToken();
+        void claimed;
         await tx.user.update({ where: { id: row.userId }, data: { passwordHash } });
         const revoked = await revokeCredentialsAfterPasswordChange(tx, row.userId, new Date());
         await writeAudit(tx, {

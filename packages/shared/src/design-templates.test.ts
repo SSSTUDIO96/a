@@ -13,10 +13,20 @@ import { DEFAULT_GREETING_PHRASES, phraseAppliesTo } from './greetings';
 const codes = (prefix: string, n: number) => Array.from({ length: n }, (_, i) => `${prefix}-${String(i + 1).padStart(2, '0')}`);
 
 describe('danh mục mẫu thiết kế', () => {
-  it('đủ 26 mẫu đợt đầu: shd-01..10, fb-01..10, lc-01..06', () => {
+  it('đủ 27 mẫu: shd-01..11, fb-01..10, lc-01..06', () => {
     expect(DESIGN_TEMPLATES.map((t) => t.code).sort()).toEqual(
-      [...codes('shd', 10), ...codes('fb', 10), ...codes('lc', 6)].sort(),
+      [...codes('shd', 11), ...codes('fb', 10), ...codes('lc', 6)].sort(),
     );
+  });
+  it('BẮT: mẫu chào mừng thứ 20 (shd-11) — khoá học, chữ ký nét mảnh, đủ ô, không ô ảnh tải lên', () => {
+    const t = findDesignTemplate('shd-11');
+    expect(t).toBeDefined();
+    expect(t).toMatchObject({ kind: 'WELCOME', name: 'Chữ ký mảnh nền đá', contractKinds: ['COURSE'], origin: 'TU_SANG_TAC', version: 1 });
+    expect([...t!.slots].sort()).toEqual(['anh', 'diachi', 'gv', 'khoa', 'lich', 'logo', 'lop', 'ngay', 'ten', 'th'].sort());
+    expect(t!.fonts).toEqual(['MP Chữ ký 1', 'MP Chữ có chân', 'MP Chữ không chân']);
+    expect(t!.photos).toEqual({ min: 0, max: 0 });
+    // Mẫu mới nằm cuối nhóm chào mừng (lưới mẫu xếp theo thứ tự danh mục).
+    expect(listDesignTemplates({ kind: 'WELCOME' }).at(-1)?.code).toBe('shd-11');
   });
   it('mã mẫu không trùng', () => {
     const all = DESIGN_TEMPLATES.map((t) => t.code);
@@ -41,7 +51,7 @@ describe('danh mục mẫu thiết kế', () => {
   });
   it('số ảnh khớp ô a1..a3 và bảng "Danh mục đợt đầu"', () => {
     const want: Record<string, number> = {
-      ...Object.fromEntries(codes('shd', 10).map((c) => [c, 0])),
+      ...Object.fromEntries(codes('shd', 11).map((c) => [c, 0])),
       'fb-01': 1, 'fb-02': 1, 'fb-03': 1, 'fb-04': 3, 'fb-05': 2, 'fb-06': 3, 'fb-07': 1, 'fb-08': 1, 'fb-09': 2, 'fb-10': 1,
       'lc-01': 1, 'lc-02': 1, 'lc-03': 1, 'lc-04': 2, 'lc-05': 0, 'lc-06': 1,
     };
@@ -58,7 +68,7 @@ describe('danh mục mẫu thiết kế', () => {
   });
   it('loại hợp đồng theo bảng "Danh mục đợt đầu"', () => {
     const kinds = (code: string) => [...findDesignTemplate(code)!.contractKinds].sort().join('+');
-    for (const c of codes('shd', 10)) expect(kinds(c), c).toBe('COURSE');
+    for (const c of codes('shd', 11)) expect(kinds(c), c).toBe('COURSE');
     for (const c of codes('fb', 10)) expect(kinds(c), c).toBe(c === 'fb-09' ? 'SERVICE' : 'COURSE+SERVICE');
     for (const c of ['lc-01', 'lc-03', 'lc-04', 'lc-06']) expect(kinds(c), c).toBe('SERVICE');
     expect(kinds('lc-02')).toBe('COURSE+SERVICE');
@@ -85,8 +95,8 @@ describe('danh mục mẫu thiết kế', () => {
     expect(findDesignTemplate('fb-09')?.name).toBe('Trước – sau');
   });
   it('lọc theo loại thẻ và loại hợp đồng', () => {
-    expect(listDesignTemplates().length).toBe(26);
-    expect(listDesignTemplates({ kind: 'WELCOME' }).length).toBe(10);
+    expect(listDesignTemplates().length).toBe(27);
+    expect(listDesignTemplates({ kind: 'WELCOME' }).length).toBe(11);
     expect(listDesignTemplates({ contractKind: 'SERVICE', kind: 'WELCOME' })).toEqual([]);
     expect(listDesignTemplates({ contractKind: 'COURSE', kind: 'FEEDBACK' }).map((t) => t.code)).not.toContain('fb-09');
     expect(listDesignTemplates({ contractKind: 'COURSE', kind: 'GREETING' }).map((t) => t.code).sort()).toEqual(['lc-02', 'lc-05']);

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useBlocker, useNavigate } from 'react-router';
 import { ApiError, errorKind, userMessage } from '../../api/errors';
 import type { PayRateSheet as Sheet } from '../../api/types';
@@ -6,6 +6,7 @@ import { Button, Card, ConfirmDialog, EmptyState, formatVnd, IconBack, IconPlus,
 import { changedRates, errorTierIds, formatDateIn, rateDraftOf, type PayOwner, type RateDraft } from './logic';
 import { LoadErrorStrip, Strip } from './parts';
 import { PayRateRow } from './PayRateRow';
+import { rosterEntryOf, useCurrentOrgStaffNaming } from './useStaffNaming';
 import { getPayRates, putPayRates } from './usePayRates';
 import { useLoad } from './useOrgInfo';
 
@@ -29,6 +30,9 @@ export function PayRateSheet({ orgId, slug, timezone, owner, canWrite, canAddTie
   const [saving, setSaving] = useState(false);
 
   const sheet = state.status === 'ready' ? state.data : null;
+  // L2: màu ảnh thợ qua sổ thợ chung (GET /staff ∪ thợ trên bảng) — cùng màu với Thợ makeup, Lịch, Hợp đồng.
+  const shownStaff = useMemo(() => (sheet?.items ?? []).flatMap((r) => r.staff.map(rosterEntryOf)), [sheet]);
+  const naming = useCurrentOrgStaffNaming(shownStaff);
   const values: RateDraft = draft ?? (sheet ? rateDraftOf(sheet.items) : {});
   const changes = sheet && canWrite ? changedRates(sheet.items, values) : [];
   const dirty = changes.length > 0;
@@ -120,6 +124,7 @@ export function PayRateSheet({ orgId, slug, timezone, owner, canWrite, canAddTie
       <PayRateRow
         key={r.tier.id}
         row={r}
+        naming={naming}
         value={values[r.tier.id] ?? null}
         readOnly={!canWrite}
         disabled={saving}

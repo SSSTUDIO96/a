@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Link, useParams } from 'react-router';
 import type { ClassView } from '../../api/courses';
 import { Avatar, Button, IconCalendar, IconClock, StatusTag } from '../../ui';
@@ -5,6 +6,7 @@ import { IconPin, IconUsers } from './icons';
 import { fullDate, scheduleText, seatInfo } from './logic';
 import { OffButton } from './OffButton';
 import { SeatBar, SeatTag } from './SeatTag';
+import { staffInitials, useCurrentOrgStaffNaming } from '../staff/useStaffNaming';
 
 // Thẻ lớp (bản vẽ C3 mục 2.1): ai, khi nào, ở đâu + thanh đầy + "x đã ghi danh / tối đa y" + nút Ghi danh.
 // Ghi danh = mở Lập hợp đồng khoá học, chọn sẵn lớp: /:orgSlug/hop-dong/moi?kind=COURSE&classId=<id> (cần contracts.write).
@@ -25,6 +27,10 @@ export interface ClassCardProps {
 export function ClassCard({ cls, title, canEnroll, onEdit, onStudents }: ClassCardProps) {
   const { orgSlug } = useParams();
   const seat = seatInfo(cls.enrolledCount, cls.capacity);
+  // L2: màu + chữ tắt ảnh giảng viên qua sổ thợ chung (ui/staffName.ts) — cùng màu với Thợ makeup, Lịch.
+  const inst = cls.instructor;
+  const shownStaff = useMemo(() => (inst ? [{ membershipId: inst.membershipId, displayName: inst.name }] : []), [inst]);
+  const naming = useCurrentOrgStaffNaming(shownStaff);
   const cancelled = cls.status === 'CANCELLED';
   const closed = cls.status === 'CLOSED';
   const state = cancelled ? 'cancelled' : seat.state === 'FULL' ? 'full' : 'open';
@@ -46,7 +52,7 @@ export function ClassCard({ cls, title, canEnroll, onEdit, onStudents }: ClassCa
         </span>
         {cls.instructor ? (
           <span>
-            <Avatar name={cls.instructor.name} colorKey={cls.instructor.membershipId} size="xs" />
+            <Avatar name={cls.instructor.name} initials={staffInitials({ displayName: cls.instructor.name })} colorKey={naming.colorKey(cls.instructor.membershipId)} size="xs" />
             {cls.instructor.name}
           </span>
         ) : (

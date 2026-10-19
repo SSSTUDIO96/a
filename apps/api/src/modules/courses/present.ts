@@ -124,8 +124,16 @@ export function classValues(k: ClassRow) {
   };
 }
 
-// ClassView (bản vẽ C3 mục 1.3).
-export function presentClass(k: ClassRow) {
+// Buổi học của lớp trên Lịch (việc tồn 6): total = buổi chưa huỷ, upcoming = trong đó buổi chưa diễn ra.
+export interface ClassCalendar {
+  total: number;
+  upcoming: number;
+}
+
+export const NO_CALENDAR: ClassCalendar = { total: 0, upcoming: 0 };
+
+// ClassView (bản vẽ C3 mục 1.3) + calendar (buổi học trên Lịch — tính bằng calendarSummaries, một lần cho cả danh sách).
+export function presentClass(k: ClassRow, calendar: ClassCalendar) {
   const v = classValues(k);
   return {
     id: k.id,
@@ -146,6 +154,7 @@ export function presentClass(k: ClassRow) {
       ? { membershipId: k.instructor.id, name: k.instructor.staffProfile?.displayName ?? k.instructor.user.fullName }
       : null,
     location: k.studioLocation ? { id: k.studioLocation.id, name: k.studioLocation.name, address: k.studioLocation.address } : null,
+    calendar: { total: calendar.total, upcoming: calendar.upcoming },
   };
 }
 

@@ -1,10 +1,14 @@
 import { useId } from 'react';
 import type { PayRateRow as Row, Vnd } from '../../api/types';
 import { MoneyInput, PersonChip, PersonChipList } from '../../ui';
+import type { StaffNaming } from '../../ui/staffName';
+import { staffInitials } from './useStaffNaming';
 
 // Một hàng tiền công (C2 1.3): tên bậc · "n thợ" / các PersonChip của thợ thuộc bậc / ô tiền + "Cập nhật dd/mm/yyyy".
 export interface PayRateRowProps {
   row: Row;
+  // L2: màu ảnh đại diện theo sổ thợ chung (ui/staffName.ts).
+  naming: StaffNaming;
   value: Vnd | null;
   readOnly: boolean;
   disabled: boolean;
@@ -14,7 +18,7 @@ export interface PayRateRowProps {
   onInputError: (msg: string | null) => void;
 }
 
-export function PayRateRow({ row, value, readOnly, disabled, error, updatedText, onChange, onInputError }: PayRateRowProps) {
+export function PayRateRow({ row, naming, value, readOnly, disabled, error, updatedText, onChange, onInputError }: PayRateRowProps) {
   const nameId = useId();
   const noteId = useId();
   return (
@@ -26,7 +30,7 @@ export function PayRateRow({ row, value, readOnly, disabled, error, updatedText,
         {row.staff.length > 0 ? (
           <PersonChipList label={`Thợ ở bậc ${row.tier.name}`}>
             {row.staff.map((s) => (
-              <PersonChip key={s.membershipId} name={s.displayName} avatarUrl={s.avatarUrl} initials={s.initials} colorKey={s.membershipId} />
+              <PersonChip key={s.membershipId} name={s.displayName} avatarUrl={s.avatarUrl} initials={staffInitials(s)} colorKey={naming.colorKey(s.membershipId)} />
             ))}
           </PersonChipList>
         ) : (

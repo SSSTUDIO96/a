@@ -44,6 +44,9 @@ export interface CreateAppointmentInput {
   notes?: string | null;
   staff: StaffAssignment[];
   status: InitialStatus;
+  // Chỉ module khoá học truyền (buổi học sinh từ lớp, kind = COURSE_SESSION): lớp + ngày học "YYYY-MM-DD".
+  courseClassId?: string;
+  sessionDate?: Date;
 }
 
 export interface TxCtx {
@@ -59,6 +62,9 @@ export const appointmentInclude = {
   // của dòng (phù dâu 2 người → 2) để màn Lịch ghi "× 2". Quan hệ đi theo khoá ngoại kép (contract_line_id,
   // organization_id) nên chỉ đọc được dòng của CHÍNH tổ chức của ca.
   contractLine: { select: { subjectName: true, quantity: true } },
+  // Buổi học sinh từ lớp: tên lớp + khoá. Khoá ngoại kép (course_class_id, organization_id) → chỉ đọc được lớp của CHÍNH
+  // tổ chức của ca.
+  courseClass: { select: { id: true, name: true, course: { select: { id: true, name: true } } } },
   staff: {
     select: {
       membershipId: true,
@@ -123,6 +129,11 @@ export function presentAppointment(a: AppointmentRow, avatarOf: AvatarOf, histor
     subjectName: a.contractLine?.subjectName ?? null,
     // Số lượng của dòng hợp đồng gắn với ca (≥ 1); ca không gắn dòng → null.
     quantity: a.contractLine?.quantity ?? null,
+    // Buổi học sinh từ lớp (kind = COURSE_SESSION); ca khác → null.
+    courseClass: a.courseClass
+      ? { id: a.courseClass.id, name: a.courseClass.name, courseId: a.courseClass.course.id, courseName: a.courseClass.course.name }
+      : null,
+    sessionDate: a.sessionDate ? a.sessionDate.toISOString().slice(0, 10) : null,
     startsAt: a.startsAt.toISOString(),
     endsAt: a.endsAt.toISOString(),
     travelBeforeMin: a.travelBeforeMin,
@@ -511,6 +522,8 @@ export async function createAppointmentTx(
       customerId,
       contractId: input.contractId ?? null,
       contractLineId: input.contractLineId ?? null,
+      courseClassId: input.courseClassId ?? null,
+      sessionDate: input.sessionDate ?? null,
       startsAt: input.startsAt,
       endsAt: input.endsAt,
       travelBeforeMin: input.travelBeforeMin,
@@ -562,11 +575,103 @@ export async function createAppointmentTx(
       endsAt: input.endsAt.toISOString(),
       customerId,
       contractId: input.contractId ?? null,
+      ...(input.courseClassId ? { courseClassId: input.courseClassId } : {}),
       staff: input.staff.map((s) => ({ membershipId: s.membershipId, role: s.role })),
     },
     requestId: ctx.requestId,
   });
   return tx.appointment.findUniqueOrThrow({ where: { id: created.id }, include: appointmentInclude });
+}
+
+export interface RescheduleInput {
+  startsAt: Date;
+  endsAt: Date;
+  staff: StaffAssignment[];
+  title: string | null;
+  locationType: LocationType | null;
+  address: string | null;
+}
+
+// Đổi giờ / thợ / tên / địa điểm của MỘT lịch đã khoá (người gọi đã khoá dòng lịch) — dùng cho module khoá học khi lịch
+// lớp đổi thì buổi học chưa diễn ra đổi theo. Cùng luật trùng giờ với đường PATCH lịch: lịch chiếm giờ → khoá thợ trước
+// bước kiểm, 409 kèm danh sách khi trùng, guardOverlap là chốt cuối khi hai yêu cầu đua nhau.
+// lockMode: người gọi đã tạo lịch trong cùng transaction (khoá tổ chức 'exclusive') thì PHẢI truyền 'exclusive' — đã cầm
+// 'shared' thì không được nâng lên 'exclusive' (xem lockStaffSchedule).
+export async function rescheduleAppointmentTx(
+  tx: Prisma.TransactionClient,
+  ctx: TxCtx,
+  before: AppointmentRow,
+  next: RescheduleInput,
+  lockMode: 'shared' | 'exclusive',
+  auditExtra?: Record<string, string>,
+): Promise<void> {
+  if (isTerminalStatus(before.status)) {
+    throw new AppError('CONFLICT', `Lịch ${WORK_STATUS_LABELS[before.status].toLowerCase()} không sửa được`);
+  }
+  const time = { startsAt: next.startsAt, endsAt: next.endsAt, travelBeforeMin: before.travelBeforeMin, travelAfterMin: before.travelAfterMin };
+  assertTimeRange(time);
+  const kept = new Set(before.staff.map((s) => s.membershipId));
+  await assertActiveStaff(tx, ctx.orgId, next.staff);
+  await assertBookable(
+    tx,
+    ctx.orgId,
+    next.staff.map((s) => s.membershipId).filter((id) => !kept.has(id)),
+  );
+  const block = computeBlock(time);
+  const isBlocking = isBlockingStatus(before.status);
+  const check = { orgId: ctx.orgId, membershipIds: next.staff.map((s) => s.membershipId), block, excludeAppointmentId: before.id };
+  if (isBlocking) {
+    await lockStaffSchedule(tx, check.orgId, check.membershipIds, lockMode);
+    await assertNoOverlap(tx, check.orgId, check.membershipIds, check.block, check.excludeAppointmentId);
+  }
+  const write = async () => {
+    await tx.appointmentStaff.deleteMany({ where: { appointmentId: before.id, organizationId: ctx.orgId } });
+    if (next.staff.length > 0) {
+      await tx.appointmentStaff.createMany({
+        data: next.staff.map((s) => ({
+          organizationId: ctx.orgId,
+          appointmentId: before.id,
+          membershipId: s.membershipId,
+          role: s.role,
+          blockStart: block.blockStart,
+          blockEnd: block.blockEnd,
+          isBlocking,
+        })),
+      });
+    }
+    await tx.appointment.update({
+      where: { id: before.id },
+      data: { startsAt: next.startsAt, endsAt: next.endsAt, title: next.title, locationType: next.locationType, address: next.address },
+    });
+  };
+  if (isBlocking) await guardOverlap(tx, check, write);
+  else await write();
+  await writeAudit(tx, {
+    organizationId: ctx.orgId,
+    actorUserId: ctx.userId,
+    action: 'appointment.updated',
+    entityType: 'appointment',
+    entityId: before.id,
+    data: {
+      code: before.code,
+      before: {
+        startsAt: before.startsAt.toISOString(),
+        endsAt: before.endsAt.toISOString(),
+        title: before.title,
+        address: before.address,
+        staff: before.staff.map((s) => ({ membershipId: s.membershipId, role: s.role })),
+      },
+      after: {
+        startsAt: next.startsAt.toISOString(),
+        endsAt: next.endsAt.toISOString(),
+        title: next.title,
+        address: next.address,
+        staff: next.staff.map((x) => ({ membershipId: x.membershipId, role: x.role })),
+      },
+      ...auditExtra,
+    },
+    requestId: ctx.requestId,
+  });
 }
 
 // Chuyển trạng thái một lịch đã khoá: kiểm bảng chuyển, kiểm trùng khi lịch bắt đầu chiếm giờ,
