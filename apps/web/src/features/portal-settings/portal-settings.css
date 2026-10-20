@@ -28,3 +28,9 @@
   .ps-prev__card { padding: 12px 14px; }
   .ps-prev__card dl > div { grid-template-columns: minmax(0, 1fr); gap: 0; }
 }
+/* Điện thoại: nhãn trên, ô dưới rộng hết (tên chủ tài khoản dài không bị cắt). */
+@media (max-width: 640px) {
+  .ps-form .ui-row { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  .ps-form .ui-row__ctl { justify-content: stretch; }
+  .ps-form .ui-row__ctl > .ui-field { width: 100%; }
+}

@@ -371,9 +371,9 @@ function CreateDialog({
         onChange={(e) => setTicked(e.target.checked)}
         data-autofocus
         label={
-          <>
+          <span>
             Tôi đã đối chiếu số điện thoại đuôi <b className="pt-last4">{phoneLast4 ?? '????'}</b> với học viên
-          </>
+          </span>
         }
       />
       {error && (
