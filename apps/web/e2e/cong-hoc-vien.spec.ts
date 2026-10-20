@@ -7,7 +7,7 @@
 //     pnpm exec playwright test e2e/cong-hoc-vien.spec.ts
 // Ảnh: <E2E_ANH_DIR>/cong-hoc-vien-<màn>-<390|1440>.png, chụp khung nhìn (fullPage: false).
 import { createRequire } from 'node:module';
-import { mkdirSync, statSync } from 'node:fs';
+import { mkdirSync, statSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
@@ -67,7 +67,8 @@ async function renderCardPng(browser: Browser, file: string, title: string, subt
       <div style="font-size:20px">${subtitle}</div></body>`,
   );
   mkdirSync(path.dirname(file), { recursive: true });
-  await page.screenshot({ path: file });
+  const png = await page.screenshot({ type: 'png' }); // buffer, ghi vào kho tệp của máy chủ (không phải ảnh tài liệu)
+  writeFileSync(file, png);
   await ctx.close();
 }
 

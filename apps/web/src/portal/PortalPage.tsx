@@ -21,7 +21,7 @@ import {
   TuitionCard,
   type Ctx,
 } from './sections';
-import { Avatar, ConfirmSheet } from './widgets';
+import { ConfirmSheet, RoundPic } from './widgets';
 
 interface NavItem {
   id: string;
@@ -132,12 +132,12 @@ export function PortalPage({ me, clockOffsetMs, onSessionLost, onSignedOut }: Pr
     <div className="pt-app">
       <header className="pt-top">
         <div className="pt-top__in">
-          <Avatar name={me.center.name} url={me.center.logoUrl} size={32} tone="brand" />
+          <RoundPic name={me.center.name} url={me.center.logoUrl} size={32} tone="brand" />
           <div className="pt-top__text">
             <strong>{me.center.name}</strong>
             <span>Cổng học viên</span>
           </div>
-          <Avatar name={me.student.callName} url={me.student.avatarUrl} size={32} />
+          <RoundPic name={me.student.callName} url={me.student.avatarUrl} size={32} />
         </div>
       </header>
 
@@ -158,7 +158,7 @@ export function PortalPage({ me, clockOffsetMs, onSessionLost, onSignedOut }: Pr
 
         <main className="pt-main">
           <section className="pt-hello" aria-label="Học viên">
-            <Avatar name={me.student.callName} url={me.student.avatarUrl} size={72} />
+            <RoundPic name={me.student.callName} url={me.student.avatarUrl} size={72} />
             <div className="pt-hello__text">
               <h1>Chào {me.student.callName}</h1>
               {sub && <p className="pt-muted">{sub}</p>}

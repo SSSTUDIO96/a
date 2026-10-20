@@ -1,8 +1,8 @@
-// Phần nhỏ dùng chung của cổng: ảnh đại diện, hộp hỏi lại.
+// Phần nhỏ dùng chung của cổng: ảnh tròn (học viên, trung tâm; KHÔNG phải ảnh thợ ở sổ thợ chung), hộp hỏi lại.
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { initialOf } from './logic';
 
-export function Avatar({ name, url, size, tone }: { name: string; url: string | null; size: number; tone?: 'brand' }) {
+export function RoundPic({ name, url, size, tone }: { name: string; url: string | null; size: number; tone?: 'brand' }) {
   const [broken, setBroken] = useState(false);
   const style = { width: size, height: size, fontSize: Math.round(size * 0.42) };
   if (url && !broken) {
