@@ -341,7 +341,7 @@ export function ContractEditor({ orgId, slug, tz, has, contractId, kindSwitch, o
         },
         report: data.autoSurcharge,
       });
-      if (texts.length > 0) setToasts((t) => [...t, ...texts.map((text) => ({ id: (toastSeq.current += 1), text }))].slice(-4));
+      if (texts.length > 0) setToasts((t) => [...t, ...texts.map((text) => ({ id: (toastSeq.current += 1), text }))].slice(-3));
     }
     knownApplied.current = next;
     // Nháp cũ mở lần đầu: luật thêm dòng mà bản đã lưu chưa có → dải xanh (không bắn thông báo từng dòng).
@@ -1143,7 +1143,9 @@ export function ContractEditor({ orgId, slug, tz, has, contractId, kindSwitch, o
           {/* Thanh tổng kèm một dải trên:
               - N2: dòng chưa có giờ CHẶN xác nhận — dải đỏ kể đúng từng dòng, bấm tên dòng thì cuộn tới ô giờ của dòng đó.
               - S1: dòng chưa có thợ chỉ nhắc (vàng), KHÔNG chặn. */}
-          <div className={`ct-totbar${gapText || noTimeLines.length > 0 || hiddenLines.length > 0 ? ' ct-totbar--note' : ''}`}>
+          <div className={`ct-totbar${gapText || noTimeLines.length > 0 || hiddenLines.length > 0 || toasts.length > 0 ? ' ct-totbar--note' : ''}`}>
+            {/* Thông báo phụ phí nằm TRONG thanh tổng (không nổi lên che thẻ đang sửa). */}
+            <SurchargeToasts items={toasts} onDone={closeToast} />
             {hiddenLines.length > 0 && (
               <div className="ct-totbar__note ct-totbar__note--block" role="status" data-o="nhan-vat-an">
                 <IconWarn />
@@ -1317,7 +1319,6 @@ export function ContractEditor({ orgId, slug, tz, has, contractId, kindSwitch, o
           }
         }}
       />
-      <SurchargeToasts items={toasts} onDone={closeToast} />
     </div>
   );
 }

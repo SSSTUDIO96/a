@@ -6,7 +6,9 @@ import { useQuote } from '../../api/useQuote';
 import type { ContractBody, ServicePackage } from '../../api/types';
 import { Button, Dialog } from '../../ui';
 import {
+  autoNotesByDraft,
   dateOf,
+  dayOfLine,
   errorLineOf,
   lineInput,
   matchQuote,
@@ -14,6 +16,7 @@ import {
   missingTimeOf,
   missingTimeWhat,
   newPackageLine,
+  placedFromView,
   quotePlan,
   serverWarnings,
   displayWarnings,
@@ -25,6 +28,7 @@ import {
   type ContractDetail,
   type PlacedDraft,
   type ContractQuote,
+  type SurchargeOverrideDraft,
 } from './model';
 import { PackageLineCard } from './PackageLineCard';
 import { StaffPicker } from './StaffPicker';
@@ -72,10 +76,15 @@ export function ExtraPackageDialog(p: ExtraPackageDialogProps) {
   useEffect(() => {
     if (!pkg) return;
     const studio = catalog.studios.find((s) => s.isDefault) ?? catalog.studios[0] ?? null;
-    setLine(newPackageLine(pkg, studio?.id ?? null, catalog.policy.defaultMode));
+    // Như ở màn lập hợp đồng: dòng mới theo sự kiện và ngày của dòng đặt chỗ ngay trên (dòng cuối chưa huỷ của hợp đồng).
+    const placed = detail.lines.filter((l) => !l.voidedAt && (l.kind === 'PACKAGE' || l.kind === 'SERVICE'));
+    const last = placed[placed.length - 1];
+    const above = last ? placedFromView(last, tz, { eventDate }) : null;
+    setLine(newPackageLine(pkg, studio?.id ?? null, catalog.policy.defaultMode, above));
     setPeople([]);
     setShowErrors(false);
     setSaveError({ fields: {}, message: null });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- chỉ đặt lại khi đổi gói / bảng giá, không khi hợp đồng nạp lại
   }, [pkg, catalog]);
 
   const draft: ContractDraft = useMemo(
@@ -90,11 +99,20 @@ export function ExtraPackageDialog(p: ExtraPackageDialogProps) {
   const plan = quotePlan(draft, local);
   const quoteDraft = line && plan.complete ? plan.draft : null;
   const body: ContractBody | null = quoteDraft
-    ? { customerId: detail.customer.id, lines: quoteDraft.lines.map((l) => lineInput(l, eventDate, tz)) }
+    ? {
+        customerId: detail.customer.id,
+        ...(eventDate ? { eventDate: zonedIso(eventDate, '00:00', tz) } : {}),
+        lines: quoteDraft.lines.map((l) => lineInput(l, eventDate, tz)),
+      }
     : null;
   const quote = useQuote(pkg ? p.orgId : null, body);
   const view = quoteDraft ? (viewsByDraft(plan, matchQuote(quoteDraft, quote.data as ContractQuote | null))[0] ?? null) : null;
+  // Luật phụ phí: ghi chú của máy chủ (bỏ qua / bỏ phần sửa) khi bảng tính còn khớp; số tiền do máy chủ trả.
+  const quoteData = quote.data as ContractQuote | null;
+  const autoNotes = quoteDraft && quoteData && quoteData.lines.length === quoteDraft.lines.length ? autoNotesByDraft(plan, quoteData.autoSurcharge) : new Map();
+  const ruleOf = (id: string) => catalog.rules.find((r) => r.id === id);
   if (!pkg || !line) return null;
+  const lineDay = dayOfLine(line, eventDate);
 
   // Dòng phát sinh của hợp đồng đã chốt được lên lịch ngay: thiếu giờ thì máy chủ chặn (409 LINES_MISSING_TIME) — chặn
   // trước ở đây: lời ngắn dưới ô giờ (ô hẹp), lý do ở lời lỗi của dòng. Không đưa vào `local` vì quote xem giá vẫn chạy
@@ -137,8 +155,8 @@ export function ExtraPackageDialog(p: ExtraPackageDialogProps) {
     }
   }
 
-  const pickBlocked = !eventDate
-    ? 'Hợp đồng chưa có ngày sự kiện.'
+  const pickBlocked = !lineDay
+    ? 'Chọn ngày cho dòng hoặc ngày sự kiện của hợp đồng.'
     : !line.start || !line.end
       ? 'Nhập giờ trước.'
       : null;
@@ -190,6 +208,24 @@ export function ExtraPackageDialog(p: ExtraPackageDialogProps) {
             pickBlockedReason={pickBlocked}
             scheduleHref={null}
             onVoid={null}
+            eventDate={eventDate}
+            occasions={{ options: catalog.occasions, listHref: null, savedName: null }}
+            surcharge={{
+              ruleName: (id) => ruleOf(id)?.name ?? 'một luật phụ phí',
+              perQuantityOf: (id) => ruleOf(id)?.perQuantity ?? null,
+              notes: autoNotes.get(0),
+              noteError: (k) => errors[`lines.0.surchargeOverrides.${k}.note`],
+              onDismiss: (ruleId) =>
+                setLine({
+                  ...line,
+                  dismissedRuleIds: [...line.dismissedRuleIds.filter((x) => x !== ruleId), ruleId],
+                  surchargeOverrides: line.surchargeOverrides.filter((o) => o.ruleId !== ruleId),
+                }),
+              onRestore: (ruleId) => setLine({ ...line, dismissedRuleIds: line.dismissedRuleIds.filter((x) => x !== ruleId) }),
+              onOverride: (ruleId, o: SurchargeOverrideDraft | null) =>
+                setLine({ ...line, surchargeOverrides: [...line.surchargeOverrides.filter((x) => x.ruleId !== ruleId), ...(o ? [o] : [])] }),
+              onVoid: null,
+            }}
           />
         </div>
       </Dialog>
@@ -199,9 +235,9 @@ export function ExtraPackageDialog(p: ExtraPackageDialogProps) {
         orgId={p.orgId}
         tz={tz}
         phone={p.phone}
-        query={eventDate && line.start && line.end ? { startsAt: zonedIso(eventDate, line.start, tz), endsAt: zonedIso(eventDate, line.end, tz) } : null}
+        query={lineDay && line.start && line.end ? { startsAt: zonedIso(lineDay, line.start, tz), endsAt: zonedIso(lineDay, line.end, tz) } : null}
         initial={line.staff}
-        subtitle={`${subjectName(line.subjectId) ?? line.name} · ${line.start} – ${line.end} · ${weekdayShort(eventDate)}`}
+        subtitle={`${subjectName(line.subjectId) ?? line.name} · ${line.start} – ${line.end} · ${weekdayShort(lineDay)}`}
         localConflicts={new Map()}
         naming={naming}
         onConfirm={(staff, ppl) => {

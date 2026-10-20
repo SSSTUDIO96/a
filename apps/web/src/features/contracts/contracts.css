@@ -317,9 +317,14 @@
 .ct-sr__skip .ui-ico { width: 14px; height: 14px; flex: none; margin-top: 2px; }
 .ct-sr__skip--info { border-color: var(--line); background: var(--soft); color: var(--muted); }
 
-/* Thông báo nhỏ 5 giây */
-.ct-toasts { position: fixed; right: 20px; bottom: 9.5rem; z-index: 40; display: flex; flex-direction: column; gap: 8px; width: min(380px, calc(100vw - 32px)); pointer-events: none; }
-.ct-toast { pointer-events: auto; display: flex; gap: 8px; align-items: flex-start; justify-content: space-between; padding: 10px 12px; background: var(--text); color: #fff; border-radius: 10px; font-size: 13px; box-shadow: 0 6px 20px rgba(0, 0, 0, .18); }
+/* Thông báo nhỏ 5 giây: dải tối nằm TRONG thanh tổng, trên các dải nhắc — không nổi lên che thẻ đang sửa. */
+.ct-toasts { display: flex; flex-direction: column; }
+.ct-toasts:empty { display: none; }
+.ct-toast { display: flex; gap: 8px; align-items: center; justify-content: space-between; padding: 6px 14px; background: var(--text); color: #fff; font-size: 13px; }
+.ct-toast + .ct-toast { border-top: 1px solid rgba(255, 255, 255, .18); }
+.ct-toasts > .ct-toast:first-child { border-radius: 12px 12px 0 0; }
+.ct-toast > span { min-width: 0; overflow-wrap: anywhere; }
+.ct-toasts + .ct-totbar__note { border-radius: 0; }
 .ct-toast__x { flex: none; border: 0; background: none; color: inherit; padding: 2px; cursor: pointer; line-height: 0; }
 .ct-toast__x .ui-ico { width: 14px; height: 14px; }
 .ct-toast__x:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
@@ -353,7 +358,9 @@
   .ct-oc__ed { flex: 1 1 100%; }
   .ct-dt { flex-wrap: wrap; }
   .ct-sr { padding-left: 20px; padding-right: 14px; }
-  .ct-toasts { left: 16px; right: 16px; width: auto; bottom: calc(var(--h-bottomnav) + 130px); }
+  .ct-toasts > .ct-toast:first-child { border-radius: 0; }
+  .ct-toast { padding: 6px 14px; font-size: 12.5px; }
+  .ct-page:has(.ct-toast) { padding-bottom: calc(var(--h-bottomnav) + 170px); }
   .ct-tot .ct-trow { grid-template-columns: minmax(0, 1fr) 150px; }
   .ct-tot .ct-trow--note { grid-template-columns: 1fr; gap: 6px; }
   .ct-pr { padding: 10px 14px; }

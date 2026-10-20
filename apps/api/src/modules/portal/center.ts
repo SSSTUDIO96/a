@@ -278,7 +278,7 @@ export async function revokeAll(
     }
     // MỌI máy chưa kết thúc của học viên (kể cả máy mở bằng đường dẫn cũ đã REPLACED).
     const ended = await tx.portalDevice.updateMany({
-      where: { organizationId: orgId, customerId, endedAt: null, linkId: live?.id ?? '' },
+      where: { organizationId: orgId, customerId, endedAt: null },
       data: {
         endedAt: now,
         endReason: 'LINK_REVOKED',

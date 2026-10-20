@@ -378,6 +378,9 @@ describe('E4 — máy: tối đa 2, thu hồi / chặn có hiệu lực ngay', (
     expect(shown).toMatchObject({ status: 'BLOCKED', endedByName: 'Người thử e4-receptionist' });
     await probe(d1.token).expect(401);
     await probe(d2.token).expect(200);
+    // Phiên của máy bị chặn thu hồi trong database (không chỉ dựa vào ended_at của máy); máy kia giữ phiên.
+    expect(await db.portalSession.count({ where: { deviceId: d1.deviceId, revokedAt: null } })).toBe(0);
+    expect(await db.portalSession.count({ where: { deviceId: d2.deviceId, revokedAt: null } })).toBe(1);
     const dev = await db.portalDevice.findUniqueOrThrow({ where: { id: d1.deviceId } });
     expect(dev).toMatchObject({ endReason: 'BLOCKED', endedById: actor.id, endNote: 'Học viên báo mất máy' });
 

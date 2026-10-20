@@ -22,7 +22,9 @@
     const c = document.querySelector('.cc');
     if (!c) throw new Error('Không thấy khung giấy chứng nhận');
     if (!window.htmlToImage) throw new Error('Thiếu bộ vẽ ảnh html-to-image');
-    const opt = { width: RONG, height: CAO, canvasWidth: RONG, canvasHeight: CAO, pixelRatio: RA_RONG / RONG, cacheBust: false, backgroundColor: '#ffffff' };
+    // KHÔNG đặt backgroundColor: html-to-image ghi đè nó lên style của chính .cc và làm mất nền từng mẫu (cc-01 mất cột xanh đêm);
+    // .cc đã có nền riêng (mặc định #fff trong cc.css).
+    const opt = { width: RONG, height: CAO, canvasWidth: RONG, canvasHeight: CAO, pixelRatio: RA_RONG / RONG, cacheBust: false };
     await window.htmlToImage.toBlob(c, opt); // lần 1: để trình duyệt nạp phông đã nhúng vào ảnh SVG
     const blob = await window.htmlToImage.toBlob(c, opt);
     if (!blob) throw new Error('Không vẽ được ảnh');

@@ -951,14 +951,16 @@ describe('N2 ở cửa thêm phát sinh (hợp đồng đã xác nhận)', () =>
     subjects: [{ id: 's-me', name: 'Mẹ cô dâu', sortOrder: 1, isActive: true }],
     studios: [{ id: 'st-1', name: 'Studio Chiến', address: '25 Hoàng Quốc Việt', isDefault: true, isActive: true }],
     policy: { defaultMode: 'PER_KM', fixedAmount: 150_000, perKmAmount: 10_000, freeKm: 1.5, minimumAmount: 0, roundTrip: true, tiers: [], updatedAt: '' },
+    occasions: OCCASIONS,
+    rules: RULES,
   };
-  const renderDialog = () =>
+  const renderDialog = (det: unknown = detail('CONFIRMED')) =>
     render(
       <ExtraPackageDialog
         pkg={PKG_ME as never}
         orgId="org-1"
         tz={TZ}
-        detail={detail('CONFIRMED') as never}
+        detail={det as never}
         catalog={CATALOG as never}
         canPickStaff
         staffRoster={[]}
@@ -1597,5 +1599,82 @@ describe('D 3.4 — thông báo nhỏ', () => {
       vi.advanceTimersByTime(200);
     });
     expect(screen.queryByText('Đã tự thêm B')).toBeNull();
+  });
+});
+
+describe('D 3.4 — hộp "Thêm phát sinh" (hợp đồng đã xác nhận)', () => {
+  const CATALOG = {
+    packages: [PKG_ME],
+    surcharges: [],
+    subjects: [{ id: 's-me', name: 'Mẹ cô dâu', sortOrder: 1, isActive: true }],
+    studios: [{ id: 'st-1', name: 'Studio Chiến', address: '25 Hoàng Quốc Việt', isDefault: true, isActive: true }],
+    policy: { defaultMode: 'PER_KM', fixedAmount: 150_000, perKmAmount: 10_000, freeKm: 1.5, minimumAmount: 0, roundTrip: true, tiers: [], updatedAt: '' },
+    occasions: OCCASIONS,
+    rules: RULES,
+  };
+  const renderDialog = (det: unknown = detail('CONFIRMED')) =>
+    render(<ExtraPackageDialog pkg={PKG_ME as never} orgId="org-1" tz={TZ} detail={det as never} catalog={CATALOG as never} canPickStaff staffRoster={[]} phone={false} onClose={() => {}} onAdded={() => {}} />);
+  const sentLine = () => (api.addContractLine.mock.calls.at(-1)?.[2] ?? {}) as unknown as BodyLine;
+  const fillTimes = async () => {
+    await userEvent.type(await screen.findByRole('textbox', { name: 'Giờ bắt đầu' }), '05:00');
+    await userEvent.type(screen.getByRole('textbox', { name: 'Giờ kết thúc' }), '06:00');
+  };
+
+  it('có ô Sự kiện, ngày riêng và dòng phụ phí tự thêm; MỘT dấu "?" ở nhãn "Ngày & giờ"; thêm → thân gửi occasionId + giờ đúng ngày riêng', async () => {
+    ruleServer();
+    api.addContractLine.mockResolvedValue(detail('CONFIRMED') as never);
+    renderDialog();
+    const card = await screen.findByRole('region', { name: /Mẹ cô dâu/ });
+    expect([...(within(card).getByLabelText('Sự kiện') as HTMLSelectElement).options].map((o) => o.textContent)).toEqual(['Chưa chọn sự kiện', 'Lễ vu quy', 'Tiệc']);
+    // Nhãn "Ngày & giờ": đúng một dấu "?" (lời giải thích gộp).
+    const lbl = within(card).getByText('Ngày & giờ').closest('.ct-rw__l') as HTMLElement;
+    expect(lbl.querySelectorAll('.ui-tip')).toHaveLength(1);
+    await userEvent.selectOptions(within(card).getByLabelText('Sự kiện'), 'Lễ vu quy');
+    await userEvent.type(within(card).getByRole('textbox', { name: 'Ngày của dòng' }), '19/10/2026');
+    await fillTimes();
+    expect(await within(card).findByText('Phụ phí ngoài giờ')).toBeTruthy();
+    expect(within(card).getByText('tự thêm theo luật Ngoài giờ')).toBeTruthy();
+    await waitFor(() => expect(lastBody().occasionId).toBe('oc-vq'));
+    // Bảng tính xem trước kèm ngày sự kiện của hợp đồng (như lúc thêm thật).
+    expect((api.quoteContract.mock.calls.at(-1)?.[1] as unknown as { eventDate?: string }).eventDate).toBe('2026-10-24T00:00:00+07:00');
+    await userEvent.click(screen.getByRole('button', { name: 'Thêm phát sinh' }));
+    await waitFor(() => expect(api.addContractLine).toHaveBeenCalled());
+    expect(sentLine()).toMatchObject({ occasionId: 'oc-vq', scheduledStart: '2026-10-19T05:00:00+07:00' });
+  });
+
+  it('bỏ luật (×) → thân thêm dòng gửi dismissedRuleIds, báo giá lại không hiện lại; sửa giá bắt buộc lý do → gửi surchargeOverrides', async () => {
+    ruleServer();
+    api.addContractLine.mockResolvedValue(detail('CONFIRMED') as never);
+    renderDialog();
+    const card = await screen.findByRole('region', { name: /Mẹ cô dâu/ });
+    await fillTimes();
+    await within(card).findByText('Phụ phí ngoài giờ');
+    await userEvent.click(within(card).getByRole('button', { name: 'Sửa phụ phí Phụ phí ngoài giờ' }));
+    const dlg = (await screen.findAllByRole('dialog')).at(-1) as HTMLElement;
+    await userEvent.type(within(dlg).getByLabelText('Giá phụ phí'), '60000');
+    await userEvent.click(within(dlg).getByRole('button', { name: 'Lưu' }));
+    expect(await within(dlg).findByText('Ghi đè giá phải ghi lý do.')).toBeTruthy();
+    await userEvent.type(within(dlg).getByLabelText('Lý do sửa giá'), 'Khách ruột');
+    await userEvent.click(within(dlg).getByRole('button', { name: 'Lưu' }));
+    await waitFor(() => expect(lastBody().surchargeOverrides).toEqual([{ ruleId: 'r-gio', unitPrice: 60_000, note: 'Khách ruột' }]));
+    await userEvent.click(await within(card).findByRole('button', { name: 'Bỏ phụ phí Phụ phí ngoài giờ ở dòng này' }));
+    await waitFor(() => expect(lastBody().dismissedRuleIds).toEqual(['r-gio']));
+    await waitFor(() => expect(within(card).queryByText('Phụ phí ngoài giờ')).toBeNull());
+    expect(within(card).getByText('Đã bỏ: Ngoài giờ')).toBeTruthy();
+    await userEvent.click(screen.getByRole('button', { name: 'Thêm phát sinh' }));
+    await waitFor(() => expect(api.addContractLine).toHaveBeenCalled());
+    expect(sentLine().dismissedRuleIds).toEqual(['r-gio']);
+    expect(sentLine()).not.toHaveProperty('surchargeOverrides');
+  });
+
+  it('dòng phát sinh lấy sự kiện và ngày của dòng đặt chỗ cuối chưa huỷ của hợp đồng', async () => {
+    api.quoteContract.mockResolvedValue(quote([]) as never);
+    // Dòng cuối: sự kiện Tiệc, ngày 19/10 (khác ngày sự kiện 24/10).
+    const last = line({ id: 'l2', occasionId: 'oc-tiec', occasionName: 'Tiệc', scheduledStart: '2026-10-18T22:00:00.000Z', scheduledEnd: '2026-10-18T23:00:00.000Z' });
+    renderDialog(detail('CONFIRMED', { lines: [line(), last] }));
+    const card = await screen.findByRole('region', { name: /Mẹ cô dâu/ });
+    expect((within(card).getByLabelText('Sự kiện') as HTMLSelectElement).value).toBe('oc-tiec');
+    expect((within(card).getByRole('textbox', { name: 'Ngày của dòng' }) as HTMLInputElement).value).toBe('19/10/2026');
+    expect(within(card).getByText('Khác ngày sự kiện')).toBeTruthy();
   });
 });

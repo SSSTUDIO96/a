@@ -283,9 +283,11 @@
 
   // ===== Điền dữ liệu =====
   const TRONG = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+  // Chữ cái đầu của họ và tên (đầu tiên + cuối cùng). Chưa có tên thì để khung trống (không in "?").
   const chuDau = (t) => {
-    const w = (t || '').trim().split(/\s+/);
-    return ((w[0] || '?')[0] + (w.length > 1 ? w[w.length - 1][0] : '')).toUpperCase();
+    const w = (t || '').trim().split(/\s+/).filter(Boolean);
+    if (!w.length) return '';
+    return (w[0][0] + (w.length > 1 ? w[w.length - 1][0] : '')).toUpperCase();
   };
   function dien(root, D) {
     root.querySelectorAll('[data-f]').forEach((el) => {

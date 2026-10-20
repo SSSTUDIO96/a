@@ -88,6 +88,15 @@ export function PackageLineCard(p: PackageLineCardProps) {
   const includedKm = pkg?.includedKm ?? p.policy?.freeKm ?? 0;
   const studio = p.studios.find((s) => s.id === line.studioLocationId) ?? null;
   const idp = `dong-${line.key}`;
+  // MỘT dấu "?" cho nhãn Ngày & giờ: gộp lời giải thích ngày riêng của dòng và giờ kết thúc tự điền.
+  const tipTime = [
+    p.eventDate !== undefined ? 'Mỗi dòng có thể một ngày riêng — ví dụ ăn hỏi 19/11, cưới 22/11 trong cùng hợp đồng.' : null,
+    !locked && pkg && pkg.durationMinutes > 0
+      ? `Gõ giờ bắt đầu, giờ kết thúc tự điền theo thời lượng gói (${pkg.durationMinutes} phút). Đã sửa tay giờ kết thúc thì giữ nguyên giờ bạn gõ.`
+      : null,
+  ]
+    .filter(Boolean)
+    .join(' ');
   const changeLocation = (loc: LocationType) => {
     const def = p.studios.find((s) => s.isDefault) ?? p.studios[0] ?? null;
     p.onChange({
@@ -164,14 +173,7 @@ export function PackageLineCard(p: PackageLineCardProps) {
       <div className="ct-rw">
         <span className="ct-rw__l">
           {p.eventDate !== undefined ? 'Ngày & giờ' : 'Giờ'}
-          {p.eventDate !== undefined && (
-            <Tooltip text="Mỗi dòng có thể một ngày riêng — ví dụ ăn hỏi 19/11, cưới 22/11 trong cùng hợp đồng." />
-          )}
-          {!locked && pkg && pkg.durationMinutes > 0 && (
-            <Tooltip
-              text={`Gõ giờ bắt đầu, giờ kết thúc tự điền theo thời lượng gói (${pkg.durationMinutes} phút). Đã sửa tay giờ kết thúc thì giữ nguyên giờ bạn gõ.`}
-            />
-          )}
+          {tipTime && <Tooltip text={tipTime} />}
         </span>
         <div className="ct-dcr">
           {p.eventDate !== undefined && (
