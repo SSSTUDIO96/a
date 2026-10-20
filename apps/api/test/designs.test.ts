@@ -212,10 +212,10 @@ const feedback = (w: World, extra: object = {}) => ({
 const issuePaths = (res: request.Response) => (res.body.error.details.issues as { path: string }[]).map((i) => i.path);
 
 describe('danh mục mẫu (GET /design-templates)', () => {
-  it('trả đủ 27 mẫu; lọc theo loại thẻ và loại hợp đồng', async () => {
+  it('trả đủ 43 mẫu (27 thẻ + 16 giấy chứng nhận); lọc theo loại thẻ và loại hợp đồng', async () => {
     const all = await request(app).get(url(A.orgId, '/design-templates')).set(bearer(A.owner)).expect(200);
     expect(all.body).toHaveLength(DESIGN_TEMPLATES.length);
-    expect(all.body).toHaveLength(27);
+    expect(all.body).toHaveLength(43);
     const welcome = await request(app).get(url(A.orgId, '/design-templates')).query({ kind: 'WELCOME' }).set(bearer(A.owner)).expect(200);
     expect(welcome.body.map((t: { code: string }) => t.code)).toEqual(['shd-01', 'shd-02', 'shd-03', 'shd-04', 'shd-05', 'shd-06', 'shd-07', 'shd-08', 'shd-09', 'shd-10', 'shd-11']);
     const svc = await request(app).get(url(A.orgId, '/design-templates')).query({ contractKind: 'SERVICE' }).set(bearer(A.owner)).expect(200);
@@ -224,6 +224,13 @@ describe('danh mục mẫu (GET /design-templates)', () => {
     expect(codes).not.toContain('lc-05');
     expect(codes).toContain('fb-09');
     await request(app).get(url(A.orgId, '/design-templates')).query({ kind: 'KHAC' }).set(bearer(A.owner)).expect(400);
+  });
+  it('giấy chứng nhận cc-01..cc-16 nằm trong danh mục nhưng KHÔNG tạo được thẻ (CERTIFICATE không phải loại thẻ của máy chủ)', async () => {
+    const res = await request(app).get(url(A.orgId, '/design-templates')).set(bearer(A.owner)).expect(200);
+    const cc = res.body.filter((t: { kind: string }) => t.kind === 'CERTIFICATE');
+    expect(cc).toHaveLength(16);
+    // Lọc ?kind=CERTIFICATE bị chặn: DESIGN_CARD_KINDS chỉ có 3 loại thẻ.
+    await request(app).get(url(A.orgId, '/design-templates')).query({ kind: 'CERTIFICATE' }).set(bearer(A.owner)).expect(400);
   });
 });
 

@@ -241,7 +241,7 @@ async function facts(code: string, params: Record<string, string>): Promise<Fact
       const C = cc.getBoundingClientRect();
       const cv = document.createElement('canvas').getContext('2d')!;
       const ink = (box: Element) => {
-        const ts = [...box.querySelectorAll('text.face')];
+        const ts = Array.from(box.querySelectorAll('text.face'));
         if (!ts.length) return null;
         const bb = box.getBoundingClientRect();
         const rs = ts.map((t) => {
@@ -257,7 +257,7 @@ async function facts(code: string, params: Record<string, string>): Promise<Fact
       const tb = tt.getBoundingClientRect(), nb = ten.getBoundingClientRect();
       const anh = cc.querySelector('.anh');
       const nh = cc.querySelector('.nh');
-      const ngoai = [...cc.querySelectorAll('*')]
+      const ngoai = Array.from(cc.querySelectorAll('*'))
         .filter((e) => !e.closest('svg') && e.children.length === 0 && (e.textContent ?? '').trim() && getComputedStyle(e).display !== 'none')
         .filter((e) => { const x = e.getBoundingClientRect(); return x.right > C.right + 1 || x.left < C.left - 1 || x.bottom > C.bottom + 1; })
         .map((e) => (e.textContent ?? '').trim().slice(0, 30));
@@ -265,7 +265,7 @@ async function facts(code: string, params: Record<string, string>): Promise<Fact
         ttInk: ink(tt), tenInk: ink(ten), ttBox: { l: tb.left, r: tb.right }, tenBox: { l: nb.left, r: nb.right },
         anhChu: anh ? getComputedStyle(anh, '::after').content : null,
         anhChua: !!anh?.classList.contains('chua-anh'),
-        logoHidden: [...cc.querySelectorAll('.o-logo')].every((e) => getComputedStyle(e).display === 'none'),
+        logoHidden: Array.from(cc.querySelectorAll('.o-logo')).every((e) => getComputedStyle(e).display === 'none'),
         khongLogo: cc.classList.contains('khong-logo'),
         dong: cc.querySelector('[data-f="dong"]')?.textContent ?? '',
         so: (nh?.parentElement?.textContent ?? '').replace(/\s+/g, ' ').trim(),

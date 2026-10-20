@@ -2,12 +2,14 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { errorKind } from '../../api/errors';
 import type { Customer } from '../../api/types';
+import { useSession } from '../../app/session';
 import { Button, Card, EmptyState, IconBack, Skeleton } from '../../ui';
 import { LoadErrorStrip } from '../staff/parts';
 import { CustomerAppointmentsCard } from './CustomerAppointmentsCard';
 import { CustomerContractsCard } from './CustomerContractsCard';
 import { CustomerEditForm } from './CustomerEditForm';
 import { CustomerInfoCard } from './CustomerInfoCard';
+import { PortalCard } from './PortalCard';
 import type { CustomerPerms } from './logic';
 import { CONTRACT_LIMIT, useCustomerHistory } from './useCustomerHistory';
 
@@ -25,6 +27,7 @@ export function CustomerDetail({ orgId, slug, timezone, customerId, perms, onSav
   const navigate = useNavigate();
   const { customer, history, retry, setCustomerData } = useCustomerHistory(orgId, customerId, perms.contractsRead);
   const [editing, setEditing] = useState(false);
+  const orgKind = useSession().organizations.find((o) => o.id === orgId)?.kind;
 
   if (customer.status === 'loading') {
     return (
@@ -86,6 +89,8 @@ export function CustomerDetail({ orgId, slug, timezone, customerId, perms, onSav
           onRetry={retry}
         />
       )}
+      {/* Thẻ Cổng học viên: sau thẻ Hợp đồng; tự ẩn khi không phải ACADEMY hoặc thiếu portal.manage (bản vẽ E 5.2). */}
+      {!editing && perms.portalManage && <PortalCard orgId={orgId} customerId={c.id} orgKind={orgKind} timezone={timezone} />}
       {hasContracts && history.details && !editing && (
         <CustomerAppointmentsCard
           slug={slug}

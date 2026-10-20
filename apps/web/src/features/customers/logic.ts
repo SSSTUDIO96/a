@@ -1,4 +1,4 @@
-import type { Permission } from '@makeup/shared';
+import { PORTAL_MAX_DEVICES, PORTAL_MAX_FAILED, PORTAL_WEB_PATH, type Permission, type PortalAdminView, type PortalDeviceStatus, type PortalLinkStatus } from '@makeup/shared';
 import type { ContractDetail, Customer, CustomerCreateInput, CustomerUpdateInput, GroupedContractLine, WorkStatus } from '../../api/types';
 
 // Logic thuần của màn Khách hàng (C2 mục 2) — tách khỏi giao diện để thử bằng vitest.
@@ -8,7 +8,14 @@ export interface CustomerPerms {
   write: boolean;
   contractsRead: boolean;
   contractsWrite: boolean;
+  // Thẻ Cổng học viên (bản vẽ E 5.2): xem, thu hồi, chặn máy.
+  portalManage: boolean;
+  // Tạo đường dẫn: portal.manage + người gửi tự xem được khách, hợp đồng, phiếu thu (ký duyệt E câu 3).
+  portalSend: boolean;
 }
+
+// Quyền đòi thêm ngoài portal.manage khi tạo đường dẫn (máy chủ center.ts PORTAL_LINK_EXTRA_PERMISSIONS).
+export const PORTAL_SEND_EXTRA_PERMISSIONS: readonly Permission[] = ['customers.read', 'contracts.read', 'payments.read'];
 
 export function customerPerms(has: (p: Permission) => boolean): CustomerPerms {
   return {
@@ -16,6 +23,8 @@ export function customerPerms(has: (p: Permission) => boolean): CustomerPerms {
     write: has('customers.write'),
     contractsRead: has('contracts.read'),
     contractsWrite: has('contracts.write'),
+    portalManage: has('portal.manage'),
+    portalSend: has('portal.manage') && PORTAL_SEND_EXTRA_PERMISSIONS.every((p) => has(p)),
   };
 }
 
@@ -185,3 +194,82 @@ export function formatTimeIn(iso: string, timeZone: string): string {
 export function dayKeyIn(iso: string, timeZone: string): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(iso));
 }
+
+// ---------------- Thẻ Cổng học viên (bản vẽ E mục 5.2) ----------------
+export type PortalTone = 'draft' | 'ok' | 'danger' | 'warn' | 'neutral';
+
+// Nhãn trạng thái đường dẫn mới nhất; không có đường dẫn → "Chưa gửi".
+export function portalLinkTag(link: PortalAdminView['link']): { label: string; tone: PortalTone } {
+  if (!link) return { label: 'Chưa gửi', tone: 'neutral' };
+  const by: Record<PortalLinkStatus, { label: string; tone: PortalTone }> = {
+    ACTIVE: { label: 'Đang mở', tone: 'ok' },
+    FULL: { label: `Đủ ${PORTAL_MAX_DEVICES} máy`, tone: 'warn' },
+    REVOKED: { label: 'Đã thu hồi', tone: 'danger' },
+    EXPIRED: { label: 'Hết hạn', tone: 'warn' },
+    LOCKED: { label: 'Bị khoá', tone: 'danger' },
+  };
+  return by[link.status];
+}
+
+// Đường dẫn còn dùng để nhận máy mới (hoặc máy đã mở còn dùng) → nút "Tạo đường dẫn mới" phải hỏi lại.
+export function portalLinkLive(link: PortalAdminView['link']): boolean {
+  return link !== null && (link.status === 'ACTIVE' || link.status === 'FULL');
+}
+
+// Dòng giải thích dưới nhãn trạng thái ("Đã thu hồi" … "Bị khoá vì nhập sai 5 lần").
+export function portalLinkNote(link: PortalAdminView['link'], timeZone: string, now: number): string {
+  if (!link) return 'Chưa gửi đường dẫn cho học viên này.';
+  const made = `Tạo ${formatPortalWhen(link.createdAt, timeZone, now)} bởi ${link.createdByName}`;
+  switch (link.status) {
+    case 'LOCKED':
+      return `Bị khoá vì nhập sai ${PORTAL_MAX_FAILED} lần. ${made}.`;
+    case 'REVOKED':
+      return `Đã thu hồi. ${made}.`;
+    case 'EXPIRED':
+      return `Hết hạn ${formatPortalWhen(link.expiresAt, timeZone, now)}, chưa ai mở. ${made}.`;
+    default:
+      return link.firstOpenedAt !== null
+        ? `${made} · mở lần đầu ${formatPortalWhen(link.firstOpenedAt, timeZone, now)}.`
+        : `${made}, hết hạn ${formatPortalWhen(link.expiresAt, timeZone, now)} nếu chưa mở.`;
+  }
+}
+
+export const PORTAL_DEVICE_STATUS_LABEL: Record<PortalDeviceStatus, string> = {
+  ACTIVE: 'Đang dùng',
+  BLOCKED: 'Đã chặn',
+  SIGNED_OUT: 'Đã thoát',
+  LINK_REVOKED: 'Đã thu hồi',
+};
+
+export const PORTAL_DEVICE_STATUS_TONE: Record<PortalDeviceStatus, PortalTone> = {
+  ACTIVE: 'ok',
+  BLOCKED: 'danger',
+  SIGNED_OUT: 'draft',
+  LINK_REVOKED: 'draft',
+};
+
+// "03/11 20:14" theo múi giờ tổ chức; cùng ngày với `now` → "hôm nay 07:52".
+export function formatPortalWhen(iso: string, timeZone: string, now: number): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const time = formatTimeIn(iso, timeZone);
+  if (dayKeyIn(iso, timeZone) === dayKeyIn(new Date(now).toISOString(), timeZone)) return `hôm nay ${time}`;
+  const day = new Intl.DateTimeFormat('en-GB', { timeZone, day: '2-digit', month: '2-digit' }).format(d);
+  return `${day} ${time}`;
+}
+
+// Đường dẫn gửi học viên: <origin>/hv#k=<chìa>. Chìa nằm sau # nên trình duyệt không gửi lên máy chủ.
+export function portalUrl(origin: string, key: string): string {
+  if (!key) throw new Error('portalUrl: thiếu chìa');
+  return `${origin}${PORTAL_WEB_PATH}#k=${key}`;
+}
+
+// Lý do điền sẵn (nhân viên sửa được) và câu hậu quả của các hộp xác nhận. Mỗi câu một dòng, tối đa 90 ký tự.
+export const PORTAL_REASON_BLOCK = 'Học viên báo mất máy';
+export const PORTAL_REASON_REVOKE = 'Đường dẫn bị lộ';
+export const PORTAL_CONSEQUENCE = {
+  create: 'Đường dẫn cũ thôi nhận máy mới. Máy đã mở vẫn dùng được.',
+  block: 'Máy này bị thoát ngay, không xem được trang học viên nữa.',
+  revoke: 'Đường dẫn hết hiệu lực, mọi máy bị thoát ngay. Muốn vào lại phải tạo đường dẫn mới.',
+} as const;
+export const PORTAL_CONSEQUENCE_MAX = 90;
