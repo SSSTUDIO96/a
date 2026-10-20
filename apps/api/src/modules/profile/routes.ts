@@ -5,7 +5,8 @@ import { AppError } from '../../lib/errors';
 import { writeAudit } from '../../lib/audit';
 import { assertUsableImage, signImages } from './images';
 import { publicRoutes } from './public';
-import { ProfileBody, parseStoredHours, type ProfileInput } from './schemas';
+import { CertificateSignerBody, ProfileBody, parseStoredHours, type ProfileInput } from './schemas';
+import { DEFAULT_SIGNER_TITLE } from '@makeup/shared';
 
 type ProfileRow = Prisma.OrganizationProfileGetPayload<object>;
 
@@ -44,7 +45,9 @@ function auditValues(p: ProfileRow) {
 async function presentProfile(db: Prisma.TransactionClient, organizationId: string, p: ProfileRow | null) {
   if (!p) return { hasProfile: false, profile: null };
   const image = await signImages(db, organizationId, [p.logoFileId, p.avatarFileId, p.coverFileId]);
-  const { organizationId: _o, workingHours, ...rest } = p;
+  // Người ký giấy chứng nhận có đường riêng (GET/PUT /profile/certificate): không trả ở đây (kiểu BrandProfile của web
+  // không có hai trường này — bài khớp hai đầu báo "thừa trường"). Nhật ký PUT hồ sơ (auditValues) vẫn ghi hai cột.
+  const { organizationId: _o, workingHours, certSignerName: _sn, certSignerTitle: _st, ...rest } = p;
   return {
     hasProfile: true,
     profile: {
@@ -61,6 +64,75 @@ async function lockProfile(tx: Prisma.TransactionClient, organizationId: string)
   await tx.$queryRaw`SELECT id FROM organizations WHERE id = ${organizationId}::uuid FOR UPDATE`;
   return tx.organizationProfile.findUnique({ where: { organizationId } });
 }
+
+function signerValues(p: { certSignerName: string | null; certSignerTitle: string | null }) {
+  return { signerName: p.certSignerName, signerTitle: p.certSignerTitle };
+}
+
+function presentSigner(p: { certSignerName: string | null; certSignerTitle: string | null } | null) {
+  return {
+    hasProfile: p !== null,
+    signerName: p?.certSignerName ?? null,
+    signerTitle: p?.certSignerTitle ?? null,
+    defaultTitle: DEFAULT_SIGNER_TITLE,
+  };
+}
+
+// Người ký thứ hai trên giấy chứng nhận (BAN-VE-F mục 4.8). Hồ sơ thương hiệu có ở MỌI loại tổ chức nên không đòi ACADEMY
+// (web chỉ hiện thẻ ở tổ chức ACADEMY). Sửa: org.update — chỉ Chủ và Quản trị (KY-DUYET-F câu 4).
+const certificateSignerRoutes = [
+  defineRoute({
+    method: 'get',
+    path: '/orgs/:orgId/profile/certificate',
+    scope: 'org',
+    permission: 'org.read',
+    tag: 'Hồ sơ thương hiệu',
+    summary: 'Người ký giấy chứng nhận đang đặt (tên, chức danh; trống chức danh = "Giám đốc trung tâm")',
+    handler: async ({ deps, org }) => {
+      const o = mustOrg(org);
+      const p = await deps.db.organizationProfile.findUnique({
+        where: { organizationId: o.id },
+        select: { certSignerName: true, certSignerTitle: true },
+      });
+      return { body: presentSigner(p) };
+    },
+  }),
+
+  defineRoute({
+    method: 'put',
+    path: '/orgs/:orgId/profile/certificate',
+    scope: 'org',
+    permission: 'org.update',
+    tag: 'Hồ sơ thương hiệu',
+    summary: 'Đặt người ký giấy chứng nhận (cần đã lưu hồ sơ thương hiệu)',
+    body: CertificateSignerBody,
+    handler: async ({ deps, org, body, userId, requestId }) => {
+      const o = mustOrg(org);
+      const saved = await deps.db.$transaction(async (tx) => {
+        const before = await lockProfile(tx, o.id);
+        if (!before) {
+          throw new AppError('CONFLICT', 'Lưu Hồ sơ thương hiệu (tên thương hiệu) trước', { reason: 'PROFILE_REQUIRED' });
+        }
+        const after = await tx.organizationProfile.update({
+          where: { organizationId: o.id },
+          data: { certSignerName: body.signerName, certSignerTitle: body.signerTitle },
+          select: { certSignerName: true, certSignerTitle: true },
+        });
+        await writeAudit(tx, {
+          organizationId: o.id,
+          actorUserId: mustUser(userId),
+          action: 'profile.certificate_signer_updated',
+          entityType: 'organization_profile',
+          entityId: o.id,
+          data: { before: signerValues(before), after: signerValues(after) },
+          requestId,
+        });
+        return after;
+      });
+      return { body: presentSigner(saved) };
+    },
+  }),
+];
 
 const orgProfileRoutes = [
   defineRoute({
@@ -180,4 +252,4 @@ const orgProfileRoutes = [
   }),
 ];
 
-export const profileRoutes: AnyRoute[] = [...orgProfileRoutes, ...publicRoutes];
+export const profileRoutes: AnyRoute[] = [...orgProfileRoutes, ...certificateSignerRoutes, ...publicRoutes];

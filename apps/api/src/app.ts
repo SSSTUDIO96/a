@@ -20,6 +20,7 @@ import { platformRoutes } from './modules/platform/routes';
 import { profileRoutes } from './modules/profile/routes';
 import { courseRoutes } from './modules/courses/routes';
 import { designRoutes } from './modules/designs/routes';
+import { certificateRoutes } from './modules/certificates/routes';
 import { todayRoutes } from './modules/today/routes';
 import { portalRoutes } from './modules/portal/routes';
 import { authenticatePortal } from './modules/portal/auth';
@@ -45,6 +46,8 @@ export const ALL_ROUTES: AnyRoute[] = [
   // Khoá & lớp (thợ gói M3), mẫu thiết kế + thẻ (thợ gói M6) — đăng ký một lần ở đây, mỗi thợ điền mảng của mình.
   ...courseRoutes,
   ...designRoutes,
+  // Giấy chứng nhận (bản vẽ F, gói S1b).
+  ...certificateRoutes,
   // Trang Hôm nay (bản vẽ D, gói M6).
   ...todayRoutes,
   // Cổng học viên (bản vẽ E): gói E3 điền đường học viên, gói E4 điền đường trung tâm.

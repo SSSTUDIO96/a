@@ -417,4 +417,98 @@ describe('cửa gác chuyển đỏ với từng kiểu lỗi', () => {
     console.log(`[đột biến D3] leak vi phạm: ${r.leak.violations.length}/${r.leak.total} (đạt ${r.leak.passed}/${r.leak.total}): ${hit.join('; ')}`);
     expect(hit.length).toBe(1);
   });
+  // Ba đột biến bản vẽ F mục 9.2 (gói S1b): giấy chứng nhận. Cửa gác chạy trên ĐÚNG 8 đường của bản vẽ F (đã cài lỗi) —
+  // fixture vẫn dựng bằng app thật đủ đường; thu hẹp bảng route để đo đúng chỗ và không phụ thuộc đường của gói khác.
+  const CERT_ROUTES = new Set([
+    'GET /orgs/:orgId/classes/:classId/certificates',
+    'POST /orgs/:orgId/classes/:classId/certificates',
+    'GET /orgs/:orgId/certificates',
+    'GET /orgs/:orgId/certificates/:certificateId',
+    'POST /orgs/:orgId/certificates/:certificateId/reissue',
+    'POST /orgs/:orgId/certificates/:certificateId/revoke',
+    'GET /orgs/:orgId/profile/certificate',
+    'PUT /orgs/:orgId/profile/certificate',
+  ]);
+  const certOnly = (routes: AnyRoute[]) => {
+    const kept = routes.filter((r) => CERT_ROUTES.has(`${r.method.toUpperCase()} ${r.path}`));
+    if (kept.length !== CERT_ROUTES.size) throw new Error(`Bảng route có ${kept.length}/${CERT_ROUTES.size} đường giấy chứng nhận`);
+    return kept;
+  };
+
+  it('Bản vẽ F — đường giấy chứng nhận chưa cài lỗi: cửa gác xanh trọn (vế GIỮ của ba đột biến dưới)', async () => {
+    const r = await gateOn(certOnly(ALL_ROUTES));
+    const bad = Object.entries(r).filter(([, c]) => c.violations.length > 0).map(([n, c]) => `${n}: ${c.violations.join('; ')}`);
+    console.log(`[F gốc] ${Object.entries(r).map(([n, c]) => `${n} ${c.passed}/${c.total}`).join(', ')}`);
+    expect(bad).toEqual([]);
+    expect(r.crossId.total).toBe(5);
+    expect(r.crossRef.total).toBe(5);
+  });
+
+  it('Đột biến 15 — GET /certificates/:certificateId tra chỉ theo id (quên tổ chức) → phép crossId đỏ', async () => {
+    const mutant = onDb('get', '/orgs/:orgId/certificates/:certificateId', (db) =>
+      db.$extends({
+        query: {
+          certificate: {
+            findFirst({ args, query }) {
+              dropOrg(args.where);
+              return query(args);
+            },
+          },
+        },
+      }) as unknown as Db,
+    );
+    const r = await gateOn(certOnly(replace(mutant)));
+    const hit = r.crossId.violations.filter((v) => v.startsWith('GET /orgs/:orgId/certificates/:certificateId '));
+    console.log(`[đột biến 15] crossId vi phạm: ${r.crossId.violations.length}/${r.crossId.total}: ${hit.join('; ')}`);
+    expect(hit).toEqual(['GET /orgs/:orgId/certificates/:certificateId với id của A → 200']);
+  });
+
+  it('Đột biến 16 — cấp hàng loạt tra ghi danh chỉ theo mã (quên tổ chức, kéo theo quên lớp) → phép crossRef đỏ ở enrollmentIds[]', async () => {
+    // Chỉ bỏ organizationId thì điều kiện courseClassId (lớp đã khoá theo (id, tổ chức)) vẫn chặn — đã đo riêng, xanh.
+    // Lỗi thật đáng sợ là tra ghi danh CHỈ theo danh sách mã: bỏ cả hai điều kiện.
+    const mutant = onDb('post', '/orgs/:orgId/classes/:classId/certificates', (db) =>
+      db.$extends({
+        query: {
+          enrollment: {
+            findMany({ args, query }) {
+              const id = (args.where as { id?: unknown } | undefined)?.id;
+              if (id && typeof id === 'object' && 'in' in id) {
+                dropOrg(args.where);
+                delete (args.where as { courseClassId?: unknown }).courseClassId;
+              }
+              return query(args);
+            },
+          },
+        },
+      }) as unknown as Db,
+    );
+    const r = await gateOn(certOnly(replace(mutant)));
+    const hit = r.crossRef.violations.filter((v) => v.startsWith('POST /orgs/:orgId/classes/:classId/certificates [enrollmentIds[]'));
+    console.log(`[đột biến 16] crossRef vi phạm: ${r.crossRef.violations.length}/${r.crossRef.total}: ${hit.join('; ')}`);
+    expect(hit.length).toBe(1);
+    expect(hit[0]).toContain('KHÁC phản hồi mã bịa');
+  });
+
+  it('Đột biến 17 — GET /certificates lọc customerId mà quên điều kiện tổ chức → phép crossRef đỏ (lộ giấy của A)', async () => {
+    const wrap = (db: Db) =>
+      db.$extends({
+        query: {
+          certificate: {
+            findMany({ args, query }) {
+              if ((args.where as { customerId?: unknown } | undefined)?.customerId) dropOrg(args.where);
+              return query(args);
+            },
+            count({ args, query }) {
+              if ((args.where as { customerId?: unknown } | undefined)?.customerId) dropOrg(args.where);
+              return query(args);
+            },
+          },
+        },
+      }) as unknown as Db;
+    const r = await gateOn(certOnly(replace(onDb('get', '/orgs/:orgId/certificates', wrap))));
+    const hit = r.crossRef.violations.filter((v) => v.startsWith('GET /orgs/:orgId/certificates [customerId'));
+    console.log(`[đột biến 17] crossRef vi phạm: ${r.crossRef.violations.length}/${r.crossRef.total}; leak ${r.leak.violations.length}: ${hit.join('; ')}`);
+    expect(hit.length).toBe(1);
+    expect(hit[0]).toContain('KHÁC phản hồi mã bịa');
+  });
 });

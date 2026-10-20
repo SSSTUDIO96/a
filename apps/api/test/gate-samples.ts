@@ -61,6 +61,11 @@ export const SAMPLES: Samples = {
   // Loại sự kiện, luật phụ phí (bản vẽ D, gói M7)
   'PATCH /orgs/:orgId/occasions/:occasionId': () => ({ name: 'Đổi tên thử' }),
   'PATCH /orgs/:orgId/surcharge-rules/:surchargeRuleId': () => ({ note: 'Sửa thử' }),
+  // Giấy chứng nhận (bản vẽ F, gói S1b). Đường dẫn mang mã lớp / mã giấy của tổ chức khác → 404 trước mọi ghi.
+  'POST /orgs/:orgId/classes/:classId/certificates': (o) => ({ enrollmentIds: [o.ids.enrollment2Id], templateCode: 'cc-01', issuedOn: '2026-03-30' }),
+  'POST /orgs/:orgId/certificates/:certificateId/reissue': () => ({ reason: 'Thử cửa gác' }),
+  'POST /orgs/:orgId/certificates/:certificateId/revoke': () => ({ reason: 'Thử cửa gác' }),
+  'PUT /orgs/:orgId/profile/certificate': () => ({ signerName: 'Tên thử', signerTitle: null }),
 };
 
 // Mẫu HỢP LỆ dùng toàn mã của chính tổ chức — cửa gác tự thay TỪNG trường mã bằng mã của tổ chức khác.
@@ -270,6 +275,15 @@ export const REF_SAMPLES: RefSamples = {
     }),
   ],
   'PUT /orgs/:orgId/occasions/order': [(o) => ({ occasionIds: allOccasionIds(o) })],
+  // Giấy chứng nhận (bản vẽ F, gói S1b): lọc sổ theo lớp / học viên — MỖI trường một mẫu riêng. Gộp classId + customerId
+  // trong một mẫu (như bản vẽ 9.2) thì thay customerId bằng mã của A vẫn kèm classId của B → rỗng, cửa gác MÙ với đột
+  // biến 17 (đã đo: 0/3 vi phạm). Mẫu ids không có trường "…Id" — chỉ chạy mẫu gốc.
+  'GET /orgs/:orgId/certificates': [
+    (o) => ({ customerId: o.ids.customerId }),
+    (o) => ({ classId: o.ids.endedClassId }),
+    (o) => ({ classId: o.ids.endedClassId, customerId: o.ids.customerId }),
+    (o) => ({ ids: o.ids.certificateId }),
+  ],
 };
 
 // Mẫu tham chiếu chéo trên HỢP ĐỒNG KHOÁ HỌC nháp của fixture (:contractId = courseContractId).
@@ -290,6 +304,13 @@ export const REF_VARIANTS: RefVariants = {
   ],
   'POST /orgs/:orgId/contracts/:contractId/lines': [{ pathIds: onCourseContract, samples: [(o) => ({ kind: 'COURSE', courseClassId: o.ids.class2Id })] }],
   'GET /orgs/:orgId/contracts/:contractId/design-data': [{ pathIds: onCourseContract, samples: [(o) => ({ courseClassId: o.ids.classId })] }],
+  // Cấp giấy chứng nhận chỉ chạy trên lớp ĐÃ KẾT THÚC (lớp mẫu classId năm 2027 → 409 CLASS_NOT_ENDED).
+  'POST /orgs/:orgId/classes/:classId/certificates': [
+    {
+      pathIds: (o) => ({ classId: o.ids.endedClassId ?? '' }),
+      samples: [(o) => ({ enrollmentIds: [o.ids.enrollment2Id], templateCode: 'cc-01', issuedOn: '2026-03-30' })],
+    },
+  ],
 };
 
 // MẪU "SỬA MỘT PHẦN" cho cửa gác test/gate-partial.ts: mọi đường PATCH phải có mẫu ở đây.

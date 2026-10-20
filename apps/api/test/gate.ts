@@ -353,6 +353,33 @@ async function setupOrg(app: App, db: Db, label: string): Promise<GateOrg> {
     status: 'PENDING_CONFIRMATION',
     staff: [],
   });
+  // ---- Giấy chứng nhận (bản vẽ F, gói S1b): lớp ĐÃ KẾT THÚC + 2 học viên ghi danh (hợp đồng khoá học XÁC NHẬN) + 1 giấy.
+  //      Lớp K1/K2 ở trên năm 2027 (chưa kết thúc) — đường 1 trên lớp đó vẫn 200 (ended: false).
+  const endedClassId = await post(app, owner, `${o}/courses/${courseId}/classes`, {
+    name: `K0 ${label}`,
+    startDate: '2026-01-05',
+    endDate: '2026-03-30',
+    weekdays: [2],
+  });
+  const customer2Id = await post(app, owner, `${o}/customers`, { fullName: `Học viên hai ${label}` });
+  for (const cid of [customerId, customer2Id]) {
+    const k = await post(app, owner, `${o}/contracts`, { kind: 'COURSE', customerId: cid, lines: [{ kind: 'COURSE', courseClassId: endedClassId }] });
+    await postBody(app, owner, `${o}/contracts/${k}/status`, { to: 'CONFIRMED' });
+  }
+  const enr = await request(app).get(`/api/v1${o}/classes/${endedClassId}/enrollments`).set(bearer(owner));
+  const enrItems = (enr.body as { items?: { id: string; customer: { id: string } }[] }).items ?? [];
+  const enrollmentId = enrItems.find((e) => e.customer.id === customerId)?.id;
+  const enrollment2Id = enrItems.find((e) => e.customer.id === customer2Id)?.id;
+  if (enr.status !== 200 || !enrollmentId || !enrollment2Id) {
+    throw new Error(`Cửa gác: lớp đã kết thúc không có đủ 2 ghi danh ${enr.status}: ${JSON.stringify(enr.body)}`);
+  }
+  const issued = (await postBody(app, owner, `${o}/classes/${endedClassId}/certificates`, {
+    enrollmentIds: [enrollmentId],
+    templateCode: 'cc-01',
+    issuedOn: '2026-03-30',
+  })) as { items?: { id?: string }[] };
+  const certificateId = issued.items?.[0]?.id;
+  if (!certificateId) throw new Error(`Cửa gác: cấp giấy chứng nhận mẫu không trả items[0].id: ${JSON.stringify(issued)}`);
   return {
     orgId,
     owner,
@@ -400,6 +427,11 @@ async function setupOrg(app: App, db: Db, label: string): Promise<GateOrg> {
       surchargeRule2Id,
       todayContractId,
       todayAppointmentId,
+      endedClassId,
+      customer2Id,
+      enrollmentId,
+      enrollment2Id,
+      certificateId,
     },
   };
 }

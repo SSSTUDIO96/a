@@ -111,3 +111,21 @@ export const ProfileBody = z.strictObject(
 );
 
 export type ProfileInput = z.infer<typeof ProfileBody>;
+
+// Người ký thứ hai trên giấy chứng nhận (BAN-VE-F mục 4.8). Hai khoá BẮT BUỘC có mặt, được phép null (null tên = để trống
+// dòng tên; null chức danh = "Giám đốc trung tâm"). Thân rỗng → 400. Không nằm trong ProfileBody: PUT /profile không bao
+// giờ xoá người ký.
+const SignerText = (label: string) =>
+  z
+    .string({ error: `Nhập ${label} hoặc gửi null` })
+    .trim()
+    .min(1, `${label[0]?.toUpperCase() ?? ''}${label.slice(1)} không được để trống (gửi null để bỏ)`)
+    .max(120, `${label[0]?.toUpperCase() ?? ''}${label.slice(1)} tối đa 120 ký tự`)
+    .nullable();
+
+export const CertificateSignerBody = z.strictObject(
+  { signerName: SignerText('tên người ký'), signerTitle: SignerText('chức danh người ký') },
+  { error: (iss) => (iss.code === 'unrecognized_keys' ? `Không nhận trường: ${iss.keys.join(', ')}` : undefined) },
+);
+
+export type CertificateSignerInput = z.infer<typeof CertificateSignerBody>;

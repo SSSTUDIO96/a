@@ -329,11 +329,45 @@
     });
   }
 
+  // Chữ thường quá dài (tên khoá, tên người ký, tên trung tâm) không được tràn ra ngoài khung giấy hay chồng sang ô bên cạnh:
+  // thu nhỏ từng nấc 0,5 px (sàn 55% cỡ gốc) cho tới khi nằm trong [lo, hi] (toạ độ px trong .cc); hết sàn mà vẫn dài thì cắt bằng "…".
+  // Chữ vừa khung (mọi trường hợp bình thường) KHÔNG bị đụng tới nên ảnh xuất y hệt bản R&D đã duyệt.
+  function thuNho(el, lo, hi) {
+    const cc = el.closest('.cc'), C = cc.getBoundingClientRect(), sc = C.width / cc.offsetWidth;
+    const vung = () => { const r = document.createRange(); r.selectNodeContents(el); const b = r.getBoundingClientRect(); return [(b.left - C.left) / sc, (b.right - C.left) / sc]; };
+    const gocPx = parseFloat(getComputedStyle(el).fontSize);
+    let px = gocPx;
+    for (let i = 0; i < 80; i++) {
+      const [l, r] = vung();
+      if (r - l <= 0 || (l >= lo - 0.5 && r <= hi + 0.5)) return;
+      if (px <= gocPx * 0.55) break;
+      px -= 0.5;
+      el.style.fontSize = px + 'px';
+    }
+    const [l, r] = vung();
+    if (r - l <= 0 || (l >= lo - 0.5 && r <= hi + 0.5)) return;
+    const cs = getComputedStyle(el), box = el.getBoundingClientRect();
+    const trai = Math.max(lo, (box.left - C.left) / sc);
+    if (cs.position === 'absolute') { el.style.left = trai + 'px'; el.style.width = Math.max(10, hi - trai) + 'px'; }
+    else el.style.maxWidth = Math.max(10, hi - lo) + 'px';
+    Object.assign(el.style, { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' });
+  }
+  function giuTrongKhung() {
+    const W = document.querySelector('.cc').offsetWidth, LE = 56;
+    document.querySelectorAll('[data-f="dong"],[data-f="khoaLop"],[data-f="th"]').forEach((el) => el.textContent && thuNho(el, LE, W - LE));
+    document.querySelectorAll('.ky .nm').forEach((el) => {
+      if (!el.textContent) return;
+      const c = el.closest('.ky'), C = document.querySelector('.cc').getBoundingClientRect(), b = c.getBoundingClientRect();
+      thuNho(el, b.left - C.left, b.right - C.left);
+    });
+  }
+
   let xong;
   window.MAU_SAN_SANG = new Promise((r) => { xong = r; });
   function fit() {
     try {
       document.querySelectorAll('.sv').forEach(veO);
+      giuTrongKhung();
     } catch (e) {
       document.body.dataset.loi = String((e && e.message) || e);
     }
