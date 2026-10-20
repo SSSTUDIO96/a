@@ -4,6 +4,7 @@
 > 1. Số mẫu: **16 mẫu** cc-01..cc-16 (anh Chiến duyệt 19/10: 01–05 dựng sát ảnh anh gửi, 16 "vinh danh kim cương"), không phải 10. R&D ở `docs/rnd/v8-mau-chung-chi/` (cc.js 339 dòng, cc.css 52 dòng, phông tiêu đề Prata, 5 kiểu chữ vàng SVG). Gói T1 chép 16 tệp + `chung/` (svg, js, css); KHÔNG chép TTF (dùng bộ phông app), KHÔNG chép `in-thu/`, `png/`.
 > 2. Migration: **`20261019210000_giay_chung_nhan`** (KY-DUYET-F câu 6). Mọi chỗ ghi 150000 trong bản này (mục 2.2, 2.4, dòng S1a) đọc là 210000. Mới nhất hiện có: 20261019200000_cong_hoc_vien (E1).
 > 3. Số dòng đã lệch sau bản vẽ D, E: dùng bảng tra lại của G0 ở `docs/rnd/BAN-VE-F-TRA-LAI-G0.md`. Hai chỗ SAI dòng: `types.ts` BrandProfile ở **1564** (không phải 1310); `nav.ts` mục Đào tạo ở **109** (không phải 97-98).
+> 5. (20/10, sau gói S1b) Mục 9.2: mẫu tham chiếu chéo của SỔ gộp `{ classId, customerId }` làm cửa gác MÙ với đột biến 17 (thay customerId bằng mã của A mà giữ classId của B → rỗng giống mã bịa, đo 0/3). Phải có thêm MỖI TRƯỜNG MỘT MẪU RIÊNG (giữ mẫu gộp). Đột biến 16 viết "quên lọc tổ chức" là đột biến tương đương (lớp đã khoá theo id + tổ chức vẫn chặn) — đột biến phải bỏ cả tổ chức lẫn lớp. Cấp lại khi ghi danh đã huỷ: máy chủ trả 409 `ENROLLMENT_CANCELLED` (việc tồn 69 chờ anh quyết); thêm 409 `CLASS_END_AFTER_ISSUE`.
 > 4. pdf-lib 1.17.1 (MIT) đã thử cài qua proxy được, đã ghi vào `docs/GHI-CHEP-MON-CUA-NGUOI-KHAC.md` mục 7.
 
 
