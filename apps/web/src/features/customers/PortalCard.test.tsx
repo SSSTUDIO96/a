@@ -5,6 +5,9 @@ import { portalMessage, type PortalAdminView } from '@makeup/shared';
 import { ApiError } from '../../api/errors';
 import { forbiddenMessage, requiredPermissions } from '../../api/portal';
 import { permissionsValue, StaticPermissionsProvider } from '../../layout/usePermissions';
+import { createMemoryRouter, RouterProvider } from 'react-router';
+import { SYSTEM_ROLES } from '@makeup/shared';
+import { routes } from '../../app/routes';
 import { PortalCard } from './PortalCard';
 import { PORTAL_CONSEQUENCE, PORTAL_CONSEQUENCE_MAX } from './logic';
 
@@ -80,7 +83,7 @@ function setup(initial: PortalAdminView, reply?: Reply) {
   return calls;
 }
 
-function renderCard(perms: readonly string[] = FULL, kind: 'ACADEMY' | 'TEAM' | undefined = 'ACADEMY') {
+function renderCard(perms: readonly string[] = FULL, kind: 'ACADEMY' | 'TEAM' | 'INDIVIDUAL' | undefined | 'chua-ro' = 'ACADEMY') {
   const state = {
     status: 'ready' as const,
     org: { id: ORG, slug: 'chien', name: 'X', kind: 'ACADEMY', timezone: 'Asia/Ho_Chi_Minh', currency: 'VND', status: 'ACTIVE', createdAt: T, updatedAt: T, myRoles: [], myPermissions: [...perms] } as never,
@@ -88,7 +91,7 @@ function renderCard(perms: readonly string[] = FULL, kind: 'ACADEMY' | 'TEAM' | 
   };
   return render(
     <StaticPermissionsProvider value={permissionsValue(state)}>
-      <PortalCard orgId={ORG} customerId={CUS} orgKind={kind} timezone="Asia/Ho_Chi_Minh" />
+      <PortalCard orgId={ORG} customerId={CUS} orgKind={kind === 'chua-ro' ? undefined : kind} timezone="Asia/Ho_Chi_Minh" />
     </StaticPermissionsProvider>,
   );
 }
@@ -99,9 +102,17 @@ const card = () => screen.findByRole('region', { name: 'Cổng học viên' });
 let clip: ReturnType<typeof vi.fn>;
 beforeEach(() => {
   clip = vi.fn(async () => undefined);
-  Object.defineProperty(navigator, 'clipboard', { value: { writeText: clip }, configurable: true });
+  vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-10-25T03:00:00.000Z'));
 });
+// userEvent.setup() thay navigator.clipboard bằng bản giả của nó → đặt bản của bài thử SAU khi setup.
+function userWithClipboard(withClipboard = true) {
+  const user = userEvent.setup();
+  Object.defineProperty(navigator, 'clipboard', { value: withClipboard ? { writeText: clip } : undefined, configurable: true });
+  return user;
+}
+
 afterEach(() => {
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
   Object.defineProperty(navigator, 'clipboard', { value: undefined, configurable: true });
   window.localStorage.clear();
@@ -119,7 +130,7 @@ describe('PortalCard — quyền và loại tổ chức', () => {
   it('tổ chức không phải ACADEMY (hoặc chưa rõ loại) → không hiện gì và không gọi máy chủ', () => {
     const calls = setup(view());
     expect(renderCard(FULL, 'TEAM').container.textContent).toBe('');
-    expect(renderCard(FULL, undefined).container.textContent).toBe('');
+    expect(renderCard(FULL, 'chua-ro').container.textContent).toBe('');
     expect(calls).toHaveLength(0);
   });
 
@@ -211,7 +222,7 @@ describe('PortalCard — tạo đường dẫn, chìa chỉ hiện một lần',
   it('vừa tạo: hộp tin nhắn có chìa + "Sao chép tin nhắn" chép đúng chữ portalMessage; chìa không vào URL / localStorage / sessionStorage', async () => {
     setup(view(), (c) => (c.method === 'POST' ? json(201, created(view({ link: link('ACTIVE') }))) : undefined));
     renderCard();
-    const user = userEvent.setup();
+    const user = userWithClipboard();
     await user.click(within(await card()).getByRole('button', { name: 'Tạo đường dẫn' }));
     await user.click(within(await screen.findByRole('dialog')).getByRole('checkbox'));
     await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Tạo' }));
@@ -233,7 +244,7 @@ describe('PortalCard — tạo đường dẫn, chìa chỉ hiện một lần',
   it('đã chép rồi đóng → mất tin; tải lại thẻ không còn chìa (máy chủ chỉ trả trạng thái)', async () => {
     setup(view(), (c) => (c.method === 'POST' ? json(201, created(view({ link: link('ACTIVE') }))) : undefined));
     const first = renderCard();
-    const user = userEvent.setup();
+    const user = userWithClipboard();
     await user.click(within(await card()).getByRole('button', { name: 'Tạo đường dẫn' }));
     await user.click(within(await screen.findByRole('dialog')).getByRole('checkbox'));
     await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Tạo' }));
@@ -265,10 +276,9 @@ describe('PortalCard — tạo đường dẫn, chìa chỉ hiện một lần',
   });
 
   it('không có clipboard → chọn sẵn chữ và báo chép tay', async () => {
-    Object.defineProperty(navigator, 'clipboard', { value: undefined, configurable: true });
     setup(view(), (c) => (c.method === 'POST' ? json(201, created(view({ link: link('ACTIVE') }))) : undefined));
     renderCard();
-    const user = userEvent.setup();
+    const user = userWithClipboard(false);
     await user.click(within(await card()).getByRole('button', { name: 'Tạo đường dẫn' }));
     await user.click(within(await screen.findByRole('dialog')).getByRole('checkbox'));
     await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Tạo' }));
@@ -368,7 +378,7 @@ describe('PortalCard — chặn máy và thu hồi', () => {
     await user.click(dlg.getByRole('button', { name: 'Thu hồi' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     expect(writes(calls)[0]).toMatchObject({ method: 'POST', path: `/orgs/${ORG}/customers/${CUS}/portal/revoke`, body: { reason: 'Đường dẫn bị lộ' } });
-    expect(await screen.findByText('Đã thu hồi', { selector: '.ui-tag' })).toBeTruthy();
+    expect((await screen.findAllByText('Đã thu hồi', { selector: '.ui-tag' })).length).toBe(2);
   });
 
   it('lỗi 409 khi chặn (máy đã thoát) → lời máy chủ trong hộp, hộp không đóng', async () => {
@@ -404,5 +414,57 @@ describe('api/portal — đọc details.required', () => {
     expect(forbiddenMessage(e(403, { required: ['customers.read', 'khoa.la'] }))).toBe('Không đủ quyền. Còn thiếu quyền: Xem khách hàng, khoa.la.');
     expect(forbiddenMessage(e(403, undefined))).toBe('Không đủ quyền.');
     expect(forbiddenMessage(e(409, undefined))).toBeNull();
+  });
+});
+
+// Trong hồ sơ khách thật (CustomerDetail): thẻ đứng ngay sau thẻ Hợp đồng; ẩn khi không phải ACADEMY hoặc thiếu portal.manage.
+describe('CustomerDetail — chỗ đặt thẻ Cổng học viên', () => {
+  const CUSTOMER = { id: 'k1', fullName: 'Phương Thảo', phone: '0912344321', email: null, note: null, createdAt: T, updatedAt: T };
+
+  function server(kind: 'ACADEMY' | 'TEAM', permissions: readonly string[]) {
+    const org = { membershipId: 'm-1', id: ORG, name: 'Học viện', slug: 'chien', kind, roles: [{ key: 'owner', name: 'Chủ' }] };
+    const calls: Call[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = new URL(String(input), 'http://localhost');
+        const path = url.pathname.replace('/api/v1', '');
+        calls.push({ method: init?.method ?? 'GET', path, body: undefined, headers: {} });
+        if (path === '/auth/refresh') return json(200, { accessToken: 't', expiresIn: 900 });
+        if (path === '/auth/me') return json(200, { id: 'u', email: 'a@b.vn', fullName: 'Chiến', organizations: [org] });
+        if (path === `/orgs/${ORG}`) return json(200, { ...org, timezone: 'Asia/Ho_Chi_Minh', currency: 'VND', status: 'ACTIVE', myRoles: ['owner'], myPermissions: [...permissions] });
+        if (path === `/orgs/${ORG}/customers`) return json(200, { items: [CUSTOMER], page: 1, pageSize: 20, total: 1 });
+        if (path === `/orgs/${ORG}/customers/k1`) return json(200, CUSTOMER);
+        if (path === `/orgs/${ORG}/contracts`) return json(200, { items: [], page: 1, pageSize: 10, total: 0 });
+        if (path === `/orgs/${ORG}/customers/k1/portal`) return json(200, view({ link: link('ACTIVE') }));
+        return err(404, 'NOT_FOUND', path);
+      }),
+    );
+    return calls;
+  }
+  const open = () => render(<RouterProvider router={createMemoryRouter(routes, { initialEntries: ['/chien/khach-hang/k1'] })} />);
+
+  it('ACADEMY + portal.manage: thẻ nằm SAU thẻ Hợp đồng', async () => {
+    server('ACADEMY', SYSTEM_ROLES.owner.permissions);
+    open();
+    const portal = await screen.findByRole('region', { name: 'Cổng học viên' });
+    const contracts = screen.getByRole('region', { name: 'Hợp đồng của khách' });
+    expect(contracts.compareDocumentPosition(portal) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('tổ chức TEAM: không có thẻ và không gọi đường cổng', async () => {
+    const calls = server('TEAM', SYSTEM_ROLES.owner.permissions);
+    open();
+    await screen.findByRole('region', { name: 'Hợp đồng của khách' });
+    expect(screen.queryByRole('region', { name: 'Cổng học viên' })).toBeNull();
+    expect(calls.some((c) => c.path.endsWith('/portal'))).toBe(false);
+  });
+
+  it('thiếu portal.manage: không có thẻ và không gọi đường cổng', async () => {
+    const calls = server('ACADEMY', SYSTEM_ROLES.owner.permissions.filter((p) => p !== 'portal.manage'));
+    open();
+    await screen.findByRole('region', { name: 'Hợp đồng của khách' });
+    expect(screen.queryByRole('region', { name: 'Cổng học viên' })).toBeNull();
+    expect(calls.some((c) => c.path.endsWith('/portal'))).toBe(false);
   });
 });
