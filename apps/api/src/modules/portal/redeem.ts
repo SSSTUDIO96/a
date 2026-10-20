@@ -201,7 +201,7 @@ export async function claimHandoff(deps: Deps, req: Request, input: { code: stri
       device.organization.status === 'ACTIVE';
     if (!valid) return DENIED;
     // Dùng một lần: xoá mã ngay trong transaction nhận phiên.
-    await tx.portalDevice.update({ where: { id: device.id }, data: {} });
+    await tx.portalDevice.update({ where: { id: device.id }, data: { handoffHash: null, handoffExpiresAt: null } });
     await revokeBrowserSession(tx, req, now);
     // Mỗi máy tối đa PORTAL_MAX_SESSIONS_PER_DEVICE phiên sống: phiên mới đẩy phiên dùng lâu nhất ra.
     const live = await tx.portalSession.findMany({

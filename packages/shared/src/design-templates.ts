@@ -221,7 +221,7 @@ export const DESIGN_TEMPLATES: readonly DesignTemplate[] = [
   cert('cc-06', 'Guilloche bạc', KY(4), PRATA, 'TU_SANG_TAC'),
   cert('cc-07', 'Hồng mận vàng hồng', KY(1), PRATA, 'TU_SANG_TAC'),
   cert('cc-08', 'Đen Art Deco', KY(2), PRATA, 'TU_SANG_TAC'),
-  cert('cc-09', 'Ngà nguyệt quế', KY(3), GREAT_VIBES, 'TU_SANG_TAC'),
+  cert('cc-09', 'Ngà nguyệt quế', KY(3), PRATA, 'TU_SANG_TAC'),
   cert('cc-10', 'Lục bảo khung vát', KY(1), PRATA, 'TU_SANG_TAC'),
   cert('cc-11', 'Xanh hoàng gia tia sáng', KY(1), PRATA, 'TU_SANG_TAC'),
   cert('cc-12', 'Hồng phấn vòng hoa', KY(3), PRATA, 'TU_SANG_TAC'),

@@ -1,5 +1,5 @@
 /* Khung chung cho 16 mẫu giấy chứng nhận cc-01..cc-16 — A4 ngang (297×210 mm). R&D 08, bản 2 (đã duyệt), vào app theo gói T1 của bản vẽ F.
-   Phông: KHÔNG chép phông mới. Tiêu đề dùng 'SSA Prata' và 'SSA Great Vibes' (mẫu cc-04, cc-09 viết tay) khai ở phong/ss-album/ss-album.css;
+   Phông: KHÔNG chép phông mới. Tiêu đề dùng 'SSA Prata' và 'SSA Great Vibes' (mẫu cc-04 viết tay) khai ở phong/ss-album/ss-album.css;
    chữ ký 'MP Chữ ký N' ở phong/phong.css (+ ss-album.css). Mỗi mẫu nối cả ba tệp bằng thẻ <link>, KHÔNG @import
    (bộ xuất PNG html-to-image không nhúng được phông qua @import — bài học sổ PH2).
    Mỗi <section class="cc"> = 1 trang in. Bố cục bên trong vẽ theo px trên khung 1123×794 (A4 ở 96 dpi).

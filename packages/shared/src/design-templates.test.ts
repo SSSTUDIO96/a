@@ -10,14 +10,15 @@ import {
   slotsForContract,
   templateSupportsContract,
 } from './design-templates';
+import { CERTIFICATE_IMAGE, CERTIFICATE_TEMPLATE_CODES, CERTIFICATE_TEMPLATES } from './certificates';
 import { DEFAULT_GREETING_PHRASES, phraseAppliesTo } from './greetings';
 
 const codes = (prefix: string, n: number) => Array.from({ length: n }, (_, i) => `${prefix}-${String(i + 1).padStart(2, '0')}`);
 
 describe('danh mục mẫu thiết kế', () => {
-  it('đủ 27 mẫu: shd-01..11, fb-01..10, lc-01..06', () => {
+  it('đủ 43 mẫu: shd-01..11, fb-01..10, lc-01..06, cc-01..16', () => {
     expect(DESIGN_TEMPLATES.map((t) => t.code).sort()).toEqual(
-      [...codes('shd', 11), ...codes('fb', 10), ...codes('lc', 6)].sort(),
+      [...codes('shd', 11), ...codes('fb', 10), ...codes('lc', 6), ...codes('cc', 16)].sort(),
     );
   });
   it('BẮT: mẫu chào mừng thứ 20 (shd-11) — khoá học, chữ ký nét mảnh, đủ ô, không ô ảnh tải lên', () => {
@@ -56,6 +57,7 @@ describe('danh mục mẫu thiết kế', () => {
       ...Object.fromEntries(codes('shd', 11).map((c) => [c, 0])),
       'fb-01': 1, 'fb-02': 1, 'fb-03': 1, 'fb-04': 3, 'fb-05': 2, 'fb-06': 3, 'fb-07': 1, 'fb-08': 1, 'fb-09': 2, 'fb-10': 1,
       'lc-01': 1, 'lc-02': 1, 'lc-03': 1, 'lc-04': 2, 'lc-05': 0, 'lc-06': 1,
+      ...Object.fromEntries(codes('cc', 16).map((c) => [c, 0])),
     };
     for (const t of DESIGN_TEMPLATES) {
       const photoSlots = t.slots.filter((s) => (PHOTO_SLOTS as readonly string[]).includes(s));
@@ -68,11 +70,12 @@ describe('danh mục mẫu thiết kế', () => {
       expect(t.photos.max).toBeLessThanOrEqual(3);
     }
   });
-  it('BẮT: mẫu nào cũng có ảnh — số khung ảnh (ảnh học viên + ảnh tải lên) đúng từng mẫu, tổng 34 khung', () => {
+  it('BẮT: mẫu nào cũng có ảnh — số khung ảnh (ảnh học viên + ảnh tải lên) đúng từng mẫu, tổng 50 khung (34 + 16 giấy chứng nhận)', () => {
     const want: Record<string, number> = {
       ...Object.fromEntries(codes('shd', 11).map((c) => [c, 1])),
       'fb-01': 1, 'fb-02': 1, 'fb-03': 1, 'fb-04': 3, 'fb-05': 2, 'fb-06': 3, 'fb-07': 1, 'fb-08': 1, 'fb-09': 2, 'fb-10': 1,
       'lc-01': 1, 'lc-02': 1, 'lc-03': 1, 'lc-04': 2, 'lc-05': 1, 'lc-06': 1,
+      ...Object.fromEntries(codes('cc', 16).map((c) => [c, 1])),
     };
     for (const t of DESIGN_TEMPLATES) {
       const frames = t.slots.filter((s) => (FRAME_SLOTS as readonly string[]).includes(s));
@@ -82,7 +85,7 @@ describe('danh mục mẫu thiết kế', () => {
       // Ảnh học viên (dữ liệu) không tính vào số ảnh tải lên.
       expect(t.photos.max, t.code).toBe(frames.filter((s) => s !== 'anh').length);
     }
-    expect(DESIGN_TEMPLATES.reduce((n, t) => n + t.photoFrames, 0)).toBe(34);
+    expect(DESIGN_TEMPLATES.reduce((n, t) => n + t.photoFrames, 0)).toBe(50);
     // shd-01 "Thư mời kem" trước đây là mẫu duy nhất không có ảnh.
     expect(findDesignTemplate('shd-01')!.slots).toContain('anh');
   });
@@ -95,18 +98,19 @@ describe('danh mục mẫu thiết kế', () => {
     const kinds = (code: string) => [...findDesignTemplate(code)!.contractKinds].sort().join('+');
     for (const c of codes('shd', 11)) expect(kinds(c), c).toBe('COURSE');
     for (const c of codes('fb', 10)) expect(kinds(c), c).toBe(c === 'fb-09' ? 'SERVICE' : 'COURSE+SERVICE');
+    for (const c of codes('cc', 16)) expect(kinds(c), c).toBe('COURSE');
     for (const c of ['lc-01', 'lc-03', 'lc-04', 'lc-06']) expect(kinds(c), c).toBe('SERVICE');
     expect(kinds('lc-02')).toBe('COURSE+SERVICE');
     expect(kinds('lc-05')).toBe('COURSE');
   });
   it('loại thẻ theo tiền tố mã; chỉ fb-02, fb-03 có sao; mẫu feedback có lời khen, mẫu lời chúc có tiêu đề + câu chúc', () => {
     for (const t of DESIGN_TEMPLATES) {
-      const kind = t.code.startsWith('shd-') ? 'WELCOME' : t.code.startsWith('fb-') ? 'FEEDBACK' : 'GREETING';
+      const kind = t.code.startsWith('shd-') ? 'WELCOME' : t.code.startsWith('fb-') ? 'FEEDBACK' : t.code.startsWith('cc-') ? 'CERTIFICATE' : 'GREETING';
       expect(t.kind, t.code).toBe(kind);
       expect(t.slots.includes('sao'), t.code).toBe(t.code === 'fb-02' || t.code === 'fb-03');
       if (t.kind === 'FEEDBACK') expect(t.slots, t.code).toContain('nd');
       if (t.kind === 'GREETING') expect(t.slots, t.code).toEqual(expect.arrayContaining(['td', 'cc']));
-      expect(t.sizes, t.code).toEqual(['1080x1350', '1080x1080']);
+      expect(t.sizes, t.code).toEqual(t.kind === 'CERTIFICATE' ? ['1754x1240'] : ['1080x1350', '1080x1080']);
       expect(t.version, t.code).toBeGreaterThanOrEqual(1);
       expect(t.fonts.length, t.code).toBeGreaterThan(0);
     }
@@ -120,7 +124,9 @@ describe('danh mục mẫu thiết kế', () => {
     expect(findDesignTemplate('fb-09')?.name).toBe('Trước – sau');
   });
   it('lọc theo loại thẻ và loại hợp đồng', () => {
-    expect(listDesignTemplates().length).toBe(27);
+    expect(listDesignTemplates().length).toBe(43);
+    expect(listDesignTemplates({ kind: 'CERTIFICATE' }).length).toBe(16);
+    expect(listDesignTemplates({ kind: 'CERTIFICATE', contractKind: 'SERVICE' })).toEqual([]);
     expect(listDesignTemplates({ kind: 'WELCOME' }).length).toBe(11);
     expect(listDesignTemplates({ contractKind: 'SERVICE', kind: 'WELCOME' })).toEqual([]);
     expect(listDesignTemplates({ contractKind: 'COURSE', kind: 'FEEDBACK' }).map((t) => t.code)).not.toContain('fb-09');
@@ -133,6 +139,42 @@ describe('danh mục mẫu thiết kế', () => {
     expect(slotsForContract(fb01, 'COURSE')).toEqual(expect.arrayContaining(['khoa', 'lop']));
     expect(slotsForContract(fb01, 'SERVICE')).toEqual(expect.arrayContaining(['nv', 'goi', 'nsk']));
     expect(slotsForContract(fb01, 'SERVICE')).not.toContain('khoa');
+  });
+});
+
+describe('giấy chứng nhận cc-01..cc-16 (bản vẽ F, đính chính 19/10/2026 tối)', () => {
+  const certs = () => listDesignTemplates({ kind: 'CERTIFICATE' });
+  it('BẮT: danh mục CERTIFICATE đúng 16 mã, khớp CERTIFICATE_TEMPLATE_CODES (hai nơi không lệch)', () => {
+    expect(certs().map((t) => t.code)).toEqual(codes('cc', 16));
+    expect(certs().map((t) => t.code)).toEqual([...CERTIFICATE_TEMPLATE_CODES]);
+    for (const t of certs()) expect(t.version, t.code).toBe(CERTIFICATE_TEMPLATES[t.code as keyof typeof CERTIFICATE_TEMPLATES].version);
+    // Mã cc-* không nằm ngoài loại CERTIFICATE.
+    expect(DESIGN_TEMPLATES.filter((t) => t.code.startsWith('cc-') !== (t.kind === 'CERTIFICATE'))).toEqual([]);
+  });
+  it('BẮT: mọi mẫu giấy chỉ khổ A4 ngang 1754x1240 (= CERTIFICATE_IMAGE), khung ảnh tròn, một khung (ảnh học viên), không ảnh tải lên', () => {
+    expect(`${CERTIFICATE_IMAGE.width}x${CERTIFICATE_IMAGE.height}`).toBe('1754x1240');
+    for (const t of certs()) {
+      expect(t.sizes, t.code).toEqual(['1754x1240']);
+      expect(t.frameShape, t.code).toBe('circle');
+      expect(t.photoFrames, t.code).toBe(1);
+      expect(t.photos, t.code).toEqual({ min: 0, max: 0 });
+      expect(t.contractKinds, t.code).toEqual(['COURSE']);
+    }
+  });
+  it('BẮT: 12 ô chung đủ khoá, ô riêng của giấy (so, ncap, lai, gd, gdcv) chỉ thuộc khoá học; mẫu thẻ cũ không có ô nào trong số đó', () => {
+    const want = ['logo', 'th', 'anh', 'ten', 'khoa', 'lop', 'so', 'ncap', 'lai', 'gv', 'gd', 'gdcv'].sort();
+    for (const t of certs()) expect([...t.slots].sort(), t.code).toEqual(want);
+    for (const k of ['so', 'ncap', 'lai', 'gd', 'gdcv'] as const) {
+      expect(SLOT_SOURCES[k].contract, k).toBe('COURSE');
+      expect(DESIGN_TEMPLATES.filter((t) => t.kind !== 'CERTIFICATE' && t.slots.includes(k)), k).toEqual([]);
+    }
+  });
+  it('BẮT: nguồn gốc 01–05 và 16 học từ ảnh anh Chiến gửi, 06–15 tự sáng tạo; tên mẫu không trùng', () => {
+    for (const t of certs()) {
+      const n = Number(t.code.slice(3));
+      expect(t.origin, t.code).toBe(n <= 5 || n === 16 ? 'HOC_TU_ANH' : 'TU_SANG_TAC');
+    }
+    expect(new Set(certs().map((t) => t.name)).size).toBe(16);
   });
 });
 
