@@ -115,7 +115,14 @@ export const NAV_ITEMS: readonly NavItem[] = [
     shortLabel: 'Cài đặt',
     icon: 'cai-dat',
     permission: 'org.update',
-    children: [{ key: 'thuong-hieu', path: 'cai-dat/thuong-hieu', label: 'Hồ sơ thương hiệu' }],
+    children: [
+      { key: 'thuong-hieu', path: 'cai-dat/thuong-hieu', label: 'Hồ sơ thương hiệu' },
+      // Bản vẽ E 5.2: số tài khoản đụng tiền → org.update (Chủ, Quản trị). Tổ chức không phải ACADEMY thấy "Tổ chức chưa bật đào tạo".
+      { key: 'cong-hoc-vien', path: 'cai-dat/cong-hoc-vien', label: 'Cổng học viên', permission: 'org.update' },
+      // Bản vẽ E 5.2 ghi org.read, nhưng mục con org.read làm mọi nhân viên thấy "Cài đặt" và đẩy trang mở đầu của người chỉ có
+// org.read từ Hôm nay sang Cài đặt (phá ký duyệt D câu 1; 10 bài AppShell đỏ). Tạm org.update — xem phiếu vướng W3-1.
+      { key: 'cai-app', path: 'cai-dat/cai-app', label: 'Cài app lên điện thoại', permission: 'org.update' },
+    ],
   },
 ];
 

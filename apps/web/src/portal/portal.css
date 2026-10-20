@@ -1,0 +1,199 @@
+/* Cổng học viên /hv — bản vẽ E mục 5.1; bám ảnh docs/rnd/anh-rnd06/hv-B-*.png. Chỉ dùng token ở styles/tokens.css.
+   Điện thoại (390) là chính: không tràn ngang, chip neo cuộn ngang TRONG hàng chip. Máy tính ≥ 1024: cột trái neo mục. */
+html, body { overflow-x: clip; }
+.pt-app, .pt-frame { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; font-family: var(--font); color: var(--text); }
+.pt-muted { color: var(--muted); }
+.pt-small { font-size: 12.5px; }
+.pt-block { display: block; }
+.pt-pad-top { padding-top: 10px; }
+.pt-warn-text { color: var(--warn); }
+.pt-ico { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.pt-pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* ---------- Khung các màn ngoài trang ---------- */
+.pt-frame__head { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 36px 16px 20px; text-align: center; }
+.pt-frame__head strong { font-size: 18px; font-weight: 700; }
+.pt-frame__head .pt-muted { font-size: 13px; }
+.pt-logo {
+  width: 54px; height: 54px; border-radius: 50%; border: 2px solid var(--accent); color: var(--accent);
+  display: inline-flex; align-items: center; justify-content: center; font-weight: 600; font-size: 26px; margin-bottom: 8px;
+}
+.pt-frame__main { flex: 1; width: 100%; max-width: 440px; margin: 0 auto; padding: 0 16px 24px; }
+.pt-frame__foot { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 18px 16px 24px; color: var(--faint); font-size: 12.5px; }
+.pt-frame__foot .pt-ico { width: 14px; height: 14px; }
+.pt-loading { text-align: center; color: var(--muted); padding: 32px 0; }
+
+/* ---------- Thẻ ---------- */
+.pt-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); overflow: hidden; scroll-margin-top: 120px; }
+.pt-card--accent { border-color: var(--accent-line); }
+.pt-card__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--line-2); }
+.pt-card__head h2 { font-size: var(--fs-h2); font-weight: 700; min-width: 0; overflow-wrap: anywhere; }
+.pt-card__aside { color: var(--muted); font-size: 12.5px; flex: none; max-width: 50%; text-align: right; overflow-wrap: anywhere; }
+.pt-card__body { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.pt-card__body h1 { font-size: 22px; font-weight: 700; line-height: 1.25; }
+.pt-card__foot { padding: 12px 16px; border-top: 1px solid var(--line-2); color: var(--muted); font-size: 13px; text-align: center; background: var(--soft); }
+.pt-card__body > .pt-card__body { padding: 0; }
+.pt-open { margin-top: 4px; }
+
+/* ---------- 4 ô số, mã chuyển máy ---------- */
+.pt-digits { display: flex; justify-content: center; gap: 10px; padding: 6px 0; }
+.pt-digit {
+  width: 52px; height: 54px; text-align: center; font-size: 22px; font-weight: 600;
+  border: 1px solid var(--line); border-radius: 10px; background: var(--surface); outline: none;
+}
+.pt-digit:focus { border-color: var(--accent); box-shadow: var(--input-ring); }
+.pt-digit--bad { border-color: var(--danger); color: var(--danger); }
+.pt-claim { display: flex; flex-direction: column; gap: 10px; }
+.pt-claim label { font-size: 13px; color: var(--muted); }
+.pt-code {
+  height: 48px; border: 1px solid var(--line); border-radius: 10px; padding: 0 12px; text-align: center;
+  font-size: 20px; letter-spacing: 3px; font-weight: 600; text-transform: uppercase; width: 100%; outline: none;
+}
+.pt-code:focus { border-color: var(--accent); box-shadow: var(--input-ring); }
+
+/* ---------- Dải thông báo ---------- */
+.pt-note { display: flex; gap: 10px; align-items: flex-start; padding: 11px 13px; border-radius: 10px; font-size: 13.5px; line-height: 1.45; border: 1px solid; }
+.pt-note p, .pt-note span { min-width: 0; overflow-wrap: anywhere; }
+.pt-note .pt-ico { margin-top: 1px; }
+.pt-note--danger { background: var(--danger-bg); border-color: var(--danger-line); color: var(--danger); }
+.pt-note--warn { background: var(--warn-bg); border-color: var(--warn-line); color: var(--warn); }
+.pt-note--ok { background: var(--ok-bg); border-color: transparent; color: var(--ok); }
+
+/* ---------- Đầu trang ---------- */
+.pt-top { position: sticky; top: 0; z-index: 30; background: var(--surface); border-bottom: 1px solid var(--line); }
+.pt-top__in { display: flex; align-items: center; gap: 10px; max-width: 1064px; margin: 0 auto; padding: 10px 16px; min-height: var(--h-topbar); }
+.pt-top__text { display: flex; flex-direction: column; min-width: 0; flex: 1; line-height: 1.25; }
+.pt-top__text strong { font-size: 15px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pt-top__text span { font-size: 12px; color: var(--muted); }
+.pt-avatar {
+  flex: none; border-radius: 50%; object-fit: cover; background: var(--accent-soft); color: var(--accent);
+  display: inline-flex; align-items: center; justify-content: center; font-weight: 600;
+}
+.pt-avatar--brand { background: var(--surface); border: 1.5px solid var(--accent); }
+
+/* ---------- Bố cục trang ---------- */
+.pt-wrap { flex: 1; width: 100%; max-width: 1064px; margin: 0 auto; }
+.pt-main { display: flex; flex-direction: column; gap: 12px; padding: 16px 16px 28px; min-width: 0; }
+.pt-group { display: flex; flex-direction: column; gap: 12px; }
+.pt-hello { display: flex; gap: 14px; align-items: center; padding: 4px 0 4px; }
+.pt-hello__text { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; min-width: 0; }
+.pt-hello h1 { font-size: 22px; line-height: 1.2; font-weight: 700; overflow-wrap: anywhere; }
+
+/* Chip neo (điện thoại): hàng cuộn ngang bên trong, dính dưới đầu trang */
+.pt-nav { position: sticky; top: var(--h-topbar); z-index: 20; background: var(--bg); border-bottom: 1px solid var(--line-2); }
+.pt-nav ul { list-style: none; display: flex; gap: 8px; overflow-x: auto; padding: 10px 16px; scrollbar-width: none; }
+.pt-nav ul::-webkit-scrollbar { display: none; }
+.pt-nav__desk { display: none; }
+.pt-chip {
+  flex: none; height: 32px; padding: 0 14px; border-radius: var(--r-pill); border: 1px solid var(--line); background: var(--surface);
+  font-size: 13.5px; font-weight: 500; white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis;
+}
+.pt-chip--on { border-color: var(--accent-line); background: var(--accent-soft); color: var(--accent); }
+
+/* ---------- Buổi học tới ---------- */
+.pt-tag { display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: var(--r-pill); font-size: var(--fs-tag); font-weight: 600; background: var(--draft-bg); color: var(--muted); white-space: nowrap; }
+.pt-tag--accent { background: var(--accent-soft); color: var(--accent); }
+.pt-tag--ok { background: var(--ok-bg); color: var(--ok); }
+.pt-tag--danger { background: var(--danger-bg); color: var(--danger); }
+.pt-when { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.pt-when strong { font-size: 19px; font-weight: 700; line-height: 1.25; }
+.pt-when__time { color: var(--accent); font-weight: 600; }
+.pt-line { display: flex; gap: 10px; align-items: center; color: var(--muted); min-width: 0; }
+.pt-line--top { align-items: flex-start; }
+.pt-line strong { color: var(--text); font-weight: 600; }
+.pt-line span { min-width: 0; overflow-wrap: anywhere; }
+.pt-line .pt-ico { color: var(--muted); margin-top: 1px; }
+.pt-actions { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
+.pt-btn {
+  display: inline-flex; align-items: center; gap: 6px; height: var(--h-ctl); padding: 0 12px; border-radius: var(--r-ctl);
+  border: 1px solid var(--line); background: var(--surface); color: var(--text); text-decoration: none; font-weight: 500; font-size: 13.5px;
+}
+.pt-btn:hover { border-color: var(--line-hover); }
+.pt-link { color: var(--accent); font-weight: 500; text-decoration: none; font-size: 13.5px; }
+.pt-linkbtn { background: none; border: 0; padding: 0; color: var(--accent); font-weight: 500; text-decoration: underline; text-underline-offset: 2px; }
+
+/* ---------- Học phí ---------- */
+.pt-sums { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.pt-sums dt { color: var(--muted); font-size: 12px; }
+.pt-sums dd { font-size: 14px; font-weight: 700; margin: 0; }
+.pt-sums__left { color: var(--accent); }
+.pt-bar { height: 8px; border-radius: var(--r-pill); background: var(--draft-bg); overflow: hidden; }
+.pt-bar span { display: block; height: 100%; background: var(--ok); border-radius: var(--r-pill); }
+.pt-note .pt-ico { color: inherit; }
+
+/* Danh sách dòng (đợt, phiếu, buổi, dòng hợp đồng) */
+.pt-rows { list-style: none; margin: -4px 0; }
+.pt-inst { display: flex; gap: 12px; align-items: flex-start; padding: 12px 0; min-width: 0; }
+.pt-inst + .pt-inst { border-top: 1px solid var(--line-2); }
+.pt-inst__main { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; overflow-wrap: anywhere; font-size: 14px; }
+.pt-inst__main .pt-muted { font-size: 13px; }
+.pt-inst__amt { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; text-align: right; flex: none; max-width: 48%; font-size: 14px; }
+.pt-inst--total { border-top: 1px solid var(--line); }
+.pt-dot { flex: none; width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--line-hover); display: inline-flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; margin-top: 1px; }
+.pt-dot .pt-ico { width: 13px; height: 13px; stroke-width: 2.4; }
+.pt-dot--paid { background: var(--ok); border-color: var(--ok); color: #fff; }
+.pt-dot--overdue { border-color: var(--warn); color: var(--warn); }
+.pt-dot--partial { border-color: var(--warn); }
+
+/* ---------- Khối khoá, bảng chữ: tên / giá trị ---------- */
+.pt-kv { display: flex; flex-direction: column; gap: 10px; }
+.pt-kv > div { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 4px 12px; align-items: start; }
+.pt-kv dt { color: var(--muted); font-size: 13px; padding-top: 1px; }
+.pt-kv dd { margin: 0; overflow-wrap: anywhere; }
+.pt-kv__copy { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.pt-kv__copy strong { font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+
+/* ---------- Buổi học ---------- */
+.pt-sessions { margin-top: 2px; }
+.pt-sess { align-items: center; }
+.pt-sess--dim .pt-inst__main, .pt-sess--dim .pt-day { opacity: .6; }
+.pt-day { flex: none; width: 48px; border: 1px solid var(--line); border-radius: 10px; display: flex; flex-direction: column; align-items: center; padding: 3px 0 2px; line-height: 1.15; }
+.pt-day b { font-size: 16px; font-weight: 700; }
+.pt-day small { font-size: 10px; color: var(--muted); }
+
+/* ---------- Ảnh ---------- */
+.pt-photos { list-style: none; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.pt-photo { display: block; width: 100%; padding: 0; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--soft); }
+.pt-photo img { width: 100%; height: auto; object-fit: cover; }
+.pt-photo__cap { display: flex; flex-direction: column; gap: 1px; padding-top: 6px; font-size: 13px; }
+.pt-overlay { position: fixed; inset: 0; z-index: 60; background: var(--overlay-dialog); display: flex; align-items: center; justify-content: center; padding: 16px; }
+.pt-overlay--sheet { align-items: flex-end; }
+.pt-lightbox { background: var(--surface); border-radius: var(--r-dialog); padding: 12px; max-width: 520px; width: 100%; max-height: 100%; overflow: auto; display: flex; flex-direction: column; gap: 12px; }
+.pt-lightbox__img { width: 100%; height: auto; max-height: 62vh; object-fit: contain; border-radius: 8px; }
+.pt-lightbox__bar { display: flex; gap: 8px; flex-wrap: wrap; }
+.pt-lightbox__hint { color: var(--muted); font-size: 13px; text-align: center; }
+.pt-sheet { background: var(--surface); width: 100%; max-width: 440px; margin: 0 auto; border-radius: var(--r-sheet) var(--r-sheet) var(--r-dialog) var(--r-dialog); padding: 18px 16px 16px; display: flex; flex-direction: column; gap: 10px; }
+.pt-sheet h2 { font-size: 17px; font-weight: 700; }
+.pt-sheet__body { color: var(--muted); display: flex; flex-direction: column; gap: 10px; }
+.pt-sheet__actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+
+/* ---------- Hợp đồng, nội quy ---------- */
+.pt-contract { display: flex; flex-direction: column; gap: 6px; }
+.pt-contract + .pt-contract { border-top: 1px solid var(--line); padding-top: 16px; }
+.pt-contract > header { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; align-items: baseline; }
+.pt-terms { border: 1px solid var(--line-2); border-radius: 10px; padding: 10px 12px; background: var(--soft); }
+.pt-terms summary { cursor: pointer; font-weight: 600; font-size: 13.5px; }
+.pt-terms .pt-pre { margin-top: 8px; color: var(--muted); font-size: 13.5px; }
+.pt-text { display: flex; flex-direction: column; gap: 4px; }
+.pt-empty { display: flex; gap: 10px; align-items: center; color: var(--muted); }
+
+/* ---------- Cài app, chân trang ---------- */
+.pt-handoff { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 14px; border: 1px dashed var(--accent-line); border-radius: 12px; background: var(--dashed-bg); margin-top: 12px; }
+.pt-handoff__code { font-size: 28px; letter-spacing: 4px; color: var(--accent); }
+.pt-foot { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px 0 0; text-align: center; font-size: 13.5px; color: var(--muted); }
+
+/* ---------- Máy tính: cột trái neo mục ---------- */
+@media (min-width: 1024px) {
+  .pt-wrap { display: grid; grid-template-columns: 200px minmax(0, 1fr); column-gap: 28px; align-items: start; padding: 0 16px; }
+  .pt-nav { position: sticky; top: calc(var(--h-topbar) + 24px); background: none; border: 0; padding-top: 24px; }
+  .pt-nav ul { flex-direction: column; gap: 2px; overflow: visible; padding: 0; }
+  .pt-nav__desk { display: list-item; }
+  .pt-chip { width: 100%; max-width: none; height: 38px; border: 0; background: none; text-align: left; padding: 0 12px; border-radius: 8px; color: var(--muted); font-weight: 500; }
+  .pt-chip:hover { background: var(--line-2); }
+  .pt-chip--on { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .pt-main { padding: 24px 0 40px; grid-column: 2; }
+  .pt-card { scroll-margin-top: 80px; }
+  .pt-hello h1 { font-size: 26px; }
+  .pt-overlay--sheet { align-items: center; }
+  .pt-sheet { border-radius: var(--r-dialog); }
+}

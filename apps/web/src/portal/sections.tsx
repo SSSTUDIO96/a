@@ -1,5 +1,5 @@
 // Các thẻ của trang học viên (bản vẽ E mục 5.1). Chỉ HIỂN THỊ dữ liệu PortalMe: tiền qua formatVnd của shared, không tính lại.
-import { useState, type ReactNode } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import { formatVnd, type PortalMe } from '@makeup/shared';
 import { Button } from '../ui/Button';
 import { IconChat, IconCheck, IconClock, IconCopy, IconDownload, IconMap, IconPhone, IconPin, IconUser, IconWarn } from './icons';
@@ -25,7 +25,7 @@ export interface Ctx {
 const money = (n: number) => <span className="num">{formatVnd(n)}</span>;
 
 function CardShell({ id, title, aside, children, tone }: { id?: string; title: string; aside?: ReactNode; children: ReactNode; tone?: 'accent' }) {
-  const headId = id ? `${id}-t` : undefined;
+  const headId = useId();
   return (
     <section id={id} className={tone === 'accent' ? 'pt-card pt-card--accent' : 'pt-card'} aria-labelledby={headId}>
       <header className="pt-card__head">
@@ -312,9 +312,11 @@ export function ScheduleCard({ e, ctx, anchorId, many }: { e: Enrollment; ctx: C
       </dl>
       {e.sessions.length > 0 && (
         <ul className="pt-rows pt-sessions" aria-label="Từng buổi học">
-          {e.sessions.map((s, idx) => {
+          {e.sessions.map((s) => {
             const badge = sessionBadge(s, ctx.nowMs, ctx.tz);
             const wd = weekdayOfYmd(s.date);
+            // Buổi đánh số theo thứ tự các buổi không huỷ (khớp "Buổi n/N" ở thẻ Buổi học tới).
+            const n = s.status === 'CANCELLED' ? null : e.sessions.filter((x) => x.status !== 'CANCELLED' && Date.parse(x.startsAt) <= Date.parse(s.startsAt)).length;
             return (
               <li key={`${s.date}-${s.startsAt}`} className={badge === 'past' || badge === 'cancelled' ? 'pt-sess pt-sess--dim' : 'pt-sess'}>
                 <span className="pt-day" aria-hidden="true">
@@ -324,7 +326,7 @@ export function ScheduleCard({ e, ctx, anchorId, many }: { e: Enrollment; ctx: C
                   </small>
                 </span>
                 <span className="pt-inst__main">
-                  <strong>Buổi {idx + 1}</strong>
+                  <strong>{n === null ? 'Buổi học bị huỷ' : `Buổi ${n}`}</strong>
                   <span className="pt-muted num">
                     {hmInZone(s.startsAt, ctx.tz)}–{hmInZone(s.endsAt, ctx.tz)}
                     {e.location ? ` · ${e.location.name}` : ''}

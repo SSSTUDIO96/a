@@ -25,6 +25,8 @@ const CustomersPage = screen(() => import('../features/customers'), (m) => m.Cus
 const DesignsPage = screen(() => import('../features/designs'), (m) => m.DesignsPage);
 const PaymentsPage = screen(() => import('../features/payments'), (m) => m.PaymentsPage);
 const PlatformApp = screen(() => import('../features/platform'), (m) => m.PlatformApp);
+const PortalSettingsPage = screen(() => import('../features/portal-settings'), (m) => m.PortalSettingsPage);
+const InstallAppPage = screen(() => import('../features/portal-settings'), (m) => m.InstallAppPage);
 const PricingPage = screen(() => import('../features/pricing'), (m) => m.PricingPage);
 const PublicSitePage = screen(() => import('../features/public-site'), (m) => m.PublicSitePage);
 const RevenuePage = screen(() => import('../features/reports'), (m) => m.RevenuePage);
@@ -99,6 +101,8 @@ const orgChildren: RouteObject[] = [
   { path: 'mau-thiet-ke/*', element: guarded('mau-thiet-ke', <DesignsPage />) },
   { path: 'cai-dat', element: guarded('cai-dat', <Navigate to="thuong-hieu" replace />) },
   { path: 'cai-dat/thuong-hieu', element: guarded('thuong-hieu', <BrandPage />) },
+  { path: 'cai-dat/cong-hoc-vien', element: guarded('cong-hoc-vien', <PortalSettingsPage />) },
+  { path: 'cai-dat/cai-app', element: guarded('cai-app', <InstallAppPage />) },
   { path: '*', element: <NotFoundView /> },
 ];
 

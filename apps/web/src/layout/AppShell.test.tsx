@@ -228,7 +228,7 @@ describe('menu con theo quyền (C2 mục 1.1, 3.1, 4.1)', () => {
     setupServer(OWNER);
     const router = renderAt('/hoa-dao/cai-dat');
     await waitFor(() => expect(router.state.location.pathname).toBe('/hoa-dao/cai-dat/thuong-hieu'));
-    await waitFor(async () => expect(await subMenuLinks()).toEqual(['Hồ sơ thương hiệu']));
+    await waitFor(async () => expect(await subMenuLinks()).toEqual(['Hồ sơ thương hiệu', 'Cổng học viên', 'Cài app lên điện thoại']));
     // Màn thật (không còn "Đang dựng") cần vài chục ms mới hiện trong jsdom — chờ, đừng đọc ngay.
     await waitFor(() => expect(activeMenu()).toEqual(['Cài đặt', 'Hồ sơ thương hiệu']));
   });
@@ -379,7 +379,7 @@ describe('nav.ts', () => {
       ],
       ['dao-tao', 'courses.read', []],
       ['mau-thiet-ke', 'designs.read', []],
-      ['cai-dat', 'org.update', [['cai-dat/thuong-hieu', 'org.update']]],
+      ['cai-dat', 'org.update', [['cai-dat/thuong-hieu', 'org.update'], ['cai-dat/cong-hoc-vien', 'org.update'], ['cai-dat/cai-app', 'org.update']]],
     ]);
     expect(visibleNav(() => false)).toEqual([]);
   });

@@ -6,7 +6,7 @@ import { Button } from '../ui/Button';
 import { InstallGuide } from '../pwa/InstallGuide';
 import { isStandalone } from '../pwa/platform';
 import { PortalHttpError, portalApi } from './api';
-import { classStatusLabel, courseNameOfContract, initialOf, nextSession } from './logic';
+import { classStatusLabel, courseNameOfContract, nextSession } from './logic';
 import {
   BankCard,
   ContactCard,
@@ -252,4 +252,3 @@ export function PortalPage({ me, clockOffsetMs, onSessionLost, onSignedOut }: Pr
   );
 }
 
-export { initialOf };
