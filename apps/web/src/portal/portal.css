@@ -178,6 +178,8 @@ html, body { overflow-x: clip; }
 .pt-empty { display: flex; gap: 10px; align-items: center; color: var(--muted); }
 
 /* ---------- Cài app, chân trang ---------- */
+#cai-app .pwa-card { border: 0; padding: 0; background: none; }
+#cai-app .pwa-card--row { padding: 0; }
 .pt-handoff { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 14px; border: 1px dashed var(--accent-line); border-radius: 12px; background: var(--dashed-bg); margin-top: 12px; }
 .pt-handoff__code { font-size: 28px; letter-spacing: 4px; color: var(--accent); }
 .pt-foot { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px 0 0; text-align: center; font-size: 13.5px; color: var(--muted); }

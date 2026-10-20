@@ -7,7 +7,7 @@
 //     pnpm exec playwright test e2e/cong-hoc-vien.spec.ts
 // Ảnh: <E2E_ANH_DIR>/cong-hoc-vien-<màn>-<390|1440>.png, chụp khung nhìn (fullPage: false).
 import { createRequire } from 'node:module';
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, statSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
@@ -180,7 +180,7 @@ test.beforeAll(async ({ browser }) => {
     const key = `org/${orgId}/design-card/${randomUUID()}.png`;
     await renderCardPng(browser, path.join(storeRoot, key), c.title, c.sub, c.hue);
     const file = await db.storedFile.create({
-      data: { organizationId: orgId, purpose: 'DESIGN_CARD', storageKey: key, originalName: `${c.kind}.png`, mimeType: 'image/png', sizeBytes: 90_000n, width: 1080, height: 1350, status: 'READY', createdById: owner.id },
+      data: { organizationId: orgId, purpose: 'DESIGN_CARD', storageKey: key, originalName: `${c.kind}.png`, mimeType: 'image/png', sizeBytes: BigInt(statSync(path.join(storeRoot, key)).size), width: 1080, height: 1350, status: 'READY', createdById: owner.id },
     });
     await db.designCard.create({
       data: {
@@ -270,7 +270,7 @@ for (const vp of [390, 1440] as const) {
     await expect(page).toHaveTitle('Chiến Makeup Academy');
     expect(await page.locator('meta[name="apple-mobile-web-app-title"]').getAttribute('content')).toBe('Chiến Makeup Academy');
     await expect(page.getByText('Chiến Makeup Academy').first()).toBeVisible();
-    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(400);
     await shot(page, 'mo-cong-thanh-cong', vp);
 
     // Trang chính: lịch học, tiền, thẻ — dữ liệu từ máy chủ thật.

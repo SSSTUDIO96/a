@@ -110,6 +110,9 @@ describe('PortalPage: dữ liệu mẫu đủ mục', () => {
     const list = within(s).getByRole('list', { name: 'Từng buổi học' });
     expect(within(list).getAllByRole('listitem')).toHaveLength(4);
     expect(within(list).getByText('Huỷ')).toBeInTheDocument();
+    // Nhãn thứ của ô ngày: 03/11/2026 là Thứ Ba → T3, 12/11 là Thứ Năm → T5.
+    expect(list.textContent).toContain('T3 · th11');
+    expect(list.textContent).toContain('T5 · th11');
     expect(within(list).getByText('Hôm nay')).toBeInTheDocument();
     expect(within(list).getByText('Đã qua')).toBeInTheDocument();
   });

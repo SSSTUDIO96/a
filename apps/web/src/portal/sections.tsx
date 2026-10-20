@@ -318,11 +318,11 @@ export function ScheduleCard({ e, ctx, anchorId, many }: { e: Enrollment; ctx: C
             // Buổi đánh số theo thứ tự các buổi không huỷ (khớp "Buổi n/N" ở thẻ Buổi học tới).
             const n = s.status === 'CANCELLED' ? null : e.sessions.filter((x) => x.status !== 'CANCELLED' && Date.parse(x.startsAt) <= Date.parse(s.startsAt)).length;
             return (
-              <li key={`${s.date}-${s.startsAt}`} className={badge === 'past' || badge === 'cancelled' ? 'pt-sess pt-sess--dim' : 'pt-sess'}>
+              <li key={`${s.date}-${s.startsAt}`} className={badge === 'past' || badge === 'cancelled' ? 'pt-inst pt-sess pt-sess--dim' : 'pt-inst pt-sess'}>
                 <span className="pt-day" aria-hidden="true">
                   <b className="num">{s.date.slice(8, 10)}</b>
                   <small>
-                    {wd === 7 ? 'CN' : `T${wd}`} · th{Number(s.date.slice(5, 7))}
+                    {wd === 7 ? 'CN' : `T${wd + 1}`} · th{Number(s.date.slice(5, 7))}
                   </small>
                 </span>
                 <span className="pt-inst__main">
