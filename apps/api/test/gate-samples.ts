@@ -66,6 +66,11 @@ export const SAMPLES: Samples = {
   'POST /orgs/:orgId/certificates/:certificateId/reissue': () => ({ reason: 'Thử cửa gác' }),
   'POST /orgs/:orgId/certificates/:certificateId/revoke': () => ({ reason: 'Thử cửa gác' }),
   'PUT /orgs/:orgId/profile/certificate': () => ({ signerName: 'Tên thử', signerTitle: null }),
+  // Cổng học viên phía trung tâm (bản vẽ E 6.3, gói E5). Đường dẫn mang mã khách / mã máy của tổ chức khác → 404 trước mọi ghi.
+  // Phép giữ gửi thân rỗng → 400 ở cả ba (zod chạy trước handler).
+  'POST /orgs/:orgId/customers/:customerId/portal/links': () => ({ phoneConfirmed: true }),
+  'POST /orgs/:orgId/customers/:customerId/portal/revoke': () => ({ reason: 'Thử cửa gác' }),
+  'POST /orgs/:orgId/portal-devices/:deviceId/block': () => ({ reason: 'Thử cửa gác' }),
 };
 
 // Mẫu HỢP LỆ dùng toàn mã của chính tổ chức — cửa gác tự thay TỪNG trường mã bằng mã của tổ chức khác.

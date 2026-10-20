@@ -8,6 +8,7 @@ import type { AnyRoute } from '../src/http/route';
 import type { Db } from '../src/lib/prisma';
 import { addMember, bearer, createAcademyOrg, grantUnlimitedPlan, makeDeps, registerUser, type App, type TestUser } from './helpers';
 import { makePng } from './png';
+import { buildPortalWorld, runPortalChecks, seedPortal, type GatePortal, type PortalWorld } from './gate-portal';
 
 export interface GateOrg {
   orgId: string;
@@ -15,11 +16,15 @@ export interface GateOrg {
   noPerms: TestUser;
   // Giá trị cho mọi tham số đường dẫn (:orgId, :membershipId, :roleId…) thuộc CHÍNH tổ chức này.
   ids: Record<string, string>;
+  // Phiên cổng học viên THẬT của học viên mẫu (ids.portalCustomerId, máy ids.deviceId) — bản vẽ E 6.3.
+  portal: GatePortal;
 }
 
 export interface GateFixture {
   a: GateOrg;
   b: GateOrg;
+  // A1, A2 (cùng lớp, tổ chức A), T1 (tổ chức B) + bộ đầu vào hỏng cho phép dò (gate-portal.ts).
+  portal: PortalWorld;
 }
 
 // Thân yêu cầu HỢP LỆ cho các đường sửa/tạo có tham số id — để phép thử "dùng id của tổ chức khác"
@@ -45,10 +50,24 @@ export interface GateCheck {
   violations: string[];
 }
 
-export type GateReport = Record<
-  'scope' | 'outsider' | 'noPerms' | 'unauth' | 'crossId' | 'leak' | 'refBase' | 'crossRef' | 'keep' | 'platform',
-  GateCheck
->;
+// 14 phép: 10 phép cách ly tổ chức + 4 phép cổng học viên (bản vẽ E 6.3).
+export const GATE_CHECKS = [
+  'scope',
+  'outsider',
+  'noPerms',
+  'unauth',
+  'crossId',
+  'leak',
+  'refBase',
+  'crossRef',
+  'keep',
+  'platform',
+  'portalScope',
+  'portalWall',
+  'portalLeak',
+  'portalProbe',
+] as const;
+export type GateReport = Record<(typeof GATE_CHECKS)[number], GateCheck>;
 
 // Thân/tham số HỢP LỆ dùng toàn mã của CHÍNH tổ chức `self` — mỗi đường có thể có nhiều mẫu (thân dạng hợp).
 // Cửa gác thay lần lượt TỪNG trường mã bằng mã của tổ chức khác. (Biên bản nghiệm thu lát 1, lỗi T3.)
@@ -380,10 +399,13 @@ async function setupOrg(app: App, db: Db, label: string): Promise<GateOrg> {
   })) as { items?: { id?: string }[] };
   const certificateId = issued.items?.[0]?.id;
   if (!certificateId) throw new Error(`Cửa gác: cấp giấy chứng nhận mẫu không trả items[0].id: ${JSON.stringify(issued)}`);
+  // ---- Cổng học viên (bản vẽ E 6.3): học viên có SĐT, đường dẫn tạo bằng đường E4, mở bằng 4 số qua đường E3.
+  const seeded = await seedPortal(app, { orgId, owner, label });
   return {
     orgId,
     owner,
     noPerms,
+    portal: seeded.portal,
     ids: {
       orgId,
       membershipId,
@@ -432,6 +454,7 @@ async function setupOrg(app: App, db: Db, label: string): Promise<GateOrg> {
       enrollmentId,
       enrollment2Id,
       certificateId,
+      ...seeded.ids,
     },
   };
 }
@@ -441,7 +464,9 @@ export async function buildGateFixture(app: App, db?: Db): Promise<GateFixture> 
   const own = db ? null : makeDeps().db;
   const d = db ?? own!;
   try {
-    return { a: await setupOrg(app, d, 'a'), b: await setupOrg(app, d, 'b') };
+    const a = await setupOrg(app, d, 'a');
+    const b = await setupOrg(app, d, 'b');
+    return { a, b, portal: await buildPortalWorld(app, d, { a, b }) };
   } finally {
     await own?.$disconnect();
   }
@@ -455,7 +480,7 @@ function fill(route: AnyRoute, ids: Record<string, string>): string {
   })}`;
 }
 
-async function send(app: App, route: AnyRoute, path: string, headers: Record<string, string>, body: unknown) {
+async function send(app: App, route: AnyRoute, path: string, headers: Record<string, string>, body: unknown): Promise<request.Response> {
   const req = request(app)[route.method](path);
   for (const [k, v] of Object.entries(headers)) req.set(k, v);
   // Luôn kèm khoá chống gửi trùng mới: đường bắt buộc khoá không bị chặn sớm ở 400 thay vì tới câu tra cứu.
@@ -493,6 +518,10 @@ export async function runIsolationGate(
     crossRef: check(),
     keep: check(),
     platform: check(),
+    portalScope: check(),
+    portalWall: check(),
+    portalLeak: check(),
+    portalProbe: check(),
   };
   const orgRoutes = routes.filter((r) => r.scope === 'org');
   // Lọc theo ĐỊA CHỈ, không theo scope khai báo: đường /platform/ bị khai nhầm scope vẫn phải vào diện kiểm
@@ -518,10 +547,10 @@ export async function runIsolationGate(
     record(report.noPerms, res.status === 403, `${key(r)} → ${res.status}`);
   }
   // So phản hồi của một đường thật với một đường bịa cùng phương thức dưới /platform/: phải GIỐNG HỆT (mã + thân trừ requestId).
-  const sameAsFakePlatform = async (r: AnyRoute, headers: Record<string, string>) => {
+  const sameAsFakePlatform = async (r: AnyRoute, headers: Record<string, string>, search = '') => {
     const fakeRoute = { ...r, path: `/platform/duong-bia-${randomUUID()}` } as AnyRoute;
-    const res = await send(app, r, fill(r, platformIds), headers, {});
-    const bia = await send(app, fakeRoute, `/api/v1${fakeRoute.path}`, headers, {});
+    const res = await send(app, r, `${fill(r, platformIds)}${search}`, headers, {});
+    const bia = await send(app, fakeRoute, `/api/v1${fakeRoute.path}${search}`, headers, {});
     const norm = (x: request.Response) => JSON.stringify(x.body ?? '').replace(/"requestId":"[^"]+"/g, '');
     const same = res.status === bia.status && norm(res) === norm(bia);
     return { ok: res.status === 404 && same, status: res.status, same, biaStatus: bia.status };
@@ -534,8 +563,8 @@ export async function runIsolationGate(
       record(report.unauth, c.ok, `${key(r)} (chưa đăng nhập) → ${c.status}${c.same ? '' : `, KHÁC đường bịa (${c.biaStatus})`}`);
       continue;
     }
-    const ids = r.scope === 'org' ? fx.a.ids : {};
-    const res = await send(app, r, fill(r, ids), {}, {});
+    // Mã của A cho MỌI đường (không chỉ scope 'org'): đường có :orgId bị gắn nhầm nhãn (đột biến 20) vẫn đi được tới máy chủ.
+    const res = await send(app, r, fill(r, fx.a.ids), {}, {});
     record(report.unauth, res.status === 401, `${key(r)} → ${res.status}`);
   }
   // 5. Chủ B, trên đường dẫn của CHÍNH B, nhưng nhét id tài nguyên của A → 404, dữ liệu A không đổi.
@@ -635,6 +664,9 @@ export async function runIsolationGate(
       record(report.platform, c.ok, `${key(r)} (${who}) → ${c.status}${c.same ? '' : `, KHÁC đường bịa (${c.biaStatus})`}`);
     }
   }
+  // 11–14. Cổng học viên (gate-portal.ts): portalScope, portalWall, portalLeak, portalProbe. Chạy TRƯỚC phép giữ (phép giữ
+  //        có thể xoá thật).
+  await runPortalChecks(app, routes, fx, report, { key, fill, send, record, refFieldPaths, sameAsFakePlatform });
   // 8. GIỮ: chủ A dùng thật phải được trả lời đúng nghĩa — xem: 200; gửi thân rỗng: 400 (lỗi dữ liệu,
   //    không phải 404/409/500); xoá: 2xx. Phép này chạy cuối vì có thể xoá thật.
   for (const r of orgRoutes) {
