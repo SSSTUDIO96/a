@@ -283,6 +283,8 @@ span.pr-subrow__name { padding-left: 8px; }
 .pr-sw-field { display: flex; flex-direction: column; gap: 6px; padding: 4px 0 2px 2px; }
 
 .pr-occcard .ui-card__sub { white-space: normal; }
+/* L1 (biên bản nghiệm thu D): bản vẽ 3.2 ghi "bảng rộng tối đa 760px" cho Loại sự kiện và Luật phụ phí; .pr-narrow (820px) còn dùng chung cho Nhân vật và Dịch vụ nên chỉ hạ riêng hai thẻ này. */
+.pr-occcard { max-width: 760px; }
 .pr-occ, .pr-rule {
   display: grid;
   align-items: center;
@@ -399,7 +401,8 @@ span.pr-subrow__name { padding-left: 8px; }
     border-radius: 50%;
     box-shadow: 0 4px 14px color-mix(in srgb, var(--text) 25%, transparent);
   }
-  .pr-occcard { margin-bottom: 76px; }
+  /* L2: đệm đáy = nút tròn (52px) + khe 16px của nó + 28px thở, để hàng cuối cuộn lên cao hơn hẳn nút. */
+  .pr-occcard { margin-bottom: 96px; }
   .pr-cond__body { padding-left: 4px; }
   .pr-nosvc { text-align: left; }
   /* Ô chọn phụ phí kèm giá cần rộng hơn 160px mặc định của dòng cài đặt */

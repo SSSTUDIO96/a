@@ -15,6 +15,11 @@
 .td-grid { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 16px; align-items: start; min-width: 0; }
 .td-col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 .td-card { min-width: 0; scroll-margin-top: 12px; overflow: hidden; }
+/* L3 (biên bản nghiệm thu D): giao diện thợ ở máy tính — đọc theo hàng hay theo cột đều là Hôm nay → Ngày mai → Sau đó:
+   hàng 1 = Hôm nay | Ngày mai, hàng 2 = Sau đó trải hết bề ngang (trước đây Hôm nay + Ngày mai xếp dọc bên trái, Sau đó bên
+   phải nên đọc theo hàng thì "Sau đó" đứng trước "Ngày mai"). Từ ≤1180px lưới thành một cột (khối @media bên dưới). */
+.td-grid--own > .td-col { display: contents; }
+.td-grid--own > .td-col #td-later { grid-column: 1 / -1; }
 
 /* ----- Dòng trong thẻ ----- */
 .td-row.ui-lrow:last-child { border-bottom: 0; }

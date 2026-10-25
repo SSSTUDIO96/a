@@ -620,3 +620,53 @@ describe('hợp đồng cũ (các cột mới NULL / rỗng): mở / sửa / bá
     }
   });
 });
+
+// ---------- Cô lập tổ chức của bảng tính (biên bản nghiệm thu D, L6) ----------
+// Bảng tính hợp đồng chỉ nạp luật của CHÍNH tổ chức (autoSurcharge.ts loadActiveRules). Trước đây chỉ bài khác "rơi" luật vào
+// báo giá mới làm bài đỏ; ca này tạo chủ đích: tổ chức A có luật khung giờ, tổ chức B báo giá đúng giờ đó.
+describe('cô lập tổ chức: luật của tổ chức khác không bao giờ vào bảng tính', () => {
+  it('A có luật khung giờ 00:00–06:00; B báo giá lúc 05:00 → B không có dòng tự thêm (quote, tạo, sửa nháp), A vẫn có', async () => {
+    const a = await seed('cl-a');
+    const b = await seed('cl-b');
+    await rule(a, { name: 'Sớm của A', startTime: '00:00', endTime: '06:00' });
+    const lúc = '2026-11-10T05:00:00+07:00';
+
+    // Đối chứng: A báo giá đúng giờ đó thì có (nếu không, ca này không chứng minh gì).
+    const qa = await quoteOk(a, [svcLine(a, lúc)]);
+    expect(qa.autoSurcharge.applied.map((x: { ruleName: string }) => x.ruleName)).toEqual(['Sớm của A']);
+    expect(autoOf(qa)).toHaveLength(1);
+
+    // B: không luật nào → báo giá không có dòng tự thêm, tổng chỉ là tiền dịch vụ chính.
+    const qb = await quoteOk(b, [svcLine(b, lúc)]);
+    expect(qb.autoSurcharge).toEqual({ applied: [], removed: [], skipped: [] });
+    expect(autoOf(qb)).toEqual([]);
+    expect(qb.subtotal).toBe(800_000);
+
+    // Hợp đồng thật của B (tạo rồi sửa nháp có gửi lines) cũng không thu thêm đồng nào.
+    const made = await createOk(b, [svcLine(b, lúc)]);
+    expect(autoOf(made)).toEqual([]);
+    expect(made.subtotal).toBe(800_000);
+    const res = await patch(b, made, { lines: [svcLine(b, lúc)] });
+    expect(res.status, JSON.stringify(res.body)).toBe(200);
+    expect(autoOf(res.body)).toEqual([]);
+    expect((await getC(b, made.id)).subtotal).toBe(800_000);
+  });
+
+  it('B có luật RIÊNG khác khung giờ: B chỉ thấy luật của B, A chỉ thấy luật của A (không trộn hai chiều)', async () => {
+    const a = await seed('cl-c');
+    const b = await seed('cl-d');
+    await rule(a, { name: 'Sớm của A', startTime: '00:00', endTime: '06:00' });
+    await rule(b, { name: 'Tối của B', serviceId: b.night, startTime: '20:00', endTime: '23:00' });
+    // Luật lạ lọt vào còn lộ ra ở `skipped` (dịch vụ của luật không thuộc tổ chức) nên kiểm cả skipped / removed, không chỉ applied.
+    const hits = async (o: Org, start: string) => {
+      const r = (await quoteOk(o, [svcLine(o, start)])).autoSurcharge as { applied: { ruleName: string }[]; removed: unknown[]; skipped: unknown[] };
+      expect(r.removed).toEqual([]);
+      expect(r.skipped).toEqual([]);
+      return r.applied.map((x) => x.ruleName);
+    };
+    expect(await hits(a, '2026-11-10T05:00:00+07:00')).toEqual(['Sớm của A']);
+    expect(await hits(a, '2026-11-10T21:00:00+07:00')).toEqual([]);
+    expect(await hits(b, '2026-11-10T05:00:00+07:00')).toEqual([]);
+    expect(await hits(b, '2026-11-10T21:00:00+07:00')).toEqual(['Tối của B']);
+  });
+});

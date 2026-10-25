@@ -361,6 +361,13 @@
   .ct-toasts > .ct-toast:first-child { border-radius: 0; }
   .ct-toast { padding: 6px 14px; font-size: 12.5px; }
   .ct-page:has(.ct-toast) { padding-bottom: calc(var(--h-bottomnav) + 170px); }
+  /* L4 (biên bản nghiệm thu D): thông báo nằm trong thanh tổng dính đáy nên che đúng khối phụ phí vừa thêm (đáy khối ở y=844,
+     thông báo ở y=582–680, điểm bấm cuối khối trúng thanh dưới). Khai cho trình duyệt biết vùng đáy bị thanh che: mọi lần cuộn
+     tới một phần tử (focus ô giờ, scrollIntoView, mốc #) dừng khi phần tử còn NẰM TRÊN thanh. Thanh = tổng + dải nhắc (~100px)
+     + mỗi thông báo ~49px (1–3 thông báo), cộng thanh dưới và 12px thở. */
+  :root:has(.ct-toast) { scroll-padding-bottom: calc(var(--h-bottomnav) + 100px + 49px + 12px); }
+  :root:has(.ct-toast + .ct-toast) { scroll-padding-bottom: calc(var(--h-bottomnav) + 100px + 98px + 12px); }
+  :root:has(.ct-toast + .ct-toast + .ct-toast) { scroll-padding-bottom: calc(var(--h-bottomnav) + 100px + 147px + 12px); }
   .ct-tot .ct-trow { grid-template-columns: minmax(0, 1fr) 150px; }
   .ct-tot .ct-trow--note { grid-template-columns: 1fr; gap: 6px; }
   .ct-pr { padding: 10px 14px; }

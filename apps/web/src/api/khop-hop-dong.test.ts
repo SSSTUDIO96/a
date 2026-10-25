@@ -394,8 +394,8 @@ describe('types.ts khớp đúng dữ liệu máy chủ thật trả về (tên 
 
     const tiec = await chk('catalog.createOccasion', catalog.createOccasion(orgId, { name: `Tiệc thử ${stamp}`, color: 'plum' }, newIdempotencyKey()));
     expect(tiec).toMatchObject({ name: `Tiệc thử ${stamp}`, color: 'plum', isActive: true, lineCount: 0 });
-    const hidden = await chk('catalog.updateOccasion', catalog.updateOccasion(orgId, tiec.id, { color: 'sage', isActive: false }));
-    expect(hidden).toMatchObject({ id: tiec.id, color: 'sage', isActive: false });
+    const hidden = await chk('catalog.updateOccasion', catalog.updateOccasion(orgId, tiec.id, { color: 'olive', isActive: false }));
+    expect(hidden).toMatchObject({ id: tiec.id, color: 'olive', isActive: false });
     // Lọc theo trạng thái: loại đang ẩn không có trong danh sách "đang bật".
     const active = await chk('catalog.listOccasions', catalog.listOccasions(orgId, { isActive: true }), 'listOccasions (đang bật)');
     expect(active.items.map((o) => o.id)).not.toContain(tiec.id);
@@ -869,6 +869,68 @@ describe('types.ts khớp đúng dữ liệu máy chủ thật trả về (tên 
     const byContract = await chk('payments.getRevenueReport', payments.getRevenueReport(hv, { from, to, kind: 'COURSE', groupBy: 'contract' }), 'getRevenueReport (hợp đồng khoá học)');
     if (byContract.groupBy !== 'contract') throw new Error('Báo cáo phải nhóm theo hợp đồng');
     expect(first(byContract.rows, 'hợp đồng khoá học')).toMatchObject({ kind: 'COURSE', courses: [{ id: made.course.id, groupId: group.id }], paid: 5_000_000, remaining: 12_500_000 });
+
+    // Hôm nay của tổ chức đào tạo (bản vẽ D 3.1): ghi danh mới 24 giờ qua + lớp gần đầy (3/4). Lớp K1 đã đầy (1/1) nên không vào.
+    const k2 = await courses.createClass(
+      hv,
+      made.course.id,
+      { name: 'K2', startDate: '2027-01-04', endDate: '2027-02-26', weekdays: [2, 4], startTime: '18:00', endTime: '21:00', capacity: 4 },
+      newIdempotencyKey(),
+    );
+    for (const fullName of ['Lê Thu A', 'Lê Thu B', 'Lê Thu C']) {
+      const hs = await schedule.createCustomer(hv, { fullName }, newIdempotencyKey());
+      const d = await contracts.createContract(hv, { kind: 'COURSE', customerId: hs.id, lines: [{ kind: 'COURSE', courseClassId: k2.id }] }, newIdempotencyKey());
+      await contracts.changeContractStatus(hv, d.id, { to: 'CONFIRMED' });
+    }
+    const todayHv = await chk('today.getToday', today.getToday(hv), 'getToday (tổ chức đào tạo)');
+    expect(todayHv.scheduleScope).toBe('ALL');
+    expect(todayHv.newEnrollments).toHaveLength(4);
+    expect(first(todayHv.newEnrollments ?? [], 'ghi danh mới')).toMatchObject({ course: { id: made.course.id } });
+    expect(todayHv.almostFullClasses).toHaveLength(1);
+    expect(first(todayHv.almostFullClasses ?? [], 'lớp gần đầy')).toMatchObject({ id: k2.id, name: 'K2', enrolledCount: 3, capacity: 4, seatsLeft: 1 });
+  });
+
+  it('Hôm nay (bản vẽ D 3.1): ca hôm nay / ngày mai / sau đó, ca chưa có thợ, đợt thu quá hạn / sắp tới, hợp đồng mới', async () => {
+    const t0 = await today.getToday(orgId);
+    expect(t0.timezone).toBe('Asia/Ho_Chi_Minh');
+    const plus = (date: string, n: number) => new Date(Date.parse(`${date}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
+    const at = (date: string, hhmm: string) => `${date}T${hhmm}:00+07:00`;
+    const day0 = t0.today;
+    expect(t0.tomorrow).toBe(plus(day0, 1));
+    // Ca hôm nay có thợ (23:00 để luôn nằm trong ngày), ngày mai chưa có thợ, ba ngày sau có thợ và khách mới.
+    const aToday = await schedule.createAppointment(orgId, { startsAt: at(day0, '23:00'), endsAt: at(day0, '23:30'), staff: [{ membershipId, role: 'PRIMARY' }], status: 'CONFIRMED', title: 'Ca hôm nay' }, newIdempotencyKey());
+    const aTomorrow = await schedule.createAppointment(orgId, { startsAt: at(plus(day0, 1), '09:00'), endsAt: at(plus(day0, 1), '10:00'), status: 'CONFIRMED', title: 'Ca ngày mai chưa thợ' }, newIdempotencyKey());
+    const aLater = await schedule.createAppointment(
+      orgId,
+      { startsAt: at(plus(day0, 3), '09:00'), endsAt: at(plus(day0, 3), '10:00'), staff: [{ membershipId, role: 'PRIMARY' }], newCustomer: { fullName: 'Khách sau đó' }, status: 'CONFIRMED', title: 'Ca sau đó' },
+      newIdempotencyKey(),
+    );
+    // Hợp đồng đã xác nhận vừa xong (hợp đồng mới 24 giờ) với một đợt quá hạn hôm qua và một đợt tới hạn sau 2 ngày.
+    const draft = await contracts.createContract(orgId, { customerId: customer.id, lines: [{ kind: 'CUSTOM', name: 'Thử hôm nay', unitPrice: 1_000_000, quantity: 1 }] }, newIdempotencyKey());
+    const done = await contracts.changeContractStatus(orgId, draft.id, { to: 'CONFIRMED' });
+    await payments.putInstallments(orgId, done.id, {
+      installments: [
+        { name: 'Đặt cọc', dueDate: at(plus(day0, -1), '00:00'), amount: 400_000, isDeposit: true },
+        { name: 'Đợt hai', dueDate: at(plus(day0, 2), '00:00'), amount: 600_000 },
+      ],
+    });
+
+    const v = await chk('today.getToday', today.getToday(orgId));
+    expect(v).toMatchObject({ today: day0, tomorrow: plus(day0, 1), scheduleScope: 'ALL' });
+    expect(v.appointments?.today.map((a) => a.id)).toContain(aToday.id);
+    expect(v.appointments?.tomorrow.map((a) => a.id)).toEqual([aTomorrow.id]);
+    expect(v.appointments?.later.map((a) => a.id)).toContain(aLater.id);
+    expect(first(v.appointments?.later ?? [], 'ca sau đó').customer).not.toBeNull();
+    expect(first(v.appointments?.today ?? [], 'ca hôm nay').staff).toHaveLength(1);
+    expect(v.unassigned?.map((a) => a.id)).toEqual([aTomorrow.id]);
+    expect(v.counts).toMatchObject({ unassignedSoon: 1, overdue: { count: 1, amount: 400_000 }, dueSoon: { count: 1, amount: 600_000 } });
+    expect(first(v.installments?.overdue ?? [], 'đợt quá hạn')).toMatchObject({ name: 'Đặt cọc', amount: 400_000, outstanding: 400_000, status: 'OVERDUE', overdueDays: 1, isDeposit: true, contract: { id: done.id } });
+    expect(first(v.installments?.dueSoon ?? [], 'đợt sắp tới hạn')).toMatchObject({ name: 'Đợt hai', outstanding: 600_000, overdueDays: 0, isDeposit: false });
+    expect(v.newContracts?.map((c) => c.id)).toContain(done.id);
+    expect(first(v.newContracts ?? [], 'hợp đồng mới').confirmedBy).not.toBeNull();
+    // Tổ chức dịch vụ (TEAM): không có thẻ đào tạo → null, không phải mảng rỗng.
+    expect(v.newEnrollments).toBeNull();
+    expect(v.almostFullClasses).toBeNull();
   });
 
   it('đã gọi đủ mọi hàm gọi của các module nghiệp vụ', () => {
