@@ -1,0 +1,48 @@
+/* MẪU 3 — BẢNG KẺ ĐẦY ĐỦ. Mọi phần trong bảng có kẻ ô (kiểu chứng từ kế toán), nhiều cột: thời gian, địa điểm, thợ,
+   giảm giá từng dòng, đã thu từng đợt. Đầu bảng tự lặp lại khi bảng sang trang; dòng tổng KHÔNG lặp. */
+@page hdin-3{
+  size:A4; margin:12mm 12mm 15mm;
+  @bottom-left{font:7pt 'Be Vietnam Pro',sans-serif;color:#555}
+  @bottom-center{font:7pt 'Be Vietnam Pro',sans-serif;color:#555}
+  @bottom-right{font:7pt 'Be Vietnam Pro',sans-serif;color:#555}
+}
+.hdin-g3{page:hdin-3;font:8.3pt/1.36 'Be Vietnam Pro',Inter,sans-serif;color:#141414;padding:12mm 12mm 15mm}
+.hdin-g3 .hdin-khung{border:.8pt solid #333;margin-bottom:1.8mm}
+.hdin-g3 .hdin-khung th,.hdin-g3 .hdin-khung td{border:.6pt solid #555;padding:.7mm 1.5mm}
+.hdin-g3 .hdin-khung th{background:#ECE8E4;white-space:nowrap;font-size:7.4pt;font-weight:700;text-transform:uppercase;letter-spacing:.03em;text-align:left}
+.hdin-g3 .hdin-khung th.hdin-r{text-align:right}.hdin-g3 .hdin-khung th.hdin-c{text-align:center}
+.hdin-g3 .hdin-khung .hdin-nh{background:#F6F4F2;font-weight:600;white-space:nowrap;width:1%}
+.hdin-g3 .hdin-khung tfoot td{font-weight:700;background:#F6F4F2}
+.hdin-g3 .hdin-khung tfoot tr.hdin-dong-tong td{font-size:10.5pt;background:#ECE8E4}
+.hdin-g3 .hdin-khung .hdin-bc{font-style:italic;font-weight:400!important}
+.hdin-g3 .hdin-dt td{vertical-align:middle}
+.hdin-g3 .hdin-dt .hdin-lo{width:19mm;text-align:center}
+.hdin-g3 .hdin-dt .hdin-lg{width:14mm;height:14mm;margin:auto}
+.hdin-g3 .hdin-dt b{font-size:11pt}
+.hdin-g3 .hdin-dt .hdin-so-o{width:46mm;text-align:center;background:#F6F4F2}
+.hdin-g3 .hdin-dt .hdin-so-o small{display:block;font-size:7pt;letter-spacing:.06em;color:#555}
+.hdin-g3 .hdin-dt .hdin-so-o b{display:block;font-size:12.5pt;margin:.6mm 0}
+.hdin-g3 .hdin-qh{text-align:center;margin:1mm 0}
+.hdin-g3 .hdin-qh b,.hdin-g3 .hdin-qh span{display:block}
+.hdin-g3 .hdin-qh span{font-weight:600;text-decoration:underline}
+.hdin-g3 .hdin-td{text-align:center;font-size:13.5pt;font-weight:700;letter-spacing:.06em;margin:1.5mm 0 2mm}
+.hdin-g3 .hdin-ben td{width:25%}
+.hdin-g3 .hdin-ben .hdin-nh{width:1%}
+.hdin-g3 .hdin-mo{margin:0 0 1.2mm!important}
+.hdin-g3 .hdin-h{font-size:8.6pt;font-weight:700;margin:1.6mm 0 1mm;padding-top:.8mm;letter-spacing:.02em}
+.hdin-g3 .hdin-h small{font-weight:400;font-size:7.6pt;color:#555}
+.hdin-g3 .hdin-sv .hdin-ct{font-size:7.4pt;color:#3d3d3d;line-height:1.4}
+.hdin-g3 .hdin-sv tr.hdin-cap1 td:nth-child(2){padding-left:4mm;color:#333}
+.hdin-g3 .hdin-sv td:nth-child(1){width:8mm}
+.hdin-g3 .hdin-sv td:nth-child(2){width:27%}
+.hdin-g3 .hdin-sv td:nth-child(3){width:36%}
+.hdin-g3 .hdin-sv td:nth-child(4){width:8mm}
+.hdin-g3 .hdin-ck{width:100%}
+.hdin-g3 .hdin-dkb td:first-child{width:11mm}
+.hdin-g3 .hdin-dkb td{text-align:justify;font-size:7.9pt}
+.hdin-g3 .hdin-cuoi{margin:1.2mm 0!important;font-style:italic}
+.hdin-g3 .hdin-ky th{text-align:center!important;width:50%}
+.hdin-g3 .hdin-ky td{text-align:center;vertical-align:top}
+.hdin-g3 .hdin-ky i{display:block;font-size:7.6pt}
+.hdin-g3 .hdin-ky span{display:block;height:12mm}
+@media print{ .hdin-g3{padding:0} }

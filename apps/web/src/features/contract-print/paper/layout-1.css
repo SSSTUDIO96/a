@@ -1,0 +1,55 @@
+/* MẪU 1 — CỔ ĐIỂN TRANG TRỌNG. Quốc hiệu – tiêu ngữ, chữ có chân (Lora), "Điều 1, Điều 2…", bảng kẻ mảnh,
+   cuối mỗi trang: số hợp đồng · Trang x/y · ô ký nháy (thói quen hợp đồng giấy ở Việt Nam). */
+@page hdin-1{
+  size:A4; margin:14mm 15mm 16mm 20mm;
+  @bottom-left{font:7.5pt 'SSA Lora',serif;color:#6b625c}
+  @bottom-center{font:7.5pt 'SSA Lora',serif;color:#6b625c}
+  @bottom-right{font:7.5pt 'SSA Lora',serif;color:#6b625c}
+}
+.hdin-g1{page:hdin-1;font:9.4pt/1.36 'SSA Lora',Georgia,serif;color:#1d1a18;padding:14mm 15mm 16mm 20mm}
+.hdin-g1 .hdin-dau{display:flex;justify-content:space-between;align-items:flex-start;gap:6mm}
+.hdin-g1 .hdin-qh{text-align:center;margin-left:auto}
+.hdin-g1 .hdin-qh b{display:block;font-size:9.6pt;letter-spacing:.01em}
+.hdin-g1 .hdin-qh span{display:block;font-weight:700;font-size:10.2pt}
+.hdin-g1 .hdin-qh i{display:block;width:40mm;margin:1mm auto 0;border-top:.6pt solid #1d1a18}
+.hdin-g1 .hdin-dt{display:flex;align-items:center;gap:2.5mm;max-width:70mm}
+.hdin-g1 .hdin-dt .hdin-lg{width:11mm;height:11mm;flex:none}
+.hdin-g1 .hdin-dt b{display:block;font-size:9.6pt;text-transform:uppercase;letter-spacing:.03em}
+.hdin-g1 .hdin-dt small{display:block;color:#5a524c;font-size:7.8pt;line-height:1.35}
+.hdin-g1 .hdin-td{text-align:center;font-size:15.5pt;font-weight:700;letter-spacing:.03em;margin:4mm 0 .5mm}
+.hdin-g1 .hdin-so{text-align:center;font-style:italic;margin-bottom:3mm!important}
+.hdin-g1 .hdin-mo{text-align:justify}
+.hdin-g1 .hdin-hai-ben{display:grid;grid-template-columns:1fr 1fr;gap:6mm;margin:1.5mm 0 2mm}
+.hdin-g1 .hdin-ben{min-width:0}
+.hdin-g1 .hdin-ben h3{font-size:10pt;font-weight:700}
+.hdin-g1 .hdin-ben dl{display:grid;grid-template-columns:19mm minmax(0,1fr);margin:.5mm 0 0;gap:0 1.5mm;font-size:9.4pt}
+.hdin-g1 .hdin-ben dt{color:#3b3430}
+.hdin-g1 .hdin-ben dd{margin:0}
+.hdin-g1 .hdin-dieu{font-size:10.2pt;font-weight:700;margin:1.8mm 0 .8mm;padding-top:.8mm}
+.hdin-g1 .hdin-tieu{font-size:10pt;font-weight:700;font-style:italic;margin:2mm 0 .5mm;padding-top:.8mm}
+.hdin-g1 .hdin-bang{margin:1mm 0 2mm;font-size:9.8pt}
+.hdin-g1 .hdin-bang th,.hdin-g1 .hdin-bang td{border:.6pt solid #3b3430;padding:.8mm 2mm}
+.hdin-g1 .hdin-bang th{font-weight:700;text-align:center;background:#f4f1ee}
+.hdin-g1 .hdin-bang th.hdin-r{text-align:right}
+.hdin-g1 .hdin-bang .hdin-ct{font-size:8.6pt;font-style:italic;color:#4b433e;margin-top:.6mm;line-height:1.4}
+.hdin-g1 .hdin-bang tr.hdin-cap1 td:nth-child(2){padding-left:6mm}
+.hdin-g1 .hdin-bang.hdin-nho{font-size:9.3pt}
+.hdin-g1 .hdin-bang .hdin-dong-tong td{font-weight:700}
+.hdin-g1 table.hdin-bang-tong{width:72mm;margin:1mm 0 1mm auto;font-size:10pt}
+.hdin-g1 table.hdin-bang-tong td{padding:.6mm 0 .6mm 3mm}
+.hdin-g1 table.hdin-bang-tong tr.hdin-dong-tong td{font-weight:700;border-top:.6pt solid #1d1a18;font-size:11pt}
+.hdin-g1 .hdin-bc{font-style:italic}
+.hdin-g1 .hdin-dong-tien{display:flex;justify-content:flex-end;gap:6mm;font-size:10pt}
+.hdin-g1 .hdin-dong-tien span{min-width:40mm;text-align:right}
+.hdin-g1 .hdin-dong-tien.hdin-dam{font-weight:700}
+.hdin-g1 .hdin-ck{margin-top:2mm;font-size:9.5pt}
+.hdin-g1 .hdin-nguon{font-size:8.3pt;font-style:italic;font-weight:400;color:#5a524c}
+.hdin-g1 .hdin-dk{margin:0;padding-left:2.4em;text-align:justify;font-size:9.5pt}
+.hdin-g1 .hdin-dk li{margin-bottom:.5mm;padding-left:.5mm}
+.hdin-g1 .hdin-dk.hdin-nq{columns:2;column-gap:8mm;text-align:left}
+.hdin-g1 .hdin-dk.hdin-nq li{break-inside:avoid}
+.hdin-g1 .hdin-ky{display:grid;grid-template-columns:1fr 1fr;gap:10mm;margin-top:4mm;text-align:center}
+.hdin-g1 .hdin-ky div{display:flex;flex-direction:column}
+.hdin-g1 .hdin-ky i{font-size:9pt}
+.hdin-g1 .hdin-ky span{margin-top:14mm;font-weight:700}
+@media print{ .hdin-g1{padding:0} }

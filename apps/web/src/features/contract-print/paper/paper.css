@@ -1,0 +1,131 @@
+/*
+ * Bản in hợp đồng — phần DÙNG CHUNG của 5 bố cục + luật in L1–L10 (bản vẽ G mục 4.6).
+ * Chuyển từ docs/rnd/v9-mau-in/chung/ban-in.css: mọi lớp mang tiền tố hdin-. Mỗi bố cục có @page riêng (layout-N.css).
+ * Tờ giấy nằm trong DÒNG CHẢY THƯỜNG khi in (không fixed, không cắt chiều cao): Chrome lặp khối fixed ở mọi trang và chỉ in
+ * phần đang thấy của khối cuộn trong — đó là lỗi chồng trang đã sửa ở N1.
+ */
+.hdin-giay,
+.hdin-giay *,
+.hdin-giay *::before,
+.hdin-giay *::after {
+  box-sizing: border-box;
+}
+.hdin-giay {
+  background: #fff;
+  margin: 0 auto;
+  width: 210mm;
+  min-height: 297mm;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 8px 24px rgba(0, 0, 0, 0.08);
+  overflow-wrap: anywhere;
+  text-align: left;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact; /* L8 */
+}
+.hdin-giay *,
+.hdin-giay *::before,
+.hdin-giay *::after {
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+.hdin-giay p { margin: 0 0 0.35em; }
+.hdin-giay h1,
+.hdin-giay h2,
+.hdin-giay h3 { margin: 0; }
+.hdin-giay table { width: 100%; border-collapse: collapse; }
+.hdin-giay td,
+.hdin-giay th { vertical-align: top; }
+.hdin-giay th { white-space: nowrap; }
+.hdin-giay .hdin-r { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.hdin-giay .hdin-c { text-align: center; }
+.hdin-giay img { display: block; max-width: 100%; }
+.hdin-giay small { font-size: 0.86em; }
+.hdin-giay .hdin-ps { font-weight: 400; font-style: italic; color: #8a5a00; }
+.hdin-giay .hdin-cho-dien { color: #8d8580; letter-spacing: 0.05em; }
+.hdin-giay .hdin-nhap {
+  display: inline-block;
+  font: 700 7.5pt/1.4 'Be Vietnam Pro', sans-serif;
+  letter-spacing: 0.06em;
+  color: #8a5a00;
+  border: 1px solid #8a5a00;
+  border-radius: 3px;
+  padding: 0 4px;
+  vertical-align: 1px;
+}
+.hdin-giay .hdin-bien { background: none; }
+
+/* ---------- Xem trước trên màn: tờ khổ thật 210 mm, thu phóng bằng zoom (CHỈ @media screen — L8) ---------- */
+.hdin-prev { min-width: 0; overflow: hidden; background: var(--soft, #f6f4f2); }
+.hdin-zoom { width: 210mm; }
+.hdin-prev-cap { margin: 8px 12px 10px; text-align: center; font-size: 12.5px; color: var(--muted, #716862); }
+@media screen {
+  .hdin-zoom { zoom: var(--hdin-zoom, 1); }
+  .hdin-prev { padding: 12px 0 0; }
+  .hdin-zoom .hdin-giay { margin: 0; }
+}
+
+/* ---------- Khung hộp thoại ---------- */
+.ui-dialog.hdin-dlg { width: min(960px, 100%); }
+.hdin-dlg .ui-dialog__body { background: var(--soft, #f6f4f2); }
+.hdin-frame { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; min-width: 0; }
+.hdin-frame__paper { min-width: 0; }
+.hdin-aside { min-width: 0; }
+@media screen and (min-width: 900px) {
+  .hdin-frame:has(.hdin-aside) { grid-template-columns: minmax(0, 1fr) 300px; }
+}
+@media screen and (max-width: 640px) {
+  .hdin-frame__paper { max-height: 60vh; overflow: auto; }
+}
+
+/* ---------- IN ---------- */
+@media print {
+  /* L1: chỉ tờ hợp đồng. BỎ HẲN (display: none, không chỉ vô hình) mọi thứ khác trong body; lớp phủ + hộp thoại về dòng
+     chảy thường, không cắt chiều cao, không cuộn trong; đầu và chân hộp thoại ẩn. Chỉ áp khi trang có .hdin-dlg. */
+  html:has(.hdin-dlg),
+  body:has(.hdin-dlg) { height: auto !important; overflow: visible !important; background: #fff !important; }
+  body:has(.hdin-dlg) > :not(.ui-overlay:has(.hdin-dlg)) { display: none !important; }
+  .ui-overlay:has(.hdin-dlg) {
+    position: static !important; inset: auto !important; display: block !important;
+    padding: 0 !important; background: none !important; z-index: auto !important;
+  }
+  .ui-dialog.hdin-dlg {
+    display: block !important; width: auto !important; height: auto !important; max-height: none !important;
+    overflow: visible !important; border-radius: 0 !important; box-shadow: none !important; background: none !important;
+  }
+  .hdin-dlg .ui-dialog__head,
+  .hdin-dlg .ui-dialog__foot,
+  .hdin-dlg .hdin-aside,
+  .hdin-dlg .hdin-prev-cap { display: none !important; }
+  .hdin-dlg .ui-dialog__body { overflow: visible !important; padding: 0 !important; background: none !important; }
+  .hdin-frame,
+  .hdin-frame__paper,
+  .hdin-prev,
+  .hdin-zoom { display: block !important; overflow: visible !important; max-height: none !important; padding: 0 !important; width: auto !important; zoom: 1 !important; background: none !important; }
+
+  .hdin-giay { width: auto; min-height: 0; margin: 0; box-shadow: none; }
+  /* L2: không ngắt giữa dòng bảng, điều khoản, chỗ ký, khung tổng, khối hai bên, khối chuyển khoản. */
+  .hdin-giay tr,
+  .hdin-giay li,
+  .hdin-giay .hdin-ky,
+  .hdin-giay .hdin-ben,
+  .hdin-giay .hdin-khoi-tong,
+  .hdin-giay .hdin-bang-tong,
+  .hdin-giay .hdin-ck,
+  .hdin-giay dl { break-inside: avoid; }
+  .hdin-giay h1,
+  .hdin-giay h2,
+  .hdin-giay h3,
+  .hdin-giay .hdin-nguon,
+  .hdin-giay .hdin-hv { break-after: avoid; }
+  .hdin-giay h1,
+  .hdin-giay h2,
+  .hdin-giay h3 { break-inside: avoid; }
+  /* L5: tiêu đề mục không mồ côi cuối trang. break-after: avoid của Chrome không đủ tin cậy khi mục sau là khối bọc danh
+     sách, nên kéo dài hộp tiêu đề thêm 14 mm (vô hình, margin âm trả lại chỗ): không đủ chỗ cho tiêu đề + 14 mm thì cả
+     tiêu đề sang trang sau. */
+  .hdin-giay h2::after { content: ""; display: block; height: 14mm; margin-bottom: -14mm; }
+  /* L4: đầu bảng lặp khi bảng sang trang (chủ đích); dòng tổng KHÔNG lặp (Chrome mặc định lặp tfoot). */
+  .hdin-giay thead { display: table-header-group; }
+  .hdin-giay tfoot { display: table-row-group; }
+  /* Chữ ký cuối không mồ côi: dính với đoạn ngay trước nó (chữ kết thúc). */
+  .hdin-giay .hdin-ky { break-before: avoid; }
+}

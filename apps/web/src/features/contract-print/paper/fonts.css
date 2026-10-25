@@ -1,0 +1,33 @@
+/*
+ * Phông cho bản in hợp đồng — DÙNG LẠI tệp đã có trong app, KHÔNG chép thêm (bản vẽ G đính chính 25/10/2026 mục 3):
+ * - Lora (mẫu 1, 5): họ 'SSA Lora' — public/mau/phong/ss-album/lora/ (SIL OFL 1.1, cùng khai báo ss-album.css:50-52).
+ * - Cormorant Garamond (mẫu 5): họ 'MP Cormorant' — public/mau/phong/CormorantGaramond-*.ttf (SIL OFL 1.1).
+ * - Be Vietnam Pro (mẫu 2, 3, 4): base.css của app.
+ * font-display: block — in trước khi phông tải xong sẽ ra chữ trống, nên hộp In chờ usePaperReady (L9).
+ */
+@font-face {
+  font-family: 'SSA Lora';
+  src: url('/mau/phong/ss-album/lora/Lora-VF.woff2') format('woff2');
+  font-weight: 400 700;
+  font-display: block;
+}
+@font-face {
+  font-family: 'SSA Lora';
+  src: url('/mau/phong/ss-album/lora/Lora-Italic-VF.woff2') format('woff2');
+  font-weight: 400 700;
+  font-style: italic;
+  font-display: block;
+}
+@font-face {
+  font-family: 'MP Cormorant';
+  src: url('/mau/phong/CormorantGaramond-VF.ttf') format('truetype');
+  font-weight: 300 700;
+  font-display: block;
+}
+@font-face {
+  font-family: 'MP Cormorant';
+  src: url('/mau/phong/CormorantGaramond-Italic-VF.ttf') format('truetype');
+  font-weight: 300 700;
+  font-style: italic;
+  font-display: block;
+}

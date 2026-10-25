@@ -1,0 +1,61 @@
+/* MẪU 5 — SANG TRỌNG VIỀN & LOGO LỚN. Khung viền kép lặp ở MỌI trang in, logo to giữa đầu trang, chữ có chân thanh mảnh
+   (Cormorant Garamond cho tiêu đề, Lora cho thân), hoa văn ngăn mục, màu vàng đồng.
+   Khung: .hdin-khung-trang position:fixed CHỈ khi in (Chrome lặp khối fixed ở mọi trang — ở đây là chủ đích, khung không chứa chữ);
+   lề trong mỗi trang: box-decoration-break:clone nên trang 2, 3… vẫn có khoảng cách tới khung. */
+@page hdin-5{
+  size:A4; margin:10mm 11mm 13mm;
+  @bottom-center{font:italic 8pt 'MP Cormorant',serif;color:#8a6d3b}
+  @bottom-left{font:7pt 'SSA Lora',serif;color:#a08a64}
+  @bottom-right{font:italic 8pt 'MP Cormorant',serif;color:#8a6d3b}
+}
+.hdin-g5{page:hdin-5;--vang:#9C7A3C;font:9pt/1.46 'SSA Lora',Georgia,serif;color:#2B2320;padding:18mm 20mm 20mm;border:3px double var(--vang);outline:.5pt solid #d8c7a4;outline-offset:-3.2mm}
+.hdin-g5 .hdin-khung-trang{display:none}
+.hdin-g5 .hdin-dt{text-align:center;display:flex;flex-direction:column;align-items:center}
+.hdin-g5 .hdin-dt .hdin-lg{width:21mm;height:21mm;margin-bottom:1mm}
+.hdin-g5 .hdin-dt .hdin-ten{font:600 16.5pt/1.1 'MP Cormorant',serif;letter-spacing:.22em;text-transform:uppercase;color:#2B2320}
+.hdin-g5 .hdin-dt small{font-style:italic;color:#6d5f55;margin-top:1mm}
+.hdin-g5 .hdin-dt .hdin-lh{font-style:normal;font-size:7.6pt;color:#8a7d72;margin-top:1mm}
+.hdin-g5 .hdin-hv{display:flex;align-items:center;gap:3mm;justify-content:center;margin:2mm auto 1.2mm;width:70mm}
+.hdin-g5 .hdin-hv i{flex:1;border-top:.6pt solid var(--vang)}
+.hdin-g5 .hdin-hv b{width:2.2mm;height:2.2mm;transform:rotate(45deg);background:var(--vang);display:block}
+.hdin-g5 .hdin-td{text-align:center;font:600 17.5pt/1.15 'MP Cormorant',serif;letter-spacing:.1em;color:#2B2320}
+.hdin-g5 .hdin-so{text-align:center;font-style:italic;color:#6d5f55;margin:.5mm 0 2.5mm!important}
+.hdin-g5 .hdin-ben{display:grid;grid-template-columns:1fr 1fr;gap:10mm;text-align:center}
+.hdin-g5 .hdin-ben small{display:block;font:600 7.5pt 'SSA Lora',serif;letter-spacing:.16em;color:var(--vang)}
+.hdin-g5 .hdin-ben b{display:block;font:600 13pt/1.25 'MP Cormorant',serif;margin:.5mm 0 1mm}
+.hdin-g5 .hdin-ben p{font-size:8.6pt;color:#4d423b;margin:0!important}
+.hdin-g5 .hdin-mo{text-align:center;font-style:italic;margin:2.5mm 8mm 0!important;color:#4d423b}
+.hdin-g5 .hdin-h{text-align:center;font:600 14pt 'MP Cormorant',serif;letter-spacing:.12em;text-transform:uppercase;margin-bottom:1mm;padding-top:.8mm}
+.hdin-g5 .hdin-h.hdin-nho{font-size:11.5pt;margin-top:3mm}
+.hdin-g5 .hdin-sv td{padding:1.4mm 1mm;border-bottom:.5pt solid #e3d6bd}
+.hdin-g5 .hdin-sv td small{display:block;font-size:7.8pt;color:#6d5f55;font-style:italic;line-height:1.45}
+.hdin-g5 .hdin-sv tr.hdin-cap1 td:first-child{padding-left:6mm;color:#4d423b}
+.hdin-g5 .hdin-sv td.hdin-c{color:#6d5f55;font-size:8.4pt;white-space:nowrap}
+.hdin-g5 .hdin-tien2{display:grid;grid-template-columns:minmax(0,1fr) 72mm;gap:9mm;align-items:start;margin-top:1mm}
+.hdin-g5 .hdin-tien2 .hdin-h.hdin-nho{text-align:left;margin-top:2mm}
+.hdin-g5 .hdin-khoi-tong{margin-top:3mm}
+.hdin-g5 .hdin-khoi-tong p.hdin-dam{font-weight:700}
+.hdin-g5 .hdin-khoi-tong p{display:flex;justify-content:space-between;margin:0 0 .8mm!important}
+.hdin-g5 .hdin-khoi-tong p.hdin-dong-tong{font:700 14pt 'MP Cormorant',serif;border-top:.8pt solid var(--vang);border-bottom:.8pt solid var(--vang);padding:1mm 0;margin:1.5mm 0!important}
+.hdin-g5 .hdin-khoi-tong p.hdin-bc{display:block;text-align:right;font-style:italic;font-size:8.4pt;color:#6d5f55}
+.hdin-g5 .hdin-dot td{border-bottom-style:dotted}
+.hdin-g5 .hdin-thu{text-align:right;font-size:8pt;color:#6d5f55;margin-top:1mm!important}
+.hdin-g5 .hdin-thu p{margin:0!important}
+.hdin-g5 .hdin-ck{text-align:center;font-size:8pt;color:#4d423b;margin-top:2mm!important;padding:1.2mm;border-top:.5pt solid #e3d6bd;border-bottom:.5pt solid #e3d6bd}
+.hdin-g5 .hdin-h .hdin-nguon{display:block;font:italic 400 7.6pt 'SSA Lora',serif;letter-spacing:0;text-transform:none;color:#8a7d72}
+.hdin-g5 .hdin-dk{margin:0;padding-left:2.3em;font-size:8.2pt;line-height:1.42;text-align:justify}
+.hdin-g5 .hdin-dk li{margin-bottom:.4mm}
+.hdin-g5 .hdin-dk.hdin-nq{columns:2;column-gap:8mm}
+.hdin-g5 .hdin-dk.hdin-nq li{break-inside:avoid}
+.hdin-g5 .hdin-dk li::marker{color:var(--vang);font-weight:700}
+.hdin-g5 .hdin-gc{font-size:8.8pt;margin-top:3mm!important}
+.hdin-g5 .hdin-cuoi{text-align:center;font-style:italic;margin-top:3mm!important}
+.hdin-g5 .hdin-ky{display:grid;grid-template-columns:1fr 1fr;gap:12mm;text-align:center;margin-top:2mm}
+.hdin-g5 .hdin-ky div{display:flex;flex-direction:column}
+.hdin-g5 .hdin-ky small{font-size:7.5pt;letter-spacing:.16em;color:var(--vang)}
+.hdin-g5 .hdin-ky span{height:13mm}
+.hdin-g5 .hdin-ky b{font:italic 600 14pt 'MP Cormorant',serif}
+@media print{
+  .hdin-g5{padding:5.5mm 10mm;border:0;outline:0;box-decoration-break:clone;-webkit-box-decoration-break:clone}
+  .hdin-g5 .hdin-khung-trang{display:block;position:fixed;inset:0;border:3px double var(--vang);outline:.5pt solid #d8c7a4;outline-offset:-2.4mm;pointer-events:none}
+}
