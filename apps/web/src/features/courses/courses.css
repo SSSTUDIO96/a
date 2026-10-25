@@ -143,6 +143,75 @@
 .kc-enr__right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
 .kc-enr__money { font-size: 13px; white-space: nowrap; }
 
+/* ---------- Hộp "Cấp giấy chứng nhận" (bản vẽ F mục 6.2; IssueDialog.tsx) ---------- */
+/* Hộp rộng hơn size lg (980px). Sau khi cấp thì thu về cỡ bản in. Điện thoại: .ui-dialog tự tràn màn hình. */
+.ui-dialog.gcn-dlg { width: min(1200px, 100%); }
+.ui-dialog.gcn-dlg.gcn-dlg--print { width: min(820px, 100%); }
+.gcn-iss { display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 16px; align-items: start; padding: 8px 0 4px; min-width: 0; }
+.gcn-iss--tablet { grid-template-columns: 300px minmax(0, 1fr); }
+.gcn-iss--phone { grid-template-columns: minmax(0, 1fr); gap: 12px; padding-top: 10px; }
+.gcn-iss__main { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.gcn-iss__skel { display: flex; flex-direction: column; gap: 12px; padding: 12px 0; }
+.gcn-iss .ui-card__body { min-width: 0; }
+
+.gcn-iss__all { display: flex; align-items: flex-start; gap: 10px; padding: 10px 14px; background: var(--soft); border-bottom: 1px solid var(--line); cursor: pointer; }
+.gcn-iss__all > span { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.gcn-iss__all small { font-size: 12px; color: var(--muted); }
+.gcn-iss__all input, .gcn-iss__row > input { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--accent); flex: none; }
+.gcn-iss__list { list-style: none; margin: 0; padding: 0; }
+.gcn-iss__row { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 10px; align-items: center; padding: 8px 14px; border-top: 1px solid var(--line-2); min-width: 0; }
+.gcn-iss__row:first-child { border-top: 0; }
+.gcn-iss__row.is-active { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
+.gcn-iss__who { all: unset; box-sizing: border-box; display: flex; align-items: center; gap: 10px; min-width: 0; cursor: pointer; padding: 2px 0; }
+.gcn-iss__who:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+.gcn-iss__name { display: flex; flex-direction: column; min-width: 0; }
+.gcn-iss__name b { overflow-wrap: anywhere; }
+.gcn-iss__sub { font-size: 12.5px; color: var(--muted); overflow-wrap: anywhere; }
+.gcn-iss__tags { grid-column: 2; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-width: 0; }
+.gcn-iss__tags:empty { display: none; }
+.gcn-iss__note { font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+.gcn-iss__note--warn { color: var(--warn); }
+.gcn-iss__note a, .gcn-iss__edit { color: var(--accent); font-weight: 600; }
+
+.gcn-iss__strip { display: flex; gap: 10px; overflow-x: auto; padding: 2px 2px 10px; scroll-snap-type: x proximity; min-width: 0; }
+.gcn-iss__thumb { all: unset; box-sizing: border-box; flex: none; width: 164px; display: flex; flex-direction: column; gap: 6px; cursor: pointer; scroll-snap-align: start; font-size: 12.5px; color: var(--muted); }
+.gcn-iss__thumb img { display: block; width: 100%; height: auto; aspect-ratio: 1123 / 794; object-fit: cover; border-radius: 8px; border: 2px solid var(--line); background: var(--soft); }
+.gcn-iss__thumb span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gcn-iss__thumb.is-on img { border-color: var(--accent); }
+.gcn-iss__thumb.is-on span { color: var(--accent); font-weight: 700; }
+.gcn-iss__thumb:focus-visible img { outline: 2px solid var(--accent); outline-offset: 2px; }
+.gcn-iss__rows { margin-top: 4px; }
+.gcn-iss__val { font-size: 13.5px; text-align: right; overflow-wrap: anywhere; min-width: 0; }
+
+/* Xem trước: iframe không nhận chuột / chạm để vuốt trái / phải ăn ở khung bọc. */
+.gcn-iss__swipe { touch-action: pan-y; }
+.gcn-iss__swipe iframe { pointer-events: none; }
+.gcn-iss__nav { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 10px; min-width: 0; }
+.gcn-iss__nav b { font-size: 14px; text-align: center; overflow-wrap: anywhere; min-width: 0; }
+.gcn-iss__hint { margin: 6px 0 0; font-size: 12.5px; color: var(--muted); text-align: center; }
+
+.gcn-iss__warn { background: var(--warn-bg); color: var(--warn); border: 1px solid var(--warn-line); border-radius: 10px; padding: 8px 12px; font-size: 13px; line-height: 1.45; margin: 8px 0 0; overflow-wrap: anywhere; }
+.gcn-iss__err { background: var(--danger-bg); color: var(--danger); border: 1px solid var(--danger-line); border-radius: 10px; padding: 8px 12px; font-size: 13px; line-height: 1.45; margin: 8px 0 0; overflow-wrap: anywhere; }
+.gcn-iss__confirm { display: flex; flex-direction: column; gap: 8px; color: var(--text); font-size: 13.5px; }
+.gcn-iss__confirm p { margin: 0; }
+.gcn-iss__confirm .gcn-iss__warn { margin: 0; }
+.gcn-iss__print { display: flex; flex-direction: column; gap: 12px; padding: 10px 0 4px; min-width: 0; }
+.gcn-iss__print .gcn-iss__warn { margin: 0; }
+.ui-dialog__foot .gcn-iss__ledger { margin-right: auto; text-decoration: none; color: var(--accent); }
+
+.gcn-iss__foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-width: 0; }
+.gcn-iss__sum { font-size: 13px; color: var(--muted); min-width: 0; overflow-wrap: anywhere; }
+.gcn-iss__sum b { color: var(--text); font-size: 14px; }
+
+@media (max-width: 640px) {
+  .ui-dialog.gcn-dlg .ui-dialog__body { padding-top: 0; }
+  .gcn-iss__row { padding: 10px 12px; }
+  .gcn-iss__thumb { width: 150px; }
+  .gcn-iss__foot { flex-direction: column; align-items: stretch; gap: 8px; }
+  .gcn-iss__foot .ui-btn { width: 100%; justify-content: center; }
+  .ui-dialog.gcn-dlg .ui-dialog__foot { flex-wrap: wrap; }
+}
+
 /* ---------- Máy tính bảng ---------- */
 @media (max-width: 1180px) {
   .kc-class { grid-template-columns: minmax(0, 1fr); }

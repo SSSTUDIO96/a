@@ -7,6 +7,8 @@ import { PageHeader } from '../../layout/PageHeader';
 import { useBreakpoint } from '../../layout/useBreakpoint';
 import { usePermissions } from '../../layout/usePermissions';
 import { Button, Card, ConfirmDialog, IconPlus, ListDetail, Skeleton } from '../../ui';
+import { IssueDialog } from '../certificates/IssueDialog';
+import { todayInTz } from '../certificates/logic';
 import { useLoad, useOrgInfo } from '../staff/useOrgInfo';
 import { ClassDialog, type ClassDialogTarget } from './ClassDialog';
 import { CourseDetail } from './CourseDetail';
@@ -16,7 +18,7 @@ import { EnrollmentsDialog } from './EnrollmentsDialog';
 import { GroupsDialog } from './GroupsDialog';
 import { SessionSyncDialog } from './SessionSyncDialog';
 import { LoadError } from './LoadError';
-import { coursePerms } from './logic';
+import { certPerms, coursePerms } from './logic';
 import { usePickers } from './usePickers';
 import './courses.css';
 
@@ -31,7 +33,8 @@ type Modal =
   | { kind: 'students'; cls: ClassView; title: string }
   | { kind: 'archive' }
   | { kind: 'cancel-class'; cls: ClassView }
-  | { kind: 'calendar'; cls: ClassView; title: string };
+  | { kind: 'calendar'; cls: ClassView; title: string }
+  | { kind: 'certificates'; cls: ClassView; title: string };
 
 export function CoursesPage() {
   const params = useParams();
@@ -40,6 +43,7 @@ export function CoursesPage() {
   const org = useOrgInfo();
   const has = usePermissions();
   const perms = useMemo(() => coursePerms(has), [has]);
+  const cert = useMemo(() => certPerms(has), [has]);
   const phone = useBreakpoint() === 'phone';
   const [q, setQ] = useState('');
   const [filter, setFilter] = useState<string | null>(null);
@@ -73,6 +77,8 @@ export function CoursesPage() {
     detail.reload();
   }, [courses, groups, detail]);
 
+  // Ngày hôm nay theo múi giờ của tổ chức: thẻ lớp dựa vào đó để bật / tắt nút Cấp chứng nhận.
+  const today = todayInTz(org.timezone);
   const listUrl = `/${org.slug}/dao-tao`;
   const addCourse = () => open({ kind: 'course', target: { kind: 'create' } });
 
@@ -124,6 +130,8 @@ export function CoursesPage() {
         onEditClass={(cls) => open({ kind: 'class', target: { kind: 'edit', cls } })}
         onStudents={(cls) => open({ kind: 'students', cls, title: course.mode === 'SINGLE_CLASS' ? course.name : cls.name })}
         onCalendar={(cls, title) => open({ kind: 'calendar', cls, title })}
+        onCertificates={cert.issue ? (cls, title) => open({ kind: 'certificates', cls, title }) : undefined}
+        today={today}
       />
     );
   }
@@ -200,6 +208,9 @@ export function CoursesPage() {
         <GroupsDialog orgId={org.orgId} groups={groupList} canWrite={perms.write} onClose={close} onChanged={reloadAll} />
       )}
       {modal?.kind === 'students' && <EnrollmentsDialog orgId={org.orgId} cls={modal.cls} title={modal.title} onClose={close} />}
+      {modal?.kind === 'certificates' && (
+        <IssueDialog orgId={org.orgId} slug={org.slug} classId={modal.cls.id} title={modal.title} canEditBrand={cert.brandEdit} onClose={close} />
+      )}
       {modal?.kind === 'calendar' && <SessionSyncDialog orgId={org.orgId} cls={modal.cls} title={modal.title} onClose={close} onDone={detail.reload} />}
       <ConfirmDialog
         open={modal?.kind === 'archive'}

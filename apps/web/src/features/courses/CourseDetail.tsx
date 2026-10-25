@@ -21,9 +21,12 @@ export interface CourseDetailProps {
   onStudents: (k: ClassView) => void;
   // Nút "Đưa lên Lịch" ở thẻ lớp (hiện khi perms.calendar). title = tên hiện trên thẻ.
   onCalendar?: (k: ClassView, title: string) => void;
+  // Nút "Cấp chứng nhận" ở thẻ lớp (màn chỉ truyền khi có certificates.issue). today = "YYYY-MM-DD" theo múi giờ tổ chức; bắt buộc đi cùng onCertificates.
+  onCertificates?: (k: ClassView, title: string) => void;
+  today?: string;
 }
 
-export function CourseDetail({ course, classes, groups, perms, onEdit, onToMulti, onOpenClass, onEditClass, onStudents, onCalendar }: CourseDetailProps) {
+export function CourseDetail({ course, classes, groups, perms, onEdit, onToMulti, onOpenClass, onEditClass, onStudents, onCalendar, onCertificates, today }: CourseDetailProps) {
   const group = groups.find((g) => g.id === course.groupId);
   const single = course.mode === 'SINGLE_CLASS';
   const live = liveClasses(classes);
@@ -80,6 +83,8 @@ export function CourseDetail({ course, classes, groups, perms, onEdit, onToMulti
               onEdit={perms.write ? onEdit : undefined}
               onStudents={() => onStudents(only)}
               onCalendar={perms.calendar && onCalendar ? () => onCalendar(only, course.name) : undefined}
+              onCertificates={onCertificates ? () => onCertificates(only, course.name) : undefined}
+              today={today}
             />
           ) : (
             <EmptyState message="Lớp của khoá này đã huỷ." />
@@ -135,6 +140,8 @@ export function CourseDetail({ course, classes, groups, perms, onEdit, onToMulti
                 onEdit={perms.write ? () => onEditClass(k) : undefined}
                 onStudents={() => onStudents(k)}
                 onCalendar={perms.calendar && onCalendar ? () => onCalendar(k, k.name) : undefined}
+                onCertificates={onCertificates ? () => onCertificates(k, k.name) : undefined}
+                today={today}
               />
             ))}
           </div>

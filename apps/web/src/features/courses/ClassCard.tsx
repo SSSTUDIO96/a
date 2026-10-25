@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router';
 import type { ClassView } from '../../api/courses';
 import { Avatar, Button, IconCalendar, IconClock, StatusTag } from '../../ui';
 import { IconPin, IconUsers } from './icons';
-import { calendarText, fullDate, NO_TIME_REASON, scheduleText, seatInfo } from './logic';
+import { calendarText, certNotEndedReason, fullDate, isClassEnded, NO_TIME_REASON, scheduleText, seatInfo } from './logic';
 import { OffButton } from './OffButton';
 import { SeatBar, SeatTag } from './SeatTag';
 import { staffInitials, useCurrentOrgStaffNaming } from '../staff/useStaffNaming';
@@ -13,6 +13,17 @@ import { staffInitials, useCurrentOrgStaffNaming } from '../staff/useStaffNaming
 export const ENROLL_TIP = 'Lập hợp đồng khoá học, chọn sẵn lớp này';
 export const FULL_REASON = 'Lớp đã đủ số học viên tối đa';
 export const CLOSED_REASON = 'Lớp đã ngừng nhận ghi danh';
+
+// Biểu tượng giấy chứng nhận (chưa có trong ui/icons; nét 18px như icons.tsx của màn).
+function IconCertificate() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" className="ui-ico">
+      <rect x="3.5" y="4.5" width="17" height="11.5" rx="1.8" />
+      <path d="M7.5 8.5h9M7.5 11.5h5" />
+      <path d="M9 16v4l3-1.8 3 1.8v-4" />
+    </svg>
+  );
+}
 
 export interface ClassCardProps {
   cls: ClassView;
@@ -24,9 +35,14 @@ export interface ClassCardProps {
   onStudents: () => void;
   // Có thì hiện nút "Đưa lên Lịch" / "Cập nhật Lịch" (courses.write + schedule.write).
   onCalendar?: () => void;
+  // Có thì hiện nút "Cấp chứng nhận" (certificates.issue, bản vẽ F mục 6.1). Phải kèm `today` ("YYYY-MM-DD" theo múi giờ tổ chức):
+  // lớp chưa kết thúc → nút tắt kèm lý do; đã kết thúc → nút chính, thay chỗ nút Ghi danh. Lớp đã huỷ không có nút.
+  onCertificates?: () => void;
+  today?: string;
 }
 
-export function ClassCard({ cls, title, canEnroll, onEdit, onStudents, onCalendar }: ClassCardProps) {
+export function ClassCard({ cls, title, canEnroll, onEdit, onStudents, onCalendar, onCertificates, today }: ClassCardProps) {
+  if (onCertificates && today === undefined) throw new Error('ClassCard: có onCertificates thì phải truyền today (ngày hôm nay theo múi giờ tổ chức)');
   const { orgSlug } = useParams();
   const seat = seatInfo(cls.enrolledCount, cls.capacity);
   // L2: màu + chữ tắt ảnh giảng viên qua sổ thợ chung (ui/staffName.ts) — cùng màu với Thợ makeup, Lịch.
@@ -39,6 +55,7 @@ export function ClassCard({ cls, title, canEnroll, onEdit, onStudents, onCalenda
   const cal = calendarText(cls);
   const hasTime = cls.startTime !== null && cls.endTime !== null;
   const calLabel = cls.calendar.total === 0 ? 'Đưa lên Lịch' : 'Cập nhật Lịch';
+  const certMode = onCertificates && !cancelled && today !== undefined ? (isClassEnded(cls.endDate, today) ? 'ready' : 'wait') : null;
   return (
     <article className={`kc-class kc-class--${state}`} aria-label={`Lớp ${title}`}>
       <div className="kc-class__t">
@@ -102,7 +119,13 @@ export function ClassCard({ cls, title, canEnroll, onEdit, onStudents, onCalenda
             ) : (
               <OffButton label={calLabel} reason={NO_TIME_REASON} />
             ))}
-          {canEnroll && !cancelled &&
+          {certMode === 'wait' && <OffButton label="Cấp chứng nhận" reason={certNotEndedReason(cls.endDate)} />}
+          {certMode === 'ready' && (
+            <Button size="sm" variant="primary" icon={<IconCertificate />} onClick={onCertificates}>
+              Cấp chứng nhận
+            </Button>
+          )}
+          {canEnroll && !cancelled && certMode !== 'ready' &&
             (seat.state === 'FULL' ? (
               <OffButton label="Hết chỗ" reason={FULL_REASON} />
             ) : closed ? (

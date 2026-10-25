@@ -47,6 +47,34 @@ export function coursePerms(has: (p: Permission) => boolean): CoursePerms {
   };
 }
 
+// Quyền của phần Giấy chứng nhận ở màn này (bản vẽ F mục 6.1). Tách khỏi coursePerms để không đổi hình dạng CoursePerms
+// (logic.test.ts so bằng toEqual). issue: nút "Cấp chứng nhận" ở thẻ lớp (máy chủ cần certificates.issue);
+// brandEdit: liên kết "Sửa" người ký trong hộp cấp, sang Hồ sơ thương hiệu (máy chủ cần org.update).
+export interface CertPerms {
+  issue: boolean;
+  brandEdit: boolean;
+}
+
+export function certPerms(has: (p: Permission) => boolean): CertPerms {
+  return { issue: has('certificates.issue'), brandEdit: has('org.update') };
+}
+
+// ---------- Giấy chứng nhận ở thẻ lớp (bản vẽ F mục 6.1) ----------
+
+const WIRE_DAY = /^\d{4}-\d{2}-\d{2}$/;
+
+// Lớp đã kết thúc khi ngày kết thúc <= hôm nay (cùng luật máy chủ: endDate > today thì 409 CLASS_NOT_ENDED).
+// Hai ngày dạng YYYY-MM-DD so được theo chữ. Sai dạng → ném lỗi (không đoán).
+export function isClassEnded(endDate: string, today: string): boolean {
+  if (!WIRE_DAY.test(endDate)) throw new Error(`isClassEnded: ngày kết thúc sai dạng: "${endDate}"`);
+  if (!WIRE_DAY.test(today)) throw new Error(`isClassEnded: ngày hôm nay sai dạng: "${today}"`);
+  return endDate <= today;
+}
+
+export function certNotEndedReason(endDate: string): string {
+  return `Lớp kết thúc ${fullDate(endDate)} — cấp được từ ngày đó`;
+}
+
 // ---------- Buổi học trên Lịch (việc tồn 6) ----------
 
 export const NO_TIME_REASON = 'Lớp chưa có giờ học — sửa lớp, nhập giờ học rồi mới đưa buổi học lên Lịch';

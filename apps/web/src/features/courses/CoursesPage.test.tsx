@@ -1,7 +1,7 @@
-import { configure, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, configure, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SYSTEM_ROLES } from '@makeup/shared';
 import { routes } from '../../app/routes';
 
@@ -144,7 +144,15 @@ async function fillRequired(d: HTMLElement, user: ReturnType<typeof userEvent.se
   await user.type(within(d).getByLabelText(/^Số học viên tối đa/), '10');
 }
 
+// "Hôm nay" cố định: 17/10 20:00 UTC = 18/10 03:00 giờ Việt Nam (múi giờ của tổ chức) — khác ngày UTC, để bài "đã kết thúc" bắt lỗi
+// tính theo giờ UTC. Chỉ giả Date (không giả setTimeout) nên findBy / waitFor chạy bình thường.
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date('2026-10-17T20:00:00.000Z'));
+});
+
 afterEach(() => {
+  vi.useRealTimers();
   vi.unstubAllGlobals();
 });
 
@@ -564,5 +572,99 @@ describe('Buổi học lên Lịch ở thẻ lớp (việc tồn 6)', () => {
     renderAt('/hv/dao-tao/nc');
     const k3b = await screen.findByRole('article', { name: 'Lớp Nâng cao K3' });
     expect(within(k3b).queryByRole('button', { name: /Lên Lịch|Đưa lên Lịch|Cập nhật Lịch/ })).toBeNull();
+  });
+});
+
+// Giấy chứng nhận ở thẻ lớp (bản vẽ F mục 6.1). Hôm nay (giờ tổ chức) = 18/10/2026.
+describe('Giấy chứng nhận ở thẻ lớp (bản vẽ F mục 6.1)', () => {
+  const KT = course('kt', 'Makeup chuyên nghiệp', 'MULTI_CLASS', { code: 'CN-01' });
+  const KT_CLASSES = [
+    cls('e1', 'kt', 'Chuyên nghiệp K12', 8, 10, { startDate: '2026-08-01', endDate: '2026-10-10' }),
+    // Kết thúc đúng hôm nay giờ Việt Nam (còn là 17/10 theo UTC): vẫn tính đã kết thúc.
+    cls('e2', 'kt', 'Chuyên nghiệp K13', 5, 10, { startDate: '2026-08-20', endDate: '2026-10-18' }),
+    cls('f1', 'kt', 'Chuyên nghiệp K14', 3, 10, { startDate: '2026-11-01', endDate: '2026-12-20' }),
+    cls('x1', 'kt', 'Chuyên nghiệp K10', 0, 10, { startDate: '2026-05-01', endDate: '2026-06-01', status: 'CANCELLED' }),
+  ];
+  const HQ_ENDED = [cls('h1', 'hq', 'Makeup Hàn Quốc', 5, 8, { startDate: '2026-08-01', endDate: '2026-09-02' })];
+  const serve = (method: string, path: string): Response | undefined => {
+    if (method !== 'GET') return undefined;
+    if (path === '/orgs/org-1/courses/kt') return json(200, { course: KT, classes: KT_CLASSES });
+    if (path === '/orgs/org-1/courses/hq') return json(200, { course: HQ, classes: HQ_ENDED });
+    return undefined;
+  };
+  const card = (name: string) => screen.findByRole('article', { name: `Lớp ${name}` });
+
+  it('lớp chưa kết thúc: nút "Cấp chứng nhận" xám, tooltip đúng chữ, bấm không mở hộp; Ghi danh giữ nguyên', async () => {
+    const calls = setupServer(OWNER, serve);
+    renderAt('/hv/dao-tao/kt');
+    const k = within(await card('Chuyên nghiệp K14'));
+    const off = k.getByRole('button', { name: 'Cấp chứng nhận' });
+    expect(off.getAttribute('aria-disabled')).toBe('true');
+    expect(document.getElementById(off.getAttribute('aria-describedby') ?? '')?.textContent).toBe('Lớp kết thúc 20/12/2026 — cấp được từ ngày đó');
+    fireEvent.click(off);
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(calls.some((c) => c.path.includes('/certificates'))).toBe(false);
+    expect(k.getByRole('link', { name: 'Ghi danh' })).toBeTruthy();
+  });
+
+  it('lớp đã kết thúc (cả ngày kết thúc = hôm nay theo giờ tổ chức) + có quyền: nút chính thay chỗ "Ghi danh"; lớp Một lớp cũng vậy', async () => {
+    setupServer(OWNER, serve);
+    const first = renderAt('/hv/dao-tao/kt');
+    for (const name of ['Chuyên nghiệp K12', 'Chuyên nghiệp K13']) {
+      const k = within(await card(name));
+      const btn = k.getByRole('button', { name: 'Cấp chứng nhận' });
+      expect(btn.getAttribute('aria-disabled')).toBeNull();
+      expect(btn.className).toContain('ui-btn--primary');
+      expect(k.queryByRole('link', { name: 'Ghi danh' })).toBeNull();
+      expect(k.queryByRole('button', { name: /Ghi danh|Hết chỗ/ })).toBeNull();
+    }
+    await act(async () => {
+      await first.navigate('/hv/dao-tao/hq');
+    });
+    const one = within(await card('Makeup Hàn Quốc'));
+    await waitFor(() => expect(one.getByRole('button', { name: 'Cấp chứng nhận' })).toBeTruthy());
+    expect(one.queryByRole('link', { name: 'Ghi danh' })).toBeNull();
+  });
+
+  it('không có certificates.issue (giảng viên; chủ bị bớt quyền) → không có nút ở bất kỳ lớp nào, Ghi danh theo luật cũ', async () => {
+    setupServer(OWNER.filter((p) => p !== 'certificates.issue'), serve);
+    renderAt('/hv/dao-tao/kt');
+    const k = within(await card('Chuyên nghiệp K12'));
+    expect(screen.queryAllByRole('button', { name: 'Cấp chứng nhận' })).toHaveLength(0);
+    expect(k.getByRole('link', { name: 'Ghi danh' })).toBeTruthy();
+    vi.unstubAllGlobals();
+    document.body.innerHTML = '';
+    setupServer(INSTRUCTOR, serve);
+    renderAt('/hv/dao-tao/kt');
+    await card('Chuyên nghiệp K12');
+    expect(INSTRUCTOR).not.toContain('certificates.issue');
+    expect(screen.queryAllByRole('button', { name: 'Cấp chứng nhận' })).toHaveLength(0);
+  });
+
+  it('quản lý có nút (vai trò mẫu manager giữ certificates.issue); lớp đã huỷ không có nút', async () => {
+    setupServer(SYSTEM_ROLES.manager.permissions, serve);
+    renderAt('/hv/dao-tao/kt');
+    await card('Chuyên nghiệp K12');
+    // 3 lớp đang chạy: K12, K13 sẵn sàng + K14 tắt — đều có nút; lớp đã huỷ nằm trong mục thu gọn và không có.
+    expect(screen.getAllByRole('button', { name: 'Cấp chứng nhận' })).toHaveLength(3);
+    const gone = screen.getByText('Lớp đã huỷ (1)').closest('details') as HTMLElement;
+    fireEvent.click(within(gone).getByText('Lớp đã huỷ (1)'));
+    expect(within(gone).getByRole('article', { name: 'Lớp Chuyên nghiệp K10' })).toBeTruthy();
+    expect(within(gone).queryByRole('button', { name: 'Cấp chứng nhận' })).toBeNull();
+  });
+
+  it('bấm nút ở lớp đã kết thúc → mở hộp "Cấp giấy chứng nhận" và gọi đúng GET /classes/:id/certificates', async () => {
+    const calls = setupServer(OWNER, (method, path) => {
+      if (method === 'GET' && path.startsWith('/orgs/org-1/classes/e1/certificates')) return err(500, 'INTERNAL', 'Máy chủ gặp lỗi thử nghiệm');
+      return serve(method, path);
+    });
+    renderAt('/hv/dao-tao/kt');
+    const k = within(await card('Chuyên nghiệp K12'));
+    fireEvent.click(k.getByRole('button', { name: 'Cấp chứng nhận' }));
+    const d = await screen.findByRole('dialog', { name: 'Cấp giấy chứng nhận' });
+    // Lỗi tải hiện lời tiếng Việt kèm "Thử lại", không trắng hộp.
+    expect(await within(d).findByText('Máy chủ gặp lỗi thử nghiệm')).toBeTruthy();
+    expect(within(d).getByRole('button', { name: 'Thử lại' })).toBeTruthy();
+    expect(calls.filter((c) => c.path === '/orgs/org-1/classes/e1/certificates')).toHaveLength(1);
   });
 });
