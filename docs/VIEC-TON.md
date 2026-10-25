@@ -94,3 +94,5 @@ Danh sách việc các thợ, thợ chấm và R&D đã nêu nhưng **chưa làm
 | 74 | Cổng học viên: "còn thiếu" của một đợt đang tính ở web (amount − paidAmount, logic.ts#installmentShortfall). Theo luật "máy chủ là nơi duy nhất tính tiền" nên thêm trường shortfall vào PortalMe ở máy chủ rồi bỏ phép trừ ở web | thợ E-W2 |
 | 75 | apps/web/playwright.config.ts cố định cổng 4000/5173 và không đặt PORTAL_RATE_LIMIT_PER_MINUTE → e2e cổng học viên bị giới hạn lượt khi chạy `pnpm e2e` thường; nâng trần lượt riêng cho e2e (không đổi bản thật) | thợ E-W2 |
 | 76 | Bài sua-mot-phan và khoa-ngoai-400 dựng fixture với bộ đếm cổng mặc định 10 lần/phút, fixture đã gọi 8 lần mở cổng — sát trần; nên dùng makePortalDeps như tenant-isolation | thợ E5 |
+| 77 | apps/web/src/api/types.ts: CustomerCreateInput/CustomerUpdateInput chưa khai avatarFileId (máy chủ nhận) — gói gắn ảnh học viên (W3c bản vẽ F) phải thêm | thợ F-W2 |
+| 78 | Kiểm lại sau khi màn giấy chứng nhận (W3a) nối PrintSheet: pdf-lib phải là chunk riêng, không nằm trong index-*.js | thợ F-W2 |
