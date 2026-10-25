@@ -1,5 +1,14 @@
 # Bản vẽ G — Mẫu in hợp đồng (R&D-09, chặng 2)
 
+> **ĐÍNH CHÍNH 25/10/2026 (điều phối, sau gói G-H1 tra lại — bản gốc bên dưới GIỮ NGUYÊN; chỗ nào đá nhau thì theo đính chính này):**
+> 1. Migration: **`20261019220000_mau_in_hop_dong`** (ký duyệt G). Mọi chỗ ghi 20261019170000 (dòng ~179, ~1038, ~1078) đọc là 220000. Mới nhất hiện có: 20261019215000_the_hien_tren_cong.
+> 2. Số dòng đã lệch sau bản vẽ D, E, F: dùng bảng tra lại `docs/rnd/BAN-VE-G-TRA-LAI-H1.md` (~35 dòng lệch; routes.tsx Cài đặt ở 102–105; nav.ts Cài đặt 112–123; ContractEditor.tsx chưa có nút In).
+> 3. Phông Lora **ĐÃ CÓ** trong app: `apps/web/public/mau/phong/ss-album/lora/` (Lora-VF.woff2, Lora-Italic-VF.woff2, OFL.txt), họ `'SSA Lora'` ở ss-album.css:50–52. Gói G-W2 **dùng lại bản này**, KHÔNG tạo bản thứ hai ở `public/fonts/lora/` (luật 6: cấm bản sao). Thêm dòng "dùng cho mẫu in hợp đồng 1 và 5" vào `docs/GHI-CHEP-MON-CUA-NGUOI-KHAC.md` ở mục Lora/Cormorant.
+> 4. Cửa gác hiện có **14 phép** (1420/1420 sau gói E5) và gate-mutants đã dùng tới số 22 (+ D1–D3): đường mới của G thêm mẫu vào 14 phép; đột biến mới đánh số TIẾP sau số lớn nhất hiện có.
+> 5. **Bổ sung từ bản vẽ D mục 3.4** (phụ phí tự động — bản vẽ D giao phần in cho G): `PrintLine` thêm trường **`surcharges: PrintSubLine[]`** = các dòng con SURCHARGE chưa huỷ của dòng gốc (dòng tự thêm theo luật VÀ dòng nhập tay gắn vào dòng gốc). Bản in hiện **tên + số lượng + tiền** (lấy đúng `lineTotal` máy chủ), **KHÔNG in tên luật / chữ "tự thêm theo luật"**, không in ghi chú ghi đè giá. Hợp đồng có các dòng khác ngày nhau (nhiều hơn một `date` khác nhau): in ngày của dòng cạnh giờ (`dd/mm · HH:MM–HH:MM`); hợp đồng một ngày giữ như cũ. Gói G-M4 (dữ liệu in) trả `surcharges`; G-W2 (bộ vẽ 5 bố cục) vẽ; bài thử: tổng các dòng in = `money.subtotal` (máy chủ), có ca phù dâu × 2 + phụ phí × 2.
+> 6. `ExtraPackageDialog.tsx` đã được bản vẽ D gói W3 sửa (điều phối cho phép 20/10) — gói G-W5 gộp trên bản hiện tại, không lùi.
+
+
 - Sản phẩm: Makeup Pro. Ngày 19/10/2026. Người viết: Trung tâm R&D. Người đọc: điều phối, các thợ, thợ chấm.
 - Phương án: **PA1 — chọn 1 trong 5 bố cục + bật/tắt từng khối + sửa chữ đầu/cuối**, lưu thành "Mẫu in của studio". Trợ lý chọn thay anh Chiến (`docs/NHAT-KY-QUYET-DINH-THAY.md:95`).
 - Quyết định đã chốt, thợ không bàn lại:
