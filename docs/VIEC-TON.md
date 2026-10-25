@@ -97,3 +97,4 @@ Danh sách việc các thợ, thợ chấm và R&D đã nêu nhưng **chưa làm
 | 77 | apps/web/src/api/types.ts: CustomerCreateInput/CustomerUpdateInput chưa khai avatarFileId (máy chủ nhận) — gói gắn ảnh học viên (W3c bản vẽ F) phải thêm | thợ F-W2 |
 | 78 | Kiểm lại sau khi màn giấy chứng nhận (W3a) nối PrintSheet: pdf-lib phải là chunk riêng, không nằm trong index-*.js | thợ F-W2 |
 | 79 | Chốt độ dài dùng `btrim(x)` chỉ cắt dấu cách: chữ toàn xuống dòng/tab (E'\n\t ') lọt qua (đo được ở bảng print_templates; cùng cách viết ở 3 migration cũ). Máy chủ zod đã cắt khoảng trắng nên chưa khai thác được qua API; sửa gộp một migration sau: `btrim(x, E' \t\r\n')` | thợ G-M1 |
+| 80 | (Chấm E T2) Giới hạn mở cổng 10 lần/phút tính theo IP, TRUST_PROXY_HOPS mặc định 0: khi lên mạng sau Vercel/Railway cả lớp có thể chung một IP → người thứ 11 trong một phút bị 429. Phải đo proxy và đặt TRUST_PROXY_HOPS khi đưa lên mạng (nối việc tồn 1, 18) | thợ chấm E |
