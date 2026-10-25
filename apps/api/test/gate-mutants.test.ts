@@ -60,7 +60,9 @@ function dropOrg(where: unknown): void {
   if (where && typeof where === 'object') delete (where as { organizationId?: unknown }).organizationId;
 }
 
-describe('cửa gác chuyển đỏ với từng kiểu lỗi', () => {
+// Mỗi ca dựng fixture (2 tổ chức + thế giới cổng học viên) rồi chạy cửa gác 14 phép trên đủ bảng route: ~30–40 giây, vượt
+// testTimeout chung 30 giây (đột biến 1, 3, 9 đã đo: báo đúng vi phạm rồi mới bị cắt vì hết giờ).
+describe('cửa gác chuyển đỏ với từng kiểu lỗi', { timeout: 180_000 }, () => {
   it('Đột biến 1 — tra vai trò chỉ theo id, quên lọc tổ chức → phép crossId đỏ', async () => {
     const mutant = defineRoute({
       method: 'patch',
