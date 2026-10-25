@@ -246,7 +246,8 @@ describe('Sổ — lọc và phân trang (máy chủ lọc)', () => {
   it('đổi năm → gửi year; "Tất cả các năm" → không gửi year; năm lấy từ máy chủ (years)', async () => {
     const calls = setupServer(OWNER);
     renderAt('/hv/giay-chung-nhan');
-    const year = (await screen.findByLabelText('Năm')) as HTMLSelectElement;
+    await screen.findByRole('table');
+    const year = screen.getByLabelText('Năm') as HTMLSelectElement;
     expect([...year.options].map((o) => o.textContent)).toEqual(['Tất cả các năm', `Năm ${THIS_YEAR}`, `Năm ${THIS_YEAR - 1}`]);
     expect(year.value).toBe(String(THIS_YEAR));
     fireEvent.change(year, { target: { value: String(THIS_YEAR - 1) } });
@@ -263,6 +264,9 @@ describe('Sổ — lọc và phân trang (máy chủ lọc)', () => {
     const before = listGets(calls).length;
     fireEvent.change(box, { target: { value: ' Mai ' } });
     expect(listGets(calls).length).toBe(before);
+    // Chưa đủ 300 ms thì vẫn chưa gọi (đợi 150 ms thật rồi kiểm lại).
+    await new Promise((r) => setTimeout(r, 150));
+    expect(listGets(calls).length).toBe(before);
     await waitFor(() => expect(queryOf(listGets(calls).at(-1)).get('q')).toBe('Mai'));
     expect(queryOf(listGets(calls).at(-1)).get('page')).toBe('1');
     fireEvent.change(box, { target: { value: '' } });
@@ -272,7 +276,8 @@ describe('Sổ — lọc và phân trang (máy chủ lọc)', () => {
   it('Trạng thái: Hiệu lực → status=ISSUED; Đã thu hồi → status=REVOKED; Tất cả → không gửi', async () => {
     const calls = setupServer(OWNER);
     renderAt('/hv/giay-chung-nhan');
-    const st = (await screen.findByLabelText('Trạng thái')) as HTMLSelectElement;
+    await screen.findByRole('table');
+    const st = screen.getByLabelText('Trạng thái') as HTMLSelectElement;
     expect([...st.options].map((o) => o.textContent)).toEqual(['Tất cả', 'Hiệu lực', 'Đã thu hồi']);
     fireEvent.change(st, { target: { value: 'hieu-luc' } });
     await waitFor(() => expect(queryOf(listGets(calls).at(-1)).get('status')).toBe('ISSUED'));
