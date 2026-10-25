@@ -1602,6 +1602,47 @@ describe('D 3.4 — thông báo nhỏ', () => {
   });
 });
 
+// Biên bản nghiệm thu D, T1: dữ liệu giả CỐ Ý có thành tiền ≠ đơn giá × số lượng và số người (số lượng dòng) > 1,
+// để việc web tự nhân / tự cộng tiền phụ phí làm bài đỏ. Số đúng là số máy chủ trả (lineTotal), không phải phép tính của màn.
+describe('D 3.4 — T1: web hiện đúng số máy chủ trả, không tự tính tiền phụ phí', () => {
+  // Dòng gói: 3 người, đơn giá 600.000, giảm 100.000 → thành tiền 1.700.000 (khác 600.000 × 3 = 1.800.000).
+  // Phụ phí A (theo số người): 3 × 100.000 nhưng máy chủ trả 250.000 (khác 300.000 và khác 100.000 × 1).
+  // Phụ phí B (luôn 1): 100.000 × 1 nhưng máy chủ trả 70.000 (khác 100.000; còn khác 100.000 × 3 = 300.000 của dòng).
+  // Phụ phí C (2 lần, đã huỷ): máy chủ trả 150.000 (khác 2 × 100.000) nhưng đã huỷ → không vào "Cộng".
+  const sA = (over: Record<string, unknown> = {}) => surRow({ quantity: 3, unitPrice: 100_000, lineTotal: 250_000, ...over });
+  const sB = (over: Record<string, unknown> = {}) =>
+    surRow({ name: 'Phụ phí ngày lễ', serviceId: 'sv-le', priceVersionId: 'pv-le', surchargeRuleId: 'r-le', surchargeRuleName: 'Ngày lễ', quantity: 1, unitPrice: 100_000, lineTotal: 70_000, ...over });
+  const grouped = (id: string | null, surcharges: unknown[]) => line({ id, quantity: 3, unitPrice: 600_000, lineDiscount: 100_000, lineTotal: 1_700_000, surcharges });
+  const CONG = '2.020.000 ₫'; // 1.700.000 + 250.000 + 70.000
+
+  it('nháp: mỗi dòng tự thêm hiện đúng lineTotal máy chủ trả; "Cộng" = tổng lineTotal (không phải đơn giá × số lượng)', async () => {
+    api.getContract.mockResolvedValue(detail('DRAFT', { lines: [grouped('l1', [])] }) as never);
+    api.quoteContract.mockResolvedValue({ ...quote([]), lines: [grouped(null, [sA(), sB()])], subtotal: 2_020_000, total: 2_021_000 } as never);
+    renderEditor(OWNER);
+    const card = await screen.findByRole('region', { name: /Mẹ cô dâu/ });
+    const a = (await within(card).findByText('Phụ phí ngoài giờ × 3')).closest('.ct-sr__r') as HTMLElement;
+    const b = within(card).getByText('Phụ phí ngày lễ').closest('.ct-sr__r') as HTMLElement;
+    expect(a.querySelector('b')?.textContent).toBe('250.000 ₫');
+    expect(b.querySelector('b')?.textContent).toBe('70.000 ₫');
+    expect(card.querySelector('.ct-ln__ft b')?.textContent).toBe(CONG);
+    // Không số nào trong chuỗi "tự nhân" lọt lên màn.
+    for (const sai of ['300.000 ₫', '100.000 ₫', '1.800.000 ₫', '2.300.000 ₫', '2.100.000 ₫']) expect(within(card).queryByText(sai)).toBeNull();
+    // Thanh tổng là total của máy chủ (lệch 1.000 có chủ ý so với tổng các dòng).
+    expect((await screen.findAllByText('2.021.000 ₫')).length).toBeGreaterThan(0);
+  });
+
+  it('đã xác nhận: dòng tự thêm hiện lineTotal đã lưu, dòng đã huỷ không vào "Cộng"', async () => {
+    const huy = sA({ id: 's3', name: 'Phụ phí cuối tuần', surchargeRuleId: 'r-cuoituan', surchargeRuleName: 'Cuối tuần', quantity: 2, lineTotal: 150_000, voidedAt: '2026-10-21T00:00:00Z', voidReason: 'Khách đổi ý' });
+    api.getContract.mockResolvedValue(detail('CONFIRMED', { total: 2_020_000, lines: [grouped('l1', [sA({ id: 's1' }), sB({ id: 's2' }), huy])] }) as never);
+    renderEditor(OWNER);
+    const card = await screen.findByRole('region', { name: /Mẹ cô dâu/ });
+    expect((within(card).getByText('Phụ phí ngoài giờ × 3').closest('.ct-sr__r') as HTMLElement).querySelector('b')?.textContent).toBe('250.000 ₫');
+    expect((within(card).getByText('Phụ phí ngày lễ').closest('.ct-sr__r') as HTMLElement).querySelector('b')?.textContent).toBe('70.000 ₫');
+    expect((within(card).getByText('Phụ phí cuối tuần × 2').closest('.ct-sr__r') as HTMLElement).querySelector('b')?.textContent).toBe('150.000 ₫');
+    expect(card.querySelector('.ct-ln__ft b')?.textContent).toBe(CONG);
+  });
+});
+
 describe('D 3.4 — hộp "Thêm phát sinh" (hợp đồng đã xác nhận)', () => {
   const CATALOG = {
     packages: [PKG_ME],

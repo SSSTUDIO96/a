@@ -629,6 +629,27 @@ describe('D 3.4: dòng phụ phí tự thêm không phải dòng gốc', () => {
     expect(groupTotal(l as never)).toBe(550_000);
   });
 
+  // T1 (biên bản nghiệm thu D): dữ liệu CỐ Ý có thành tiền ≠ đơn giá × số lượng và số người > 1.
+  it('cộng dòng lấy đúng lineTotal máy chủ trả, KHÔNG tự nhân đơn giá × số lượng (số người > 1, giá đã giảm / sửa)', () => {
+    const l = view({
+      quantity: 3, unitPrice: 600_000, lineDiscount: 100_000, lineTotal: 1_700_000, // 600.000 × 3 = 1.800.000 ≠ 1.700.000
+      addons: [view({ quantity: 3, unitPrice: 50_000, lineTotal: 120_000 })], // 150.000 ≠ 120.000
+      travel: view({ quantity: 2, unitPrice: 40_000, lineTotal: 65_000 }), // 80.000 ≠ 65.000
+      surcharges: [
+        sur({ quantity: 3, unitPrice: 100_000, lineTotal: 250_000 }), // 300.000 ≠ 250.000
+        sur({ id: 's2', quantity: 1, unitPrice: 100_000, lineTotal: 70_000 }), // 100.000 ≠ 70.000
+        sur({ id: 's3', quantity: 2, unitPrice: 100_000, lineTotal: 150_000, voidedAt: '2026-10-20T00:00:00Z' }), // đã huỷ → 0
+      ],
+    });
+    expect(groupTotal(l as never)).toBe(1_700_000 + 120_000 + 65_000 + 250_000 + 70_000);
+  });
+
+  it('phụ phí tự thêm: chỉ đổi lineTotal (đơn giá và số lượng giữ nguyên) thì "Cộng" đổi đúng bằng mức đổi đó', () => {
+    const base = (total: number) => view({ quantity: 3, lineTotal: 1_700_000, surcharges: [sur({ quantity: 3, unitPrice: 100_000, lineTotal: total })] });
+    expect(groupTotal(base(250_000) as never)).toBe(1_950_000);
+    expect(groupTotal(base(251_000) as never)).toBe(1_951_000);
+  });
+
   it('phần sửa đọc lại từ dòng đã lưu: giá không trỏ phiên bản = ghi đè; số lượng khác mặc định của luật = sửa', () => {
     const pq = (id: string) => (id === 'r-gio' ? true : id === 'r-le' ? false : null);
     const l = view({

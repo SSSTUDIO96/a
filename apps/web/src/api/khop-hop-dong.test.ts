@@ -20,16 +20,19 @@ import * as payments from './payments';
 import * as profile from './profile';
 import * as schedule from './schedule';
 import * as staff from './staff';
+import * as today from './today';
 import type {
   AppointmentDetail,
   ContractBody,
   ContractDetail,
   Customer,
   MakeupSubject,
+  OccasionView,
   Service,
   ServiceCategory,
   ServicePackage,
   StaffTier,
+  SurchargeRuleView,
   StoredFileView,
 } from './types';
 
@@ -106,7 +109,7 @@ function grantUnlimitedPlan(url: string, orgId: string): void {
 }
 
 // Mọi hàm gọi của các module nghiệp vụ: thêm hàm mới mà bài này chưa gọi → bài "đã gọi đủ" đỏ.
-const MODULES = { catalog, contracts, schedule, staff, payments, files, profile } as const;
+const MODULES = { catalog, contracts, schedule, staff, payments, files, profile, today } as const;
 const DOMAIN_HAM = Object.entries(MODULES).flatMap(([mod, exports]) =>
   Object.entries(exports)
     .filter(([, v]) => typeof v === 'function')
@@ -378,6 +381,48 @@ describe('types.ts khớp đúng dữ liệu máy chủ thật trả về (tên 
     first((await chk('catalog.listPackages', catalog.listPackages(orgId, { isActive: true }))).items, 'gói');
     await chk('catalog.addPackagePrice', catalog.addPackagePrice(orgId, pkg.id, { listPrice: 2_800_000 }, newIdempotencyKey()));
     first((await chk('catalog.listPackagePrices', catalog.listPackagePrices(orgId, pkg.id))).items, 'giá gói');
+  });
+
+  // Biên bản nghiệm thu D, T2: 7 hàm Loại sự kiện / Luật phụ phí gọi THẬT vào máy chủ, so JSON thật với types.ts.
+  it('loại sự kiện và luật phụ phí (bản vẽ D 2.2, 2.3): liệt kê, tạo, sửa, đổi thứ tự', async () => {
+    // Tổ chức mới có sẵn 6 loại mặc định (đã bật).
+    const seeded = await chk('catalog.listOccasions', catalog.listOccasions(orgId));
+    expect(seeded.items.length).toBeGreaterThanOrEqual(6);
+    expect(seeded.items.every((o) => o.isActive)).toBe(true);
+    const hon = first(seeded.items, 'loại sự kiện mặc định');
+    expectIso(hon.createdAt, 'OccasionView.createdAt');
+
+    const tiec = await chk('catalog.createOccasion', catalog.createOccasion(orgId, { name: `Tiệc thử ${stamp}`, color: 'plum' }, newIdempotencyKey()));
+    expect(tiec).toMatchObject({ name: `Tiệc thử ${stamp}`, color: 'plum', isActive: true, lineCount: 0 });
+    const hidden = await chk('catalog.updateOccasion', catalog.updateOccasion(orgId, tiec.id, { color: 'sage', isActive: false }));
+    expect(hidden).toMatchObject({ id: tiec.id, color: 'sage', isActive: false });
+    // Lọc theo trạng thái: loại đang ẩn không có trong danh sách "đang bật".
+    const active = await chk('catalog.listOccasions', catalog.listOccasions(orgId, { isActive: true }), 'listOccasions (đang bật)');
+    expect(active.items.map((o) => o.id)).not.toContain(tiec.id);
+    // Đổi thứ tự: phải gồm ĐỦ mọi loại (cả loại đang ẩn); đảo ngược danh sách.
+    const all = await catalog.listOccasions(orgId);
+    const reversed = all.items.map((o) => o.id).reverse();
+    const ordered = await chk('catalog.reorderOccasions', catalog.reorderOccasions(orgId, { occasionIds: reversed }));
+    expect(ordered.items.map((o) => o.id)).toEqual(reversed);
+    const missing: unknown = await catalog.reorderOccasions(orgId, { occasionIds: reversed.slice(1) }).catch((e: unknown) => e);
+    expect(errorKind(missing)).toBe('validation');
+
+    // Luật phụ phí: dịch vụ loại SURCHARGE (đã tạo ở bài trước), điều kiện khung giờ + thứ + sự kiện + gói.
+    expect((await chk('catalog.listSurchargeRules', catalog.listSurchargeRules(orgId))).items).toEqual([]);
+    const rule: SurchargeRuleView = await chk(
+      'catalog.createSurchargeRule',
+      catalog.createSurchargeRule(
+        orgId,
+        { name: 'Ca sớm cuối tuần', serviceId: surcharge.id, startTime: '05:00', endTime: '08:00', weekdays: [6, 7], dates: ['2026-12-25', '2026-12-24'], occasionIds: [tiec.id], packageIds: [pkg.id], perQuantity: true, note: 'Thử khớp' },
+        newIdempotencyKey(),
+      ),
+    );
+    expect(rule).toMatchObject({ startTime: '05:00', endTime: '08:00', weekdays: [6, 7], dates: ['2026-12-24', '2026-12-25'], occasionIds: [tiec.id], packageIds: [pkg.id], perQuantity: true, isActive: true, usedLineCount: 0 });
+    expect(rule.service).toMatchObject({ id: surcharge.id, kind: 'SURCHARGE' });
+    const edited = await chk('catalog.updateSurchargeRule', catalog.updateSurchargeRule(orgId, rule.id, { startTime: null, endTime: null, dates: [], perQuantity: false, isActive: false }));
+    expect(edited).toMatchObject({ startTime: null, endTime: null, dates: [], weekdays: [6, 7], perQuantity: false, isActive: false });
+    const rules = await chk('catalog.listSurchargeRules', catalog.listSurchargeRules(orgId, { isActive: false }), 'listSurchargeRules (đang tắt)');
+    expect(rules.items.map((r) => r.id)).toEqual([rule.id]);
   });
 
   it('tệp: tải lên, xem, xoá', async () => {

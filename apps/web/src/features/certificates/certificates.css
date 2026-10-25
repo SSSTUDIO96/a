@@ -1,0 +1,56 @@
+/* Giấy chứng nhận — bản in (bản vẽ F mục 7.4) và khối "Bản in" (mục 6.4). Tiền tố gcn-. Màu theo tokens.css. */
+
+/* ===== Vùng in ngay: gắn thẳng vào body (PrintArea.tsx), màn hình thường không thấy ===== */
+.gcn-print-root { display: none; }
+
+@page gcn { size: A4 landscape; margin: 0; }
+
+@media print {
+  html:has(.gcn-print-root), body:has(.gcn-print-root) { height: auto !important; overflow: visible !important; background: #fff !important; }
+  body:has(.gcn-print-root) > :not(.gcn-print-root) { display: none !important; }
+  .gcn-print-root { display: block !important; position: static !important; }
+  /* 209,5 mm (không phải 210) để Chrome không đẻ thêm trang trắng do làm tròn. */
+  .gcn-print-page { page: gcn; width: 297mm; height: 209.5mm; overflow: hidden; break-after: page; break-inside: avoid; }
+  .gcn-print-page:last-child { break-after: auto; }
+  .gcn-print-page img { display: block; width: 297mm; height: 209.5mm; object-fit: fill; }
+}
+
+/* ===== Khối "Bản in" (PrintSheet) ===== */
+.gcn-sheet { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+
+.gcn-progress { display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.gcn-progress__row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; }
+.gcn-progress__text { font-size: 14px; font-weight: 600; color: var(--text); overflow-wrap: anywhere; min-width: 0; }
+.gcn-bar { height: 8px; border-radius: 999px; background: var(--line-2); overflow: hidden; }
+.gcn-bar__fill { height: 100%; width: 0; background: var(--accent); border-radius: 999px; transition: width .2s ease; }
+
+.gcn-band { display: flex; flex-direction: column; gap: 4px; padding: 10px 14px; border-radius: 10px; font-size: 13.5px; line-height: 1.45; overflow-wrap: anywhere; }
+.gcn-band--ok { background: var(--ok-bg); color: var(--ok); border: 1px solid var(--ok); }
+.gcn-band--warn { background: var(--warn-bg); color: var(--warn); border: 1px solid var(--warn-line); }
+.gcn-band--error { background: var(--danger-bg); color: var(--danger); border: 1px solid var(--danger-line); }
+.gcn-band__row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.gcn-band strong { font-weight: 700; }
+
+.gcn-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.gcn-file { font-size: 12.5px; color: var(--muted); overflow-wrap: anywhere; }
+
+.gcn-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.gcn-list__item { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 14px; border-top: 1px solid var(--line-2); min-width: 0; }
+.gcn-list__item:first-child { border-top: 0; }
+.gcn-list__name { display: flex; flex-direction: column; min-width: 0; }
+.gcn-list__name b { font-size: 14px; font-weight: 600; color: var(--text); overflow-wrap: anywhere; }
+.gcn-list__name span { font-size: 12.5px; color: var(--muted); }
+
+/* Điện thoại (≤ 640): nút chính kéo rộng hết hàng, 16px lề do hộp chứa lo. */
+@media (max-width: 640px) {
+  .gcn-actions { flex-direction: column; align-items: stretch; }
+  .gcn-actions .ui-btn { width: 100%; justify-content: center; }
+  .gcn-list__item { padding: 10px 12px; }
+}
+
+/* ===== Xem trước (CertificatePreview) ===== */
+.gcn-preview { position: relative; width: 100%; background: var(--soft); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.gcn-preview__stage { position: absolute; left: 0; top: 0; width: 1123px; height: 794px; transform-origin: 0 0; }
+.gcn-preview__frame { width: 1123px; height: 794px; border: 0; display: block; background: #fff; }
+.gcn-preview__note { font-size: 12.5px; color: var(--muted); margin-top: 6px; }
+.gcn-preview__badge { position: absolute; left: 8px; bottom: 8px; padding: 3px 8px; border-radius: 999px; background: rgba(34, 28, 25, .72); color: #fff; font-size: 12px; max-width: calc(100% - 16px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

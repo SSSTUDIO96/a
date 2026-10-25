@@ -5,16 +5,21 @@ import { z } from 'zod';
 import { ALL_ROUTES } from '../src/app';
 import { defineRoute, mustOrg, type AnyRoute } from '../src/http/route';
 import { AppError } from '../src/lib/errors';
-import { buildGateFixture, runIsolationGate, type GateFixture, type GateReport } from './gate';
-import { makeApp, makeDeps } from './helpers';
+import { buildGateFixture, GATE_CHECKS, runIsolationGate, type GateFixture, type GateReport } from './gate';
+import { makeApp } from './helpers';
+import { makePortalDeps } from './portal-helpers';
 import { PARTIAL_SAMPLES, REF_SAMPLES, REF_VARIANTS, SAMPLES } from './gate-samples';
 import { createApp } from '../src/app';
 import express, { type NextFunction, type Request, type Response } from 'express';
 import { authenticate } from '../src/http/middleware';
 import { runPartialPatchGate } from './gate-partial';
 import type { Db } from '../src/lib/prisma';
+import { mustPortal, isPortalPath } from '../src/http/route';
+import { phoneLast4 } from '../src/modules/portal/center';
+import { sha256Hex } from '../src/modules/portal/tokens';
 
-const deps = makeDeps();
+// Bộ đếm 'portal' nâng trần: mỗi lần dựng fixture + chạy cửa gác mở cổng / dò hàng chục lần (mặc định 10/phút/IP).
+const deps = makePortalDeps();
 afterAll(async () => {
   await deps.db.$disconnect();
 });
@@ -510,5 +515,125 @@ describe('cửa gác chuyển đỏ với từng kiểu lỗi', () => {
     console.log(`[đột biến 17] crossRef vi phạm: ${r.crossRef.violations.length}/${r.crossRef.total}; leak ${r.leak.violations.length}: ${hit.join('; ')}`);
     expect(hit.length).toBe(1);
     expect(hit[0]).toContain('KHÁC phản hồi mã bịa');
+  });
+
+  // Năm đột biến bản vẽ E mục 6.3 (gói E5), đánh số TIẾP SAU 17 (15–17 đã dùng cho giấy chứng nhận — nhật ký quyết định thay
+  // 20/10, dòng E3): 18 ↔ bản vẽ 15, 19 ↔ 16, 20 ↔ 17, 21 ↔ 18, 22 ↔ 19. Cửa gác chạy trên ĐÚNG 11 đường cổng (5 đường học
+  // viên + 6 đường trung tâm) — fixture vẫn dựng bằng app thật đủ đường.
+  const PORTAL_CENTER_ROUTES = new Set([
+    'GET /orgs/:orgId/customers/:customerId/portal',
+    'POST /orgs/:orgId/customers/:customerId/portal/links',
+    'POST /orgs/:orgId/customers/:customerId/portal/revoke',
+    'POST /orgs/:orgId/portal-devices/:deviceId/block',
+    'GET /orgs/:orgId/portal-settings',
+    'PUT /orgs/:orgId/portal-settings',
+  ]);
+  const portalOnly = (routes: AnyRoute[], extra: string[] = []) => {
+    const k = (r: AnyRoute) => `${r.method.toUpperCase()} ${r.path}`;
+    const kept = routes.filter((r) => isPortalPath(r.path) || r.scope === 'portal' || PORTAL_CENTER_ROUTES.has(k(r)) || extra.includes(k(r)));
+    const student = ALL_ROUTES.filter((r) => isPortalPath(r.path)).length;
+    if (student !== 5) throw new Error(`Bảng route có ${student}/5 đường học viên`);
+    if (kept.length !== 5 + PORTAL_CENTER_ROUTES.size + extra.length) throw new Error(`Bảng route có ${kept.length} đường cổng`);
+    return kept;
+  };
+  const summary = (r: GateReport) => GATE_CHECKS.map((n) => `${n} ${r[n].passed}/${r[n].total}`).join(', ');
+
+  it('Bản vẽ E — 11 đường cổng chưa cài lỗi: cửa gác 14 phép xanh trọn (vế GIỮ của năm đột biến dưới)', async () => {
+    const r = await gateOn(portalOnly(ALL_ROUTES));
+    const bad = GATE_CHECKS.filter((n) => r[n].violations.length > 0).map((n) => `${n}: ${r[n].violations.join('; ')}`);
+    console.log(`[E gốc] ${summary(r)}`);
+    expect(bad).toEqual([]);
+    expect(r.portalScope.total).toBe(5);
+    expect(r.portalLeak.total).toBe(3);
+    expect(r.portalProbe.total).toBe(15);
+    expect(r.crossId.total).toBe(4);
+  });
+
+  it('Đột biến 18 — đường cổng đọc học viên từ THÂN (body: { customerId }) → defineRoute ném lỗi; dựng thẳng thì portalScope đỏ', async () => {
+    const original = ALL_ROUTES.find((r) => r.method === 'post' && r.path === '/portal/session/handoff');
+    if (!original) throw new Error('Không có route tạo mã chuyển máy');
+    const body = z.object({ customerId: z.uuid() });
+    expect(() => defineRoute({ ...original, body } as Parameters<typeof defineRoute>[0])).toThrow(/customerId/);
+    // Dựng thẳng đối tượng (vượt chốt khởi động): học viên lấy từ thân thay vì từ phiên.
+    const mutant = { ...original, body, handler: async (ctx: Parameters<typeof original.handler>[0]) =>
+      original.handler({ ...ctx, portal: { ...mustPortal(ctx.portal), customerId: (ctx.body as { customerId: string }).customerId } }) } as AnyRoute;
+    const r = await gateOn(portalOnly(replace(mutant)));
+    const hit = r.portalScope.violations.filter((v) => v.startsWith('POST /portal/session/handoff:'));
+    console.log(`[đột biến 18] portalScope vi phạm: ${r.portalScope.violations.length}/${r.portalScope.total}: ${hit.join('; ')}`);
+    expect(hit.length).toBe(1);
+    expect(hit[0]).toContain('customerId');
+  });
+
+  it('Đột biến 19 — /portal/me lọc thẻ thiết kế theo tổ chức, quên học viên → portalLeak đỏ (A1 thấy thẻ của A2)', async () => {
+    const mutant = onDb('get', '/portal/me', (db) =>
+      db.$extends({
+        query: {
+          designCard: {
+            findMany({ args, query }) {
+              if (args.where) delete (args.where as { customerId?: unknown }).customerId;
+              return query(args);
+            },
+          },
+        },
+      }) as unknown as Db,
+    );
+    const r = await gateOn(portalOnly(replace(mutant)));
+    const hit = r.portalLeak.violations.filter((v) => v.startsWith('GET /portal/me (A1)'));
+    console.log(`[đột biến 19] portalLeak vi phạm: ${r.portalLeak.violations.length}/${r.portalLeak.total}: ${r.portalLeak.violations.join('; ')}`);
+    expect(hit.length).toBe(1);
+    expect(hit[0]).toContain('Lớp riêng A2');
+  });
+
+  it('Đột biến 20 — GET /orgs/:orgId/customers bị gắn nhầm scope "portal" (dựng thẳng) → portalWall và portalScope đỏ', async () => {
+    const original = ALL_ROUTES.find((r) => r.method === 'get' && r.path === '/orgs/:orgId/customers');
+    if (!original) throw new Error('Không có route danh sách khách');
+    const mutant = { ...original, scope: 'portal' } as AnyRoute;
+    const r = await gateOn(portalOnly(replace(mutant), ['GET /orgs/:orgId/customers']));
+    const wall = r.portalWall.violations.filter((v) => v.startsWith('GET /orgs/:orgId/customers ('));
+    const scope = r.portalScope.violations.filter((v) => v.startsWith('GET /orgs/:orgId/customers:'));
+    console.log(`[đột biến 20] portalWall vi phạm: ${r.portalWall.violations.length}/${r.portalWall.total}: ${wall.join('; ')}`);
+    console.log(`[đột biến 20] portalScope vi phạm: ${r.portalScope.violations.length}/${r.portalScope.total}: ${scope.join('; ')}`);
+    expect(wall.some((v) => v.includes('(cookie cổng + X-Client: portal)'))).toBe(true);
+    expect(scope.length).toBe(1);
+  });
+
+  it('Đột biến 21 — mở bằng 4 số báo "Sai số điện thoại" / "Đường dẫn không tồn tại" (hai lời khác nhau) → portalProbe đỏ', async () => {
+    const original = ALL_ROUTES.find((r) => r.method === 'post' && r.path === '/portal/session');
+    if (!original) throw new Error('Không có route mở cổng');
+    const mutant = { ...original, handler: async (ctx: Parameters<typeof original.handler>[0]) => {
+      try {
+        return await original.handler(ctx);
+      } catch (err) {
+        const body = ctx.body as { key: string; last4: string };
+        const link = await ctx.deps.db.portalLink.findUnique({ where: { keyHash: sha256Hex(body.key) }, select: { customer: { select: { phone: true } } } });
+        if (!link) throw new AppError('UNAUTHENTICATED', 'Đường dẫn không tồn tại');
+        if (phoneLast4(link.customer.phone) !== body.last4) throw new AppError('UNAUTHENTICATED', 'Sai số điện thoại');
+        throw err;
+      }
+    } } as AnyRoute;
+    const r = await gateOn(portalOnly(replace(mutant)));
+    const hit = r.portalProbe.violations.filter((v) => v.startsWith('POST /portal/session ['));
+    console.log(`[đột biến 21] portalProbe vi phạm: ${r.portalProbe.violations.length}/${r.portalProbe.total}: ${hit.join('; ')}`);
+    expect(hit.some((v) => v.startsWith('POST /portal/session [sai 4 số]') && v.includes('KHÁC phản hồi "chìa không có"'))).toBe(true);
+  });
+
+  it('Đột biến 22 — /portal/me trả thêm Contract.notes (ghi chú nội bộ) → portalLeak đỏ', async () => {
+    const original = ALL_ROUTES.find((r) => r.method === 'get' && r.path === '/portal/me');
+    if (!original) throw new Error('Không có route /portal/me');
+    const mutant = { ...original, handler: async (ctx: Parameters<typeof original.handler>[0]) => {
+      const res = await original.handler(ctx);
+      const p = mustPortal(ctx.portal);
+      const notes = await ctx.deps.db.contract.findMany({
+        where: { organizationId: p.organizationId, customerId: p.customerId },
+        select: { code: true, notes: true },
+      });
+      const body = res.body as { contracts: { code: string }[] };
+      return { ...res, body: { ...body, contracts: body.contracts.map((c) => ({ ...c, notes: notes.find((n) => n.code === c.code)?.notes ?? null })) } };
+    } } as AnyRoute;
+    const r = await gateOn(portalOnly(replace(mutant)));
+    console.log(`[đột biến 22] portalLeak vi phạm: ${r.portalLeak.violations.length}/${r.portalLeak.total}: ${r.portalLeak.violations.join('; ')}`);
+    // Cả ba học viên: hợp đồng của chính mình mang ghi chú nội bộ (chuỗi bí mật BI-MAT-… của trung tâm).
+    expect(r.portalLeak.violations.length).toBe(3);
+    expect(r.portalLeak.violations.every((v) => v.includes('BI-MAT-'))).toBe(true);
   });
 });
