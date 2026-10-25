@@ -5,7 +5,7 @@ import { AppError } from '../../lib/errors';
 import { writeAudit } from '../../lib/audit';
 import { assertUsableImage, signImages } from './images';
 import { publicRoutes } from './public';
-import { CertificateSignerBody, ProfileBody, parseStoredHours, type ProfileInput } from './schemas';
+import { CertificateSignerBody, ContractInfoBody, ProfileBody, parseStoredHours, type ProfileInput } from './schemas';
 import { DEFAULT_SIGNER_TITLE } from '@makeup/shared';
 
 type ProfileRow = Prisma.OrganizationProfileGetPayload<object>;
@@ -134,6 +134,62 @@ const certificateSignerRoutes = [
   }),
 ];
 
+type ContractInfo = Pick<
+  ProfileRow,
+  'representativeName' | 'representativeTitle' | 'bankName' | 'bankAccountNumber' | 'bankAccountName'
+>;
+
+function contractInfoValues(p: ContractInfo) {
+  return {
+    representativeName: p.representativeName,
+    representativeTitle: p.representativeTitle,
+    bankName: p.bankName,
+    bankAccountNumber: p.bankAccountNumber,
+    bankAccountName: p.bankAccountName,
+  };
+}
+
+// Thông tin trên hợp đồng (bản vẽ G mục 3.3 đường 8, 3.4): người đại diện + tài khoản ngân hàng. Sửa: org.update — chỉ Chủ
+// và Quản trị (SYSTEM_ROLES). Đọc: đi theo GET /profile (presentProfile trải cả dòng). CHỈ ghi 5 cột này; PUT /profile không
+// đụng (toData không liệt kê). Chưa có hồ sơ → 409 PROFILE_REQUIRED, không tự tạo hồ sơ (cửa gác cần tổ chức chưa có hồ sơ).
+const contractInfoRoutes = [
+  defineRoute({
+    method: 'put',
+    path: '/orgs/:orgId/profile/contract-info',
+    scope: 'org',
+    permission: 'org.update',
+    tag: 'Hồ sơ thương hiệu',
+    summary: 'Ghi thông tin trên hợp đồng: người đại diện, chức vụ, ngân hàng, số tài khoản, chủ tài khoản (đủ 5 khoá, null = để trống)',
+    body: ContractInfoBody,
+    handler: async ({ deps, org, body, userId, requestId }) => {
+      const o = mustOrg(org);
+      const saved = await deps.db.$transaction(async (tx) => {
+        const before = await lockProfile(tx, o.id);
+        if (!before) {
+          throw new AppError('CONFLICT', 'Chưa có hồ sơ thương hiệu — lưu hồ sơ ở Cài đặt › Hồ sơ thương hiệu trước', {
+            reason: 'PROFILE_REQUIRED',
+          });
+        }
+        const after = await tx.organizationProfile.update({
+          where: { organizationId: o.id },
+          data: contractInfoValues(body),
+        });
+        await writeAudit(tx, {
+          organizationId: o.id,
+          actorUserId: mustUser(userId),
+          action: 'profile.contract_info_updated',
+          entityType: 'organization_profile',
+          entityId: o.id,
+          data: { before: contractInfoValues(before), after: contractInfoValues(after) },
+          requestId,
+        });
+        return after;
+      });
+      return { body: await presentProfile(deps.db, o.id, saved) };
+    },
+  }),
+];
+
 const orgProfileRoutes = [
   defineRoute({
     method: 'get',
@@ -252,4 +308,4 @@ const orgProfileRoutes = [
   }),
 ];
 
-export const profileRoutes: AnyRoute[] = [...orgProfileRoutes, ...certificateSignerRoutes, ...publicRoutes];
+export const profileRoutes: AnyRoute[] = [...orgProfileRoutes, ...certificateSignerRoutes, ...contractInfoRoutes, ...publicRoutes];

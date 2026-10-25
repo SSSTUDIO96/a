@@ -71,6 +71,8 @@ export const SAMPLES: Samples = {
   'POST /orgs/:orgId/customers/:customerId/portal/links': () => ({ phoneConfirmed: true }),
   'POST /orgs/:orgId/customers/:customerId/portal/revoke': () => ({ reason: 'Thử cửa gác' }),
   'POST /orgs/:orgId/portal-devices/:deviceId/block': () => ({ reason: 'Thử cửa gác' }),
+  // Mẫu in hợp đồng (bản vẽ G, gói G-M3). Đường dẫn mang mã mẫu của tổ chức khác → 404 trước mọi ghi.
+  'PATCH /orgs/:orgId/print-templates/:templateId': () => ({ name: 'Đổi tên thử' }),
 };
 
 // Mẫu HỢP LỆ dùng toàn mã của chính tổ chức — cửa gác tự thay TỪNG trường mã bằng mã của tổ chức khác.
@@ -521,6 +523,23 @@ export const PARTIAL_SAMPLES: PartialSamples = {
       isActive: false,
     }),
     one: () => ({ note: 'Ghi chú đổi' }),
+  },
+  // Mẫu in hợp đồng (bản vẽ G, gói G-M3) — chạy trên mẫu dịch vụ MẶC ĐỊNH của tổ chức (giữ defaultFor ['SERVICE']: không
+  // bỏ mặc định được). Tổ chức thử là ACADEMY nên appliesTo nhận cả khoá học.
+  'PATCH /orgs/:orgId/print-templates/:templateId': {
+    full: () => ({
+      name: 'Mẫu đủ',
+      layout: 4,
+      appliesTo: ['SERVICE', 'COURSE'],
+      blocks: { 'ky-nhay': true, 'giay-to': true },
+      title: 'TIÊU ĐỀ ĐỦ',
+      openingText: 'Mở đầu {Tên khách}',
+      closingText: 'Kết thúc',
+      defaultFor: ['SERVICE'],
+      isActive: true,
+    }),
+    one: () => ({ name: 'Mẫu đổi tên' }),
+    derived: { version: 'tăng khi đổi nội dung in', usage: 'đếm từ nhật ký in', updatedBy: 'người sửa' },
   },
   'PATCH /platform/organizations/:organizationId': {
     full: () => ({ status: 'ACTIVE', reason: 'Mở lại' }),

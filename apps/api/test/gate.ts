@@ -399,6 +399,19 @@ async function setupOrg(app: App, db: Db, label: string): Promise<GateOrg> {
   })) as { items?: { id?: string }[] };
   const certificateId = issued.items?.[0]?.id;
   if (!certificateId) throw new Error(`Cửa gác: cấp giấy chứng nhận mẫu không trả items[0].id: ${JSON.stringify(issued)}`);
+  // ---- Mẫu in hợp đồng (bản vẽ G, gói G-M3): mẫu MẶC ĐỊNH cài sẵn lúc tạo tổ chức — đọc THẬT qua đường danh sách (không
+  //      tạo mới, không mã cứng). Tổ chức thử là ACADEMY nên có đủ mẫu dịch vụ + mẫu khoá học.
+  const defaultTemplate = async (kind: 'SERVICE' | 'COURSE') => {
+    const res = await request(app).get(`/api/v1${o}/print-templates?appliesTo=${kind}`).set(bearer(owner));
+    const items = (res.body as { items?: { id: string; defaultFor: string[] }[] }).items ?? [];
+    const hit = items.filter((t) => t.defaultFor.includes(kind));
+    if (res.status !== 200 || hit.length !== 1) {
+      throw new Error(`Cửa gác: tổ chức thử cần đúng 1 mẫu in mặc định ${kind}, có ${hit.length} (${res.status}): ${JSON.stringify(res.body)}`);
+    }
+    return hit[0]!.id;
+  };
+  const templateId = await defaultTemplate('SERVICE');
+  const courseTemplateId = await defaultTemplate('COURSE');
   // ---- Cổng học viên (bản vẽ E 6.3): học viên có SĐT, đường dẫn tạo bằng đường E4, mở bằng 4 số qua đường E3.
   const seeded = await seedPortal(app, { orgId, owner, label });
   return {
@@ -454,6 +467,8 @@ async function setupOrg(app: App, db: Db, label: string): Promise<GateOrg> {
       enrollmentId,
       enrollment2Id,
       certificateId,
+      templateId,
+      courseTemplateId,
       ...seeded.ids,
     },
   };

@@ -19,6 +19,7 @@ function screen<M>(load: () => Promise<M>, pick: (m: M) => ComponentType) {
 }
 
 const BrandPage = screen(() => import('../features/brand'), (m) => m.BrandPage);
+const CertificateRegisterPage = screen(() => import('../features/certificates'), (m) => m.CertificateRegisterPage);
 const ContractListPage = screen(() => import('../features/contracts'), (m) => m.ContractListPage);
 const CoursesPage = screen(() => import('../features/courses'), (m) => m.CoursesPage);
 const CustomersPage = screen(() => import('../features/customers'), (m) => m.CustomersPage);
@@ -97,6 +98,7 @@ const orgChildren: RouteObject[] = [
   { path: 'bao-cao/so-thu', element: guarded('so-thu', <CashbookPage />) },
   { path: 'dao-tao', element: guarded('dao-tao', <CoursesPage />) },
   { path: 'dao-tao/*', element: guarded('dao-tao', <CoursesPage />) },
+  { path: 'giay-chung-nhan', element: guarded('giay-chung-nhan', <CertificateRegisterPage />) },
   { path: 'mau-thiet-ke', element: guarded('mau-thiet-ke', <DesignsPage />) },
   { path: 'mau-thiet-ke/*', element: guarded('mau-thiet-ke', <DesignsPage />) },
   { path: 'cai-dat', element: guarded('cai-dat', <Navigate to="thuong-hieu" replace />) },

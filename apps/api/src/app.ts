@@ -23,6 +23,7 @@ import { designRoutes } from './modules/designs/routes';
 import { certificateRoutes } from './modules/certificates/routes';
 import { todayRoutes } from './modules/today/routes';
 import { portalRoutes } from './modules/portal/routes';
+import { printModuleRoutes } from './modules/print/routes';
 import { authenticatePortal } from './modules/portal/auth';
 import { createHash, type Hash } from 'node:crypto';
 import { RAW_ROUTE, rawFileHandler } from './modules/files/raw';
@@ -52,6 +53,8 @@ export const ALL_ROUTES: AnyRoute[] = [
   ...todayRoutes,
   // Cổng học viên (bản vẽ E): gói E3 điền đường học viên, gói E4 điền đường trung tâm.
   ...portalRoutes,
+  // Mẫu in hợp đồng (bản vẽ G): gói G-M3 đường mẫu in, gói G-M4 đường dữ liệu in + nhật ký in.
+  ...printModuleRoutes,
 ];
 
 export function createApp(deps: Deps, routes: AnyRoute[] = ALL_ROUTES) {

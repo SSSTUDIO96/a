@@ -8,6 +8,7 @@ import { assertCanEditRole, assertCanGrant, assertCanTouchMember, assertKeepsAnO
 import { lockOrgAndRecheck, recordNewOrgIdempotency } from '../../http/middleware';
 import { seedDefaultGreetingPhrases } from '../designs/seed';
 import { seedDefaultOccasions } from '../catalog/occasions';
+import { seedDefaultPrintTemplates } from '../print/seed';
 
 // Tên trang của web không được dùng làm đường dẫn tổ chức (web dùng /:orgSlug/...).
 // 'trang': trang giới thiệu công khai nằm ở /trang/:slug — tổ chức đặt đường dẫn "trang" sẽ đè đường đó.
@@ -133,6 +134,8 @@ export const orgRoutes = [
         await seedDefaultOccasions(tx, created.id);
         // 6 câu chúc mặc định cho thiết kế thẻ (hàm dùng chung với lệnh chạy bù; không chép hai lần).
         await seedDefaultGreetingPhrases(tx, created.id);
+        // Mẫu in mặc định (bản vẽ G): dịch vụ cho mọi tổ chức, thêm khoá học cho ACADEMY — cùng logic đoạn SEED của migration.
+        await seedDefaultPrintTemplates(tx, created.id);
         await tx.travelFeePolicy.create({ data: { organizationId: created.id } });
         const membership = await tx.membership.create({ data: { organizationId: created.id, userId: uid } });
         await tx.membershipRole.create({

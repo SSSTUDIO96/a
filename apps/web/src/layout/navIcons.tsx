@@ -72,6 +72,13 @@ const PATHS: Record<NavIconName | 'brand' | 'more' | 'logout' | 'swap' | 'down',
       <path d="M6 11v5c2 2 10 2 12 0v-5M22 9v6" />
     </>
   ),
+  // Giấy chứng nhận (bản vẽ F mục 6.5): tờ giấy có dải ruy băng.
+  'chung-nhan': (
+    <>
+      <rect x="3" y="4" width="18" height="12.5" rx="2" />
+      <path d="M7 8.5h10M7 12h5M15.5 16.5V21l2-1.3 2 1.3v-4.5" />
+    </>
+  ),
   mau: (
     <>
       <rect x="3" y="3" width="18" height="18" rx="2" />

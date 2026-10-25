@@ -129,3 +129,47 @@ export const CertificateSignerBody = z.strictObject(
 );
 
 export type CertificateSignerInput = z.infer<typeof CertificateSignerBody>;
+
+// Thông tin trên hợp đồng (bản vẽ G mục 3.3 đường 8): người đại diện + tài khoản ngân hàng. PUT ghi toàn bộ: đủ 5 khoá,
+// giá trị null = để trống. Không nằm trong ProfileBody: PUT /profile không bao giờ xoá 5 trường này.
+const InfoText = (label: string, min: number, max: number) =>
+  z
+    .string({ error: `Nhập ${label} hoặc gửi null` })
+    .trim()
+    .min(min, min > 1 ? `${label[0]?.toUpperCase() ?? ''}${label.slice(1)} cần ít nhất ${min} ký tự` : `${label[0]?.toUpperCase() ?? ''}${label.slice(1)} không được để trống (gửi null để bỏ)`)
+    .max(max, `${label[0]?.toUpperCase() ?? ''}${label.slice(1)} tối đa ${max} ký tự`)
+    .nullable();
+
+export const BANK_ALL_OR_NONE_MESSAGE = 'Nhập đủ ngân hàng, số tài khoản, chủ tài khoản (hoặc để trống cả ba)';
+
+export const ContractInfoBody = z
+  .strictObject(
+    {
+      representativeName: InfoText('tên người đại diện', 1, 120),
+      representativeTitle: InfoText('chức vụ người đại diện', 1, 80),
+      bankName: InfoText('tên ngân hàng', 2, 120),
+      // Chuẩn hoá: bỏ mọi khoảng trắng, viết hoa (database chỉ nhận ^[0-9A-Z]{4,30}$).
+      bankAccountNumber: z
+        .string({ error: 'Nhập số tài khoản hoặc gửi null' })
+        .transform((s) => s.replace(/\s+/g, '').toUpperCase())
+        .pipe(z.string().regex(/^[0-9A-Z]{4,30}$/, 'Số tài khoản chỉ gồm chữ số / chữ cái, 4–30 ký tự'))
+        .nullable(),
+      bankAccountName: InfoText('chủ tài khoản', 2, 120),
+    },
+    { error: (iss) => (iss.code === 'unrecognized_keys' ? `Không nhận trường: ${iss.keys.join(', ')}` : undefined) },
+  )
+  .superRefine((b, ctx) => {
+    const bank = [b.bankName, b.bankAccountNumber, b.bankAccountName];
+    const filled = bank.filter((v) => v !== null).length;
+    if (filled !== 0 && filled !== 3) {
+      const keys = ['bankName', 'bankAccountNumber', 'bankAccountName'] as const;
+      for (const [i, k] of keys.entries()) {
+        if (bank[i] === null) ctx.addIssue({ code: 'custom', path: [k], message: BANK_ALL_OR_NONE_MESSAGE });
+      }
+    }
+    if (b.representativeTitle !== null && b.representativeName === null) {
+      ctx.addIssue({ code: 'custom', path: ['representativeName'], message: 'Có chức vụ thì phải có tên người đại diện' });
+    }
+  });
+
+export type ContractInfoInput = z.infer<typeof ContractInfoBody>;

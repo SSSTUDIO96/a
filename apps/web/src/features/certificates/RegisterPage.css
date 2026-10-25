@@ -1,0 +1,113 @@
+/*
+ * Sổ giấy chứng nhận (bản vẽ F mục 6.5; ảnh mẫu docs/rnd/anh-rnd08/luong-a-so-1440.png, luong-a-so-390.png). Tiền tố gcr-.
+ * Chỉ dùng token ở src/styles/tokens.css. Điểm gãy: máy tính bảng ≤ 1180px, điện thoại ≤ 640px.
+ */
+.gcr-page { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.gcr-ph-sub { font-size: 13.5px; font-weight: 400; color: var(--muted); }
+.sh-ph:has(> .gcr-ph-sub) > h1 { order: -2; }
+.sh-ph > .gcr-ph-sub { order: -1; margin-left: -2px; }
+
+.gcr-card { min-width: 0; overflow: clip; }
+.gcr-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* ----- Dải báo ----- */
+.gcr-band { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 12px; border-radius: 10px; font-size: 13.5px; line-height: 1.45; overflow-wrap: anywhere; }
+.gcr-band > span { min-width: 0; }
+.gcr-band--ok { background: var(--ok-bg); color: var(--ok); border: 1px solid var(--ok); }
+.gcr-band--err { background: var(--danger-bg); color: var(--danger); border: 1px solid var(--danger-line); }
+.gcr-band--warn { background: var(--warn-bg); color: var(--warn); border: 1px solid var(--warn-line); }
+.gcr-err { display: flex; align-items: center; gap: 8px; margin: 12px 16px; padding: 8px 12px; border: 1px solid var(--danger-line); border-radius: 10px; background: var(--danger-bg); color: var(--danger); font-size: 13px; }
+.gcr-err > .ui-ico { width: 16px; height: 16px; flex: none; }
+.gcr-err__text { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.gcr-skel { display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; }
+.gcr-empty { padding: 18px; }
+
+/* ----- Bộ lọc ----- */
+.gcr-filters { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 14px; padding: 14px 18px; border-bottom: 1px solid var(--line); }
+.gcr-f { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.gcr-f > label { font-size: 12px; font-weight: 600; color: var(--muted); }
+.gcr-f .ui-select, .gcr-f .ui-input { min-width: 150px; }
+.gcr-f--grow { flex: 1 1 260px; }
+.gcr-f--grow .ui-input { width: 100%; }
+.gcr-chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 18px; border-bottom: 1px solid var(--line); }
+.gcr-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 999px; border: 1px solid var(--accent-line); background: var(--accent-soft); color: var(--accent); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; max-width: 100%; overflow-wrap: anywhere; text-align: left; }
+.gcr-chip:hover { background: var(--accent-line); }
+
+/* ----- Thanh chọn nhiều ----- */
+.gcr-selbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding: 8px 18px; background: var(--accent-soft); border-bottom: 1px solid var(--accent-line); font-size: 13.5px; }
+.gcr-selbar__txt { min-width: 0; overflow-wrap: anywhere; }
+.gcr-selbar__btns { display: inline-flex; gap: 8px; align-items: center; }
+
+/* ----- Bảng ----- */
+.gcr-body { min-width: 0; }
+.gcr-wrapx { overflow-x: auto; min-width: 0; }
+.gcr-tbl { width: 100%; border-collapse: collapse; font-size: 14px; }
+.gcr-tbl th { text-align: left; font-size: 11.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); background: var(--soft); padding: 10px 14px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.gcr-tbl td { padding: 11px 14px; border-bottom: 1px solid var(--line-2); vertical-align: middle; }
+.gcr-tbl tr:last-child td { border-bottom: 0; }
+.gcr-col-check { width: 44px; padding-right: 0 !important; }
+.gcr-col-act { width: 1%; white-space: nowrap; text-align: right; }
+.gcr-acts { display: inline-flex; align-items: center; gap: 6px; justify-content: flex-end; }
+.gcr-code { font-weight: 700; white-space: nowrap; }
+.gcr-name { display: block; overflow-wrap: anywhere; }
+.gcr-sub { display: block; font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+.gcr-tbl .num { font-variant-numeric: tabular-nums; }
+.gcr-status { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; min-width: 0; }
+.gcr-status .ui-tag { white-space: normal; text-align: left; }
+.gcr-status__why { font-size: 12px; color: var(--muted); overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; max-width: 260px; }
+.gcr-tbl tr.is-revoked td, .gcr-cardrow.is-revoked .gcr-dl dd:not(:last-child) { color: var(--muted); }
+.gcr-tbl tr.is-revoked .gcr-code, .gcr-cardrow.is-revoked .gcr-code { color: var(--muted); }
+.gcr-danger { color: var(--danger); }
+.gcr-more { padding: 0; }
+
+/* ----- Menu ⋯ (gắn vào body) ----- */
+.gcr-menu { position: fixed; z-index: 1000; min-width: 150px; padding: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 8px 24px rgba(34, 28, 25, .16); display: flex; flex-direction: column; }
+.gcr-menu__item { display: block; width: 100%; text-align: left; padding: 8px 12px; border: 0; border-radius: 8px; background: transparent; font: inherit; font-size: 14px; color: var(--text); cursor: pointer; }
+.gcr-menu__item:hover, .gcr-menu__item:focus-visible { background: var(--accent-soft); outline: none; }
+.gcr-menu__item.is-danger { color: var(--danger); }
+.gcr-menu__item.is-danger:hover, .gcr-menu__item.is-danger:focus-visible { background: var(--danger-bg); }
+
+/* ----- Phân trang ----- */
+.gcr-pager { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 10px 14px; border-top: 1px solid var(--line-2); font-size: 12.5px; color: var(--muted); }
+.gcr-pager__btns { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+
+/* ----- Hộp cấp lại ----- */
+.gcr-reissue { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.gcr-reissue__other { padding: 0 0 8px; }
+.gcr-reissue__note { margin: -4px 0 6px; font-size: 12px; color: var(--muted); }
+.gcr-reissue__fe { margin: 0 0 6px; font-size: 12px; color: var(--danger); }
+.gcr-reissue__band { margin-top: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--soft); color: var(--muted); font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
+.gcr-reissue__band b { color: var(--text); }
+.gcr-reissue__err { margin-top: 10px; padding: 8px 12px; border: 1px solid var(--danger-line); border-radius: 10px; background: var(--danger-bg); color: var(--danger); font-size: 13px; line-height: 1.45; overflow-wrap: anywhere; }
+
+/* ----- Hộp in ----- */
+.ui-dialog.gcr-dlg--print { width: min(820px, 100%); }
+.gcr-print { display: flex; flex-direction: column; gap: 12px; padding: 10px 0 4px; min-width: 0; }
+
+/* ----- Máy tính bảng ----- */
+@media (max-width: 1180px) {
+  .gcr-filters { padding: 12px 14px; }
+  .gcr-tbl th, .gcr-tbl td { padding-left: 10px; padding-right: 10px; }
+}
+
+/* ----- Điện thoại: mỗi bản một thẻ (luong-a-so-390.png) ----- */
+.gcr-allrow { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--line-2); font-size: 13.5px; color: var(--muted); }
+.gcr-cards { list-style: none; margin: 0; padding: 0; }
+.gcr-cardrow { padding: 12px 14px; border-bottom: 1px solid var(--line-2); display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.gcr-cardrow:last-child { border-bottom: 0; }
+.gcr-cardrow__top:empty { display: none; }
+.gcr-dl { margin: 0; display: flex; flex-direction: column; gap: 4px; }
+.gcr-dl > div { display: flex; gap: 8px; align-items: baseline; min-width: 0; }
+.gcr-dl dt { flex: none; width: 82px; font-size: 13px; color: var(--muted); }
+.gcr-dl dd { margin: 0; min-width: 0; overflow-wrap: anywhere; font-size: 14px; }
+.gcr-cardrow__btns { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding-top: 4px; }
+@media (max-width: 640px) {
+  .gcr-ph-sub { display: none; }
+  .gcr-filters { padding: 12px 14px; }
+  .gcr-f { flex: 1 1 100%; }
+  .gcr-f--grow { order: -1; }
+  .gcr-f .ui-select, .gcr-f .ui-input { width: 100%; min-width: 0; }
+  .gcr-filters .gcr-f:not(.gcr-f--grow) { flex: 1 1 calc(50% - 7px); }
+  .gcr-selbar { position: sticky; bottom: calc(var(--h-bottomnav, 0px) + 8px); z-index: 5; margin: 0 8px; border: 1px solid var(--accent-line); border-radius: 10px; }
+  .gcr-status__why { max-width: none; }
+}

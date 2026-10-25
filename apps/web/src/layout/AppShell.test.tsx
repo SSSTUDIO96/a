@@ -250,7 +250,7 @@ describe('thanh dưới điện thoại theo loại tổ chức (C3 mục 1.0)',
     expect(phoneActive()).toEqual(['Thu tiền']);
   });
 
-  it('ACADEMY: ngăn "Thêm" có Hôm nay, Bảng giá, Khách hàng, Thợ makeup, Báo cáo, Mẫu thiết kế, Cài đặt', async () => {
+  it('ACADEMY: ngăn "Thêm" có Hôm nay, Bảng giá, Khách hàng, Thợ makeup, Báo cáo, Giấy chứng nhận, Mẫu thiết kế, Cài đặt', async () => {
     setupServer(OWNER, { kind: 'ACADEMY' });
     renderAt('/hoa-dao/hop-dong');
     await mainMenuLinks();
@@ -258,7 +258,7 @@ describe('thanh dưới điện thoại theo loại tổ chức (C3 mục 1.0)',
     fireEvent.click(within(screen.getByRole('navigation', { name: 'Mục chính (điện thoại)' })).getByRole('button', { name: 'Thêm' }));
     const sheet = await screen.findByRole('dialog', { name: 'Thêm' });
     const list = sheet.querySelector('.sh-more__list');
-    expect([...(list?.querySelectorAll('a') ?? [])].map((a) => a.textContent)).toEqual(['Hôm nay', 'Bảng giá', 'Khách hàng', 'Thợ makeup', 'Báo cáo', 'Mẫu thiết kế', 'Cài đặt']);
+    expect([...(list?.querySelectorAll('a') ?? [])].map((a) => a.textContent)).toEqual(['Hôm nay', 'Bảng giá', 'Khách hàng', 'Thợ makeup', 'Báo cáo', 'Giấy chứng nhận', 'Mẫu thiết kế', 'Cài đặt']);
   });
 
   it('INDIVIDUAL: Lịch · Hợp đồng · Bảng giá · Khách · Thêm; ở /thu-tien ô "Hợp đồng" đang chọn', async () => {
@@ -378,6 +378,7 @@ describe('nav.ts', () => {
         ],
       ],
       ['dao-tao', 'courses.read', []],
+      ['giay-chung-nhan', 'certificates.read', []],
       ['mau-thiet-ke', 'designs.read', []],
       ['cai-dat', 'org.update', [['cai-dat/thuong-hieu', 'org.update'], ['cai-dat/cong-hoc-vien', 'org.update'], ['cai-dat/cai-app', 'org.update']]],
     ]);
@@ -428,7 +429,7 @@ describe('nav.ts', () => {
     const items = [...visibleNav(() => true, 'ACADEMY'), daoTao];
     const academy = bottomNav(items, 'ACADEMY');
     expect(academy.main.map((m) => m.shortLabel)).toEqual(['Lịch', 'Hợp đồng', 'Thu tiền', 'Khoá học']);
-    expect(academy.rest.map((i) => i.key)).toEqual(['hom-nay', 'bang-gia', 'khach-hang', 'nhan-su', 'bao-cao', 'mau-thiet-ke', 'cai-dat']);
+    expect(academy.rest.map((i) => i.key)).toEqual(['hom-nay', 'bang-gia', 'khach-hang', 'nhan-su', 'bao-cao', 'giay-chung-nhan', 'mau-thiet-ke', 'cai-dat']);
     expect(activeBottomKey(academy.main, activeNavItem('thu-tien'), activeNavChild(activeNavItem('thu-tien'), 'thu-tien'))).toBe('thu-tien');
     expect(bottomNav(visibleNav(() => true, 'INDIVIDUAL'), 'INDIVIDUAL').main.map((m) => m.shortLabel)).toEqual(['Lịch', 'Hợp đồng', 'Bảng giá', 'Khách']);
   });
@@ -527,5 +528,75 @@ describe('mục Hôm nay', () => {
     fireEvent.click(within(screen.getByRole('navigation', { name: 'Mục chính (điện thoại)' })).getByRole('button', { name: 'Thêm' }));
     const sheet = await screen.findByRole('dialog', { name: 'Thêm' });
     expect([...(sheet.querySelector('.sh-more__list')?.querySelectorAll('a') ?? [])].map((a) => a.textContent)).toEqual(['Hôm nay']);
+  });
+});
+
+// ---- Mục "Giấy chứng nhận" (bản vẽ F mục 6.5; ký duyệt F câu 2) ----
+describe('mục Giấy chứng nhận', () => {
+  const ROLE = (key: keyof typeof SYSTEM_ROLES) => (p: Permission) => (SYSTEM_ROLES[key].permissions as readonly string[]).includes(p);
+
+  it('khai báo đúng bản vẽ: ngay sau Đào tạo, quyền certificates.read, chỉ ACADEMY, không làm trang mở đầu, KHÔNG là mục con của Đào tạo', () => {
+    const keys = NAV_ITEMS.map((i) => i.key);
+    expect(keys.indexOf('giay-chung-nhan')).toBe(keys.indexOf('dao-tao') + 1);
+    expect(NAV_ITEMS.find((i) => i.key === 'giay-chung-nhan')).toEqual({
+      key: 'giay-chung-nhan',
+      path: 'giay-chung-nhan',
+      label: 'Giấy chứng nhận',
+      shortLabel: 'Chứng nhận',
+      icon: 'chung-nhan',
+      permission: 'certificates.read',
+      orgKinds: ['ACADEMY'],
+    });
+    expect(NAV_ITEMS.find((i) => i.key === 'dao-tao')?.children).toBeUndefined();
+    expect(matchRoutes(routes, '/hoa-dao/giay-chung-nhan')?.at(-1)?.route.path).toBe('giay-chung-nhan');
+  });
+
+  it('thanh dưới điện thoại ACADEMY GIỮ NGUYÊN; mục mới nằm trong "Thêm"', () => {
+    const shown = bottomNav(visibleNav(ROLE('owner'), 'ACADEMY'), 'ACADEMY');
+    expect(shown.main.map((m) => m.shortLabel)).toEqual(['Lịch', 'Hợp đồng', 'Thu tiền', 'Khoá học']);
+    expect(shown.rest.map((i) => i.key)).toContain('giay-chung-nhan');
+  });
+
+  it('theo vai trò mẫu (ACADEMY): Chủ, Quản trị, Quản lý, Lễ tân, Giảng viên thấy; Thợ, Thợ phụ, Kế toán, Trợ giảng không thấy', () => {
+    const sees = (k: keyof typeof SYSTEM_ROLES, kind: Kind = 'ACADEMY') => visibleNav(ROLE(k), kind).some((i) => i.key === 'giay-chung-nhan');
+    for (const k of ['owner', 'admin', 'manager', 'receptionist', 'instructor'] as const) expect(sees(k), k).toBe(true);
+    for (const k of ['artist', 'assistant', 'accountant', 'teaching_assistant'] as const) expect(sees(k), k).toBe(false);
+    // Tổ chức không phải ACADEMY: không ai thấy, kể cả Chủ.
+    for (const kind of ['TEAM', 'INDIVIDUAL'] as const) expect(sees('owner', kind), kind).toBe(false);
+  });
+
+  it('chỉ có certificates.read: thấy ĐÚNG một mục, không làm hiện mục cha Đào tạo; trang mở đầu của mọi vai trò mẫu không đổi', () => {
+    const only = (p: Permission) => p === 'certificates.read';
+    expect(visibleNav(only, 'ACADEMY').map((i) => i.key)).toEqual(['giay-chung-nhan']);
+    expect(navEntryAllowed('dao-tao', only, 'ACADEMY')).toBe(false);
+    expect(navEntryAllowed('giay-chung-nhan', only, 'ACADEMY')).toBe(true);
+    expect(navEntryAllowed('giay-chung-nhan', only, 'TEAM')).toBe(false);
+    for (const k of Object.keys(SYSTEM_ROLES) as (keyof typeof SYSTEM_ROLES)[]) {
+      const withCert = homeNavItem(ROLE(k), 'ACADEMY')?.key;
+      const without = homeNavItem((p) => ROLE(k)(p) && p !== 'certificates.read' && p !== 'certificates.issue', 'ACADEMY')?.key;
+      expect(withCert, k).toBe(without);
+    }
+  });
+
+  it('khung thật: Lễ tân (ACADEMY) thấy mục ở thanh bên, mục đang chọn khi vào /giay-chung-nhan, đúng đường', async () => {
+    setupServer(RECEPTIONIST, { kind: 'ACADEMY' });
+    renderAt('/hoa-dao/giay-chung-nhan');
+    expect(await mainMenuLinks()).toContain('Giấy chứng nhận');
+    expect(menuLink('Giấy chứng nhận').getAttribute('href')).toBe('/hoa-dao/giay-chung-nhan');
+    await waitFor(() => expect(activeMenu()).toEqual(['Giấy chứng nhận']));
+  });
+
+  it('khung thật: thợ makeup (không certificates.read) vào thẳng /giay-chung-nhan → dải 403; không có mục trên thanh bên', async () => {
+    setupServer(ARTIST, { kind: 'ACADEMY' });
+    renderAt('/hoa-dao/giay-chung-nhan');
+    expect((await screen.findByRole('alert')).textContent).toBe('Bạn không có quyền xem giấy chứng nhận.');
+    expect(await mainMenuLinks()).not.toContain('Giấy chứng nhận');
+  });
+
+  it('khung thật: tổ chức TEAM, kể cả Chủ, không có mục và vào thẳng đường bị chặn', async () => {
+    setupServer(OWNER, { kind: 'TEAM' });
+    renderAt('/hoa-dao/giay-chung-nhan');
+    expect((await screen.findByRole('alert')).textContent).toBe('Bạn không có quyền xem giấy chứng nhận.');
+    expect(await mainMenuLinks()).not.toContain('Giấy chứng nhận');
   });
 });

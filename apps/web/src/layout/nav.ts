@@ -8,7 +8,7 @@ import type { OrgKind } from '../api/auth';
 //   { key: 'dao-tao', path: 'dao-tao', label: 'Đào tạo', shortLabel: 'Khoá học', icon: 'khoa-hoc', permission: 'courses.read', orgKinds: ['ACADEMY'] },
 //   { key: 'mau-thiet-ke', path: 'mau-thiet-ke', label: 'Mẫu thiết kế', shortLabel: 'Mẫu', icon: 'mau', permission: 'designs.read' },
 
-export type NavIconName = 'hom-nay' | 'lich' | 'hd' | 'thu-tien' | 'gia' | 'khach' | 'tho' | 'bao-cao' | 'khoa-hoc' | 'mau' | 'cai-dat';
+export type NavIconName = 'hom-nay' | 'lich' | 'hd' | 'thu-tien' | 'gia' | 'khach' | 'tho' | 'bao-cao' | 'khoa-hoc' | 'chung-nhan' | 'mau' | 'cai-dat';
 
 export interface NavChild {
   key: string;
@@ -107,6 +107,9 @@ export const NAV_ITEMS: readonly NavItem[] = [
     ],
   },
   { key: 'dao-tao', path: 'dao-tao', label: 'Đào tạo', shortLabel: 'Khoá học', icon: 'khoa-hoc', permission: 'courses.read', orgKinds: ['ACADEMY'] },
+  // Bản vẽ F mục 6.5: mục riêng ngay sau Đào tạo (KHÔNG làm mục con của Đào tạo: mục con có quyền riêng sẽ làm hiện mục cha
+  // cho người chỉ có certificates.read — việc tồn 72). Thanh dưới điện thoại không đổi: mục này nằm trong ngăn "Thêm".
+  { key: 'giay-chung-nhan', path: 'giay-chung-nhan', label: 'Giấy chứng nhận', shortLabel: 'Chứng nhận', icon: 'chung-nhan', permission: 'certificates.read', orgKinds: ['ACADEMY'] },
   { key: 'mau-thiet-ke', path: 'mau-thiet-ke', label: 'Mẫu thiết kế', shortLabel: 'Mẫu', icon: 'mau', permission: 'designs.read' },
   {
     key: 'cai-dat',
