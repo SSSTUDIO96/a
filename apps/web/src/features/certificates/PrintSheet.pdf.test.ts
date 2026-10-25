@@ -1,4 +1,5 @@
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium, type Browser, type Page } from '@playwright/test';
@@ -22,6 +23,7 @@ const HARNESS = '/src/features/certificates/__in-thu__/index.html';
 const OUT = process.env.GCN_OUT ?? '';
 
 let server: ViteDevServer;
+let cacheDir = '';
 let browser: Browser;
 let base: string;
 let page: Page;
@@ -35,8 +37,11 @@ beforeAll(async () => {
         'hoặc đặt PLAYWRIGHT_BROWSERS_PATH trỏ tới thư mục trình duyệt đã cài — bài in giấy chứng nhận không tự bỏ qua.',
     );
   }
+  // Bộ nhớ đệm đóng gói riêng: nhiều bài Chromium chạy cùng lúc mà dùng chung node_modules/.vite thì đóng gói lại đè nhau, mất tệp pdf-lib.
+  cacheDir = mkdtempSync(join(tmpdir(), 'gcn-vite-'));
   server = await createServer({
     root: WEB,
+    cacheDir,
     configFile: join(WEB, 'vite.config.ts'),
     logLevel: 'error',
     server: { port: 0, strictPort: false, host: '127.0.0.1', hmr: false, proxy: {} },
@@ -57,6 +62,7 @@ beforeAll(async () => {
 afterAll(async () => {
   await browser?.close();
   await server?.close();
+  if (cacheDir) rmSync(cacheDir, { recursive: true, force: true });
 });
 
 const NAMES = ['Lê Thị Mai', 'Tôn Nữ Hoàng Bảo Ngọc Phương Thảo', 'Nguyễn Văn Đức', 'Đặng Thuỳ Linh', 'Phạm Quỳnh Như'];
