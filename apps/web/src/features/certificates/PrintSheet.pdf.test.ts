@@ -142,8 +142,8 @@ describe('Bản in giấy chứng nhận bằng Chromium thật', () => {
       app: getComputedStyle(document.getElementById('root') as Element).display,
       root: getComputedStyle(document.querySelector('.gcn-print-root') as Element).display,
       pos: getComputedStyle(document.querySelector('.gcn-print-root') as Element).position,
-      breakAfter: [...document.querySelectorAll('.gcn-print-page')].map((e) => getComputedStyle(e).breakAfter).join(','),
-      imgs: [...document.querySelectorAll('.gcn-print-root img')].every((i) => (i as HTMLImageElement).complete && (i as HTMLImageElement).naturalWidth === 1754),
+      breakAfter: Array.from(document.querySelectorAll('.gcn-print-page')).map((e) => getComputedStyle(e).breakAfter).join(','),
+      imgs: Array.from(document.querySelectorAll('.gcn-print-root img')).every((i) => (i as HTMLImageElement).complete && (i as HTMLImageElement).naturalWidth === 1754),
     }));
     expect(facts).toEqual({ app: 'none', root: 'block', pos: 'static', breakAfter: 'page,page,page,page,auto', imgs: true });
     const pdf = await page.pdf({ preferCSSPageSize: true, printBackground: true });

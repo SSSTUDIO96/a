@@ -15,7 +15,7 @@ const base: CertificateFrameInput = {
   reissuedOn: null,
   fontOverride: null,
 };
-const blobs = { photo: 'blob:http://x/p', logo: 'blob:http://x/l' };
+const blobs: { photo: string | null; logo: string | null } = { photo: 'blob:http://x/p', logo: 'blob:http://x/l' };
 const q = (v: Partial<CertificateFrameInput>, b = blobs) => new URLSearchParams(certificateFrameQuery({ ...base, ...v }, b));
 
 describe('frame.ts: tham số cho tệp mẫu cc-NN.html', () => {
