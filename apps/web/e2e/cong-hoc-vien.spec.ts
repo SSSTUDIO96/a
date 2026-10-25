@@ -35,6 +35,8 @@ interface Seed {
   last4: string;
   wrong4: string;
   ownerToken: string;
+  ownerEmail: string;
+  orgSlug: string;
   secret: string;
   hiddenTitle: string;
   api: APIRequestContext;
@@ -77,6 +79,7 @@ test.beforeAll(async ({ browser }) => {
   const api = await pwRequest.newContext({ baseURL: API });
   const stamp = Date.now();
   const secret = `BI-MAT-${randomUUID()}`;
+  const orgSlug = `chien-academy-${stamp}`;
   const register = async (label: string) => {
     const email = `cong-${label}-${stamp}@thu.local`;
     const res = await api.post('/api/v1/auth/register', { data: { email, password: 'mat-khau-thu-123', fullName: `Người thử ${label}` } });
@@ -90,7 +93,7 @@ test.beforeAll(async ({ browser }) => {
 
   // Trung tâm đào tạo (ACADEMY) + gói không giới hạn + hồ sơ thương hiệu.
   const org = await ok<{ id: string }>(
-    await api.post('/api/v1/orgs', { headers: auth, data: { name: `Chiến Makeup Academy ${stamp}`, slug: `chien-academy-${stamp}`, kind: 'ACADEMY' } }),
+    await api.post('/api/v1/orgs', { headers: auth, data: { name: `Chiến Makeup Academy ${stamp}`, slug: orgSlug, kind: 'ACADEMY' } }),
     201,
     'tạo tổ chức',
   );
@@ -191,7 +194,7 @@ test.beforeAll(async ({ browser }) => {
     });
   }
 
-  seed = { orgId, customerId: cust.id, last4, wrong4: '5678', ownerToken: owner.token, secret, hiddenTitle, api };
+  seed = { orgId, customerId: cust.id, last4, wrong4: '5678', ownerToken: owner.token, ownerEmail: owner.email, orgSlug, secret, hiddenTitle, api };
 });
 
 test.afterAll(async () => {
@@ -381,7 +384,7 @@ interface Cut {
 async function measureCut(page: Page): Promise<{ count: number; cuts: Cut[]; note: string | null }> {
   return page.evaluate(() => {
     const cuts: { what: string; why: string }[] = [];
-    const els = [...document.querySelectorAll<HTMLElement>('.pt-card .num, .pt-card .pt-kv__copy strong')];
+    const els = Array.from(document.querySelectorAll<HTMLElement>('.pt-card .num, .pt-card .pt-kv__copy strong'));
     const name = (el: HTMLElement) => `${el.tagName.toLowerCase()}.${el.className} "${(el.textContent ?? '').trim().slice(0, 40)}"`;
     for (const el of els) {
       const card = el.closest<HTMLElement>('.pt-card')!;
@@ -392,11 +395,11 @@ async function measureCut(page: Page): Promise<{ count: number; cuts: Cut[]; not
         if (n.clientWidth > 0 && n.scrollWidth > n.clientWidth) cuts.push({ what: name(el), why: `${n.tagName.toLowerCase()}.${n.className} scrollWidth ${n.scrollWidth} > clientWidth ${n.clientWidth}` });
       }
       // 2) mọi dòng chữ của ô nằm trong mép thẻ (phần ngoài mép bị overflow:hidden cắt mất).
-      for (const r of el.getClientRects()) {
+      for (const r of Array.from(el.getClientRects())) {
         if (r.width > 0 && (r.right > box.right - border + 0.5 || r.left < box.left + border - 0.5)) cuts.push({ what: name(el), why: `ra ngoài thẻ: ${Math.round(r.left)}–${Math.round(r.right)} so với ${Math.round(box.left)}–${Math.round(box.right)}` });
       }
     }
-    const note = [...document.querySelectorAll<HTMLElement>('.pt-kv > div')].find((d) => d.querySelector('dt')?.textContent?.startsWith('Nội dung chuyển khoản'))?.querySelector<HTMLElement>('dd strong');
+    const note = Array.from(document.querySelectorAll<HTMLElement>('.pt-kv > div')).find((d) => d.querySelector('dt')?.textContent?.startsWith('Nội dung chuyển khoản'))?.querySelector<HTMLElement>('dd strong');
     const uniq = [...new Map(cuts.map((c) => [`${c.what}|${c.why}`, c])).values()];
     return { count: els.length, cuts: uniq, note: note ? note.innerText : null };
   });
@@ -432,6 +435,52 @@ for (const vp of [320, 360, 375, 390] as const) {
     await ctx.close();
   });
 }
+
+// L3 (biên bản nghiệm thu E): phía TRUNG TÂM, điện thoại 390. Tin nhắn dài đẩy dải vàng "chỉ hiện một lần" và nút "Sao chép tin nhắn"
+// xuống dưới mép màn; phải thấy ngay sau khi tạo (không cần cuộn). Đo trên trình duyệt thật, giữa thanh trên và thanh dưới.
+test('trung tâm 390: tạo đường dẫn xong thì dải vàng "chỉ hiện một lần" và nút "Sao chép tin nhắn" nằm ngay trong màn hình', async ({ browser }) => {
+  test.setTimeout(90_000);
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 1 });
+  const page = await ctx.newPage();
+  await page.goto('/dang-nhap');
+  await page.locator('input[type=email]').fill(seed.ownerEmail);
+  await page.locator('input[type=password]').fill('mat-khau-thu-123');
+  await page.getByRole('button', { name: 'Đăng nhập' }).click();
+  await page.waitForURL((u) => !u.pathname.includes('dang-nhap'), { timeout: 20_000 });
+  await page.goto(`/${seed.orgSlug}/khach-hang/${seed.customerId}`);
+  const card = page.getByRole('region', { name: 'Cổng học viên' });
+  await expect(card).toBeVisible({ timeout: 20_000 });
+  await card.scrollIntoViewIfNeeded();
+  await card.getByRole('button', { name: /^Tạo đường dẫn( mới)?$/ }).click();
+  const dlg = page.getByRole('dialog');
+  await dlg.getByRole('checkbox').check();
+  await dlg.getByRole('button', { name: 'Tạo', exact: true }).click();
+  await expect(page.getByTestId('portal-message')).toBeVisible();
+  const warn = page.getByText(/Tin này chỉ hiện/);
+  const copy = page.getByRole('button', { name: 'Sao chép tin nhắn' });
+  // Vùng nhìn thấy thật = dưới thanh trên (sticky) và trên thanh điều hướng dưới (fixed).
+  const inView = async () =>
+    page.evaluate(() => {
+      const top = document.querySelector('.sh-top')?.getBoundingClientRect().bottom ?? 0;
+      const bnav = document.querySelector('.sh-bnav')?.getBoundingClientRect().top ?? window.innerHeight;
+      const rect = (el: Element | null) => (el ? el.getBoundingClientRect() : null);
+      const warnEl = Array.from(document.querySelectorAll('.pt-warn')).at(-1) ?? null;
+      const copyEl = Array.from(document.querySelectorAll('button')).find((b) => b.textContent?.includes('Sao chép tin nhắn')) ?? null;
+      const w = rect(warnEl);
+      const c = rect(copyEl);
+      return { top, bottom: Math.min(bnav, window.innerHeight), warn: w && { t: w.top, b: w.bottom }, copy: c && { t: c.top, b: c.bottom } };
+    });
+  await expect
+    .poll(async () => {
+      const v = await inView();
+      return !!v.warn && !!v.copy && v.warn.t >= v.top && v.warn.b <= v.bottom && v.copy.t >= v.top && v.copy.b <= v.bottom;
+    }, { message: `dải vàng / nút Sao chép phải nằm trong màn hình ngay sau khi tạo`, timeout: 5000 })
+    .toBe(true);
+  await expect(warn).toBeInViewport({ ratio: 1 });
+  await expect(copy).toBeInViewport({ ratio: 1 });
+  await shot(page, 'trung-tam-vua-tao', 390);
+  await ctx.close();
+});
 
 test('mã chuyển sang app: máy mới nhận phiên bằng mã (không tốn suất), vào đúng trang của học viên', async ({ browser }) => {
   const key = await newLink();

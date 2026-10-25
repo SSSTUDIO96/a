@@ -182,7 +182,21 @@ describe('PortalCard — trạng thái', () => {
     renderCard();
     const c = await card();
     expect(within(c).getByText(/Bị khoá vì nhập sai 5 lần/)).toBeTruthy();
-    expect(screen.getByText('Đường dẫn chưa mở hết hạn sau 7 ngày. Nhập sai 4 số cuối 5 lần là khoá, trung tâm phải tạo đường dẫn mới.')).toBeTruthy();
+    // L2: dòng xám nằm TRONG thẻ, ở chân thẻ (bản vẽ 5.2), không phải khối riêng dưới thẻ.
+    const line = within(c).getByText('Đường dẫn chưa mở hết hạn sau 7 ngày. Nhập sai 4 số cuối 5 lần là khoá, trung tâm phải tạo đường dẫn mới.');
+    expect(line.closest('footer')).toBeTruthy();
+    expect(c.contains(line)).toBe(true);
+  });
+
+  it('chân thẻ: nút "Thu hồi…" rồi tới dòng xám, cùng nằm trong <footer> của thẻ', async () => {
+    setup(view({ link: link('ACTIVE') }));
+    renderCard();
+    const foot = (await card()).querySelector('footer');
+    expect(foot).toBeTruthy();
+    const f = within(foot as HTMLElement);
+    const btn = f.getByRole('button', { name: 'Thu hồi đường dẫn và chặn mọi máy' });
+    const line = f.getByText(/Đường dẫn chưa mở hết hạn sau 7 ngày/);
+    expect(btn.compareDocumentPosition(line) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('danh sách máy: tên, mở lần đầu · lần cuối, nút "Chặn máy này" chỉ ở máy đang dùng', async () => {
@@ -191,9 +205,21 @@ describe('PortalCard — trạng thái', () => {
     const c = await card();
     const list = within(await within(c).findByRole('region', { name: 'Máy đã mở cổng' }));
     expect(list.getAllByText('iPhone · Safari')).toHaveLength(2);
+    // L1: tiêu đề ghi "(n/2)" = số suất đã dùng của đường dẫn hiện tại (cùng số với nhãn "Đủ 2 máy"), không phải "(tối đa 2)".
+    expect(list.getByRole('heading', { name: /Máy đã mở cổng/ }).textContent).toBe('Máy đã mở cổng (2/2)');
+    expect(list.queryByText(/tối đa/)).toBeNull();
     expect(list.getAllByRole('button', { name: /Chặn máy/ })).toHaveLength(1);
     expect(list.getByText('Đã chặn')).toBeTruthy();
     expect(list.getAllByText(/Mở lần đầu 19\/10 20:14 · lần cuối 20\/10 07:52/).length).toBeGreaterThan(0);
+  });
+});
+
+describe('PortalCard — "Máy đã mở (n/2)"', () => {
+  it('mới mở 1 máy → (1/2); đã chặn máy cũ vẫn tính suất đã dùng', async () => {
+    setup(view({ link: link('ACTIVE', { devicesUsed: 1, firstOpenedAt: T }), devices: [device('d1')] }));
+    renderCard();
+    const list = within(await within(await card()).findByRole('region', { name: 'Máy đã mở cổng' }));
+    expect(list.getByRole('heading', { name: /Máy đã mở cổng/ }).textContent).toBe('Máy đã mở cổng (1/2)');
   });
 });
 
@@ -239,6 +265,35 @@ describe('PortalCard — tạo đường dẫn, chìa chỉ hiện một lần',
     expect(window.location.hash).toBe('');
     expect(JSON.stringify({ ...window.localStorage })).not.toContain(KEY);
     expect(JSON.stringify({ ...window.sessionStorage })).not.toContain(KEY);
+  });
+
+  it('L3: vừa tạo → cuộn khối tin nhắn (cả dải vàng "một lần" và nút Sao chép) lên đầu màn hình, không bắt người dùng tự cuộn', async () => {
+    const scrolled: { el: Element; arg: unknown }[] = [];
+    Object.defineProperty(Element.prototype, 'scrollIntoView', {
+      configurable: true,
+      value: function (this: Element, arg?: unknown) {
+        scrolled.push({ el: this, arg });
+      },
+    });
+    try {
+      setup(view(), (c) => (c.method === 'POST' ? json(201, created(view({ link: link('ACTIVE') }))) : undefined));
+      renderCard();
+      const user = userEvent.setup();
+      await user.click(within(await card()).getByRole('button', { name: 'Tạo đường dẫn' }));
+      expect(scrolled).toHaveLength(0); // chưa có tin thì không cuộn
+      await user.click(within(await screen.findByRole('dialog')).getByRole('checkbox'));
+      await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Tạo' }));
+      await screen.findByTestId('portal-message');
+      expect(scrolled).toHaveLength(1);
+      const target = scrolled[0]!.el as HTMLElement;
+      // Phần tử được cuộn chứa đủ ba thứ cần thấy ngay: hộp tin, dải vàng, nút sao chép.
+      expect(target.contains(screen.getByTestId('portal-message'))).toBe(true);
+      expect(target.contains(screen.getByText(/Tin này chỉ hiện/))).toBe(true);
+      expect(target.contains(screen.getByRole('button', { name: 'Sao chép tin nhắn' }))).toBe(true);
+      expect(scrolled[0]!.arg).toMatchObject({ block: 'start' });
+    } finally {
+      delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView;
+    }
   });
 
   it('đã chép rồi đóng → mất tin; tải lại thẻ không còn chìa (máy chủ chỉ trả trạng thái)', async () => {
