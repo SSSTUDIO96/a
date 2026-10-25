@@ -10,3 +10,4 @@ export * from './occasions';
 export * from './surcharges';
 export * from './portal';
 export * from './certificates';
+export * from './print';

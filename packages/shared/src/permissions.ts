@@ -21,7 +21,7 @@ export const PERMISSIONS = {
   'contracts.read': 'Xem hợp đồng',
   'contracts.write': 'Lập, sửa, xác nhận hợp đồng',
   'contracts.adjust': 'Điều chỉnh hợp đồng đã xác nhận: huỷ dòng, giảm giá',
-  'contracts.texts': 'Sửa mẫu điều khoản / nội quy',
+  'contracts.texts': 'Sửa mẫu điều khoản, nội quy, mẫu in hợp đồng',
   'staff.read': 'Xem hồ sơ thợ, bậc lương của thợ',
   'staff.write': 'Sửa hồ sơ thợ, gán bậc lương, quản lý danh sách bậc',
   'payroll.read': 'Xem tiền công theo gói',
