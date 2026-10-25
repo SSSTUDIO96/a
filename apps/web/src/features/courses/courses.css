@@ -205,6 +205,8 @@
 
 @media (max-width: 640px) {
   .ui-dialog.gcn-dlg .ui-dialog__body { padding-top: 0; }
+  .gcn-iss__seg { margin-top: 10px; }
+  .gcn-iss__rows .ui-row { --row-ctl-phone: 210px; }
   .gcn-iss__row { padding: 10px 12px; }
   .gcn-iss__thumb { width: 150px; }
   .gcn-iss__foot { flex-direction: column; align-items: stretch; gap: 8px; }

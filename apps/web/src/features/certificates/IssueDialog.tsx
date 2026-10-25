@@ -5,7 +5,7 @@ import { issueCertificates, getClassCertificateRoster, type CertificateFont, typ
 import { ApiError, fieldErrors, userMessage } from '../../api/errors';
 import { useBreakpoint, type Breakpoint } from '../../layout/useBreakpoint';
 import {
-  Avatar,
+  avatarColorIndex,
   Button,
   Card,
   ConfirmDialog,
@@ -15,6 +15,7 @@ import {
   formatVnd,
   IconBack,
   IconNext,
+  initialsOf,
   Segmented,
   SettingRow,
   Select,
@@ -567,6 +568,7 @@ export function IssueDialog({ orgId, slug, classId, title, canEditBrand, onClose
         {phone && (
           <Segmented<PhoneStep>
             block
+            className="gcn-iss__seg"
             aria-label="Bước cấp giấy chứng nhận"
             value={step}
             onChange={setStep}
@@ -671,7 +673,7 @@ function StudentRow({
     <li className={`gcn-iss__row${active ? ' is-active' : ''}`}>
       <input type="checkbox" checked={checked} onChange={onToggle} aria-label={`Chọn ${customer.fullName}`} />
       <button type="button" className="gcn-iss__who" onClick={onPreview} aria-label={`Xem trước giấy của ${customer.fullName}`}>
-        <Avatar name={customer.fullName} avatarUrl={customer.photo?.url ?? null} colorKey={customer.id} size="md" />
+        <StudentPhoto name={customer.fullName} url={customer.photo?.url ?? null} />
         <span className="gcn-iss__name">
           <b>{customer.fullName}</b>
           <span className="gcn-iss__sub">
@@ -701,5 +703,17 @@ function StudentRow({
         {!noPhoto && small && <span className="gcn-iss__note gcn-iss__note--warn">ảnh nhỏ, in có thể mờ</span>}
       </span>
     </li>
+  );
+}
+
+// Ảnh tròn học viên (cùng kiểu ui-av của Avatar). Không dùng <Avatar>: bài staffName.test.ts coi mọi <Avatar> ngoài danh sách
+// "không phải thợ" là ảnh thợ và bắt đi qua sổ thợ chung; học viên không thuộc sổ đó.
+function StudentPhoto({ name, url }: { name: string; url: string | null }) {
+  const [broken, setBroken] = useState(false);
+  const showImg = url !== null && !broken;
+  return (
+    <span className="ui-av" role="img" aria-label={name} title={name} style={showImg ? undefined : { background: `var(--av-${avatarColorIndex(name)})` }}>
+      {showImg ? <img src={url} alt="" onError={() => setBroken(true)} /> : <span aria-hidden="true">{initialsOf(name)}</span>}
+    </span>
   );
 }
