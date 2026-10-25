@@ -73,6 +73,7 @@ function PortalCardBody({ orgId, customerId, timezone }: PortalCardProps) {
   const [copied, setCopied] = useState<'no' | 'yes' | 'manual'>('no');
   const [dialog, setDialog] = useState<Dialogs>(null);
   const boxRef = useRef<HTMLDivElement>(null);
+  const freshRef = useRef<HTMLDivElement>(null);
   const copiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const title = <span>Cổng học viên</span>;
 
@@ -82,6 +83,13 @@ function PortalCardBody({ orgId, customerId, timezone }: PortalCardProps) {
     },
     [],
   );
+
+  // Vừa tạo xong: đưa khối tin nhắn lên đầu màn hình, để dải vàng "chỉ hiện một lần" và nút "Sao chép tin nhắn" thấy ngay
+  // (điện thoại 390: tin dài đẩy hai thứ này xuống dưới mép màn; trước đây phải tự cuộn mới thấy cảnh báo).
+  const freshKey = fresh?.url ?? null;
+  useEffect(() => {
+    if (freshKey !== null) freshRef.current?.scrollIntoView?.({ block: 'start' });
+  }, [freshKey]);
 
   if (load.state.status === 'loading') {
     return (
@@ -163,16 +171,21 @@ function PortalCardBody({ orgId, customerId, timezone }: PortalCardProps) {
         className="pt-card"
         actions={<StatusTag tone={tag.tone}>{tag.label}</StatusTag>}
         footer={
-          canRevoke ? (
-            <Button className="pt-outline-danger" onClick={() => setDialog({ kind: 'revoke' })}>
-              Thu hồi đường dẫn và chặn mọi máy
-            </Button>
-          ) : undefined
+          <div className="pt-foot">
+            {canRevoke && (
+              <Button className="pt-outline-danger" onClick={() => setDialog({ kind: 'revoke' })}>
+                Thu hồi đường dẫn và chặn mọi máy
+              </Button>
+            )}
+            <p role="note">
+              {`Đường dẫn chưa mở hết hạn sau ${PORTAL_LINK_TTL_DAYS} ngày. Nhập sai 4 số cuối ${PORTAL_MAX_FAILED} lần là khoá, trung tâm phải tạo đường dẫn mới.`}
+            </p>
+          </div>
         }
       >
         <div className="pt-body">
           {fresh ? (
-            <>
+            <div ref={freshRef} className="pt-fresh" data-testid="portal-fresh">
               <p className="pt-hint">
                 Gửi tin này cho học viên qua Zalo hoặc tin nhắn. Học viên bấm đường dẫn, nhập <b>4 số cuối số điện thoại</b> là vào, không cần mật khẩu.
               </p>
@@ -197,7 +210,7 @@ function PortalCardBody({ orgId, customerId, timezone }: PortalCardProps) {
               <p className="pt-live" role="status" aria-live="polite">
                 {copied === 'yes' ? 'Đã chép. Dán vào Zalo hoặc tin nhắn của học viên.' : copied === 'manual' ? 'Máy này không cho chép tự động. Chữ đã được chọn sẵn, hãy chép bằng tay.' : ''}
               </p>
-            </>
+            </div>
           ) : (
             <>
               <p className="pt-note">{notAcademy ? 'Tổ chức chưa bật đào tạo' : portalLinkNote(view.link, timezone, now)}</p>
@@ -221,7 +234,7 @@ function PortalCardBody({ orgId, customerId, timezone }: PortalCardProps) {
           {view.devices.length > 0 && (
             <section className="pt-devs" aria-label="Máy đã mở cổng">
               <h3 className="pt-devs__title">
-                Máy đã mở cổng <span>{`(tối đa ${PORTAL_MAX_DEVICES})`}</span>
+                Máy đã mở cổng <span>{`(${view.link?.devicesUsed ?? 0}/${PORTAL_MAX_DEVICES})`}</span>
               </h3>
               <ul>
                 {view.devices.map((d) => (
@@ -251,9 +264,6 @@ function PortalCardBody({ orgId, customerId, timezone }: PortalCardProps) {
           )}
         </div>
       </Card>
-      <p className="pt-foot" role="note">
-        {`Đường dẫn chưa mở hết hạn sau ${PORTAL_LINK_TTL_DAYS} ngày. Nhập sai 4 số cuối ${PORTAL_MAX_FAILED} lần là khoá, trung tâm phải tạo đường dẫn mới.`}
-      </p>
 
       {dialog?.kind === 'create' && (
         <CreateDialog

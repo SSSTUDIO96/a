@@ -9,6 +9,11 @@ html, body { overflow-x: clip; }
 .pt-warn-text { color: var(--warn); }
 .pt-ico { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .pt-pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+/* `.num` (styles/base.css, dùng chung cả app) = nowrap. Trong cổng, thẻ cắt phần thừa (overflow: hidden) nên nowrap làm MẤT chữ
+   (nội dung chuyển khoản, khoảng ngày, giờ học). Mặc định ở cổng: `.num` được xuống dòng, chỉ giữ chữ số thẳng hàng (tabular-nums).
+   Số tiền là ngoại lệ ngắn, giữ một dòng (`.pt-money`) và nhường chỗ bằng bố cục (xem .pt-sums). KHÔNG sửa base.css. */
+.pt-card .num { white-space: normal; overflow-wrap: anywhere; min-width: 0; max-width: 100%; }
+.pt-card .pt-money { white-space: nowrap; overflow-wrap: normal; }
 
 /* ---------- Khung các màn ngoài trang ---------- */
 .pt-frame__head { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 36px 16px 20px; text-align: center; }
@@ -117,6 +122,12 @@ html, body { overflow-x: clip; }
 .pt-sums dt { color: var(--muted); font-size: 12px; }
 .pt-sums dd { font-size: 14px; font-weight: 700; margin: 0; }
 .pt-sums__left { color: var(--accent); }
+/* Máy hẹp (< 380): 3 ô tiền ở 3 cột không đủ chỗ (ô ~79 px, "14.000.000 ₫" đậm ~96 px) → mỗi khoản một hàng: nhãn trái, số phải. */
+@media (max-width: 379px) {
+  .pt-sums { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  .pt-sums > div { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+  .pt-sums dd { text-align: right; }
+}
 .pt-bar { height: 8px; border-radius: var(--r-pill); background: var(--draft-bg); overflow: hidden; }
 .pt-bar span { display: block; height: 100%; background: var(--ok); border-radius: var(--r-pill); }
 .pt-note .pt-ico { color: inherit; }

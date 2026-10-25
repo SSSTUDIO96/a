@@ -371,6 +371,68 @@ for (const vp of [390, 1440] as const) {
   });
 }
 
+// Đo BỐ CỤC thật (jsdom không đo được): ở máy nhỏ, mọi ô `.num` (tiền, ngày, giờ, mã) và dòng "Nội dung chuyển khoản" phải
+// nằm trọn trong thẻ — không bị `.pt-card { overflow: hidden }` cắt chữ, không tràn ô (scrollWidth ≤ clientWidth).
+// Gốc lỗi cũ (biên bản nghiệm thu E, T1/L4): `.num { white-space: nowrap }` ở styles/base.css thắng `overflow-wrap` của cổng.
+interface Cut {
+  what: string;
+  why: string;
+}
+async function measureCut(page: Page): Promise<{ count: number; cuts: Cut[]; note: string | null }> {
+  return page.evaluate(() => {
+    const cuts: { what: string; why: string }[] = [];
+    const els = [...document.querySelectorAll<HTMLElement>('.pt-card .num, .pt-card .pt-kv__copy strong')];
+    const name = (el: HTMLElement) => `${el.tagName.toLowerCase()}.${el.className} "${(el.textContent ?? '').trim().slice(0, 40)}"`;
+    for (const el of els) {
+      const card = el.closest<HTMLElement>('.pt-card')!;
+      const box = card.getBoundingClientRect();
+      const border = card.clientLeft;
+      // 1) chính ô, và mọi tổ tiên tới thẻ: nội dung không rộng hơn khung (scrollWidth ≤ clientWidth).
+      for (let n: HTMLElement | null = el; n && n !== card.parentElement; n = n.parentElement) {
+        if (n.clientWidth > 0 && n.scrollWidth > n.clientWidth) cuts.push({ what: name(el), why: `${n.tagName.toLowerCase()}.${n.className} scrollWidth ${n.scrollWidth} > clientWidth ${n.clientWidth}` });
+      }
+      // 2) mọi dòng chữ của ô nằm trong mép thẻ (phần ngoài mép bị overflow:hidden cắt mất).
+      for (const r of el.getClientRects()) {
+        if (r.width > 0 && (r.right > box.right - border + 0.5 || r.left < box.left + border - 0.5)) cuts.push({ what: name(el), why: `ra ngoài thẻ: ${Math.round(r.left)}–${Math.round(r.right)} so với ${Math.round(box.left)}–${Math.round(box.right)}` });
+      }
+    }
+    const note = [...document.querySelectorAll<HTMLElement>('.pt-kv > div')].find((d) => d.querySelector('dt')?.textContent?.startsWith('Nội dung chuyển khoản'))?.querySelector<HTMLElement>('dd strong');
+    const uniq = [...new Map(cuts.map((c) => [`${c.what}|${c.why}`, c])).values()];
+    return { count: els.length, cuts: uniq, note: note ? note.innerText : null };
+  });
+}
+
+for (const vp of [320, 360, 375, 390] as const) {
+  test(`cổng ${vp} có dữ liệu: mọi ô .num và "Nội dung chuyển khoản" hiện đủ chữ, không bị cắt, không tràn ô`, async ({ browser }) => {
+    test.setTimeout(90_000);
+    const key = await newLink();
+    const ctx = await browser.newContext({ viewport: { width: vp, height: 800 }, userAgent: IPHONE_SAFARI, isMobile: true, hasTouch: true, deviceScaleFactor: 1 });
+    const page = await ctx.newPage();
+    const meBody = page.waitForResponse((r) => new URL(r.url()).pathname === '/api/v1/portal/me' && r.request().method() === 'GET' && r.ok());
+    await page.goto(`/hv#k=${key}`);
+    await typeLast4(page, seed.last4);
+    await page.getByRole('button', { name: 'Mở trang của tôi' }).click();
+    await expect(page.getByRole('heading', { name: 'Chào Thảo' })).toBeVisible();
+    const me = (await (await meBody).json()) as { contracts: { transferNote: string }[] };
+    const original = me.contracts[0]!.transferNote;
+    expect(original).toMatch(/^HDKH-\d+ Ton Nu Phuong Thao$/); // tên dài của học viên thử: chữ gốc để so
+
+    const bank = page.getByRole('region', { name: 'Cách đóng tiền' });
+    await expect(bank).toContainText(original); // chữ hiển thị đủ với chữ gốc
+    const m = await measureCut(page);
+    expect(m.count, 'phải đo được nhiều ô .num (không đo suông)').toBeGreaterThanOrEqual(10);
+    expect(m.note, 'có dòng nội dung chuyển khoản').not.toBeNull();
+    expect(m.note!.replace(/\s+/g, ' ').trim()).toBe(original);
+    expect(m.cuts, `ô bị cắt/tràn ở ${vp}px:\n${m.cuts.map((c) => `${c.what}: ${c.why}`).join('\n')}`).toEqual([]);
+    await noHorizontalOverflow(page);
+    await scrollToSection(page, 'cach-dong');
+    await shot(page, 'cach-dong-ten-dai', vp);
+    await scrollToSection(page, 'hoc-phi');
+    await shot(page, 'hoc-phi-so-tien', vp);
+    await ctx.close();
+  });
+}
+
 test('mã chuyển sang app: máy mới nhận phiên bằng mã (không tốn suất), vào đúng trang của học viên', async ({ browser }) => {
   const key = await newLink();
   const a = await newMobile(browser);

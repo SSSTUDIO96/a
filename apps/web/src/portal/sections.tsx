@@ -22,7 +22,7 @@ export interface Ctx {
   nowMs: number;
 }
 
-const money = (n: number) => <span className="num">{formatVnd(n)}</span>;
+const money = (n: number) => <span className="num pt-money">{formatVnd(n)}</span>;
 
 function CardShell({ id, title, aside, children, tone }: { id?: string; title: string; aside?: ReactNode; children: ReactNode; tone?: 'accent' }) {
   const headId = useId();
@@ -216,7 +216,7 @@ export function ReceiptsCard({ c, ctx }: { c: Contract; ctx: Ctx }) {
               </span>
             </span>
             <span className="pt-inst__amt">
-              <strong>{r.kind === 'REFUND' ? <span className="num">−{formatVnd(r.amount)}</span> : money(r.amount)}</strong>
+              <strong>{r.kind === 'REFUND' ? <span className="num pt-money">−{formatVnd(r.amount)}</span> : money(r.amount)}</strong>
             </span>
           </li>
         ))}
@@ -481,7 +481,7 @@ export function ContractsCard({ contracts, ctx }: { contracts: Contract[]; ctx: 
                   <span>Giảm</span>
                 </span>
                 <span className="pt-inst__amt">
-                  <span className="num">−{formatVnd(c.discount)}</span>
+                  <span className="num pt-money">−{formatVnd(c.discount)}</span>
                 </span>
               </li>
             )}

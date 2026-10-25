@@ -602,7 +602,7 @@ export function RegisterPage({ breakpoint, renderDeps }: RegisterPageProps = {})
               </th>
               <th>Số</th>
               <th>Học viên</th>
-              {!tablet && <th>Khoá · Lớp</th>}
+              {!tablet && <th className="gcr-col-course">Khoá · Lớp</th>}
               <th>Ngày cấp</th>
               {!tablet && <th>Mẫu</th>}
               <th>Trạng thái</th>
@@ -625,9 +625,9 @@ export function RegisterPage({ breakpoint, renderDeps }: RegisterPageProps = {})
                   )}
                 </td>
                 {!tablet && (
-                  <td>
-                    <span className="gcr-name">{c.className}</span>
-                    <span className="gcr-sub">{c.courseName}</span>
+                  <td className="gcr-col-course">
+                    <span className="gcr-name">{c.courseName}</span>
+                    <span className="gcr-sub">Lớp {c.className}</span>
                   </td>
                 )}
                 <td className="num">{viDate(c.issuedOn)}</td>
@@ -659,7 +659,7 @@ export function RegisterPage({ breakpoint, renderDeps }: RegisterPageProps = {})
   return (
     <>
       <PageHeader title="Giấy chứng nhận" actions={<span className="gcr-ph-sub">Sổ giấy chứng nhận của trung tâm</span>} />
-      <div className="gcr-page">
+      <div className={`gcr-page${selected.size > 0 ? ' has-sel' : ''}`}>
         {notice && (
           <div className="gcr-band gcr-band--ok" role="status">
             <span>{notice}</span>

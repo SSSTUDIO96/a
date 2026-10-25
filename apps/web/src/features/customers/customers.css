@@ -94,10 +94,10 @@
 .pt-dev__main strong { font-weight: 600; overflow-wrap: anywhere; }
 .pt-dev__sub { font-size: 12.5px; color: var(--muted); overflow-wrap: anywhere; }
 .pt-dev > .ui-btn, .pt-dev > .ui-tag { flex: none; }
-.pt-foot {
-  margin: 0; padding: 10px 14px; font-size: 12.5px; line-height: 1.5; color: var(--muted); overflow-wrap: anywhere;
-  background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
-}
+/* Chân thẻ (bản vẽ 5.2): nút thu hồi rồi dòng xám hạn 7 ngày / khoá 5 lần, nằm TRONG thẻ (.ui-card__foot) */
+.pt-foot { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; min-width: 0; flex: 1; }
+.pt-foot p { margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--muted); overflow-wrap: anywhere; }
+.pt-fresh { display: flex; flex-direction: column; gap: 10px; min-width: 0; scroll-margin-top: calc(var(--h-topbar) + 8px); }
 .pt-dlg__msg { margin: 0 0 12px; font-size: 13px; color: var(--muted); line-height: 1.5; }
 .pt-dlg__reason { display: flex; flex-direction: column; gap: 6px; }
 .pt-dlg__reason label { font-weight: 500; font-size: 13px; }
