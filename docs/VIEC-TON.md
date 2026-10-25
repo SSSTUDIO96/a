@@ -96,3 +96,4 @@ Danh sách việc các thợ, thợ chấm và R&D đã nêu nhưng **chưa làm
 | 76 | Bài sua-mot-phan và khoa-ngoai-400 dựng fixture với bộ đếm cổng mặc định 10 lần/phút, fixture đã gọi 8 lần mở cổng — sát trần; nên dùng makePortalDeps như tenant-isolation | thợ E5 |
 | 77 | apps/web/src/api/types.ts: CustomerCreateInput/CustomerUpdateInput chưa khai avatarFileId (máy chủ nhận) — gói gắn ảnh học viên (W3c bản vẽ F) phải thêm | thợ F-W2 |
 | 78 | Kiểm lại sau khi màn giấy chứng nhận (W3a) nối PrintSheet: pdf-lib phải là chunk riêng, không nằm trong index-*.js | thợ F-W2 |
+| 79 | Chốt độ dài dùng `btrim(x)` chỉ cắt dấu cách: chữ toàn xuống dòng/tab (E'\n\t ') lọt qua (đo được ở bảng print_templates; cùng cách viết ở 3 migration cũ). Máy chủ zod đã cắt khoảng trắng nên chưa khai thác được qua API; sửa gộp một migration sau: `btrim(x, E' \t\r\n')` | thợ G-M1 |
