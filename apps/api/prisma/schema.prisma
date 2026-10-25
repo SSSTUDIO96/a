@@ -74,6 +74,9 @@ model User {
   // Bản vẽ F — giấy chứng nhận (migration 20261019210000_giay_chung_nhan).
   certificatesIssued    Certificate[]            @relation("CertificateIssuedBy")
   certificatesRevoked   Certificate[]            @relation("CertificateRevokedBy")
+  // Bản vẽ G — mẫu in hợp đồng (migration 20261019220000_mau_in_hop_dong).
+  printTemplatesUpdated PrintTemplate[]          @relation("PrintTemplateUpdatedBy")
+  contractPrints        ContractPrint[]          @relation("ContractPrintedBy")
 
   @@map("users")
 }
@@ -183,6 +186,9 @@ model Organization {
   portalSettings PortalSettings?
   // Bản vẽ F — giấy chứng nhận (migration 20261019210000_giay_chung_nhan).
   certificates   Certificate[]
+  // Bản vẽ G — mẫu in hợp đồng (migration 20261019220000_mau_in_hop_dong).
+  printTemplates PrintTemplate[]
+  contractPrints ContractPrint[]
 
   @@map("organizations")
 }
@@ -836,6 +842,8 @@ model Contract {
   payments      Payment[]
   enrollments   Enrollment[]
   designCards   DesignCard[]
+  // Bản vẽ G — nhật ký in (migration 20261019220000_mau_in_hop_dong).
+  prints        ContractPrint[]
   createdBy     User                 @relation("ContractCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
 
   @@unique([organizationId, code])
@@ -1253,6 +1261,13 @@ model OrganizationProfile {
   certSignerName     String?   @map("cert_signer_name")
   // Trống = "Giám đốc trung tâm" (DEFAULT_SIGNER_TITLE ở packages/shared).
   certSignerTitle    String?   @map("cert_signer_title")
+  // Thông tin trên hợp đồng (bản vẽ G). CHỈ ghi bằng PUT /profile/contract-info — PUT /profile không đụng (toData không liệt kê).
+  representativeName  String?   @map("representative_name")
+  representativeTitle String?   @map("representative_title")
+  // Ba trường ngân hàng: có cả ba hoặc trống cả ba (CHECK organization_profiles_bank_all_or_none).
+  bankName            String?   @map("bank_name")
+  bankAccountNumber   String?   @map("bank_account_number")
+  bankAccountName     String?   @map("bank_account_name")
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   // Khoá ngoại kép (tệp, tổ chức): database chặn gắn ảnh của tổ chức khác.
@@ -1732,4 +1747,91 @@ model Certificate {
   @@index([organizationId, customerId], map: "certificates_org_customer_idx")
   @@index([organizationId, year, seq], map: "certificates_org_number_idx")
   @@map("certificates")
+}
+
+// ==================== MẪU IN HỢP ĐỒNG (bản vẽ G — migration 20261019220000_mau_in_hop_dong) ====================
+// CHECK, index một phần (mỗi loại một mặc định), trigger print_templates_version_guard và contract_prints_append_only
+// viết tay trong migration (Prisma không tả được).
+
+// Nguồn của một lần in (bản vẽ G mục 3.4):
+// TEMPLATE     = mẫu in hiện hành + dữ liệu hiện tại
+// PRIOR_CONFIG = cấu hình đã chụp ở một lần in trước + dữ liệu hiện tại (giữ đúng mẫu & số bản đã in)
+// REPRINT      = in lại y hệt một lần in trước (cấu hình + dữ liệu đã chụp)
+enum PrintSource {
+  TEMPLATE
+  PRIOR_CONFIG
+  REPRINT
+}
+
+// Mẫu in của studio (R&D-09 PA1). Chỉ quyết định CÁCH TRÌNH BÀY; thông tin studio lấy từ hồ sơ thương hiệu,
+// điều khoản lấy từ mẫu điều khoản / bản chụp của hợp đồng.
+// blocks: { "<khoá khối>": true|false } — CHỈ các khối bật/tắt được; khoá vắng mặt = mặc định của bố cục.
+// title / openingText / closingText: NULL = chữ mặc định theo loại hợp đồng (packages/shared/src/print.ts).
+// Đổi layout/blocks/title/openingText/closingText ⇒ version + 1 (trigger print_templates_version_guard chặn quên tăng).
+// Mỗi loại hợp đồng có đúng một mẫu mặc định (index một phần + máy chủ cấm bỏ mặc định).
+model PrintTemplate {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  name           String
+  layout         Int
+  forService     Boolean  @map("for_service")
+  forCourse      Boolean  @map("for_course")
+  defaultService Boolean  @default(false) @map("default_service")
+  defaultCourse  Boolean  @default(false) @map("default_course")
+  blocks         Json     @default("{}")
+  title          String?
+  openingText    String?  @map("opening_text")
+  closingText    String?  @map("closing_text")
+  version        Int      @default(1)
+  isActive       Boolean  @default(true) @map("is_active")
+  // NULL = mẫu có sẵn do hệ thống tạo (migration / lúc tạo tổ chức).
+  updatedById    String?  @map("updated_by_id") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  updatedBy    User?           @relation("PrintTemplateUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  prints       ContractPrint[]
+
+  @@unique([id, organizationId])
+  @@index([organizationId])
+  @@map("print_templates")
+}
+
+// Nhật ký in: CHỈ GHI THÊM (trigger contract_prints_append_only). Lưu bản chụp cấu hình + dữ liệu đúng như đã in
+// (đã che theo quyền người in) để in lại ra y hệt, kể cả khi mẫu, hồ sơ thương hiệu, tiền đã thu thay đổi.
+model ContractPrint {
+  id              String         @id @default(uuid()) @db.Uuid
+  organizationId  String         @map("organization_id") @db.Uuid
+  contractId      String         @map("contract_id") @db.Uuid
+  // Lần in thứ mấy của hợp đồng (1, 2, 3…), cấp dưới khoá tư vấn theo hợp đồng.
+  printNo         Int            @map("print_no")
+  source          PrintSource
+  // Lần in làm gốc (PRIOR_CONFIG, REPRINT) — cùng hợp đồng (khoá kép với contract_id).
+  basedOnPrintId  String?        @map("based_on_print_id") @db.Uuid
+  templateId      String         @map("template_id") @db.Uuid
+  templateVersion Int            @map("template_version")
+  // ResolvedPrintConfig (packages/shared/src/print.ts) — mọi khối ghi tường minh, chữ đã thay mặc định.
+  config          Json
+  // ContractPrintData phiên bản data_version, đúng như đã in (đã che theo quyền người in).
+  data            Json
+  dataVersion     Int            @default(1) @map("data_version")
+  // sha256 hex của JSON dữ liệu đã sắp khoá (stableJson).
+  dataHash        String         @map("data_hash")
+  contractStatus  ContractStatus @map("contract_status")
+  printedById     String         @map("printed_by_id") @db.Uuid
+  printedAt       DateTime       @default(now()) @map("printed_at") @db.Timestamptz(3)
+
+  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  contract     Contract        @relation(fields: [contractId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  template     PrintTemplate   @relation(fields: [templateId, organizationId], references: [id, organizationId], onDelete: Restrict)
+  basedOn      ContractPrint?  @relation("PrintBasedOn", fields: [basedOnPrintId, contractId], references: [id, contractId], onDelete: Restrict)
+  derived      ContractPrint[] @relation("PrintBasedOn")
+  printedBy    User            @relation("ContractPrintedBy", fields: [printedById], references: [id], onDelete: Restrict)
+
+  @@unique([id, organizationId])
+  @@unique([id, contractId])
+  @@unique([contractId, printNo])
+  @@index([organizationId, templateId])
+  @@map("contract_prints")
 }
