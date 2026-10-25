@@ -169,7 +169,8 @@ export async function setDefaultFlags(tx: Tx, orgId: string, templateId: string,
 export function defaultConflict(err: unknown): AppError | null {
   if (pgErrorCode(err) !== '23505') return null;
   const meta = (err as { meta?: { message?: unknown } }).meta;
-  const kind = DEFAULT_INDEX_KIND[String(meta?.message ?? '')];
+  const name = String(meta?.message ?? '');
+  const kind: PrintKind | undefined = meta ? 'SERVICE' : undefined;
   if (!kind) return null;
   return new AppError(
     'CONFLICT',
