@@ -30,13 +30,14 @@ export function printMarkText(mark: PrintMark): string {
  * Lề @page (mm) và lề trong của tờ khi in, theo bố cục — NGUỒN SỰ THẬT là layout-N.css; print-css.test.ts đọc CSS và
  * kiểm bảng này khớp. `pad` = padding hai đầu của tờ khi in (mẫu 5 cần chỗ trống bên trong khung viền).
  */
-export const PAGE_MM: Record<PrintLayout, { top: number; bottom: number; pad: number }> = {
-  1: { top: 14, bottom: 16, pad: 0 },
-  2: { top: 15, bottom: 17, pad: 0 },
-  3: { top: 12, bottom: 15, pad: 0 },
-  4: { top: 10, bottom: 12, pad: 0 },
-  5: { top: 10, bottom: 13, pad: 5.5 },
+export const PAGE_MM: Record<PrintLayout, { top: number; bottom: number; left: number; right: number; pad: number }> = {
+  1: { top: 14, bottom: 16, left: 20, right: 15, pad: 0 },
+  2: { top: 15, bottom: 17, left: 16, right: 16, pad: 0 },
+  3: { top: 12, bottom: 15, left: 12, right: 12, pad: 0 },
+  4: { top: 10, bottom: 12, left: 11, right: 11, pad: 0 },
+  5: { top: 10, bottom: 13, left: 11, right: 11, pad: 5.5 },
 };
+export const A4_WIDTH_MM = 210;
 export const A4_HEIGHT_MM = 297;
 
 /** Chiều cao vùng chữ của MỘT trang A4 (mm) theo bố cục. */

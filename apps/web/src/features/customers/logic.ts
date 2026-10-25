@@ -1,5 +1,7 @@
 import { PORTAL_MAX_DEVICES, PORTAL_MAX_FAILED, PORTAL_WEB_PATH, type Permission, type PortalAdminView, type PortalDeviceStatus, type PortalLinkStatus } from '@makeup/shared';
+import type { CertificateView } from '../../api/certificates';
 import type { ContractDetail, Customer, CustomerCreateInput, CustomerUpdateInput, GroupedContractLine, WorkStatus } from '../../api/types';
+import { viDate } from '../certificates/logic';
 
 // Logic thuần của màn Khách hàng (C2 mục 2) — tách khỏi giao diện để thử bằng vitest.
 
@@ -12,6 +14,8 @@ export interface CustomerPerms {
   portalManage: boolean;
   // Tạo đường dẫn: portal.manage + người gửi tự xem được khách, hợp đồng, phiếu thu (ký duyệt E câu 3).
   portalSend: boolean;
+  // Thẻ Giấy chứng nhận (bản vẽ F 6.6): xem danh sách giấy của học viên và In lại. Chỉ ACADEMY — card tự kiểm loại tổ chức.
+  certRead: boolean;
 }
 
 // Quyền đòi thêm ngoài portal.manage khi tạo đường dẫn (máy chủ center.ts PORTAL_LINK_EXTRA_PERMISSIONS).
@@ -25,6 +29,7 @@ export function customerPerms(has: (p: Permission) => boolean): CustomerPerms {
     contractsWrite: has('contracts.write'),
     portalManage: has('portal.manage'),
     portalSend: has('portal.manage') && PORTAL_SEND_EXTRA_PERMISSIONS.every((p) => has(p)),
+    certRead: has('certificates.read'),
   };
 }
 
@@ -273,3 +278,36 @@ export const PORTAL_CONSEQUENCE = {
   revoke: 'Đường dẫn hết hiệu lực, mọi máy bị thoát ngay. Muốn vào lại phải tạo đường dẫn mới.',
 } as const;
 export const PORTAL_CONSEQUENCE_MAX = 90;
+
+// ---------------- Thẻ Giấy chứng nhận (bản vẽ F mục 6.6) ----------------
+export type CertTone = 'ok' | 'neutral';
+
+// Nhãn trạng thái một giấy: "Hiệu lực" · "Hiệu lực · bản cấp lại dd/mm/yyyy" · "Đã thu hồi". Bản cấp lại thiếu ngày → ném lỗi (không bịa ngày).
+export function certificateStatus(c: Pick<CertificateView, 'status' | 'reissueNo' | 'reissuedOn'>): { label: string; tone: CertTone } {
+  if (c.status === 'REVOKED') return { label: 'Đã thu hồi', tone: 'neutral' };
+  if (c.reissueNo > 0) {
+    if (c.reissuedOn === null) throw new Error('Bản cấp lại thiếu ngày cấp lại (reissuedOn)');
+    return { label: `Hiệu lực · bản cấp lại ${viDate(c.reissuedOn)}`, tone: 'ok' };
+  }
+  return { label: 'Hiệu lực', tone: 'ok' };
+}
+
+// Dòng chính "{khoá} · {lớp}" và dòng phụ "{số} · cấp dd/mm/yyyy".
+export function certificateTitle(c: Pick<CertificateView, 'courseName' | 'className'>): string {
+  return `${c.courseName} · ${c.className}`;
+}
+
+export function certificateSub(c: Pick<CertificateView, 'code' | 'issuedOn'>): string {
+  return `${c.code} · cấp ${viDate(c.issuedOn)}`;
+}
+
+// Tên tệp / tiêu đề PDF khi In lại một giấy (cùng kiểu sổ: Giay-chung-nhan-CC-2026-0007).
+export function certificatePrintNames(c: Pick<CertificateView, 'code'>): { baseName: string; pdfTitle: string } {
+  return { baseName: `Giay-chung-nhan-${c.code}`, pdfTitle: `Giấy chứng nhận ${c.code}` };
+}
+
+// Liên kết "Xem trong sổ": sổ lọc theo học viên bằng ?khach=<customerId>.
+export function certificateRegisterPath(slug: string, customerId: string): string {
+  if (!slug || !customerId) throw new Error('certificateRegisterPath: thiếu slug hoặc mã học viên');
+  return `/${slug}/giay-chung-nhan?khach=${encodeURIComponent(customerId)}`;
+}

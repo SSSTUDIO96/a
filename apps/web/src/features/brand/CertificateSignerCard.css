@@ -1,0 +1,20 @@
+/*
+ * Thẻ người ký giấy chứng nhận ở Hồ sơ thương hiệu (bản vẽ F 6.7). Tiền tố gcs-.
+ * Tệp riêng ngoài danh sách gói (brand.css không thuộc W3c). Chỉ dùng token ở src/styles/tokens.css.
+ */
+.gcs-card { min-width: 0; margin-top: 16px; }
+.gcs-skel { display: flex; flex-direction: column; gap: 10px; padding: 6px 0; }
+.gcs-skel__bar { height: 30px; border-radius: 8px; background: var(--line-2); }
+.gcs-band { padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; margin: 6px 0; font-size: 13.5px; line-height: 1.45; overflow-wrap: anywhere; }
+.gcs-band--grey { background: var(--soft); color: var(--muted); }
+.gcs-band--danger { background: var(--danger-bg); color: var(--danger); border-color: var(--danger-line); }
+.gcs-foot { display: flex; align-items: center; justify-content: flex-end; gap: 12px; min-width: 0; }
+.gcs-live { color: var(--ok); font-size: 13px; font-weight: 600; }
+.gcs-live:empty { display: none; }
+
+@media (max-width: 640px) {
+  /* Điện thoại: nhãn trên, ô dưới kéo hết bề ngang (cùng cách Hồ sơ thương hiệu). */
+  .gcs-row.ui-row { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  .gcs-row .ui-row__ctl { justify-content: stretch; }
+  .gcs-row .ui-row__ctl > * { width: 100%; }
+}

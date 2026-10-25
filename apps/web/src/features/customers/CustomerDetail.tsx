@@ -6,6 +6,7 @@ import { useSession } from '../../app/session';
 import { Button, Card, EmptyState, IconBack, Skeleton } from '../../ui';
 import { LoadErrorStrip } from '../staff/parts';
 import { CustomerAppointmentsCard } from './CustomerAppointmentsCard';
+import { CustomerCertificatesCard } from './CustomerCertificatesCard';
 import { CustomerContractsCard } from './CustomerContractsCard';
 import { CustomerEditForm } from './CustomerEditForm';
 import { CustomerInfoCard } from './CustomerInfoCard';
@@ -13,7 +14,7 @@ import { PortalCard } from './PortalCard';
 import type { CustomerPerms } from './logic';
 import { CONTRACT_LIMIT, useCustomerHistory } from './useCustomerHistory';
 
-// Cột phải màn Khách hàng (C2 2.2): Thông tin khách · Hợp đồng · Lịch makeup (khe 16).
+// Cột phải màn Khách hàng (C2 2.2): Thông tin khách · Hợp đồng · Cổng học viên · Giấy chứng nhận · Lịch makeup (khe 16).
 export interface CustomerDetailProps {
   orgId: string;
   slug: string;
@@ -91,6 +92,9 @@ export function CustomerDetail({ orgId, slug, timezone, customerId, perms, onSav
       )}
       {/* Thẻ Cổng học viên: sau thẻ Hợp đồng; tự ẩn khi không phải ACADEMY hoặc thiếu portal.manage (bản vẽ E 5.2). */}
       {!editing && perms.portalManage && <PortalCard orgId={orgId} customerId={c.id} orgKind={orgKind} timezone={timezone} />}
+      {/* Thẻ Giấy chứng nhận (bản vẽ F 6.6): sau thẻ Cổng học viên để Cổng giữ nguyên chỗ ngay sau Hợp đồng. Tự ẩn khi không phải ACADEMY,
+          thiếu certificates.read hoặc học viên chưa có giấy nào. */}
+      {!editing && perms.certRead && <CustomerCertificatesCard key={c.id} orgId={orgId} slug={slug} customerId={c.id} orgKind={orgKind} />}
       {hasContracts && history.details && !editing && (
         <CustomerAppointmentsCard
           slug={slug}

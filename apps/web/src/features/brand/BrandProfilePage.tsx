@@ -11,6 +11,7 @@ import { useBreakpoint } from '../../layout/useBreakpoint';
 import { usePermissions, usePermissionsContext } from '../../layout/usePermissions';
 import { Button, ConfirmDialog, EmptyState, Segmented, Skeleton, TextInput } from '../../ui';
 import { BrandForm } from './BrandForm';
+import { CertificateSignerCard } from './CertificateSignerCard';
 import { draftToSite } from './draftToSite';
 import {
   emptyDraft,
@@ -76,6 +77,8 @@ function BrandProfileScreen({ orgId, slug }: { orgId: string; slug: string }) {
   const catalogWrite = has('catalog.write');
   const compact = useBreakpoint() === 'phone';
   const online = useOnline();
+  // Thẻ người ký giấy chứng nhận chỉ có ở tổ chức ACADEMY (bản vẽ F 6.7).
+  const orgKind = useSession().organizations.find((o) => o.id === orgId)?.kind;
 
   const p = useProfileDraft(orgId);
   const catalog = usePreviewCatalog(orgId, catalogRead);
@@ -220,6 +223,7 @@ function BrandProfileScreen({ orgId, slug }: { orgId: string; slug: string }) {
                 p.apply(await putBrandProfile(orgId, input));
               }}
             />
+            <CertificateSignerCard orgId={orgId} orgKind={orgKind} canEdit={canEdit} profileSaved={false} />
           </>
         ) : (
           <>
@@ -254,6 +258,7 @@ function BrandProfileScreen({ orgId, slug }: { orgId: string; slug: string }) {
                         : null
                     }
                   />
+                  <CertificateSignerCard orgId={orgId} orgKind={orgKind} canEdit={canEdit} profileSaved />
                 </div>
               )}
               {(!compact || tab === 'xem') && <PreviewPane data={site} compact={compact} />}
