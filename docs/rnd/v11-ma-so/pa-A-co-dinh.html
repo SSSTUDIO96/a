@@ -13,7 +13,7 @@
 <script src="../v8-chung/v8.js"></script>
 <script src="chung/v11.js"></script>
 <script>
-const { man, mucLuc, boot, icon } = V4;
+const { man, mucLuc, boot, icon, tip } = V4;
 const { HV, dong, hopThoai, studio } = V11;
 
 // Phương án A: mã = số thứ tự ghi danh trong lớp, cấp ngay lúc hợp đồng xác nhận (cùng lúc sinh Enrollment), không bao giờ
@@ -37,9 +37,10 @@ function dsA(suaTen) {
     const moi = h.ten === 'Đỗ Hải Yến';
     return dong(h, { trai: `<button class="ma-btn" aria-label="Sửa mã ${m}">${V11.maBox(m, moi ? 'moi' : '')}${pen}</button>` });
   }).join('');
-  const huy = daHuy.map(([h, m]) => dong(h, { trai: V11.maBox(m, 'huy'), cls: 'gone', sub: `${h.hd} · huỷ ${h.huy} · ${h.lydo} · số ${m} để trống, không cấp lại` })).join('');
-  return `<div class="bn grey dlg-note">${icon('warn', 's')}<span>Mã số tự cấp theo <b>thứ tự ghi danh</b> (01, 02…) và <b>giữ nguyên</b>. Bấm vào mã để sửa tay. Người huỷ ghi danh để trống số của mình.</span></div>
-  <div class="enr"><div class="lh">Đang học<span class="sp"></span>${dangHoc.length} học viên</div>${hang}
+  const huy = daHuy.map(([h, m]) => dong(h, { trai: V11.maBox(m, 'huy'), cls: 'gone', sub: `${h.hd} · huỷ ${h.huy} · ${h.lydo}` })).join('');
+  // Luật 7: chỉ nhãn + điều khiển; giải thích nằm trong dấu "?" cạnh nhãn "Mã số".
+  const giaiThich = 'Mã số tự cấp theo thứ tự ghi danh (01, 02…) và giữ nguyên. Bấm vào mã để sửa. Người huỷ ghi danh giữ số của mình trên dòng đã huỷ; số đó không cấp lại cho người khác.';
+  return `<div class="enr"><div class="lh">Mã số${tip(giaiThich)} · Đang học<span class="sp"></span>${dangHoc.length} học viên</div>${hang}
   <div class="lh">Đã huỷ ghi danh<span class="sp"></span>${daHuy.length}</div>${huy}</div>`;
 }
 
@@ -54,7 +55,7 @@ man('a-lop', { nav: 'dao-tao', kid: 'Khoá & lớp', title: 'Học viên lớp K
 man('a-lop-sua', { nav: 'dao-tao', kid: 'Khoá & lớp', title: 'Học viên lớp K12', back: '#muc-luc' }, hopThoai(9, dsA('Trần Bảo Ngọc')));
 man('a-the', { nav: 'mau', title: 'Mẫu thiết kế', back: '#muc-luc' }, studio({
   mau: 'cm-01', ten: 'Vũ Thu Trang', hd: 'HĐ-0142', ma: '07', maHien: '07',
-  ghiChuMa: 'Lấy từ danh sách học viên lớp K12 (số thứ tự ghi danh). Sửa mã ở Đào tạo → Học viên; thẻ đã xuất trước khi sửa vẫn mang số cũ.',
+  ghiChuMa: 'Lấy từ danh sách học viên lớp K12. Sửa mã ở Đào tạo › Học viên.',
 }));
 boot();
 </script>

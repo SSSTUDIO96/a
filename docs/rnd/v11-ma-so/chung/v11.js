@@ -1,7 +1,7 @@
 /* Bản mẫu R&D 11 — mã số học viên trong lớp. Dựa trên khung ../v8-chung/v8.js (V4.man, V4.mucLuc, V4.boot, V4.icon, V4.av).
    Mọi ô trên màn chỉ ra trường dữ liệu (data-f). Trường MỚI (chưa có trong database) ghi "đề xuất: Enrollment.seatCode". */
 (function () {
-  const { icon, av, vnd } = window.V4;
+  const { icon, av, vnd, tip } = window.V4;
 
   // Học viên lớp K12 theo THỨ TỰ GHI DANH (Enrollment.enrolledAt). Ánh Dương huỷ ghi danh 12/10 (đổi sang lớp K13).
   const HV = [
@@ -18,7 +18,7 @@
   ];
   const HV_SAU_CHOT = { ten: 'Lý Thanh Hà', ghi: '22/10', hd: 'HĐ-0151', sdt: '0913 640 207', thu: 3000000, tong: 12000000 };
 
-  const maBox = (t, cls) => `<span class="ma${cls ? ' ' + cls : ''}" data-f="đề xuất: Enrollment.seatCode">${t}</span>`;
+  const maBox = (t, cls) => `<span class="ma${cls ? ' ' + cls : ''}" data-f="Enrollment.seatNo (trường mới)">${t}</span>`;
   const tien = (h) => `<span class="money">Đã thu ${vnd(h.thu)} / ${vnd(h.tong)}</span>`;
   const tagHd = (h) => (h.huy ? '<span class="tag huy">Huỷ ghi danh</span>' : '<span class="tag ok">Đã xác nhận</span>');
 
@@ -83,8 +83,7 @@
         <div><div class="sb small" style="margin-bottom:4px">Loại hợp đồng</div><div class="seg sm"><button class="on">Khoá học</button><button class="dis" disabled>Dịch vụ</button></div></div>
         <div><div class="sb small" style="margin-bottom:4px">Hợp đồng</div><select class="ctl" data-f="Contract (COURSE)"><option>${o.hd} · ${o.ten}</option></select></div>
         <div class="auto" aria-label="Giá trị tự lấy từ hợp đồng">
-          <div class="it ma-it"><span>Mã số trong lớp <span class="mtag">trường mới</span></span><b class="num" data-f="đề xuất: Enrollment.seatCode">${o.maHien}</b></div>
-          ${o.ghiChuMa ? `<div class="note">${o.ghiChuMa}</div>` : ''}
+          <div class="it ma-it"><span>Mã số trong lớp${o.ghiChuMa ? tip(o.ghiChuMa) : ''}</span><b class="num" data-f="Enrollment.seatNo (trường mới)">${o.maHien}</b></div>
           <div class="it"><span>Tên học viên</span><b data-f="Customer.fullName">${o.ten}</b></div>
           <div class="it"><span>Tên khoá</span><b data-f="CourseClass.course.name">Makeup chuyên nghiệp</b></div>
           <div class="it"><span>Tên lớp</span><b data-f="CourseClass.name">K12</b></div>
