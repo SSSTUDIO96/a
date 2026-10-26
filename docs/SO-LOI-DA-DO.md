@@ -115,6 +115,8 @@ Mỗi lỗi ghi đủ: triệu chứng · gốc bệnh · số đo · cách ch�
 - **Cách chặn:** chỉ giao chấm một mã đã qua `pnpm build` và typecheck ngay trên đúng mã đó, chạy trong một bản tách riêng. Ghi lệnh và kết quả vào đầu bài giao chấm. Bản chụp việc dở ghi rõ "CHƯA nghiệm thu" và không bao giờ đem đi chấm.
 - **Bài học cho studio khác:** "lưu cho khỏi mất" và "bản để nghiệm thu" là hai việc khác nhau. Lẫn hai thứ đó thì người chấm mất nửa buổi vào lỗi không phải của người được chấm.
 
+- **Tái phạm 26/10/2026 (chấm bản vẽ F):** điều phối giao chấm trên commit 08de168 đang dính việc dở của bản vẽ G (cửa gác thiếu `:printId`, typecheck web đỏ). Gốc: chạy song song nhiều bản vẽ nên không có commit nào sạch. Thợ chấm đã tách phần của G để đo, nhưng số "toàn bộ" không còn sạch. Chặn: trước khi giao chấm, điều phối chạy `pnpm -r typecheck` + cửa gác trên commit định chấm; đỏ do bản vẽ khác thì chọn commit trước khi bản vẽ đó chạm tệp chung, hoặc chờ gói đó xong.
+
 ### 20. "Sửa giá" xoá luôn 9 thông số khác của gói thuê bao
 - **Triệu chứng (thợ chấm độc lập tìm ra):** quản trị viên chỉ sửa giá một gói thuê bao. Sau đó cả 9 thông số khác của gói bị đặt lại: mọi giới hạn thành "không giới hạn", gói đã ngừng bán được bật bán lại. Một studio đang bị chặn ở mức 2 nhân sự liền thêm được người.
 - **Gốc bệnh:** thân yêu cầu "sửa một phần" được dựng bằng cách lấy khuôn của "tạo mới" rồi cho mọi trường thành tuỳ chọn. Khuôn tạo mới có giá trị mặc định, và công cụ kiểm dữ liệu (zod 4) vẫn điền mặc định vào những trường người dùng không gửi. Bài thử của thợ không thấy, vì nó gửi kèm đủ trường rồi chỉ kiểm hai trường vừa gửi.
