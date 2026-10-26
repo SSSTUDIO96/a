@@ -451,7 +451,9 @@ export interface CustomerCreateInput {
   note?: string | null;
 }
 
-export type CustomerUpdateInput = Partial<CustomerCreateInput>;
+// Sửa khách: avatarFileId = tệp CUSTOMER_AVATAR đã tải (null = bỏ ảnh, vắng = giữ nguyên). Chỉ đường PATCH nhận trường này;
+// đường POST (CustomerCreateInput) KHÔNG nhận — thêm vào kiểu tạo sẽ bị máy chủ bỏ qua im lặng.
+export type CustomerUpdateInput = Partial<CustomerCreateInput> & { avatarFileId?: string | null };
 
 // schedule/service.ts — presentAppointment.
 export interface AppointmentStaff {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { asciiSlug, codeRange, estimateMegabytes, fontNumber, formatBytes, isLargeBatch, isSmallPhoto, pdfFileName, pngFileName, progressText, todayInTz, viDate, withPdfExt } from './logic';
+import { asciiSlug, codeRange, estimateMegabytes, fontNumber, formatBytes, isLargeBatch, isSmallPhoto, SMALL_PHOTO_PX, pdfFileName, pngFileName, progressText, todayInTz, viDate, withPdfExt } from './logic';
 
 describe('logic.ts: ngày, tên tệp, cỡ tệp', () => {
   it('viDate đổi YYYY-MM-DD → dd/mm/yyyy, sai dạng thì ném lỗi', () => {
@@ -58,6 +58,12 @@ describe('logic.ts: ngày, tên tệp, cỡ tệp', () => {
     expect(() => fontNumber('ky-9')).toThrow();
     expect(isSmallPhoto({ width: 200, height: 900 })).toBe(true);
     expect(isSmallPhoto({ width: 800, height: 900 })).toBe(false);
+    // Ngưỡng 500 px theo bản vẽ (nghiệm thu F, L1): cạnh ngắn 499 → báo; 500 → không; 300×300 (trước đây lọt) → báo; một cạnh nhỏ là đủ.
+    expect(SMALL_PHOTO_PX).toBe(500);
+    expect(isSmallPhoto({ width: 499, height: 900 })).toBe(true);
+    expect(isSmallPhoto({ width: 900, height: 499 })).toBe(true);
+    expect(isSmallPhoto({ width: 500, height: 500 })).toBe(false);
+    expect(isSmallPhoto({ width: 300, height: 300 })).toBe(true);
     expect(isSmallPhoto({ width: null, height: null })).toBe(false);
     expect(isSmallPhoto(null)).toBe(false);
   });

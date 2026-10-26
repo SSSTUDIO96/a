@@ -76,6 +76,16 @@ describe('sửa / thêm khách: chỉ gửi trường đã đổi, xoá trắng 
     expect(customerPatch(C, { ...draftOf(C), fullName: ' Phương Thảo ', email: '', note: '  ' })).toEqual({ fullName: 'Phương Thảo', email: null, note: null });
   });
 
+  it('ảnh: gửi avatarFileId chỉ khi khác ảnh hiện có; null = bỏ ảnh; không truyền = form không có ô ảnh', () => {
+    expect(customerPatch(C, draftOf(C), null)).toEqual({});
+    expect(customerPatch(C, draftOf(C), 'f-moi')).toEqual({ avatarFileId: 'f-moi' });
+    expect(customerPatch(C, draftOf(C), undefined)).toEqual({});
+    const co = { ...C, avatarFileId: 'f-cu', avatarUrl: 'u' };
+    expect(customerPatch(co, draftOf(co), 'f-cu')).toEqual({});
+    expect(customerPatch(co, draftOf(co), null)).toEqual({ avatarFileId: null });
+    expect(customerPatch(co, { ...draftOf(co), email: '' }, 'f-moi')).toEqual({ email: null, avatarFileId: 'f-moi' });
+  });
+
   it('thêm mới: bỏ ô trống', () => {
     expect(createInput({ fullName: ' Mai ', phone: '', email: 'mai@x.vn', note: '' })).toEqual({ fullName: 'Mai', email: 'mai@x.vn' });
   });

@@ -16,6 +16,8 @@ export interface CustomerPerms {
   portalSend: boolean;
   // Thẻ Giấy chứng nhận (bản vẽ F 6.6): xem danh sách giấy của học viên và In lại. Chỉ ACADEMY — card tự kiểm loại tổ chức.
   certRead: boolean;
+  // Tải ảnh lên (ô ảnh ở form sửa khách): files.write.
+  files: boolean;
 }
 
 // Quyền đòi thêm ngoài portal.manage khi tạo đường dẫn (máy chủ center.ts PORTAL_LINK_EXTRA_PERMISSIONS).
@@ -30,6 +32,7 @@ export function customerPerms(has: (p: Permission) => boolean): CustomerPerms {
     portalManage: has('portal.manage'),
     portalSend: has('portal.manage') && PORTAL_SEND_EXTRA_PERMISSIONS.every((p) => has(p)),
     certRead: has('certificates.read'),
+    files: has('files.write'),
   };
 }
 
@@ -117,13 +120,15 @@ export function draftOf(c: Customer | CustomerCreateInput): CustomerDraft {
 
 const nul = (s: string) => (s.trim() === '' ? null : s.trim());
 
-export function customerPatch(c: Customer, d: CustomerDraft): CustomerUpdateInput {
+// avatarFileId: mã tệp ảnh đang chọn trong form (null = đã bỏ ảnh, undefined = form không có ô ảnh → không gửi).
+export function customerPatch(c: Customer, d: CustomerDraft, avatarFileId?: string | null): CustomerUpdateInput {
   const out: CustomerUpdateInput = {};
   if (d.fullName.trim() !== c.fullName) out.fullName = d.fullName.trim();
   // Số điện thoại: so theo chữ số (máy chủ chuẩn hoá), tránh gửi lại chỉ vì khác dấu cách.
   if (nul(d.phone) === null ? c.phone !== null : d.phone.replace(/\D/g, '') !== (c.phone ?? '')) out.phone = nul(d.phone);
   if (nul(d.email) !== c.email) out.email = nul(d.email);
   if (nul(d.note) !== c.note) out.note = nul(d.note);
+  if (avatarFileId !== undefined && avatarFileId !== c.avatarFileId) out.avatarFileId = avatarFileId;
   return out;
 }
 

@@ -71,7 +71,7 @@ function roster(over: Partial<ClassCertificateRoster> = {}): ClassCertificateRos
       item(2, 'Phạm Quỳnh Hương', { customer: { id: cid(2), fullName: 'Phạm Quỳnh Hương', photo: null } }),
       item(3, 'Hoàng Minh Anh', { certificate: CERT3 }),
       item(4, 'Vũ Thu Trang', { lastRevoked: { id: 'rv', code: 'CC-2026-0002', revokedAt: T, revokeReason: 'Sai tên' } }),
-      item(5, 'Bùi Khánh Linh', { customer: { id: cid(5), fullName: 'Bùi Khánh Linh', photo: photo(250, 250) } }),
+      item(5, 'Bùi Khánh Linh', { customer: { id: cid(5), fullName: 'Bùi Khánh Linh', photo: photo(480, 480) } }),
     ],
     ...over,
   };

@@ -69,6 +69,7 @@ export function CustomerDetail({ orgId, slug, timezone, customerId, perms, onSav
         <CustomerEditForm
           orgId={orgId}
           c={c}
+          canFiles={perms.files}
           onCancel={() => setEditing(false)}
           onSaved={(next) => {
             setCustomerData(next);

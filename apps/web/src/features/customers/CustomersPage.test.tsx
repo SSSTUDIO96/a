@@ -270,6 +270,96 @@ describe('Khách mới, sửa tại chỗ', () => {
     expect(writes(calls).map((c) => [c.method, c.path, c.body])).toEqual([['PATCH', '/orgs/org-1/customers/k1', { email: null }]]);
   });
 
+  // ---- Ảnh học viên (bản vẽ F, nghiệm thu T1): ô "Ảnh đại diện" ở form sửa khách ----
+  const NEW_FILE = { id: 'f-new', purpose: 'CUSTOMER_AVATAR', status: 'READY', originalName: 'anh.png', mimeType: 'image/png', sizeBytes: 3, sha256: null, width: 600, height: 600, createdAt: T, signedUrl: 'https://files.test/moi.png', signedUrlExpiresAt: T };
+  // Máy chủ giả: khách k1 có ảnh cũ (hoặc không), POST /files trả tệp mới, PATCH trả lại khách với avatarUrl theo avatarFileId.
+  function avatarServer(initial: 'cu' | null) {
+    let current = initial === 'cu' ? { avatarFileId: 'f-old', avatarUrl: 'https://files.test/cu.png' } : { avatarFileId: null, avatarUrl: null };
+    const override: Override = (method, path, body) => {
+      if (method === 'GET' && path === '/orgs/org-1/customers/k1') return json(200, { ...MAIN, ...current });
+      if (method === 'POST' && path.startsWith('/orgs/org-1/files?')) return json(201, NEW_FILE);
+      if (method === 'PATCH' && path === '/orgs/org-1/customers/k1') {
+        const b = body as { avatarFileId?: string | null };
+        if (b.avatarFileId !== undefined) current = { avatarFileId: b.avatarFileId, avatarUrl: b.avatarFileId === 'f-new' ? NEW_FILE.signedUrl : b.avatarFileId === null ? null : current.avatarUrl };
+        return json(200, { ...MAIN, ...b, ...current });
+      }
+      return undefined;
+    };
+    return override;
+  }
+  async function openEditForm() {
+    const info = await screen.findByRole('region', { name: 'Thông tin khách' });
+    await userEvent.click(within(info).getByRole('button', { name: 'Sửa' }));
+    return screen.findByRole('region', { name: 'Sửa thông tin khách' });
+  }
+  const pickFile = (form: HTMLElement) =>
+    userEvent.upload(form.querySelector('input[type=file]') as HTMLInputElement, new File(['png'], 'anh.png', { type: 'image/png' }));
+
+  it('Ảnh học viên — GẮN: chọn ảnh → tải CUSTOMER_AVATAR → Lưu gửi đúng avatarFileId (chỉ trường đó), thẻ Thông tin hiện ảnh', async () => {
+    const calls = setupServer(OWNER, avatarServer(null));
+    renderAt('/chien/khach-hang/k1');
+    const form = await openEditForm();
+    expect(within(form).getByRole('button', { name: 'Tải ảnh — Ảnh đại diện' })).toBeTruthy();
+    await pickFile(form);
+    await waitFor(() => expect(within(form).getByRole('button', { name: 'Đổi ảnh — Ảnh đại diện' })).toBeTruthy());
+    expect(writes(calls).map((c) => [c.method, c.path.split('&name=')[0]])).toEqual([['POST', '/orgs/org-1/files?purpose=CUSTOMER_AVATAR']]);
+    await userEvent.click(within(form).getByRole('button', { name: 'Lưu' }));
+    const back = await screen.findByRole('region', { name: 'Thông tin khách' });
+    expect(writes(calls).filter((c) => c.method === 'PATCH').map((c) => [c.path, c.body])).toEqual([['/orgs/org-1/customers/k1', { avatarFileId: 'f-new' }]]);
+    await waitFor(() => expect(back.querySelector('.ui-av img')?.getAttribute('src')).toBe(NEW_FILE.signedUrl));
+  });
+
+  it('Ảnh học viên — ĐỔI: có ảnh cũ, chọn ảnh khác → PATCH mã mới; GỠ: "Bỏ ảnh" → PATCH avatarFileId null', async () => {
+    const calls = setupServer(OWNER, avatarServer('cu'));
+    renderAt('/chien/khach-hang/k1');
+    let form = await openEditForm();
+    expect((within(form).getByRole('img', { name: 'Ảnh đại diện' }) as HTMLImageElement).getAttribute('src')).toBe('https://files.test/cu.png');
+    await pickFile(form);
+    await waitFor(() => expect(writes(calls).some((c) => c.method === 'POST')).toBe(true));
+    await waitFor(() => expect((within(form).getByRole('img', { name: 'Ảnh đại diện' }) as HTMLImageElement).getAttribute('src')).toBe(NEW_FILE.signedUrl));
+    await userEvent.click(within(form).getByRole('button', { name: 'Lưu' }));
+    await screen.findByRole('region', { name: 'Thông tin khách' });
+    expect(writes(calls).filter((c) => c.method === 'PATCH').map((c) => c.body)).toEqual([{ avatarFileId: 'f-new' }]);
+    // Gỡ ảnh.
+    form = await openEditForm();
+    await userEvent.click(within(form).getByRole('button', { name: 'Bỏ ảnh — Ảnh đại diện' }));
+    expect(within(form).queryByRole('img', { name: 'Ảnh đại diện' })).toBeNull();
+    await userEvent.click(within(form).getByRole('button', { name: 'Lưu' }));
+    await screen.findByRole('region', { name: 'Thông tin khách' });
+    expect(writes(calls).filter((c) => c.method === 'PATCH').map((c) => c.body)).toEqual([{ avatarFileId: 'f-new' }, { avatarFileId: null }]);
+  });
+
+  it('Ảnh học viên: không đụng ô ảnh → PATCH không có avatarFileId; Huỷ sau khi tải → không PATCH', async () => {
+    const calls = setupServer(OWNER, avatarServer('cu'));
+    renderAt('/chien/khach-hang/k1');
+    let form = await openEditForm();
+    await userEvent.clear(within(form).getByLabelText('Email'));
+    await userEvent.click(within(form).getByRole('button', { name: 'Lưu' }));
+    await screen.findByRole('region', { name: 'Thông tin khách' });
+    expect(writes(calls).map((c) => c.body)).toEqual([{ email: null }]);
+    form = await openEditForm();
+    await pickFile(form);
+    await waitFor(() => expect(writes(calls).some((c) => c.method === 'POST')).toBe(true));
+    await userEvent.click(within(form).getByRole('button', { name: 'Huỷ' }));
+    await screen.findByRole('region', { name: 'Thông tin khách' });
+    expect(writes(calls).filter((c) => c.method === 'PATCH')).toHaveLength(1);
+  });
+
+  it('Ảnh học viên: thiếu files.write → form sửa không có ô ảnh và Lưu không gửi avatarFileId', async () => {
+    const calls = setupServer(
+      OWNER.filter((p) => p !== 'files.write'),
+      avatarServer('cu'),
+    );
+    renderAt('/chien/khach-hang/k1');
+    const form = await openEditForm();
+    expect(form.querySelector('input[type=file]')).toBeNull();
+    await userEvent.clear(within(form).getByLabelText('Email'));
+    await userEvent.type(within(form).getByLabelText('Email'), 'a@b.vn');
+    await userEvent.click(within(form).getByRole('button', { name: 'Lưu' }));
+    await screen.findByRole('region', { name: 'Thông tin khách' });
+    expect(writes(calls).map((c) => c.body)).toEqual([{ email: 'a@b.vn' }]);
+  });
+
   it('Sửa: bỏ trống họ tên → lỗi dưới ô, không gọi máy chủ; lỗi mạng → dải đỏ, giữ chữ đang gõ', async () => {
     const calls = setupServer(OWNER, (m) => {
       if (m === 'PATCH') throw new TypeError('Failed to fetch');

@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../src/app';
+import { getStorage, LocalDiskDriver, verifyToken } from '../src/lib/storage';
 import { todayIn } from '../src/modules/courses/present';
 import type { Db } from '../src/lib/prisma';
 import { addMember, bearer, createAcademyOrg, createOrg, grantUnlimitedPlan, makeApp, makeDeps, registerUser, type App, type TestUser } from './helpers';
@@ -22,6 +23,16 @@ afterAll(async () => {
 
 const idem = () => `k-${randomUUID()}`;
 const api = (orgId: string, rest: string) => `/api/v1/orgs/${orgId}${rest}`;
+
+// URL ký phải là vé của ĐÚNG tệp (giải vé bằng khoá ký của kho tệp → storageKey so với tệp trong database).
+async function expectSignedFor(url: string | undefined, fileId: string, what: string) {
+  expect(url, `${what}: có URL ảnh`).toMatch(/\/api\/v1\/files\/raw\/[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/);
+  const s = getStorage();
+  if (!(s instanceof LocalDiskDriver)) throw new Error('Bài thử cần driver đĩa cục bộ');
+  const check = verifyToken(s.signingSecret, url!.split('/').pop() ?? '');
+  const key = (await db.storedFile.findUniqueOrThrow({ where: { id: fileId } })).storageKey;
+  expect(check.ok ? check.key : `vé hỏng: ${check.reason}`, `${what}: vé của đúng tệp ${fileId}`).toBe(key);
+}
 
 interface Org {
   orgId: string;
@@ -374,6 +385,28 @@ describe('S10, S11 — bản chụp lúc cấp, ảnh', () => {
     expect(snap(got.body as View)).toEqual(before);
     expect((got.body as View).customer.fullName).toBe('Tên Mới');
 
+    // N6 (nghiệm thu F, T3; KY-DUYET-F câu 1): ĐỔI ảnh hồ sơ sau khi cấp → GET một bản, GET sổ (?ids=, đường "In lại") và GET theo khách
+    // vẫn trả ẢNH LÚC CẤP (tệp cũ, 4×5), không phải ảnh hiện hành của hồ sơ (tệp mới, 8×9).
+    await expectSignedFor(c1!.photo?.url, up.body.id, 'lúc cấp');
+    const up2 = await request(app)
+      .post(api(a.orgId, '/files?purpose=CUSTOMER_AVATAR&name=anh-moi.png'))
+      .set(bearer(a.owner))
+      .set('idempotency-key', idem())
+      .set('content-type', 'application/octet-stream')
+      .send(makePng(8, 9));
+    expect(up2.status).toBe(201);
+    await request(app).patch(api(a.orgId, `/customers/${withPhoto.customerId}`)).set(bearer(a.owner)).send({ avatarFileId: up2.body.id }).expect(200);
+    expect((await db.customer.findUniqueOrThrow({ where: { id: withPhoto.customerId } })).avatarFileId, 'hồ sơ đã đổi sang ảnh mới').toBe(up2.body.id);
+    expect(up2.body.id).not.toBe(up.body.id);
+    const swapped = await request(app).get(api(a.orgId, `/certificates/${c1!.id}`)).set(bearer(a.owner)).expect(200);
+    expect((swapped.body as View).photo).toMatchObject({ width: 4, height: 5 });
+    await expectSignedFor((swapped.body as View).photo?.url, up.body.id, 'GET một bản sau khi đổi ảnh hồ sơ');
+    const byIds = await request(app).get(api(a.orgId, `/certificates?ids=${c1!.id}`)).set(bearer(a.owner)).expect(200);
+    expect((byIds.body.items as View[]).map((v) => v.id)).toEqual([c1!.id]);
+    await expectSignedFor((byIds.body.items as View[])[0]!.photo?.url, up.body.id, 'GET sổ ?ids= sau khi đổi ảnh hồ sơ');
+    const byCustomer = await request(app).get(api(a.orgId, `/certificates?customerId=${withPhoto.customerId}`)).set(bearer(a.owner)).expect(200);
+    await expectSignedFor((byCustomer.body.items as View[])[0]!.photo?.url, up.body.id, 'GET sổ ?customerId= sau khi đổi ảnh hồ sơ');
+
     // S11b: xoá mềm ảnh sau khi cấp → photo null, không lỗi.
     await request(app).delete(api(a.orgId, `/files/${up.body.id}`)).set(bearer(a.owner)).expect((r) => expect([200, 204]).toContain(r.status));
     const after = await request(app).get(api(a.orgId, `/certificates/${c1!.id}`)).set(bearer(a.owner)).expect(200);
@@ -449,9 +482,16 @@ describe('S12, S13 — cấp lại giữ số, thu hồi', () => {
     const ok = await revoke({ reason: 'Cấp nhầm' });
     expect(ok.status).toBe(200);
     expect(ok.body).toMatchObject({ status: 'REVOKED', revokeReason: 'Cấp nhầm', code: 'CC-2026-0001' });
+    // N8 (nghiệm thu F, T3): thu hồi TAY phải ghi nhật ký — ĐÚNG MỘT dòng certificate.revoked của bản này, kèm lý do và số giấy,
+    // không phải dòng "via: reissue" của cấp lại (bản này chưa từng cấp lại).
+    const logs = await db.auditLog.findMany({ where: { organizationId: a.orgId, entityType: 'certificate', entityId: c.id }, orderBy: { createdAt: 'asc' } });
+    expect(logs.map((x) => x.action), 'nhật ký của bản vừa thu hồi: cấp rồi thu hồi').toEqual(['certificate.issued', 'certificate.revoked']);
+    expect(logs[1]).toMatchObject({ actorUserId: a.owner.id, data: { code: 'CC-2026-0001', reissueNo: 0, reason: 'Cấp nhầm', enrollmentId: s.enrollmentId } });
+    expect((logs[1]!.data as Record<string, unknown>).via, 'thu hồi tay không mang dấu via').toBeUndefined();
     const twice = await revoke({ reason: 'Lần hai' });
     expect(twice.status).toBe(409);
     expect(twice.body.error).toMatchObject({ message: 'Bản này đã thu hồi', details: { reason: 'CERTIFICATE_REVOKED', replacedById: null } });
+    expect(await db.auditLog.count({ where: { organizationId: a.orgId, action: 'certificate.revoked', entityId: c.id } }), 'thu hồi lần hai bị chặn không ghi thêm nhật ký').toBe(1);
     const roster = await request(app).get(api(a.orgId, `/classes/${k.classId}/certificates`)).set(bearer(a.owner)).expect(200);
     expect(roster.body.items[0].certificate).toBeNull();
     expect(roster.body.items[0].lastRevoked).toMatchObject({ id: c.id, code: 'CC-2026-0001', revokeReason: 'Cấp nhầm' });

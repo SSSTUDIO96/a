@@ -98,8 +98,9 @@ export function fontNumber(font: string | null): string | null {
   return m[1] as string;
 }
 
-// Ảnh học viên nhỏ quá thì in mờ: báo trước khi in. Ngưỡng: cạnh ngắn dưới 300 px (khung tròn in cỡ khoảng 200 px ở 1123 px ngang).
-export const SMALL_PHOTO_PX = 300;
+// Ảnh học viên nhỏ quá thì in mờ: báo trước khi in. Ngưỡng theo bản vẽ F 6.2 (và R&D-08 "ảnh mờ khi in"): chiều rộng HOẶC chiều cao
+// dưới 500 px, tức cạnh ngắn < 500. Dùng ở hộp cấp (nhãn "ảnh nhỏ, in có thể mờ") và bản in (dòng "Ảnh nhỏ, in có thể mờ: …").
+export const SMALL_PHOTO_PX = 500;
 export function isSmallPhoto(photo: { width: number | null; height: number | null } | null): boolean {
   if (!photo || photo.width === null || photo.height === null) return false;
   return Math.min(photo.width, photo.height) < SMALL_PHOTO_PX;

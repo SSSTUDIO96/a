@@ -7,7 +7,7 @@ export function CustomerInfoCard({ c, timezone, canWrite, onEdit }: { c: Custome
   return (
     <section className="ui-card kh-info" aria-label="Thông tin khách">
       <header className="kh-info__head">
-        <Avatar name={c.fullName} initials={initialsOf(c.fullName)} colorKey={c.id} />
+        <Avatar name={c.fullName} initials={initialsOf(c.fullName)} avatarUrl={c.avatarUrl} colorKey={c.id} />
         <h2 className="kh-info__name">{c.fullName}</h2>
         {canWrite && (
           <Button size="sm" onClick={onEdit}>

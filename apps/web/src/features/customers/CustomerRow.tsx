@@ -9,7 +9,7 @@ export function CustomerRow({ slug, c, q, selected }: { slug: string; c: Custome
     <ListRow
       as={Link}
       linkProps={{ to: `/${slug}/khach-hang/${c.id}` }}
-      leading={<Avatar name={c.fullName} initials={initialsOf(c.fullName)} colorKey={c.id} />}
+      leading={<Avatar name={c.fullName} initials={initialsOf(c.fullName)} avatarUrl={c.avatarUrl} colorKey={c.id} />}
       title={c.fullName}
       trailing={
         c.phone ? (

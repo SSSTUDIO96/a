@@ -337,6 +337,63 @@ describe('16 mẫu vẽ thật trong Chromium (?that=1)', () => {
     }
   }, 240_000);
 
+  // Nghiệm thu F, T2: luật `.c8 .day i{background:#6B5A3A}` (viết cho vạch ngăn) trúng luôn <i class="lai"> → chữ cấp lại in trên dải nâu.
+  // Đo THẬT: ẩn mực chữ (color:transparent, giữ nền của chính phần tử), chụp đúng vùng chữ để lấy điểm ảnh nền ngay sau chữ,
+  // rồi tính tương phản WCAG giữa màu chữ (đã tính độ mờ của cha) và từng điểm ảnh nền. Lấy phân vị 25 (chịu được vài điểm viền / hoa văn).
+  it('BẮT (T2): với tham số lai, chữ "· Bản cấp lại dd/mm/yyyy" ở cả 16 mẫu có tương phản ≥ 4,5:1 với nền ngay sau nó', async () => {
+    const MIN = 4.5;
+    const got: Record<string, number> = {};
+    for (const code of CODES) {
+      const page = await browser.newPage({ viewport: { width: 1123, height: 794 } });
+      try {
+        await page.goto(`${base}/mau/${code}.html?${new URLSearchParams(dataOf({ ten: SHORT, lai: '05/01/2027' }))}`);
+        await page.waitForFunction(() => document.body.dataset.ready === '1', null, { timeout: 30_000 });
+        const info = await page.evaluate(() => {
+          const el = document.querySelector('.cc .lai') as HTMLElement;
+          const r = el.getBoundingClientRect();
+          let alpha = 1;
+          for (let e: Element | null = el; e && e !== document.documentElement; e = e.parentElement) alpha *= Number(getComputedStyle(e).opacity);
+          const color = getComputedStyle(el).color;
+          el.style.color = 'transparent';
+          el.style.textShadow = 'none';
+          return { text: el.textContent ?? '', color, rect: { x: r.left, y: r.top, w: r.width, h: r.height }, alpha };
+        });
+        expect(info.text, `${code} chữ cấp lại`).toMatch(/Bản cấp lại 05\/01\/2027/);
+        expect(info.rect.w * info.rect.h, `${code} vùng chữ cấp lại có kích thước`).toBeGreaterThan(0);
+        const clip = { x: Math.floor(info.rect.x), y: Math.floor(info.rect.y), width: Math.ceil(info.rect.w) + 1, height: Math.ceil(info.rect.h) + 1 };
+        const shot = (await page.screenshot({ clip })).toString('base64');
+        const p25 = await page.evaluate(
+          async ({ b64, color, alpha }) => {
+            const im = await createImageBitmap(await (await fetch(`data:image/png;base64,${b64}`)).blob());
+            const c = document.createElement('canvas');
+            c.width = im.width;
+            c.height = im.height;
+            const x = c.getContext('2d')!;
+            x.drawImage(im, 0, 0);
+            const d = x.getImageData(0, 0, im.width, im.height).data;
+            const [fr, fg, fb] = (color.match(/[\d.]+/g) ?? []).map(Number) as [number, number, number];
+            const lin = (v: number) => { const u = v / 255; return u <= 0.03928 ? u / 12.92 : ((u + 0.055) / 1.055) ** 2.4; };
+            const lum = (r: number, g: number, b: number) => 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+            const ratios: number[] = [];
+            for (let k = 0; k < d.length; k += 4) {
+              const bg: [number, number, number] = [d[k]!, d[k + 1]!, d[k + 2]!];
+              const l1 = lum(alpha * fr + (1 - alpha) * bg[0], alpha * fg + (1 - alpha) * bg[1], alpha * fb + (1 - alpha) * bg[2]);
+              const l2 = lum(...bg);
+              ratios.push((Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05));
+            }
+            ratios.sort((a, b) => a - b);
+            return ratios[Math.floor(ratios.length * 0.25)]!;
+          },
+          { b64: shot, color: info.color, alpha: info.alpha },
+        );
+        got[code] = Math.round(p25 * 100) / 100;
+      } finally {
+        await page.close();
+      }
+    }
+    for (const code of CODES) expect(got[code], `${code} tương phản chữ cấp lại ${got[code]}:1 (cần ≥ ${MIN}:1) — cả bảng ${JSON.stringify(got)}`).toBeGreaterThanOrEqual(MIN);
+  }, 240_000);
+
   it('BẮT: tên khoá / trung tâm / người ký quá dài không tràn ra ngoài khung giấy (chữ thu nhỏ hoặc cắt "…")', async () => {
     for (const code of CODES) {
       const f = await facts(code, dataOf({
