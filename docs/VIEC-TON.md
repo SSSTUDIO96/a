@@ -101,3 +101,4 @@ Danh sách việc các thợ, thợ chấm và R&D đã nêu nhưng **chưa làm
 | 81 | khop-hop-dong.test.ts đỏ: GET /profile trả thêm 5 trường thông tin hợp đồng (G-M1/M3) nên BrandProfile trong apps/web/src/api/types.ts lệch, và các hàm profile.* mới chưa được gọi — gói G-W1 thêm kiểu + gọi | thợ sửa E |
 | 82 | Thẻ cổng phía trung tâm liệt kê cả máy của các đường dẫn CŨ (center.ts:117 không lọc theo đường dẫn) nên sau khi tạo đường dẫn mới có thể thấy "(0/2)" kèm máy cũ — xem có nên tách "máy của đường dẫn hiện tại" | thợ sửa E |
 | 83 | formatVnd dùng khoảng trắng thường trước "₫" nên trong câu thường có thể xuống dòng riêng "5.000.000 / ₫" — đổi sang khoảng trắng không ngắt ở packages/shared (kiểm mọi bài so chuỗi tiền) | thợ sửa E |
+| 84 | Nhãn trạng thái giấy chứng nhận đang có 2 bản: statusLabel trong certificates/RegisterPage.tsx và certificateStatus trong customers/logic.ts — gộp về certificates/logic.ts (luật 6 cấm bản sao) | thợ F-W3c |

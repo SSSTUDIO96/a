@@ -365,7 +365,7 @@ describe('CustomerDetail — chỗ đặt thẻ Giấy chứng nhận', () => {
     open();
     const first = await screen.findByRole('region', { name: 'Giấy chứng nhận của học viên' });
     expect(within(first).getByText('CC-2026-0002 · cấp 15/08/2026')).toBeTruthy();
-    await userEvent.setup().click(await screen.findByText('Phạm Quỳnh Hương', { selector: '.kh-row__name, .kh-row__name *, a *, a' }).catch(() => screen.getByText('Phạm Quỳnh Hương')));
+    await userEvent.setup().click(await screen.findByRole('link', { name: /Phạm Quỳnh Hương/ }));
     await waitFor(() => expect(screen.queryByText('CC-2026-0002 · cấp 15/08/2026')).toBeNull());
     release();
   });
