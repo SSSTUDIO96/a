@@ -573,6 +573,29 @@ describe('PDF: dò chỗ ngắt trang (L2 không cắt đôi, L5 tiêu đề m�
     600_000,
   );
 
+  // Khung tổng nằm giữa trang 1 nên dò riêng: dịch tờ xuống 56 → 128 mm, bước 2 mm; dòng đầu và dòng cuối của khối phải cùng trang.
+  for (const [layout, first, last] of [
+    [1, 'Tạm tính', 'Tổng cộng'],
+    [2, 'Tạm tính', 'Cọc phải thu'],
+    [5, 'Tạm tính', 'Còn phải thanh toán'],
+  ] as const) {
+    it(
+      `mẫu ${layout} dịch vụ dài: khung tổng ("${first}" → "${last}") không bị cắt đôi ở mọi chỗ ngắt từ 56 đến 128 mm`,
+      async () => {
+        const bad: string[] = [];
+        for (let lech = 56; lech <= 128; lech += 2) {
+          const p = await print({ layout, kind: 'SERVICE', ban: 'long', lech });
+          const a = pageOf(p, first);
+          const b = pageOf(p, last, 'last');
+          if (a < 0 || b < 0) bad.push(`mẫu ${layout} lệch ${lech}: thiếu dòng của khung tổng`);
+          else if (a !== b) bad.push(`mẫu ${layout} lệch ${lech}: khung tổng bị cắt (trang ${a + 1} → ${b + 1})`);
+        }
+        expect(bad).toEqual([]);
+      },
+      600_000,
+    );
+  }
+
   for (const [layout, kind, ban] of [
     [1, 'COURSE', 'long'],
     [2, 'SERVICE', 'long'],
