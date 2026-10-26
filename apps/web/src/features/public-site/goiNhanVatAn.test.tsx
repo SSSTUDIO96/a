@@ -101,6 +101,11 @@ describe('Trang công khai — gói của nhân vật ẩn', () => {
 // ---- Khung "Xem trước" ở màn Thương hiệu: dựng bằng draftToSite từ GET /packages + nhân vật đang dùng ----
 const PROFILE: BrandProfile = {
   ...PROFILE_VIEW,
+  representativeName: null,
+  representativeTitle: null,
+  bankName: null,
+  bankAccountNumber: null,
+  bankAccountName: null,
   brandName: 'Studio Chiến Makeup',
   logoFileId: null,
   avatarFileId: null,

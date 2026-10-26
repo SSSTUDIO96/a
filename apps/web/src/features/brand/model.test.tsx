@@ -8,6 +8,11 @@ import { parseSiteOrigin, shareUrl, siteLink } from './publicLink';
 const T = '2026-10-18T00:00:00.000Z';
 const PROFILE: BrandProfile = {
   brandName: 'Studio Chiến Makeup',
+  representativeName: null,
+  representativeTitle: null,
+  bankName: null,
+  bankAccountNumber: null,
+  bankAccountName: null,
   tagline: null,
   bio: 'Giới thiệu',
   experience: null,
