@@ -228,7 +228,7 @@ describe('menu con theo quyền (C2 mục 1.1, 3.1, 4.1)', () => {
     setupServer(OWNER);
     const router = renderAt('/hoa-dao/cai-dat');
     await waitFor(() => expect(router.state.location.pathname).toBe('/hoa-dao/cai-dat/thuong-hieu'));
-    await waitFor(async () => expect(await subMenuLinks()).toEqual(['Hồ sơ thương hiệu', 'Cổng học viên', 'Cài app lên điện thoại']));
+    await waitFor(async () => expect(await subMenuLinks()).toEqual(['Hồ sơ thương hiệu', 'Mẫu in hợp đồng', 'Cổng học viên', 'Cài app lên điện thoại']));
     // Màn thật (không còn "Đang dựng") cần vài chục ms mới hiện trong jsdom — chờ, đừng đọc ngay.
     await waitFor(() => expect(activeMenu()).toEqual(['Cài đặt', 'Hồ sơ thương hiệu']));
   });
@@ -380,7 +380,7 @@ describe('nav.ts', () => {
       ['dao-tao', 'courses.read', []],
       ['giay-chung-nhan', 'certificates.read', []],
       ['mau-thiet-ke', 'designs.read', []],
-      ['cai-dat', 'org.update', [['cai-dat/thuong-hieu', 'org.update'], ['cai-dat/cong-hoc-vien', 'org.update'], ['cai-dat/cai-app', 'org.update']]],
+      ['cai-dat', 'org.update', [['cai-dat/thuong-hieu', 'org.update'], ['cai-dat/mau-in', 'contracts.texts'], ['cai-dat/cong-hoc-vien', 'org.update'], ['cai-dat/cai-app', 'org.update']]],
     ]);
     expect(visibleNav(() => false)).toEqual([]);
   });
@@ -598,5 +598,68 @@ describe('mục Giấy chứng nhận', () => {
     renderAt('/hoa-dao/giay-chung-nhan');
     expect((await screen.findByRole('alert')).textContent).toBe('Bạn không có quyền xem giấy chứng nhận.');
     expect(await mainMenuLinks()).not.toContain('Giấy chứng nhận');
+  });
+});
+
+// ---- Mục con "Mẫu in hợp đồng" dưới Cài đặt (bản vẽ G 4.5; việc tồn 72: mục con không được kéo mục cha cho người không có quyền) ----
+describe('Cài đặt › Mẫu in hợp đồng', () => {
+  const ROLE = (key: keyof typeof SYSTEM_ROLES) => (p: Permission) => (SYSTEM_ROLES[key].permissions as readonly string[]).includes(p);
+  const MANAGER = SYSTEM_ROLES.manager.permissions;
+
+  it('khai báo: mục con của Cài đặt, quyền contracts.texts; Hồ sơ thương hiệu ghi rõ org.update; đường có màn thật', () => {
+    const cd = NAV_ITEMS.find((i) => i.key === 'cai-dat')!;
+    expect(cd.permission).toBe('org.update');
+    expect(cd.children?.find((c) => c.key === 'mau-in')).toMatchObject({ path: 'cai-dat/mau-in', label: 'Mẫu in hợp đồng', permission: 'contracts.texts' });
+    expect(cd.children?.find((c) => c.key === 'thuong-hieu')?.permission).toBe('org.update');
+    for (const p of ['cai-dat/mau-in', 'cai-dat/mau-in/moi', 'cai-dat/mau-in/abc']) expect(matchRoutes(routes, `/hoa-dao/${p}`)?.at(-1)?.route.path, p).not.toBe('*');
+  });
+
+  it('mục Cài đặt hiện ĐÚNG cho vai trò có org.update hoặc contracts.texts (Chủ, Quản trị, Quản lý); không hiện thêm cho vai trò nào khác', () => {
+    for (const k of Object.keys(SYSTEM_ROLES) as (keyof typeof SYSTEM_ROLES)[]) {
+      const sees = visibleNav(ROLE(k), 'ACADEMY').some((i) => i.key === 'cai-dat');
+      const expected = ROLE(k)('org.update') || ROLE(k)('contracts.texts');
+      expect(sees, k).toBe(expected);
+    }
+    // Hai quyền đó là toàn bộ lý do: ai chỉ có org.read (mọi nhân viên) KHÔNG thấy Cài đặt.
+    expect(visibleNav((p) => p === 'org.read', 'ACADEMY').some((i) => i.key === 'cai-dat')).toBe(false);
+  });
+
+  it('Quản lý thấy Cài đặt chỉ với MỘT mục con "Mẫu in hợp đồng" (không thấy Hồ sơ thương hiệu, Cổng học viên, Cài app)', () => {
+    const cd = visibleNav(ROLE('manager'), 'ACADEMY').find((i) => i.key === 'cai-dat')!;
+    expect(cd.children.map((c) => c.label)).toEqual(['Mẫu in hợp đồng']);
+    expect(cd.href).toBe('cai-dat/mau-in');
+    expect(navEntryAllowed('thuong-hieu', ROLE('manager'), 'ACADEMY')).toBe(false);
+    expect(navEntryAllowed('mau-in', ROLE('manager'), 'ACADEMY')).toBe(true);
+  });
+
+  it('trang mở đầu của mọi vai trò mẫu KHÔNG đổi (Cài đặt không bao giờ chen lên trước Lịch/Hôm nay)', () => {
+    for (const k of Object.keys(SYSTEM_ROLES) as (keyof typeof SYSTEM_ROLES)[]) {
+      const withMauIn = homeNavItem(ROLE(k), 'ACADEMY')?.key;
+      const without = homeNavItem((p) => ROLE(k)(p) && p !== 'contracts.texts', 'ACADEMY')?.key;
+      expect(withMauIn, k).toBe(without);
+      expect(withMauIn, k).not.toBe('cai-dat');
+    }
+  });
+
+  it('khung thật: Quản lý — /cai-dat chuyển thẳng tới Mẫu in hợp đồng (không gặp 403 của Hồ sơ thương hiệu), thanh bên có mục Cài đặt', async () => {
+    setupServer(MANAGER);
+    const router = renderAt('/hoa-dao/cai-dat');
+    await waitFor(() => expect(router.state.location.pathname).toBe('/hoa-dao/cai-dat/mau-in'));
+    await waitFor(async () => expect(await subMenuLinks()).toEqual(['Mẫu in hợp đồng']));
+    await waitFor(() => expect(activeMenu()).toEqual(['Cài đặt', 'Mẫu in hợp đồng']));
+    expect(await mainMenuLinks()).toContain('Cài đặt');
+  });
+
+  it('khung thật: Quản lý vào thẳng /cai-dat/thuong-hieu → dải 403 (quyền org.update)', async () => {
+    setupServer(MANAGER);
+    renderAt('/hoa-dao/cai-dat/thuong-hieu');
+    expect((await screen.findByRole('alert')).textContent).toBe('Bạn không có quyền xem hồ sơ thương hiệu.');
+  });
+
+  it('khung thật: Thợ makeup không thấy mục Cài đặt; /cai-dat → dải 403', async () => {
+    setupServer(ARTIST);
+    renderAt('/hoa-dao/cai-dat');
+    expect((await screen.findByRole('alert')).textContent).toBe('Bạn không có quyền xem cài đặt.');
+    expect(await mainMenuLinks()).not.toContain('Cài đặt');
   });
 });

@@ -6,9 +6,11 @@ import { LoginPage } from '../features/auth/LoginPage';
 import { RegisterPage } from '../features/auth/RegisterPage';
 import { ResetPasswordPage } from '../features/auth/ResetPasswordPage';
 import { AppShell, NavSectionHome, OrgHome, RequireNavPermission } from '../layout/AppShell';
+import { visibleNav } from '../layout/nav';
+import { usePermissions } from '../layout/usePermissions';
 import { NotFoundView, PageSkeleton } from '../layout/ErrorStates';
 import { GuestOnly, HomeRedirect, Loading, RequireAuth } from './guards';
-import { SessionProvider } from './session';
+import { SessionProvider, useSession } from './session';
 
 // Tách bản web theo màn (biên bản cuối L8): mỗi gói màn là một tệp JS riêng, chỉ tải khi mở màn đó.
 // Ở lại tệp vào: phiên, khung (AppShell, thanh trái/dưới, quyền), bộ ui dùng chung và 3 màn đăng nhập/đăng ký/tạo tổ chức
@@ -20,6 +22,8 @@ function screen<M>(load: () => Promise<M>, pick: (m: M) => ComponentType) {
 
 const BrandPage = screen(() => import('../features/brand'), (m) => m.BrandPage);
 const CertificateRegisterPage = screen(() => import('../features/certificates'), (m) => m.CertificateRegisterPage);
+const PrintTemplatesPage = screen(() => import('../features/contract-print'), (m) => m.PrintTemplatesPage);
+const PrintTemplateEditorPage = screen(() => import('../features/contract-print'), (m) => m.PrintTemplateEditorPage);
 const ContractListPage = screen(() => import('../features/contracts'), (m) => m.ContractListPage);
 const CoursesPage = screen(() => import('../features/courses'), (m) => m.CoursesPage);
 const CustomersPage = screen(() => import('../features/customers'), (m) => m.CustomersPage);
@@ -66,6 +70,17 @@ function Root() {
   );
 }
 
+// /cai-dat → mục con ĐẦU TIÊN người xem được thấy. Không dùng NavSectionHome: mục Cài đặt có quyền riêng (org.update), nên với Chủ/Quản trị
+// đường mặc định của mục chính là /cai-dat → NavSectionHome sẽ chuyển hướng về chính nó. Quản lý (chỉ có contracts.texts) vào thẳng Mẫu in.
+function SettingsHome() {
+  const has = usePermissions();
+  const { orgSlug } = useParams();
+  const kind = useSession().organizations.find((o) => o.slug === orgSlug)?.kind;
+  const first = visibleNav(has, kind).find((i) => i.key === 'cai-dat')?.children[0];
+  if (!first) return <Navigate to={`/${orgSlug ?? ''}`} replace />;
+  return <Navigate to={`/${orgSlug ?? ''}/${first.path}`} replace />;
+}
+
 // Màn chưa dựng: đúng một dòng, không nút giả. Thợ màn thay bằng màn thật (cửa vào src/features/<gói>/index.tsx).
 export function Placeholder() {
   return <p>Đang dựng</p>;
@@ -101,8 +116,11 @@ const orgChildren: RouteObject[] = [
   { path: 'giay-chung-nhan', element: guarded('giay-chung-nhan', <CertificateRegisterPage />) },
   { path: 'mau-thiet-ke', element: guarded('mau-thiet-ke', <DesignsPage />) },
   { path: 'mau-thiet-ke/*', element: guarded('mau-thiet-ke', <DesignsPage />) },
-  { path: 'cai-dat', element: guarded('cai-dat', <Navigate to="thuong-hieu" replace />) },
+  { path: 'cai-dat', element: guarded('cai-dat', <SettingsHome />) },
   { path: 'cai-dat/thuong-hieu', element: guarded('thuong-hieu', <BrandPage />) },
+  { path: 'cai-dat/mau-in', element: guarded('mau-in', <PrintTemplatesPage />) },
+  { path: 'cai-dat/mau-in/moi', element: guarded('mau-in', <PrintTemplateEditorPage />) },
+  { path: 'cai-dat/mau-in/:templateId', element: guarded('mau-in', <PrintTemplateEditorPage />) },
   { path: 'cai-dat/cong-hoc-vien', element: guarded('cong-hoc-vien', <PortalSettingsPage />) },
   { path: 'cai-dat/cai-app', element: guarded('cai-app', <InstallAppPage />) },
   { path: '*', element: <NotFoundView /> },

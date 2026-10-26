@@ -119,7 +119,11 @@ export const NAV_ITEMS: readonly NavItem[] = [
     icon: 'cai-dat',
     permission: 'org.update',
     children: [
-      { key: 'thuong-hieu', path: 'cai-dat/thuong-hieu', label: 'Hồ sơ thương hiệu' },
+      // Quyền ghi tường minh: mục cha dùng org.update, nên mục con không ghi quyền thì chỉ Chủ/Quản trị thấy.
+      { key: 'thuong-hieu', path: 'cai-dat/thuong-hieu', label: 'Hồ sơ thương hiệu', permission: 'org.update' },
+      // Bản vẽ G 4.5: Quản lý (contracts.texts, không có org.update) vào thẳng "Mẫu in hợp đồng". Quyền này chỉ có ở Chủ, Quản trị,
+      // Quản lý nên mục Cài đặt KHÔNG hiện thêm cho vai trò khác và không đổi trang mở đầu của ai (khác bẫy việc tồn 72: org.read).
+      { key: 'mau-in', path: 'cai-dat/mau-in', label: 'Mẫu in hợp đồng', permission: 'contracts.texts', forbidden: 'Bạn không có quyền sửa mẫu in hợp đồng.' },
       // Bản vẽ E 5.2: số tài khoản đụng tiền → org.update (Chủ, Quản trị). Tổ chức không phải ACADEMY thấy "Tổ chức chưa bật đào tạo".
       { key: 'cong-hoc-vien', path: 'cai-dat/cong-hoc-vien', label: 'Cổng học viên', permission: 'org.update' },
       // Bản vẽ E 5.2 ghi org.read, nhưng mục con org.read làm mọi nhân viên thấy "Cài đặt" và đẩy trang mở đầu của người chỉ có

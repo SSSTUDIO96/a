@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>In thử hộp In hợp đồng</title>
+  </head>
+  <body>
+    <!-- Trang in thử cho dialog/PrintDialog.real.test.ts: dựng PrintButton + PrintDialog THẬT, gọi MÁY CHỦ THẬT qua proxy của Vite.
+         ?org=<orgId> &hd=<contractId> &trang-thai=DRAFT|CONFIRMED|... &dien-thoai=1 &quyen-mau=1 &can-luu=1
+         Token truy cập đặt ở window.__HDIN__.token (bài thử đặt bằng addInitScript). Chỉ chạy với vite dev; không vào bản build. -->
+    <div id="root"></div>
+    <script type="module" src="./main.tsx"></script>
+  </body>
+</html>
