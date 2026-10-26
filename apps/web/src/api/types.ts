@@ -8,6 +8,7 @@
 // ---- Giá trị liệt kê: lấy từ @makeup/shared khi shared có; còn lại khớp schema.prisma (types-shared.test.ts đối chiếu) ----
 import type {
   ContractKindKey,
+  ContractPrintData,
   ContractStatus,
   INITIAL_STATUSES,
   InstallmentStatus,
@@ -15,6 +16,9 @@ import type {
   PaymentKind,
   PaymentMethod,
   PaymentSummary,
+  PrintBlockOverrides,
+  PrintLayout,
+  ResolvedPrintConfig,
   SeatState,
   TravelFeeMode,
   Vnd,
@@ -22,6 +26,24 @@ import type {
 } from '@makeup/shared';
 
 export type { ContractStatus, InstallmentStatus, OccasionColor, PaymentKind, PaymentMethod, PaymentSummary, TravelFeeMode, Vnd, WorkStatus };
+// Mẫu in hợp đồng (bản vẽ G): kiểu dữ liệu in và cấu hình in DÙNG LẠI từ @makeup/shared (máy chủ dựng, web chỉ vẽ) — không khai lại.
+export type {
+  AlwaysOnBlockKey,
+  ContractPrintData,
+  LocalDate,
+  LocalTime,
+  PrintBlockKey,
+  PrintBlockOverrides,
+  PrintCourse,
+  PrintLayout,
+  PrintLine,
+  PrintPayments,
+  PrintSubLine,
+  PrintText,
+  PrintTravel,
+  ResolvedPrintConfig,
+  ToggleBlockKey,
+} from '@makeup/shared';
 export type IsoDateTime = string;
 // Loại hợp đồng (BAN-VE-C3 mục 1.1): dịch vụ makeup hoặc khoá học. Đặt lúc tạo, không đổi được sau đó.
 export type ContractKind = ContractKindKey;
@@ -1589,6 +1611,13 @@ export interface BrandProfile {
   isPublished: boolean;
   publishedAt: IsoDateTime | null;
   updatedAt: IsoDateTime;
+  // Thông tin trên hợp đồng (bản vẽ G mục 3.3 đường 8): người đại diện + tài khoản ngân hàng, in trên mọi hợp đồng giao khách.
+  // Mọi vai trò có org.read đọc được; ghi bằng updateContractInfo (PUT /profile/contract-info), KHÔNG qua putBrandProfile.
+  representativeName: string | null;
+  representativeTitle: string | null;
+  bankName: string | null;
+  bankAccountNumber: string | null;
+  bankAccountName: string | null;
   // Tệp chưa sẵn sàng / đã xoá → null.
   logo: SignedImage | null;
   avatar: SignedImage | null;
@@ -1624,8 +1653,31 @@ export interface BrandProfileInput {
   depositPolicy?: string | null;
 }
 
+// PUT /profile/contract-info (profile/schemas.ts ContractInfoBody): ĐỦ 5 khoá, null = để trống. Ngân hàng: đủ ba trường hoặc trống cả ba;
+// có chức vụ thì phải có tên. Số tài khoản máy chủ bỏ khoảng trắng và viết hoa. Cần org.update; chưa có hồ sơ → 409 PROFILE_REQUIRED.
+export interface ContractInfoInput {
+  representativeName: string | null;
+  representativeTitle: string | null;
+  bankName: string | null;
+  bankAccountNumber: string | null;
+  bankAccountName: string | null;
+}
+
 // profile/public.ts — GET /public/sites/:slug (không cần đăng nhập): trang giới thiệu đã xuất bản.
-export type PublicProfile = Omit<BrandProfile, 'logoFileId' | 'avatarFileId' | 'coverFileId' | 'isPublished' | 'updatedAt'>;
+// Thông tin hợp đồng (người đại diện, ngân hàng) KHÔNG lên trang công khai (public.ts chọn từng trường).
+export type PublicProfile = Omit<
+  BrandProfile,
+  | 'logoFileId'
+  | 'avatarFileId'
+  | 'coverFileId'
+  | 'isPublished'
+  | 'updatedAt'
+  | 'representativeName'
+  | 'representativeTitle'
+  | 'bankName'
+  | 'bankAccountNumber'
+  | 'bankAccountName'
+>;
 
 // Giá công khai: chỉ số tiền, không có mã phiên bản giá.
 export interface PublicPrice {
@@ -1670,3 +1722,123 @@ export interface PublicSite {
   subjects: { id: string; name: string }[];
   travel: { freeKm: number | null };
 }
+
+// ---- Mẫu in hợp đồng (bản vẽ G mục 3.3; print/templates.ts, print/prints.ts) ----
+
+export type PrintSource = 'TEMPLATE' | 'PRIOR_CONFIG' | 'REPRINT';
+
+// print/data.ts PrintWarningCode.
+export type PrintWarningCode =
+  | 'NO_PROFILE'
+  | 'NO_REPRESENTATIVE'
+  | 'NO_BANK'
+  | 'CONTACT_HIDDEN'
+  | 'PAYMENTS_HIDDEN'
+  | 'NO_TERMS'
+  | 'NO_INSTALLMENTS'
+  | 'SCHEDULE_DIFFERENCE'
+  | 'DRAFT'
+  | 'LOGO_GONE';
+
+export interface PrintWarning {
+  code: PrintWarningCode;
+  message: string;
+}
+
+// templates.ts presentTemplate. blocks = đúng như đã lưu (chỉ khối bật/tắt được). updatedBy null = mẫu có sẵn.
+export interface PrintTemplateView {
+  id: string;
+  name: string;
+  layout: PrintLayout;
+  appliesTo: ContractKind[];
+  defaultFor: ContractKind[];
+  blocks: PrintBlockOverrides;
+  // null = dùng chữ mặc định của loại hợp đồng.
+  title: string | null;
+  openingText: string | null;
+  closingText: string | null;
+  version: number;
+  isActive: boolean;
+  createdAt: IsoDateTime;
+  updatedAt: IsoDateTime;
+  updatedBy: { id: string; fullName: string } | null;
+  usage: { printedContracts: number; lastPrintedAt: IsoDateTime | null };
+}
+
+// GET /print-templates: mặc định chỉ mẫu đang dùng.
+export interface PrintTemplateListQuery {
+  appliesTo?: ContractKind;
+  includeInactive?: boolean;
+}
+
+export interface PrintTemplateCreateInput {
+  name: string;
+  layout: PrintLayout;
+  appliesTo: ContractKind[];
+  blocks?: PrintBlockOverrides;
+  title?: string | null;
+  openingText?: string | null;
+  closingText?: string | null;
+  defaultFor?: ContractKind[];
+}
+
+// PATCH: chỉ gửi trường đã đổi. blocks = THAY toàn bộ bảng công tắc (không trộn). Đổi nội dung in → version + 1.
+export interface PrintTemplateUpdateInput {
+  name?: string;
+  layout?: PrintLayout;
+  appliesTo?: ContractKind[];
+  blocks?: PrintBlockOverrides;
+  title?: string | null;
+  openingText?: string | null;
+  closingText?: string | null;
+  defaultFor?: ContractKind[];
+  isActive?: boolean;
+}
+
+// prints.ts presentPrint. templateName = tên HIỆN TẠI của mẫu; layout lấy từ cấu hình đã chụp.
+export interface PrintRecordView {
+  id: string;
+  printNo: number;
+  source: PrintSource;
+  basedOnPrintId: string | null;
+  printedAt: IsoDateTime;
+  printedBy: { id: string; fullName: string };
+  templateId: string;
+  templateName: string;
+  templateVersion: number;
+  layout: PrintLayout;
+  contractStatus: ContractStatus;
+}
+
+// GET /contracts/:id/print-data — một đường trả đủ dữ liệu in đã tính sẵn (che theo quyền người xem).
+export interface PrintDataResult {
+  contract: { id: string; code: string; kind: ContractKind; status: ContractStatus; updatedAt: IsoDateTime };
+  data: ContractPrintData;
+  // Mã băm dữ liệu in: gửi lại ở expectedDataHash khi ghi nhật ký in.
+  dataHash: string;
+  logoUrl: string | null;
+  logoUrlExpiresAt: IsoDateTime | null;
+  // Mẫu đang dùng và dùng được cho loại hợp đồng này; mặc định đứng đầu.
+  templates: PrintTemplateView[];
+  defaultTemplateId: string | null;
+  // sameData: dữ liệu lần in đó (che theo người xem hiện tại) có đúng bằng dữ liệu hiện tại không.
+  lastPrint: (PrintRecordView & { sameData: boolean }) | null;
+  printCount: number;
+  warnings: PrintWarning[];
+}
+
+// GET /contracts/:id/prints/:printId — bản chụp một lần in (dữ liệu che thêm theo người xem; dataHash là của bản đã che).
+export interface ContractPrintResult {
+  print: PrintRecordView;
+  config: ResolvedPrintConfig;
+  data: ContractPrintData;
+  dataHash: string;
+  logoUrl: string | null;
+  warnings: PrintWarning[];
+}
+
+// POST /contracts/:id/prints (PrintCreate, print/schemas.ts). Ba nguồn; REPRINT (in lại y hệt) KHÔNG nhận blockOverrides.
+export type PrintCreateInput =
+  | { source: 'TEMPLATE'; templateId: string; expectedTemplateVersion: number; blockOverrides?: PrintBlockOverrides; expectedDataHash: string }
+  | { source: 'PRIOR_CONFIG'; basedOnPrintId: string; blockOverrides?: PrintBlockOverrides; expectedDataHash: string }
+  | { source: 'REPRINT'; basedOnPrintId: string; expectedDataHash: string };

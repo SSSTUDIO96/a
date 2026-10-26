@@ -10,19 +10,21 @@ import * as catalog from './catalog';
 import { setAccessToken } from './client';
 import * as contracts from './contracts';
 import * as courses from './courses';
-import { errorKind, fieldErrors } from './errors';
+import { errorKind, fieldErrors, userMessage } from './errors';
 import { draftFromDetail, draftIndexesOfLineIds, linesWithoutTime, missingTimeOf } from '../features/contracts/model';
 import * as files from './files';
 import { newIdempotencyKey } from './idempotency';
 import { napKieu, soKieu, type Kieu } from './khop-kieu';
 import * as org from './org';
 import * as payments from './payments';
+import * as print from './print';
 import * as profile from './profile';
 import * as schedule from './schedule';
 import * as staff from './staff';
 import * as today from './today';
 import type {
   AppointmentDetail,
+  BrandProfile,
   ContractBody,
   ContractDetail,
   Customer,
@@ -37,7 +39,7 @@ import type {
 } from './types';
 
 // "Khớp hai đầu": chạy máy chủ API THẬT trên một database thử RIÊNG, gọi MỖI hàm gọi của catalog/contracts/schedule/staff/
-// payments/files/profile ít nhất một lần với dữ liệu thật, rồi so giá trị trả về với kiểu mà hàm đó khai (types.ts):
+// payments/files/profile/print ít nhất một lần với dữ liệu thật, rồi so giá trị trả về với kiểu mà hàm đó khai (types.ts):
 // đủ/thừa tên trường, kiểu giá trị string/number/boolean/null/mảng/đối tượng, giá trị liệt kê, chuỗi ISO, số nguyên đồng —
 // lồng sâu tới từng phần tử mảng. Khuôn so đọc thẳng khai báo TypeScript lúc chạy (khop-kieu.ts), không chép tay.
 //
@@ -109,7 +111,7 @@ function grantUnlimitedPlan(url: string, orgId: string): void {
 }
 
 // Mọi hàm gọi của các module nghiệp vụ: thêm hàm mới mà bài này chưa gọi → bài "đã gọi đủ" đỏ.
-const MODULES = { catalog, contracts, schedule, staff, payments, files, profile, today } as const;
+const MODULES = { catalog, contracts, schedule, staff, payments, files, profile, print, today } as const;
 const DOMAIN_HAM = Object.entries(MODULES).flatMap(([mod, exports]) =>
   Object.entries(exports)
     .filter(([, v]) => typeof v === 'function')
@@ -178,6 +180,24 @@ function makePng(width: number, height: number): Blob {
     chunk('IEND', Buffer.alloc(0)),
   ]);
   return new Blob([new Uint8Array(png)]);
+}
+
+// Thông tin trên hợp đồng (bản vẽ G đường 8) và hàm rút đúng 5 trường đó ra từ hồ sơ.
+const CONTRACT_INFO = {
+  representativeName: 'Nguyễn Văn Chiến',
+  representativeTitle: 'Giám đốc',
+  bankName: 'Vietcombank',
+  bankAccountNumber: '0123456789',
+  bankAccountName: 'NGUYEN VAN CHIEN',
+};
+function pickInfo(p: BrandProfile) {
+  return {
+    representativeName: p.representativeName,
+    representativeTitle: p.representativeTitle,
+    bankName: p.bankName,
+    bankAccountNumber: p.bankAccountNumber,
+    bankAccountName: p.bankAccountName,
+  };
 }
 
 let server: ChildProcess | null = null;
@@ -647,6 +667,10 @@ describe('types.ts khớp đúng dữ liệu máy chủ thật trả về (tên 
 
   it('hồ sơ thương hiệu và trang giới thiệu công khai', async () => {
     expect(await chk('profile.getBrandProfile', profile.getBrandProfile(orgId))).toEqual({ hasProfile: false, profile: null });
+    // Chưa có hồ sơ thương hiệu → ghi thông tin hợp đồng bị 409 PROFILE_REQUIRED.
+    const early: unknown = await profile.updateContractInfo(orgId, CONTRACT_INFO).catch((e: unknown) => e);
+    expect(errorKind(early)).toBe('conflict');
+    expect((early as { details?: unknown }).details).toMatchObject({ reason: 'PROFILE_REQUIRED' });
     const logo = await files.uploadFile(orgId, { purpose: 'ORG_LOGO', name: 'logo.png', data: makePng(8, 8) }, newIdempotencyKey());
     const saved = await chk(
       'profile.putBrandProfile',
@@ -667,6 +691,39 @@ describe('types.ts khớp đúng dữ liệu máy chủ thật trả về (tên 
     if (!saved.hasProfile) throw new Error('Lưu xong phải có hồ sơ');
     expect(saved.profile.logo).not.toBeNull();
     expect(saved.profile.workingHours.map((s) => s.open)).toEqual(['08:00', '13:00']);
+    // 5 trường thông tin hợp đồng (bản vẽ G đường 8): hồ sơ mới lưu → cả năm null (kiểu BrandProfile khai đủ 5 tên, chk so ở trên).
+    expect(pickInfo(saved.profile)).toEqual({ representativeName: null, representativeTitle: null, bankName: null, bankAccountNumber: null, bankAccountName: null });
+    // Số tài khoản máy chủ bỏ khoảng trắng + viết hoa; PUT ghi cả năm trường.
+    const withInfo = await chk('profile.updateContractInfo', profile.updateContractInfo(orgId, { ...CONTRACT_INFO, bankAccountNumber: '0123 4567 89' }));
+    if (!withInfo.hasProfile) throw new Error('Có hồ sơ thì PUT contract-info phải trả hồ sơ');
+    expect(pickInfo(withInfo.profile)).toEqual(CONTRACT_INFO);
+    // Thiếu một trong ba trường ngân hàng → 400 đúng trường; chức vụ không tên → 400.
+    const halfBank: unknown = await profile.updateContractInfo(orgId, { ...CONTRACT_INFO, bankName: null }).catch((e: unknown) => e);
+    expect(errorKind(halfBank)).toBe('validation');
+    expect(Object.keys(fieldErrors(halfBank))).toEqual(['bankName']);
+    const noName: unknown = await profile.updateContractInfo(orgId, { ...CONTRACT_INFO, representativeName: null }).catch((e: unknown) => e);
+    expect(Object.keys(fieldErrors(noName))).toEqual(['representativeName']);
+    // PUT /profile không đụng 5 trường này; PUT contract-info trả null = để trống.
+    const resaved = await profile.putBrandProfile(orgId, { brandName: 'Hoa Makeup', tagline: 'Trang điểm cô dâu tự nhiên', logoFileId: logo.id });
+    if (!resaved.hasProfile) throw new Error('Lưu lại phải có hồ sơ');
+    expect(pickInfo(resaved.profile)).toEqual(CONTRACT_INFO);
+    const got = await chk('profile.getBrandProfile', profile.getBrandProfile(orgId), 'getBrandProfile (đã có thông tin hợp đồng)');
+    if (!got.hasProfile) throw new Error('Có hồ sơ');
+    expect(pickInfo(got.profile)).toEqual(CONTRACT_INFO);
+    // Lưu lại hồ sơ như ban đầu để các bài sau (trang công khai) giữ nguyên dữ liệu.
+    await profile.putBrandProfile(orgId, {
+      brandName: 'Hoa Makeup',
+      tagline: 'Trang điểm cô dâu tự nhiên',
+      styles: ['Cô dâu', 'Tự nhiên'],
+      phone: '0912 345 678',
+      facebook: 'https://facebook.com/hoamakeup',
+      workingHours: [
+        { weekday: 1, open: '13:00', close: '20:00' },
+        { weekday: 1, open: '08:00', close: '12:00' },
+      ],
+      logoFileId: logo.id,
+      avatarFileId: avatarFile.id,
+    });
     const published = await chk('profile.publishBrandProfile', profile.publishBrandProfile(orgId));
     expect(published.profile?.isPublished).toBe(true);
 
@@ -680,6 +737,182 @@ describe('types.ts khớp đúng dữ liệu máy chủ thật trả về (tên 
     const hidden = await chk('profile.unpublishBrandProfile', profile.unpublishBrandProfile(orgId));
     expect(hidden.profile?.isPublished).toBe(false);
     await expect(profile.getPublicSite(slug)).rejects.toMatchObject({ status: 404 });
+  });
+
+  // Bản vẽ G (G-W1): 7 hàm mẫu in + nhật ký in gọi THẬT vào máy chủ, so JSON thật với kiểu khai trong types.ts.
+  it('mẫu in hợp đồng (bản vẽ G): mẫu, dữ liệu in, nhật ký in ba nguồn, lỗi 409', async () => {
+    const HEX64 = /^[0-9a-f]{64}$/;
+    // Tổ chức mới có sẵn mẫu "Hiện đại" (bố cục 2, mặc định dịch vụ) — mẫu có sẵn không có người sửa (updatedBy null).
+    const seeded = await chk('print.listPrintTemplates', print.listPrintTemplates(orgId));
+    const base = first(seeded.items, 'mẫu in có sẵn');
+    expect(seeded.items).toHaveLength(1);
+    expect(base).toMatchObject({ name: 'Hiện đại', layout: 2, appliesTo: ['SERVICE'], defaultFor: ['SERVICE'], blocks: {}, title: null, version: 1, isActive: true, updatedBy: null });
+    expect(base.usage).toEqual({ printedContracts: 0, lastPrintedAt: null });
+
+    // Tạo mẫu mới (người sửa là tôi); khối chỉ khai công tắc đã đổi; loại COURSE bị chặn ở tổ chức chưa bật đào tạo.
+    const made = await chk(
+      'print.createPrintTemplate',
+      print.createPrintTemplate(
+        orgId,
+        { name: `Mẫu cưới ${stamp}`, layout: 3, appliesTo: ['SERVICE'], blocks: { 'ky-nhay': true, tho: false }, openingText: 'Hai bên ký hợp đồng cho ngày {Ngày sự kiện}:' },
+        newIdempotencyKey(),
+      ),
+    );
+    expect(made).toMatchObject({ layout: 3, appliesTo: ['SERVICE'], defaultFor: [], blocks: { 'ky-nhay': true, tho: false }, title: null, closingText: null, version: 1, isActive: true });
+    expect(made.updatedBy).toMatchObject({ fullName: 'Thợ Khớp Hợp Đồng' });
+    expectIso(made.createdAt, 'PrintTemplateView.createdAt');
+    const wrongKind: unknown = await print
+      .createPrintTemplate(orgId, { name: 'Mẫu khoá học', layout: 1, appliesTo: ['COURSE'] }, newIdempotencyKey())
+      .catch((e: unknown) => e);
+    expect(errorKind(wrongKind)).toBe('validation');
+    expect(userMessage(wrongKind)).toBe('Tổ chức chưa bật đào tạo — mẫu in chỉ dùng cho hợp đồng dịch vụ');
+    const unknownBlock: unknown = await print
+      .createPrintTemplate(orgId, { name: 'Khối lạ', layout: 1, appliesTo: ['SERVICE'], blocks: { 'tieu-de': false } as never }, newIdempotencyKey())
+      .catch((e: unknown) => e);
+    expect(errorKind(unknownBlock)).toBe('validation');
+
+    expect(await chk('print.getPrintTemplate', print.getPrintTemplate(orgId, made.id))).toEqual(made);
+    const missingTemplate: unknown = await print.getPrintTemplate(orgId, '00000000-0000-4000-8000-000000000000').catch((e: unknown) => e);
+    expect(errorKind(missingTemplate)).toBe('not_found');
+
+    // Sửa một phần: đổi bố cục → version + 1; chỉ đổi tên → giữ version; ngừng dùng → biến khỏi danh sách mặc định.
+    const v2 = await chk('print.updatePrintTemplate', print.updatePrintTemplate(orgId, made.id, { layout: 4 }));
+    expect(v2).toMatchObject({ layout: 4, version: 2, blocks: { 'ky-nhay': true, tho: false } });
+    const renamed = await chk('print.updatePrintTemplate', print.updatePrintTemplate(orgId, made.id, { name: `Mẫu cưới mới ${stamp}` }), 'updatePrintTemplate (đổi tên)');
+    expect(renamed).toMatchObject({ version: 2, name: `Mẫu cưới mới ${stamp}` });
+    const off = await print.updatePrintTemplate(orgId, made.id, { isActive: false });
+    expect(off.isActive).toBe(false);
+    expect((await print.listPrintTemplates(orgId)).items.map((t) => t.id)).toEqual([base.id]);
+    const withOff = await chk('print.listPrintTemplates', print.listPrintTemplates(orgId, { appliesTo: 'SERVICE', includeInactive: true }), 'listPrintTemplates (cả mẫu ngừng dùng)');
+    expect(withOff.items.map((t) => t.id)).toEqual([base.id, made.id]);
+    await print.updatePrintTemplate(orgId, made.id, { isActive: true });
+    // Mẫu mặc định không bỏ / ngừng dùng được.
+    const dropDefault: unknown = await print.updatePrintTemplate(orgId, base.id, { isActive: false }).catch((e: unknown) => e);
+    expect(errorKind(dropDefault)).toBe('conflict');
+    expect((dropDefault as { details?: unknown }).details).toMatchObject({ reason: 'DEFAULT_REQUIRED' });
+
+    // ---- Dữ liệu in của hợp đồng dịch vụ đã xác nhận (có thợ, phụ phí nhập tay, phí di chuyển, thu tiền, hồ sơ + thông tin hợp đồng) ----
+    const pd = await chk('print.getPrintData', print.getPrintData(orgId, contract.id));
+    expect(pd.contract).toMatchObject({ id: contract.id, code: contract.code, kind: 'SERVICE', status: 'CONFIRMED' });
+    expect(pd.dataHash).toMatch(HEX64);
+    expect(pd.data).toMatchObject({ version: 1, kind: 'SERVICE', paymentsHidden: false });
+    expect(pd.data.money).toMatchObject({ total: contract.total });
+    expect(pd.data.studio).toMatchObject({
+      name: 'Hoa Makeup',
+      representative: { name: CONTRACT_INFO.representativeName, title: CONTRACT_INFO.representativeTitle },
+      bank: { bankName: CONTRACT_INFO.bankName, accountNumber: CONTRACT_INFO.bankAccountNumber, accountName: CONTRACT_INFO.bankAccountName },
+    });
+    const pkgRow = pd.data.lines.find((l) => l.kind === 'PACKAGE');
+    expect(pkgRow, 'dòng gói trong dữ liệu in').toBeDefined();
+    expect(first(pkgRow?.addons ?? [], 'dịch vụ phụ của dòng gói').name).toBe(addon.name);
+    expect(pkgRow?.travel).not.toBeNull();
+    expect(pkgRow?.staff.primary).toEqual(['Hoa Khớp']);
+    expect(pd.data.lines.some((l) => l.kind === 'SURCHARGE')).toBe(true);
+    expect(pd.data.payments?.paid).toBeGreaterThan(0);
+    expect(pd.logoUrl).toMatch(/^(https?:\/\/|\/)/);
+    expectIso(pd.logoUrlExpiresAt, 'PrintDataResult.logoUrlExpiresAt');
+    expect(pd.templates.map((t) => t.id)).toEqual([base.id, made.id]);
+    expect(pd.defaultTemplateId).toBe(base.id);
+    expect(pd.lastPrint).toBeNull();
+    expect(pd.printCount).toBe(0);
+    expect(pd.warnings.map((w) => w.code)).not.toContain('NO_BANK');
+
+    // ---- Ghi nhật ký in: ba nguồn ----
+    const keyA = newIdempotencyKey();
+    const first1 = await chk(
+      'print.createContractPrint',
+      print.createContractPrint(orgId, contract.id, { source: 'TEMPLATE', templateId: made.id, expectedTemplateVersion: 2, blockOverrides: { 'ky-nhay': false }, expectedDataHash: pd.dataHash }, keyA),
+      'createContractPrint (theo mẫu)',
+    );
+    expect(first1).toMatchObject({ printNo: 1, source: 'TEMPLATE', basedOnPrintId: null, templateId: made.id, templateVersion: 2, layout: 4, contractStatus: 'CONFIRMED', templateName: `Mẫu cưới mới ${stamp}` });
+    expect(first1.printedBy.fullName).toBe('Thợ Khớp Hợp Đồng');
+    expectIso(first1.printedAt, 'PrintRecordView.printedAt');
+    // Bấm hai lần (cùng Idempotency-Key, cùng thân) → cùng một lần in, KHÔNG ghi thêm dòng nhật ký.
+    const replay = await print.createContractPrint(orgId, contract.id, { source: 'TEMPLATE', templateId: made.id, expectedTemplateVersion: 2, blockOverrides: { 'ky-nhay': false }, expectedDataHash: pd.dataHash }, keyA);
+    expect(replay.id).toBe(first1.id);
+    expect((await print.getPrintData(orgId, contract.id)).printCount).toBe(1);
+    // Cùng khoá, khác thân → 409.
+    const sameKeyOtherBody: unknown = await print
+      .createContractPrint(orgId, contract.id, { source: 'REPRINT', basedOnPrintId: first1.id, expectedDataHash: pd.dataHash }, keyA)
+      .catch((e: unknown) => e);
+    expect(errorKind(sameKeyOtherBody)).toBe('conflict');
+
+    const second = await chk(
+      'print.createContractPrint',
+      print.createContractPrint(orgId, contract.id, { source: 'PRIOR_CONFIG', basedOnPrintId: first1.id, blockOverrides: { 'chu-dau': false }, expectedDataHash: pd.dataHash }, newIdempotencyKey()),
+      'createContractPrint (theo cấu hình lần trước)',
+    );
+    expect(second).toMatchObject({ printNo: 2, source: 'PRIOR_CONFIG', basedOnPrintId: first1.id, templateId: made.id, templateVersion: 2, layout: 4 });
+    const third = await chk(
+      'print.createContractPrint',
+      print.createContractPrint(orgId, contract.id, { source: 'REPRINT', basedOnPrintId: first1.id, expectedDataHash: pd.dataHash }, newIdempotencyKey()),
+      'createContractPrint (in lại y hệt)',
+    );
+    expect(third).toMatchObject({ printNo: 3, source: 'REPRINT', basedOnPrintId: first1.id });
+
+    // Bản chụp của lần in: cấu hình đã gộp (công tắc nhanh đã áp) + dữ liệu đúng bản đã in.
+    const snap = await chk('print.getContractPrint', print.getContractPrint(orgId, contract.id, first1.id));
+    expect(snap.print.id).toBe(first1.id);
+    expect(snap.config).toMatchObject({ templateId: made.id, templateVersion: 2, layout: 4 });
+    expect(snap.config.blocks).toMatchObject({ 'ky-nhay': false, tho: false, 'tieu-de': true, 'chu-ky': true });
+    expect(snap.dataHash).toBe(pd.dataHash);
+    expect(snap.data).toEqual(pd.data);
+    expect((await print.getContractPrint(orgId, contract.id, second.id)).config.blocks['chu-dau']).toBe(false);
+    const otherBlocks = (await print.getContractPrint(orgId, contract.id, third.id)).config.blocks;
+    expect(otherBlocks).toEqual(snap.config.blocks);
+    const missingPrint: unknown = await print.getContractPrint(orgId, contract.id, '00000000-0000-4000-8000-000000000000').catch((e: unknown) => e);
+    expect(errorKind(missingPrint)).toBe('not_found');
+
+    // Sau 3 lần in: số lần in, lần in gần nhất cùng dữ liệu, số hợp đồng đã in của mẫu.
+    const after = await chk('print.getPrintData', print.getPrintData(orgId, contract.id), 'getPrintData (sau khi in)');
+    expect(after.printCount).toBe(3);
+    expect(after.lastPrint).toMatchObject({ id: third.id, printNo: 3, sameData: true });
+    expect(after.dataHash).toBe(pd.dataHash);
+    const usedBy = (await print.getPrintTemplate(orgId, made.id)).usage;
+    expect(usedBy.printedContracts).toBe(1);
+    expectIso(usedBy.lastPrintedAt, 'PrintTemplateView.usage.lastPrintedAt');
+
+    // ---- Lỗi 409: mẫu vừa sửa, dữ liệu vừa đổi, hợp đồng đã huỷ — không ghi gì ----
+    const stale: unknown = await print
+      .createContractPrint(orgId, contract.id, { source: 'TEMPLATE', templateId: made.id, expectedTemplateVersion: 1, expectedDataHash: pd.dataHash }, newIdempotencyKey())
+      .catch((e: unknown) => e);
+    expect(errorKind(stale)).toBe('conflict');
+    expect((stale as { details?: unknown }).details).toMatchObject({ reason: 'TEMPLATE_CHANGED', templateVersion: 2 });
+    const changed: unknown = await print
+      .createContractPrint(orgId, contract.id, { source: 'REPRINT', basedOnPrintId: first1.id, expectedDataHash: '0'.repeat(64) }, newIdempotencyKey())
+      .catch((e: unknown) => e);
+    expect((changed as { details?: unknown }).details).toMatchObject({ reason: 'DATA_CHANGED' });
+    const gone = await contracts.createContract(orgId, { customerId: customer.id, lines: [{ kind: 'CUSTOM', name: 'Thử huỷ', unitPrice: 100_000, quantity: 1 }] }, newIdempotencyKey());
+    const goneData = await print.getPrintData(orgId, gone.id);
+    expect(goneData.warnings.map((w) => w.code)).toContain('DRAFT');
+    await contracts.changeContractStatus(orgId, gone.id, { to: 'CANCELLED', reason: 'Thử in hợp đồng huỷ' });
+    const cancelledPrint: unknown = await print
+      .createContractPrint(orgId, gone.id, { source: 'TEMPLATE', templateId: base.id, expectedTemplateVersion: 1, expectedDataHash: goneData.dataHash }, newIdempotencyKey())
+      .catch((e: unknown) => e);
+    expect(errorKind(cancelledPrint)).toBe('conflict');
+    expect((cancelledPrint as { details?: unknown }).details).toMatchObject({ reason: 'CONTRACT_CANCELLED' });
+    expect((await print.getPrintData(orgId, gone.id)).printCount).toBe(0);
+    // Mã hợp đồng bịa → 404.
+    const noContract: unknown = await print.getPrintData(orgId, '00000000-0000-4000-8000-000000000000').catch((e: unknown) => e);
+    expect(errorKind(noContract)).toBe('not_found');
+
+    // Phụ phí tự thêm theo luật (bản vẽ D 3.4): nằm ở PrintLine.surcharges của dòng gốc (tên + số lượng + tiền), không phải dòng riêng.
+    await catalog.createSurchargeRule(orgId, { name: `Ca sớm in ${stamp}`, serviceId: surcharge.id, startTime: '05:00', endTime: '08:00' }, newIdempotencyKey());
+    const early = await contracts.createContract(
+      orgId,
+      {
+        customerId: customer.id,
+        eventDate: '2026-12-22T00:00:00+07:00',
+        lines: [{ kind: 'PACKAGE', packageId: pkg.id, subjectId: subject.id, quantity: 2, locationType: 'STUDIO', scheduledStart: '2026-12-22T06:00:00+07:00', scheduledEnd: '2026-12-22T09:00:00+07:00' }],
+      },
+      newIdempotencyKey(),
+    );
+    const earlyData = await chk('print.getPrintData', print.getPrintData(orgId, early.id), 'getPrintData (có phụ phí tự thêm)');
+    const earlyRow = first(earlyData.data.lines, 'dòng gói có phụ phí');
+    expect(earlyRow.quantity).toBe(2);
+    expect(first(earlyRow.surcharges, 'phụ phí tự thêm')).toMatchObject({ name: surcharge.name, quantity: 2 });
+    expect(earlyData.data.lines).toHaveLength(1);
+    expect(earlyData.data.money.total).toBe(early.total);
   });
 
   it('lịch: tạo (gắn hợp đồng), xem, danh sách, sửa, đổi trạng thái', async () => {
@@ -840,6 +1073,25 @@ describe('types.ts khớp đúng dữ liệu máy chủ thật trả về (tên 
     expect(confirmed.rules).toBe(rules.body);
     expect(confirmed.terms).toBe(terms.body);
     first((await chk('contracts.listContracts', contracts.listContracts(hv, { kind: 'COURSE' }), 'listContracts (khoá học)')).items, 'hợp đồng khoá học');
+
+    // Mẫu in của hợp đồng khoá học (bản vẽ G): mẫu "Cổ điển có quốc hiệu" cài sẵn cho tổ chức đào tạo, dòng COURSE có lịch học, điều khoản + nội quy là bản chụp.
+    const cpd = await chk('print.getPrintData', print.getPrintData(hv, draft.id), 'getPrintData (khoá học)');
+    expect(cpd.data).toMatchObject({ kind: 'COURSE', terms: { snapshot: true }, rules: { snapshot: true } });
+    const courseRow = first(cpd.data.lines, 'dòng khoá học');
+    expect(courseRow.course).toMatchObject({ courseName: 'Makeup chuyên nghiệp', className: 'K1', startDate: '2026-11-02', weekdays: [2, 4, 6] });
+    expect(first(cpd.templates, 'mẫu in khoá học')).toMatchObject({ name: 'Cổ điển có quốc hiệu', layout: 1, appliesTo: ['COURSE'], defaultFor: ['COURSE'] });
+    expect(cpd.defaultTemplateId).toBe(first(cpd.templates, 'mẫu in khoá học').id);
+    const courseTpl = first(cpd.templates, 'mẫu in khoá học');
+    const cPrint = await print.createContractPrint(hv, draft.id, { source: 'TEMPLATE', templateId: courseTpl.id, expectedTemplateVersion: courseTpl.version, expectedDataHash: cpd.dataHash }, newIdempotencyKey());
+    expect(cPrint).toMatchObject({ printNo: 1, source: 'TEMPLATE', layout: 1 });
+    const cSnap = await chk('print.getContractPrint', print.getContractPrint(hv, draft.id, cPrint.id), 'getContractPrint (khoá học)');
+    expect(cSnap.config.blocks).toMatchObject({ 'noi-quy': true, tho: false });
+    // Mẫu dịch vụ không dùng cho hợp đồng khoá học → 400.
+    const tplService = first((await print.listPrintTemplates(hv, { appliesTo: 'SERVICE' })).items, 'mẫu dịch vụ');
+    const wrongTpl: unknown = await print
+      .createContractPrint(hv, draft.id, { source: 'TEMPLATE', templateId: tplService.id, expectedTemplateVersion: tplService.version, expectedDataHash: cpd.dataHash }, newIdempotencyKey())
+      .catch((e: unknown) => e);
+    expect(errorKind(wrongTpl)).toBe('validation');
 
     // Lớp đã đủ 1/1: hợp đồng thứ hai vào cùng lớp → 409 ngay lúc lưu, details có số chỗ mới.
     const other = await schedule.createCustomer(hv, { fullName: 'Đỗ Minh Ngọc' }, newIdempotencyKey());

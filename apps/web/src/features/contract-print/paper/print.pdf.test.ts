@@ -101,7 +101,7 @@ function query(j: Job): string {
 }
 
 function fileName(j: Job): string {
-  const tag = j.tag ? `-${j.tag}` : j.lech ? `-lech${j.lech}` : '';
+  const tag = `${j.tag ? `-${j.tag}` : ''}${j.lech ? `-lech${j.lech}` : ''}${j.nhap ? '-nhap' : ''}${j.bat?.length ? `-bat-${j.bat.join('+')}` : ''}${j.lanIn ? `-lan${j.lanIn}` : ''}`;
   return `bo-cuc-${j.layout}-${j.kind === 'SERVICE' ? 'dich-vu' : 'khoa-hoc'}-${j.ban}${tag}.pdf`;
 }
 

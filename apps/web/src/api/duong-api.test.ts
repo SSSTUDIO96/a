@@ -8,11 +8,12 @@ import * as files from './files';
 import * as org from './org';
 import * as payments from './payments';
 import * as platform from './platform';
+import * as print from './print';
 import * as profile from './profile';
 import * as schedule from './schedule';
 import * as staff from './staff';
 import * as today from './today';
-import type { ContractBody } from './types';
+import type { ContractBody, ContractInfoInput, PrintCreateInput } from './types';
 
 // Kiểm từng hàm gọi đúng đường, phương thức, thân, query và header (Idempotency-Key chỉ ở POST tạo dữ liệu).
 
@@ -70,6 +71,20 @@ const contractBody: ContractBody = {
   newCustomer: { fullName: 'Lan', phone: '0912345678' },
   lines: [{ kind: 'CUSTOM', name: 'Phụ phí', unitPrice: 100_000, quantity: 1 }],
 };
+
+// Mẫu in hợp đồng (bản vẽ G mục 3.3): thân gửi nguyên vẹn, đủ ba nguồn của POST prints.
+const HASH = 'a'.repeat(64);
+const contractInfo: ContractInfoInput = {
+  representativeName: 'Nguyễn Văn Chiến',
+  representativeTitle: 'Giám đốc',
+  bankName: 'Vietcombank',
+  bankAccountNumber: '0123456789',
+  bankAccountName: 'NGUYEN VAN CHIEN',
+};
+const printFromTemplate: PrintCreateInput = { source: 'TEMPLATE', templateId: 'm1', expectedTemplateVersion: 3, blockOverrides: { 'quoc-hieu': false }, expectedDataHash: HASH };
+const printFromPrior: PrintCreateInput = { source: 'PRIOR_CONFIG', basedOnPrintId: 'l1', blockOverrides: { 'quoc-hieu': true }, expectedDataHash: HASH };
+const printReprint: PrintCreateInput = { source: 'REPRINT', basedOnPrintId: 'l1', expectedDataHash: HASH };
+const templateBody = { name: 'Mẫu cưới', layout: 2 as const, appliesTo: ['SERVICE' as const], defaultFor: ['SERVICE' as const], blocks: { 'quoc-hieu': false }, title: null };
 
 const cases: Case[] = [
   // ---- catalog ----
@@ -249,6 +264,16 @@ const cases: Case[] = [
   { name: 'publishBrandProfile', call: () => profile.publishBrandProfile(ORG), method: 'POST', url: `${P}/profile/publish` },
   { name: 'unpublishBrandProfile', call: () => profile.unpublishBrandProfile(ORG), method: 'POST', url: `${P}/profile/unpublish` },
   { name: 'getPublicSite', call: () => profile.getPublicSite('hoa-makeup'), method: 'GET', url: '/api/v1/public/sites/hoa-makeup', noAuth: true },
+  // PUT ghi toàn bộ 5 trường, không Idempotency-Key.
+  { name: 'updateContractInfo', call: () => profile.updateContractInfo(ORG, contractInfo), method: 'PUT', url: `${P}/profile/contract-info`, body: contractInfo },
+  // ---- print (mẫu in hợp đồng, bản vẽ G): chỉ POST tạo mẫu và POST ghi nhật ký in có Idempotency-Key ----
+  { name: 'listPrintTemplates', call: () => print.listPrintTemplates(ORG, { appliesTo: 'COURSE', includeInactive: true }), method: 'GET', url: `${P}/print-templates?appliesTo=COURSE&includeInactive=true` },
+  { name: 'getPrintTemplate', call: () => print.getPrintTemplate(ORG, 'm1'), method: 'GET', url: `${P}/print-templates/m1` },
+  { name: 'createPrintTemplate', call: () => print.createPrintTemplate(ORG, templateBody, KEY), method: 'POST', url: `${P}/print-templates`, body: templateBody, idem: true },
+  { name: 'updatePrintTemplate', call: () => print.updatePrintTemplate(ORG, 'm1', { isActive: false }), method: 'PATCH', url: `${P}/print-templates/m1`, body: { isActive: false } },
+  { name: 'getPrintData', call: () => print.getPrintData(ORG, 'hd1'), method: 'GET', url: `${P}/contracts/hd1/print-data` },
+  { name: 'getContractPrint', call: () => print.getContractPrint(ORG, 'hd1', 'l1'), method: 'GET', url: `${P}/contracts/hd1/prints/l1` },
+  { name: 'createContractPrint', call: () => print.createContractPrint(ORG, 'hd1', printFromTemplate, KEY), method: 'POST', url: `${P}/contracts/hd1/prints`, body: printFromTemplate, idem: true },
   // ---- platform (quản trị nền tảng, W13) — đường KHÔNG có /orgs/:orgId; POST không khai idempotent trên máy chủ ----
   { name: 'getPlatformStats', call: () => platform.getPlatformStats(), method: 'GET', url: '/api/v1/platform/stats' },
   {
@@ -343,8 +368,8 @@ describe('mỗi hàm gọi đúng đường API', () => {
     else expect(s?.headers['Idempotency-Key']).toBeUndefined();
   });
 
-  it('đủ mọi hàm xuất ra của catalog/contracts/schedule/staff/payments/files/profile/platform/today đều có bài thử', () => {
-    const exported = [catalog, contracts, schedule, staff, payments, files, profile, platform, today].flatMap((m) => Object.keys(m)).sort();
+  it('đủ mọi hàm xuất ra của catalog/contracts/schedule/staff/payments/files/profile/print/platform/today đều có bài thử', () => {
+    const exported = [catalog, contracts, schedule, staff, payments, files, profile, print, platform, today].flatMap((m) => Object.keys(m)).sort();
     expect(cases.map((c) => c.name).sort()).toEqual(exported);
   });
 
@@ -362,6 +387,26 @@ describe('mỗi hàm gọi đúng đường API', () => {
     await profile.publishBrandProfile(ORG);
     expect(seen[0]?.raw).toBeUndefined();
     expect(seen[0]?.headers['Content-Type']).toBeUndefined();
+  });
+
+  it('POST ghi nhật ký in: cả ba nguồn đi nguyên thân; REPRINT không có blockOverrides; luôn có Idempotency-Key', async () => {
+    for (const body of [printFromTemplate, printFromPrior, printReprint]) {
+      seen = [];
+      await print.createContractPrint(ORG, 'hd1', body, KEY);
+      expect(seen).toHaveLength(1);
+      expect(seen[0]?.method).toBe('POST');
+      expect(seen[0]?.url).toBe(`${P}/contracts/hd1/prints`);
+      expect(seen[0]?.body).toEqual(body);
+      expect(seen[0]?.headers['Idempotency-Key']).toBe(KEY);
+    }
+    expect(Object.keys(seen[0]?.body as object)).not.toContain('blockOverrides');
+  });
+
+  it('danh sách mẫu in không lọc thì không có dấu ?; includeInactive: false gửi đúng chữ "false"; id lạ được mã hoá', async () => {
+    await print.listPrintTemplates(ORG);
+    await print.listPrintTemplates(ORG, { includeInactive: false });
+    await print.getContractPrint(ORG, 'hd/1', 'l 1');
+    expect(seen.map((x) => x.url)).toEqual([`${P}/print-templates`, `${P}/print-templates?includeInactive=false`, `${P}/contracts/hd%2F1/prints/l%201`]);
   });
 
   it('id có ký tự lạ được mã hoá trong đường dẫn', async () => {
