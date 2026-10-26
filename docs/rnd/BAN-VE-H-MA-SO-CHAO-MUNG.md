@@ -1,5 +1,13 @@
 # Bản vẽ H — Mã số học viên trên thẻ chào mừng (R&D-11, chặng 2)
 
+> **ĐÍNH CHÍNH 26/10/2026 tối (điều phối, sau gói H-H1 tra lại — bản gốc bên dưới GIỮ NGUYÊN; chỗ nào đá nhau thì theo đính chính này):**
+> 1. Số dòng mục 1: đúng hết về nội dung, vài chỗ lệch đuôi 1–2 dòng (HEAD tra là 1f4e54d, mã app không đổi từ f489b3e). Không có dòng nào sai nội dung.
+> 2. Mục 3.2: tên nhật ký "contract.confirmed / contract.lines_added" **không tồn tại**. Tên đúng: `contract.status_changed` (contracts/routes.ts:908), `contract.line_added` (:725), `contract.line_voided` (:815). `enroll.ts` không tự ghi nhật ký; ghi ở chỗ gọi.
+> 3. Bài sẽ ĐỎ phải sửa theo gói: `apps/api/test/designs.test.ts:446-454` (bản chụp shd-02 so đủ khoá — thêm `ma`) → gói H-M3 phần designs; `apps/web/src/features/designs/mau-20.test.ts:46` (ô của shd-11) → gói H-T1; `apps/web/src/portal/fixtures.ts:12` thiếu `seatLabel` (lỗi typecheck) → H-M3 như đã ghi. Không có bài nào so khuôn đủ dòng ghi danh hay `PortalMe.enrollments`; 0 tệp snapshot.
+> 4. Cửa gác: thẻ thiết kế trong fixture ở `apps/api/test/gate.ts:323` và `:484` (cardId) — H-M3 kiểm mẫu sửa một phần có `portalVisible` chạy đúng thẻ này.
+> 5. `apps/api/test/gate-mutants.test.ts:523` chú thích ghi "(25)" đã cũ — số lớn nhất là 26 (:525). Đột biến mới của H là 27, 28.
+
+
 - Sản phẩm: Makeup Pro. Ngày 26/10/2026. Người viết: Trung tâm R&D. Người đọc: điều phối, các thợ, thợ chấm.
 - Phương án: **A — số theo thứ tự ghi danh, giữ nguyên, sửa tay được**. Trợ lý chọn thay anh Chiến (`docs/NHAT-KY-QUYET-DINH-THAY.md:114`).
 - Quyết định đã chốt, thợ không bàn lại:
