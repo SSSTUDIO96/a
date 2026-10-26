@@ -110,3 +110,7 @@ Danh sách việc các thợ, thợ chấm và R&D đã nêu nhưng **chưa làm
 | 90 | `apps/web/src/features/courses/ClassCard.tsx:60` aria-label vẫn ra "Lớp Lớp K12" — dùng lại `lopLabel()` của certificates/logic.ts | thợ sửa nhỏ F2 |
 | 91 | Form sửa khách (ô ảnh) có dòng giải thích dưới nút "Học viên: ảnh này in lên giấy chứng nhận. Nên dùng ảnh vuông, cạnh từ 500 px." — luật 7: đưa vào tooltip | thợ sửa nhỏ F2 |
 | 92 | `CustomerCreateInput` không nhận `avatarFileId` (POST /customers chỉ nhận fullName/phone/email/note) — tạo khách mới chưa gắn được ảnh ngay, phải tạo xong rồi sửa. Có cần gắn ảnh lúc tạo không: hỏi anh khi bàn màn tạo học viên | chờ |
+| 93 | Hợp đồng huỷ: chú thích "Hợp đồng đã huỷ — không in" bị `contract-print/dialog/dialog.css` (@media ≤640 `.hdin-btn-note{display:none}`) ẩn ở điện thoại; nút vẫn tắt, có tooltip. Quyết khi chấm G-K | G-K |
+| 94 | `CourseContractEditor` prop `orgName` còn khai báo mà không dùng (ContractKindRouter.tsx, contracts/index.tsx ngoài gói G-W5) — dọn | thợ sửa sau G-K |
+| 95 | `contract-print/dialog/index.ts` xuất tĩnh PrintDialog nên lazy-load trong PrintButton mất tác dụng: gói man-contracts 145 kB. Đo lại và tách | thợ sửa sau G-K |
+| 96 | Màn "Lập hợp đồng" khoá học (ảnh G-W5 03-khoa-hoc-nut-in-1440) thanh bên tô "Danh sách hợp đồng" thay vì "Lập hợp đồng" — đào xem có từ trước G-W5 không | G-K |
