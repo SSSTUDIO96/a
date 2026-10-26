@@ -88,7 +88,7 @@ export function ExtraPackageDialog(p: ExtraPackageDialogProps) {
   }, [pkg, catalog]);
 
   const draft: ContractDraft = useMemo(
-    () => ({ customer: { kind: 'existing', id: detail.customer.id, fullName: '', phone: null, email: null }, eventDate, discount: 0, depositRequired: null, notes: '', lines: line ? [line] : [] }),
+    () => ({ customer: { kind: 'existing', id: detail.customer.id, fullName: '', phone: null, email: null }, eventDate, discount: 0, depositRequired: null, notes: '', termsTemplateId: null, lines: line ? [line] : [] }),
     [detail.customer.id, eventDate, line],
   );
   const local = useMemo(

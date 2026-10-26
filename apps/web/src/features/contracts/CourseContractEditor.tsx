@@ -8,13 +8,12 @@ import { newIdempotencyKey } from '../../api/idempotency';
 import { getCustomer } from '../../api/schedule';
 import { listStaff } from '../../api/staff';
 import { useQuote } from '../../api/useQuote';
-import type { ContractDetail, ContractQuote, ContractText, ContractTextKind, ContractUpdateInput, PaymentInstallment, StaffMember } from '../../api/types';
+import type { ContractDetail, ContractQuote, ContractText, ContractUpdateInput, PaymentInstallment, StaffMember } from '../../api/types';
 import { useOnline } from '../../layout/ErrorStates';
 import { PageHeader } from '../../layout/PageHeader';
 import { useBreakpoint } from '../../layout/useBreakpoint';
-import { BottomSheet, Button, Card, IconLock, IconPlus, Select, SkeletonText, StatusTag, StickyTotalBar, Tooltip, formatVnd } from '../../ui';
-import { fullDate, scheduleText } from '../courses/logic';
-import { ContractPrintDialog, type PrintLine, type PrintText } from './ContractPrint';
+import { BottomSheet, Button, Card, ConfirmDialog, IconLock, IconPlus, Select, SkeletonText, StatusTag, StickyTotalBar, Tooltip, formatVnd } from '../../ui';
+import { PrintButton } from '../contract-print/dialog';
 import { ContractTextsCard, TextsManager } from './ContractTexts';
 import { CourseInstallments, InstallmentsPlaceholder } from './CourseInstallments';
 import { CourseLineCard } from './CourseLineCard';
@@ -43,6 +42,7 @@ import { addedLabel, belowPaidText, contractAbilities, customerChangeText, error
 import { TotalsCard } from './TotalsCard';
 import { useCourseCatalog } from './useCourseCatalog';
 import { VoidLineDialog } from './VoidLineDialog';
+import { TERMS_CHANGED_QUESTION, termsChangedSinceLastPrint } from './printGuard';
 import './contracts.css';
 
 // Lập hợp đồng KHOÁ HỌC (bản vẽ C3 mục 2.3): cột trái danh mục khoá theo nhóm; cột phải học viên + người phụ trách,
@@ -53,7 +53,9 @@ export interface CourseContractEditorProps {
   orgId: string;
   slug: string;
   tz: string;
-  orgName: string;
+  // Không còn dùng (bản in nay do contract-print vẽ, lấy tên studio từ hồ sơ thương hiệu). Còn nhận để ContractKindRouter / index.tsx
+  // (ngoài phạm vi gói G-W5) chưa phải đổi; bỏ ở lượt dọn sau.
+  orgName?: string;
   has: (p: Permission) => boolean;
   // Hợp đồng đã lưu (trang cha đã tải để biết loại); null = lập mới.
   detail: ContractDetail | null;
@@ -74,7 +76,7 @@ function sig(d: CourseContractDraft): string {
   return JSON.stringify(coursePatchBody(d));
 }
 
-export function CourseContractEditor({ orgId, slug, tz, orgName, has, detail: initial, kindSwitch, onCreated }: CourseContractEditorProps) {
+export function CourseContractEditor({ orgId, slug, tz, has, detail: initial, kindSwitch, onCreated }: CourseContractEditorProps) {
   const navigate = useNavigate();
   const phone = useBreakpoint() === 'phone';
   const online = useOnline();
@@ -97,7 +99,8 @@ export function CourseContractEditor({ orgId, slug, tz, orgName, has, detail: in
   const [extraTarget, setExtraTarget] = useState<ExtraTarget | null>(null);
   const [voidTarget, setVoidTarget] = useState<{ id: string; name: string } | null>(null);
   const [cancelOpen, setCancelOpen] = useState(false);
-  const [printOpen, setPrintOpen] = useState(false);
+  // Điều khoản sắp chụp khác bản đã in cho khách: giữ hợp đồng đã lưu để hỏi lại trước khi xác nhận (bản vẽ G mục 4.4).
+  const [termsAsk, setTermsAsk] = useState<ContractDetail | null>(null);
   const [manageOpen, setManageOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [installments, setInstallments] = useState<PaymentInstallment[] | null>(null);
@@ -336,17 +339,48 @@ export function CourseContractEditor({ orgId, slug, tz, orgName, has, detail: in
   async function onConfirm() {
     setBusy('confirm');
     try {
+      const existed = detail !== null;
       const d = dirty || !detail ? await save() : detail;
       if (!d) return;
-      try {
-        const res = await changeContractStatus(orgId, d.id, { to: 'CONFIRMED' });
-        setDetail(res);
-        setSeatError(null);
-        reloadCatalog();
-        setAlert({ text: enrolledText(res), tone: 'ok', link: has('payments.read') ? { to: `/${slug}/thu-tien/${res.id}`, label: 'Thu tiền' } : undefined });
-      } catch (err) {
-        applyError(err);
+      // Hợp đồng đã lưu từ trước có thể đã được in cho khách: điều khoản / nội quy sắp chụp khác bản đã in thì hỏi lại. Hợp đồng vừa tạo
+      // thì chưa thể có lần in. Kiểm không được (mạng, máy chủ) thì KHÔNG xác nhận — không im lặng bỏ qua cảnh báo.
+      if (existed) {
+        try {
+          if (await termsChangedSinceLastPrint(orgId, d.id)) {
+            setTermsAsk(d);
+            return;
+          }
+        } catch (err) {
+          setAlert({ text: `Chưa kiểm được điều khoản đã in cho khách nên chưa xác nhận: ${userMessage(err)}` });
+          return;
+        }
       }
+      await runConfirm(d);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function runConfirm(d: ContractDetail) {
+    try {
+      const res = await changeContractStatus(orgId, d.id, { to: 'CONFIRMED' });
+      setDetail(res);
+      setSeatError(null);
+      reloadCatalog();
+      setAlert({ text: enrolledText(res), tone: 'ok', link: has('payments.read') ? { to: `/${slug}/thu-tien/${res.id}`, label: 'Thu tiền' } : undefined });
+    } catch (err) {
+      applyError(err);
+    }
+  }
+
+  // Người dùng đã đọc câu hỏi và chọn "Vẫn xác nhận".
+  async function onConfirmAnyway() {
+    const d = termsAsk;
+    setTermsAsk(null);
+    if (!d) return;
+    setBusy('confirm');
+    try {
+      await runConfirm(d);
     } finally {
       setBusy(null);
     }
@@ -430,38 +464,7 @@ export function CourseContractEditor({ orgId, slug, tz, orgName, has, detail: in
         .filter((v) => v.kind === 'CUSTOM')
         .map((v) => ({ key: v.id, kind: 'CUSTOM' as const, name: v.name, quantity: v.quantity, note: v.note, view: v, addedLabel: addedLabel(v, tz), error: null }));
 
-  // ---- Bản in ----
-  const classDetail = (classId: string | null) => {
-    const c = cat?.classes.find((k) => k.id === classId);
-    if (!c) return null;
-    return [`Khai giảng ${fullDate(c.startDate)} → ${fullDate(c.endDate)}`, scheduleText(c), c.instructor ? `Giảng viên ${c.instructor.name}` : null, c.location?.name ?? null].filter(Boolean).join(' · ');
-  };
-  const printLines: PrintLine[] = draftMode
-    ? draft.lines.map((l, i) => ({
-        key: l.key,
-        name: l.kind === 'COURSE' ? (views[i]?.name ?? l.courseName) : `${l.name}${l.quantity > 1 ? ` × ${l.quantity}` : ''}`,
-        detail: l.kind === 'COURSE' ? classDetail(l.classId) : null,
-        amount: views[i]?.lineTotal ?? null,
-      }))
-    : (detail?.lines ?? [])
-        .filter((v) => !v.voidedAt)
-        .map((v) => ({ key: v.id, name: `${v.name}${v.quantity > 1 ? ` × ${v.quantity}` : ''}`, detail: v.kind === 'COURSE' ? classDetail(v.courseClassId) : null, amount: v.lineTotal }));
-  const pickText = (kind: ContractTextKind): PrintText | null => {
-    const title = kind === 'TERMS' ? 'Điều khoản' : 'Nội quy trung tâm';
-    if (!draftMode && detail) {
-      const bodyText = kind === 'TERMS' ? detail.terms : detail.rules;
-      const v = kind === 'TERMS' ? detail.termsTemplateVersion : detail.rulesTemplateVersion;
-      const id = kind === 'TERMS' ? detail.termsTemplateId : detail.rulesTemplateId;
-      const name = texts?.find((t) => t.id === id)?.name;
-      return bodyText ? { title, source: v ? `${name ? `${name} · ` : ''}bản v${v}` : null, body: bodyText } : null;
-    }
-    const id = kind === 'TERMS' ? draft.termsTemplateId : draft.rulesTemplateId;
-    const t = (texts ?? []).find((x) => x.id === id) ?? defaultText(texts ?? [], kind);
-    return t ? { title, source: `${t.name} · bản v${t.version}`, body: t.body } : null;
-  };
-  const printTexts = [pickText('TERMS'), pickText('RULES')].filter((t): t is PrintText => t !== null);
   const fmtDate = (iso: string) => new Intl.DateTimeFormat('vi-VN', { timeZone: tz, day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(iso));
-  const printDate = `Ngày ${fmtDate(detail?.confirmedAt ?? new Date().toISOString())}`;
 
   // ---- Người phụ trách ----
   const ownerName = (id: string | null) => (id && staff.status === 'ready' ? (staff.items.find((m) => m.membershipId === id)?.displayName ?? null) : null);
@@ -512,10 +515,19 @@ export function CourseContractEditor({ orgId, slug, tz, orgName, has, detail: in
   const showPicker = draftMode && ab.canEdit;
 
   const saveBlocked = !online;
+  // Nút In (bản vẽ G mục 4.2): giữ nguyên chỗ nút "Xem bản in" cũ, trong thanh tổng.
   const printButton = (
-    <Button size={phone ? 'sm' : 'md'} onClick={() => setPrintOpen(true)} aria-label="Xem bản in">
-      {phone ? 'Bản in' : 'Xem bản in'}
-    </Button>
+    <PrintButton
+      orgId={orgId}
+      tz={tz}
+      contractId={detail?.id ?? null}
+      status={status}
+      needsSave={draftMode && ab.canEdit && dirty}
+      ensureSaved={async () => (await save())?.id ?? null}
+      canManageTemplates={has('contracts.texts')}
+      phone={phone}
+      size={phone ? 'sm' : 'md'}
+    />
   );
   const actions = draftMode ? (
     ab.canEdit ? (
@@ -783,27 +795,18 @@ export function CourseContractEditor({ orgId, slug, tz, orgName, has, detail: in
         saveLabel={draftMode ? (extraTarget?.line ? 'Lưu' : 'Thêm') : 'Thêm phát sinh'}
       />
 
-      <ContractPrintDialog
-        open={printOpen}
-        onClose={() => setPrintOpen(false)}
-        eyebrow={detail ? `${detail.code} · ${CONTRACT_STATUS_LABELS[detail.status].toLowerCase()}` : 'Bản nháp chưa lưu'}
-        orgName={orgName}
-        title="HỢP ĐỒNG ĐÀO TẠO"
-        code={detail?.code ?? null}
-        dateText={printDate}
-        customer={draft.customer ? { fullName: draft.customer.fullName, phone: draft.customer.phone || null } : null}
-        lines={printLines}
-        subtotal={totals?.subtotal ?? null}
-        discount={draftMode ? draft.discount : (detail?.discount ?? 0)}
-        total={totals?.total ?? null}
-        deposit={deposit}
-        installments={installments}
-        texts={printTexts}
-        notes={draft.notes.trim() || null}
-        fmtDate={fmtDate}
-      />
-
       <TextsManager open={manageOpen} orgId={orgId} tz={tz} onClose={() => setManageOpen(false)} onChanged={() => setTextsAttempt((n) => n + 1)} />
+
+      <ConfirmDialog
+        open={termsAsk !== null}
+        onClose={() => setTermsAsk(null)}
+        title="Điều khoản đã đổi sau lần in"
+        eyebrow={termsAsk?.code}
+        message={TERMS_CHANGED_QUESTION}
+        confirmLabel="Vẫn xác nhận"
+        cancelLabel="Xem lại"
+        onConfirm={onConfirmAnyway}
+      />
 
       <VoidLineDialog
         open={voidTarget !== null}

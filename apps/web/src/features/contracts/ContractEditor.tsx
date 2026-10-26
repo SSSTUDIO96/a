@@ -6,6 +6,7 @@ import {
   changeContractStatus,
   createContract,
   getContract,
+  listContractTexts,
   quoteContract,
   updateContract,
   voidContractLine,
@@ -14,7 +15,7 @@ import { errorKind, fieldErrors, userMessage } from '../../api/errors';
 import { newIdempotencyKey } from '../../api/idempotency';
 import { getCustomer } from '../../api/schedule';
 import { useQuote } from '../../api/useQuote';
-import type { AppointmentConflict, ContractQuoteBody, ContractUpdateInput, Service, ServicePackage } from '../../api/types';
+import type { AppointmentConflict, ContractQuoteBody, ContractText, ContractTextKind, ContractUpdateInput, Service, ServicePackage } from '../../api/types';
 import { NotFoundView, useOnline } from '../../layout/ErrorStates';
 import { PageHeader } from '../../layout/PageHeader';
 import { useBreakpoint } from '../../layout/useBreakpoint';
@@ -22,6 +23,7 @@ import {
   BottomSheet,
   Button,
   Card,
+  ConfirmDialog,
   DateInput,
   IconCheck,
   IconLock,
@@ -35,6 +37,8 @@ import {
 } from '../../ui';
 import { SurchargeToasts, type SurchargeToast } from './AutoSurchargeRows';
 import { CatalogPicker } from './CatalogPicker';
+import { ContractTextsCard, TextsManager } from './ContractTexts';
+import { PrintButton } from '../contract-print/dialog';
 import { CustomerBlock } from './CustomerBlock';
 import { ExtraDialog, type ExtraTarget } from './ExtraDialog';
 import { ExtraPackageDialog } from './ExtraPackageDialog';
@@ -113,6 +117,7 @@ import type { StaffPerson } from './StaffRow';
 import { TotalsCard } from './TotalsCard';
 import { useContractCatalog } from './useContractCatalog';
 import { VoidLineDialog } from './VoidLineDialog';
+import { TERMS_CHANGED_QUESTION, termsChangedSinceLastPrint } from './printGuard';
 import { useStaffList } from '../schedule/useScheduleData';
 import { staffNaming, type StaffRosterEntry } from '../../ui/staffName';
 import './contracts.css';
@@ -182,6 +187,9 @@ export function ContractEditor({ orgId, slug, tz, has, contractId, kindSwitch, o
   const [extraPkg, setExtraPkg] = useState<ServicePackage | null>(null);
   const [voidTarget, setVoidTarget] = useState<{ id: string; name: string } | null>(null);
   const [cancelOpen, setCancelOpen] = useState(false);
+  // Điều khoản sắp chụp khác bản đã in cho khách: giữ hợp đồng đã lưu để hỏi lại trước khi xác nhận (bản vẽ G mục 4.4).
+  const [termsAsk, setTermsAsk] = useState<ContractDetail | null>(null);
+  const [manageOpen, setManageOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   // Đã sửa ô cọc: hiện đúng số người nhập (trống = theo gợi ý); chưa sửa: hiện số máy chủ trả.
   const [depositTouched, setDepositTouched] = useState(false);
@@ -199,6 +207,21 @@ export function ContractEditor({ orgId, slug, tz, has, contractId, kindSwitch, o
   const [legacy, setLegacy] = useState<number | null>(null);
   const [toasts, setToasts] = useState<SurchargeToast[]>([]);
   const pickRef = useRef<HTMLDivElement>(null);
+
+  // ---- Mẫu điều khoản (bản vẽ G mục 4.2: màn dịch vụ cũng chọn mẫu, gửi termsTemplateId) ----
+  const [texts, setTexts] = useState<ContractText[] | null>(null);
+  const [textsError, setTextsError] = useState<string | null>(null);
+  const [textsAttempt, setTextsAttempt] = useState(0);
+  useEffect(() => {
+    const controller = new AbortController();
+    setTextsError(null);
+    listContractTexts(orgId, { appliesTo: 'SERVICE' }, controller.signal)
+      .then(setTexts)
+      .catch((err: unknown) => {
+        if (!controller.signal.aborted) setTextsError(`Chưa tải được mẫu điều khoản: ${userMessage(err)}`);
+      });
+    return () => controller.abort();
+  }, [orgId, textsAttempt]);
 
   // ---- Hợp đồng mới chọn sẵn khách: /hop-dong/moi?customerId=… (màn Khách hàng dẫn sang) ----
   const [searchParams] = useSearchParams();
@@ -643,26 +666,57 @@ export function ContractEditor({ orgId, slug, tz, has, contractId, kindSwitch, o
     if (blockedReason) return;
     setBusy('confirm');
     try {
+      const existed = detail !== null;
       const d = dirty || !detail ? await save() : detail;
       if (!d) return;
-      try {
-        const res = await changeContractStatus(orgId, d.id, { to: 'CONFIRMED' });
-        setDetail(res as unknown as ContractDetail);
-        // S1: báo đúng số lịch máy chủ đã tạo (kể cả lịch chưa có thợ).
-        setAlert({ text: confirmResultText(res as unknown as ContractDetail & { createdAppointments: { contractLineId: string | null }[] }), tone: 'ok', link: (has('schedule.read_all') || has('schedule.read_own')) ? { to: `/${slug}/lich`, label: 'Xem lịch' } : undefined });
-      } catch (err) {
-        if (applyNoTimeError(err, d)) return;
-        applyError(err);
-        // 409 trùng giờ: hợp đồng vẫn là nháp. Gọi lại quote để dải đỏ hiện đúng dòng.
-        if (conflictsOf(err).length > 0 && quoteBody && quoteKey) {
-          try {
-            const fresh = (await quoteContract(orgId, quoteBody)) as ContractQuote;
-            setRefreshed({ key: quoteKey, data: fresh });
-          } catch {
-            // Không gọi lại được: dải trùng lịch vẫn hiện danh sách ca của máy chủ.
+      // Hợp đồng đã lưu từ trước có thể đã được in cho khách: điều khoản sắp chụp khác bản đã in thì hỏi lại. Hợp đồng vừa tạo thì chưa
+      // thể có lần in. Kiểm không được (mạng, máy chủ) thì KHÔNG xác nhận — không im lặng bỏ qua cảnh báo.
+      if (existed) {
+        try {
+          if (await termsChangedSinceLastPrint(orgId, d.id)) {
+            setTermsAsk(d);
+            return;
           }
+        } catch (err) {
+          setAlert({ text: `Chưa kiểm được điều khoản đã in cho khách nên chưa xác nhận: ${userMessage(err)}` });
+          return;
         }
       }
+      await runConfirm(d);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function runConfirm(d: ContractDetail) {
+    try {
+      const res = await changeContractStatus(orgId, d.id, { to: 'CONFIRMED' });
+      setDetail(res as unknown as ContractDetail);
+      // S1: báo đúng số lịch máy chủ đã tạo (kể cả lịch chưa có thợ).
+      setAlert({ text: confirmResultText(res as unknown as ContractDetail & { createdAppointments: { contractLineId: string | null }[] }), tone: 'ok', link: (has('schedule.read_all') || has('schedule.read_own')) ? { to: `/${slug}/lich`, label: 'Xem lịch' } : undefined });
+    } catch (err) {
+      if (applyNoTimeError(err, d)) return;
+      applyError(err);
+      // 409 trùng giờ: hợp đồng vẫn là nháp. Gọi lại quote để dải đỏ hiện đúng dòng.
+      if (conflictsOf(err).length > 0 && quoteBody && quoteKey) {
+        try {
+          const fresh = (await quoteContract(orgId, quoteBody)) as ContractQuote;
+          setRefreshed({ key: quoteKey, data: fresh });
+        } catch {
+          // Không gọi lại được: dải trùng lịch vẫn hiện danh sách ca của máy chủ.
+        }
+      }
+    }
+  }
+
+  // Người dùng đã đọc câu hỏi và chọn "Vẫn xác nhận".
+  async function onConfirmAnyway() {
+    const d = termsAsk;
+    setTermsAsk(null);
+    if (!d) return;
+    setBusy('confirm');
+    try {
+      await runConfirm(d);
     } finally {
       setBusy(null);
     }
@@ -810,6 +864,20 @@ export function ContractEditor({ orgId, slug, tz, has, contractId, kindSwitch, o
   );
 
   const saveBlocked = !online;
+  // Nút In (bản vẽ G mục 4.2): máy tính / máy tính bảng ở đầu thẻ đầu, điện thoại ở thanh trên cạnh nhãn trạng thái.
+  const printButton = (size: 'sm' | 'md') => (
+    <PrintButton
+      orgId={orgId}
+      tz={tz}
+      contractId={detail?.id ?? null}
+      status={status}
+      needsSave={draftMode && ab.canEdit && dirty}
+      ensureSaved={async () => (await save())?.id ?? null}
+      canManageTemplates={has('contracts.texts')}
+      phone={phone}
+      size={size}
+    />
+  );
   const actions = draftMode ? (
     ab.canEdit ? (
       <>
@@ -865,7 +933,12 @@ export function ContractEditor({ orgId, slug, tz, has, contractId, kindSwitch, o
     <div className="ct-page">
       {/* h1 máy tính "Lập hợp đồng" (bản mẫu); điện thoại ẩn h1, thanh trên ghi đủ "Lập hợp đồng {mã}". */}
       <PageHeader title={phone ? title : draftMode ? 'Lập hợp đồng' : 'Hợp đồng'} backTo={`/${slug}/hop-dong`}
-        phoneAction={<StatusTag tone={status === 'CANCELLED' ? 'danger' : status === null || status === 'DRAFT' ? 'draft' : 'ok'}>{CONTRACT_STATUS_LABELS[status ?? 'DRAFT']}</StatusTag>}
+        phoneAction={
+          <>
+            <StatusTag tone={status === 'CANCELLED' ? 'danger' : status === null || status === 'DRAFT' ? 'draft' : 'ok'}>{CONTRACT_STATUS_LABELS[status ?? 'DRAFT']}</StatusTag>
+            {phone && printButton('sm')}
+          </>
+        }
       />
       <div className="ct-grid" style={ab.showCatalog ? undefined : { gridTemplateColumns: 'minmax(0, 1fr)' }}>
         {catalogCard}
@@ -878,6 +951,7 @@ export function ContractEditor({ orgId, slug, tz, has, contractId, kindSwitch, o
             actions={
               <>
                 {statusTag}
+                {!phone && printButton('sm')}
                 {ab.canCollect && detail && (
                   <Link className="ct-lnk" to={`/${slug}/thu-tien/${detail.id}`}>
                     Thu tiền
@@ -1112,6 +1186,22 @@ export function ContractEditor({ orgId, slug, tz, has, contractId, kindSwitch, o
             onNotesBlur={status === 'CONFIRMED' ? () => void saveNotes() : undefined}
           />
 
+          <ContractTextsCard
+            contractKind="SERVICE"
+            texts={texts}
+            textsError={textsError}
+            tz={tz}
+            chosen={{ termsTemplateId: draft.termsTemplateId, rulesTemplateId: null }}
+            snapshot={!draftMode && detail ? detail : null}
+            locked={!draftMode || !ab.canEdit}
+            canManage={has('contracts.texts')}
+            onChoose={(k: ContractTextKind, id) => {
+              if (k === 'TERMS') update((d) => ({ ...d, termsTemplateId: id }));
+            }}
+            onManage={() => setManageOpen(true)}
+            onRetry={() => setTextsAttempt((n) => n + 1)}
+          />
+
           {alert?.tone === 'ok' ? (
             <div className="ct-okband" role="status">
               <IconLock />
@@ -1299,6 +1389,19 @@ export function ContractEditor({ orgId, slug, tz, has, contractId, kindSwitch, o
             return userMessage(err);
           }
         }}
+      />
+
+      <TextsManager open={manageOpen} orgId={orgId} tz={tz} onClose={() => setManageOpen(false)} onChanged={() => setTextsAttempt((n) => n + 1)} />
+
+      <ConfirmDialog
+        open={termsAsk !== null}
+        onClose={() => setTermsAsk(null)}
+        title="Điều khoản đã đổi sau lần in"
+        eyebrow={termsAsk?.code}
+        message={TERMS_CHANGED_QUESTION}
+        confirmLabel="Vẫn xác nhận"
+        cancelLabel="Xem lại"
+        onConfirm={onConfirmAnyway}
       />
 
       <VoidLineDialog

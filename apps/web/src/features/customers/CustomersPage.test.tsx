@@ -274,7 +274,7 @@ describe('Khách mới, sửa tại chỗ', () => {
   const NEW_FILE = { id: 'f-new', purpose: 'CUSTOMER_AVATAR', status: 'READY', originalName: 'anh.png', mimeType: 'image/png', sizeBytes: 3, sha256: null, width: 600, height: 600, createdAt: T, signedUrl: 'https://files.test/moi.png', signedUrlExpiresAt: T };
   // Máy chủ giả: khách k1 có ảnh cũ (hoặc không), POST /files trả tệp mới, PATCH trả lại khách với avatarUrl theo avatarFileId.
   function avatarServer(initial: 'cu' | null) {
-    let current = initial === 'cu' ? { avatarFileId: 'f-old', avatarUrl: 'https://files.test/cu.png' } : { avatarFileId: null, avatarUrl: null };
+    let current: { avatarFileId: string | null; avatarUrl: string | null } = initial === 'cu' ? { avatarFileId: 'f-old', avatarUrl: 'https://files.test/cu.png' } : { avatarFileId: null, avatarUrl: null };
     const override: Override = (method, path, body) => {
       if (method === 'GET' && path === '/orgs/org-1/customers/k1') return json(200, { ...MAIN, ...current });
       if (method === 'POST' && path.startsWith('/orgs/org-1/files?')) return json(201, NEW_FILE);

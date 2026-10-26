@@ -68,7 +68,7 @@ export function CustomerEditForm({ orgId, c, canFiles, onCancel, onSaved }: { or
             error={errors.avatarFileId || null}
             hint="Học viên: ảnh này in lên giấy chứng nhận. Nên dùng ảnh vuông, cạnh từ 500 px."
             onUpload={async (file) => {
-              const stored = await uploadFile(orgId, { purpose: 'ALBUM_IMAGE', name: file.name.slice(0, 200) || 'anh-hoc-vien', data: file }, newIdempotencyKey());
+              const stored = await uploadFile(orgId, { purpose: 'CUSTOMER_AVATAR', name: file.name.slice(0, 200) || 'anh-hoc-vien', data: file }, newIdempotencyKey());
               setAvatarId(stored.id);
               setAvatarUrl(stored.signedUrl);
             }}

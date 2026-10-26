@@ -127,10 +127,12 @@ export interface ContractDraft {
   // null = để máy chủ lấy cọc gợi ý.
   depositRequired: Vnd | null;
   notes: string;
+  // Mẫu điều khoản đã chọn (bản vẽ G mục 4.2: màn dịch vụ cũng chọn mẫu). null = theo mẫu mặc định / điều khoản đã lưu.
+  termsTemplateId: string | null;
   lines: DraftLine[];
 }
 
-export const EMPTY_DRAFT: ContractDraft = { customer: null, eventDate: '', discount: 0, depositRequired: null, notes: '', lines: [] };
+export const EMPTY_DRAFT: ContractDraft = { customer: null, eventDate: '', discount: 0, depositRequired: null, notes: '', termsTemplateId: null, lines: [] };
 
 let keySeq = 0;
 export function newLineKey(): string {
@@ -417,6 +419,7 @@ export function buildBody(draft: ContractDraft, tz: string): ContractBody | null
   const fields = {
     ...(draft.eventDate ? { eventDate: zonedIso(draft.eventDate, '00:00', tz) } : {}),
     ...(draft.notes.trim() ? { notes: draft.notes } : {}),
+    ...(draft.termsTemplateId ? { termsTemplateId: draft.termsTemplateId } : {}),
     discount: draft.discount,
     ...(draft.depositRequired !== null ? { depositRequired: draft.depositRequired } : {}),
     lines,
@@ -437,6 +440,8 @@ export function patchBody(draft: ContractDraft, tz: string): ContractPatchFields
     ...(draft.depositRequired !== null ? { depositRequired: draft.depositRequired } : {}),
     eventDate: draft.eventDate ? zonedIso(draft.eventDate, '00:00', tz) : null,
     notes: draft.notes.trim() ? draft.notes : null,
+    // null = bỏ mẫu đã chọn (máy chủ dùng mẫu mặc định lúc xác nhận); khoá có mặt cả khi null để đổi về "theo mặc định" cũng lưu được.
+    termsTemplateId: draft.termsTemplateId,
   };
 }
 
@@ -522,6 +527,7 @@ export function draftFromDetail(d: ContractDetail, tz: string, perQuantityOf?: (
     discount: d.discount,
     depositRequired: d.depositRequired,
     notes: d.notes ?? '',
+    termsTemplateId: d.termsTemplateId,
     lines,
   };
 }
