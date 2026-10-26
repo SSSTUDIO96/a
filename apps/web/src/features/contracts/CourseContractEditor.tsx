@@ -8,7 +8,7 @@ import { newIdempotencyKey } from '../../api/idempotency';
 import { getCustomer } from '../../api/schedule';
 import { listStaff } from '../../api/staff';
 import { useQuote } from '../../api/useQuote';
-import type { ContractDetail, ContractQuote, ContractText, ContractUpdateInput, PaymentInstallment, StaffMember } from '../../api/types';
+import type { ContractDetail, ContractQuote, ContractText, ContractUpdateInput, StaffMember } from '../../api/types';
 import { useOnline } from '../../layout/ErrorStates';
 import { PageHeader } from '../../layout/PageHeader';
 import { useBreakpoint } from '../../layout/useBreakpoint';
@@ -72,6 +72,9 @@ interface Alert {
 
 type StaffState = { status: 'idle' | 'loading' } | { status: 'ready'; items: StaffMember[] } | { status: 'error'; error: unknown };
 
+// Bản in cũ cần danh sách đợt từ thẻ tiến độ; bản in mới (contract-print) tự lấy từ máy chủ. Thẻ tiến độ vẫn đòi hàm này.
+const IGNORE_INSTALLMENTS = () => undefined;
+
 function sig(d: CourseContractDraft): string {
   return JSON.stringify(coursePatchBody(d));
 }
@@ -103,7 +106,6 @@ export function CourseContractEditor({ orgId, slug, tz, has, detail: initial, ki
   const [termsAsk, setTermsAsk] = useState<ContractDetail | null>(null);
   const [manageOpen, setManageOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [installments, setInstallments] = useState<PaymentInstallment[] | null>(null);
   const idemKey = useRef(newIdempotencyKey());
   const pickRef = useRef<HTMLDivElement>(null);
 
@@ -405,7 +407,6 @@ export function CourseContractEditor({ orgId, slug, tz, has, detail: initial, ki
     }
   }
 
-  const onInstallments = useCallback((items: PaymentInstallment[] | null) => setInstallments(items), []);
 
   // ---- Hiển thị ----
   const classesOf = (courseId: string) =>
@@ -729,7 +730,7 @@ export function CourseContractEditor({ orgId, slug, tz, has, detail: initial, ki
           />
 
           {detail && has('payments.read') ? (
-            <CourseInstallments orgId={orgId} contractId={detail.id} canWrite={has('payments.write') && status !== 'CANCELLED'} version={`${detail.updatedAt}:${detail.total}`} onInstallments={onInstallments} />
+            <CourseInstallments orgId={orgId} contractId={detail.id} canWrite={has('payments.write') && status !== 'CANCELLED'} version={`${detail.updatedAt}:${detail.total}`} onInstallments={IGNORE_INSTALLMENTS} />
           ) : !detail ? (
             <InstallmentsPlaceholder />
           ) : null}
