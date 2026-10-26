@@ -1,8 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import type { ContractDetail, Customer } from '../../api/types';
+import { SYSTEM_ROLES, type Permission } from '@makeup/shared';
+import { fakeView } from '../certificates/fixtures';
 import {
   appointmentsOf,
+  certificatePrintNames,
+  certificateRegisterPath,
+  certificateStatus,
+  certificateSub,
+  certificateTitle,
   createInput,
+  customerPerms,
   customerPatch,
   dayKeyIn,
   draftOf,
@@ -99,5 +107,46 @@ describe('hợp đồng, lịch của khách', () => {
   it('giờ, ngày (tham số ?ngay=) theo múi giờ tổ chức', () => {
     expect(formatTimeIn('2026-10-23T21:30:00Z', 'Asia/Ho_Chi_Minh')).toBe('04:30');
     expect(dayKeyIn('2026-10-23T21:30:00Z', 'Asia/Ho_Chi_Minh')).toBe('2026-10-24');
+  });
+});
+
+describe('thẻ Giấy chứng nhận (bản vẽ F 6.6)', () => {
+  it('certRead = có certificates.read, theo từng vai trò mẫu (Chủ, Quản trị, Quản lý, Lễ tân, Giảng viên có; còn lại không)', () => {
+    const has = (perms: readonly string[]) => (p: Permission) => perms.includes(p);
+    const seen = Object.entries(SYSTEM_ROLES)
+      .filter(([, r]) => customerPerms(has(r.permissions)).certRead)
+      .map(([k]) => k)
+      .sort();
+    expect(seen).toEqual(['admin', 'instructor', 'manager', 'owner', 'receptionist']);
+    // certificates.issue một mình KHÔNG đủ để thấy thẻ.
+    expect(customerPerms(has(['certificates.issue'])).certRead).toBe(false);
+  });
+
+  it('trạng thái: Hiệu lực · bản cấp lại dd/mm/yyyy · Đã thu hồi', () => {
+    expect(certificateStatus(fakeView(1))).toEqual({ label: 'Hiệu lực', tone: 'ok' });
+    expect(certificateStatus(fakeView(1, { reissueNo: 2, reissuedOn: '2026-10-20' }))).toEqual({ label: 'Hiệu lực · bản cấp lại 20/10/2026', tone: 'ok' });
+    expect(certificateStatus(fakeView(1, { status: 'REVOKED', reissueNo: 1, reissuedOn: '2026-10-20' }))).toEqual({ label: 'Đã thu hồi', tone: 'neutral' });
+  });
+
+  it('bản cấp lại mà thiếu ngày cấp lại → ném lỗi (không bịa ngày)', () => {
+    expect(() => certificateStatus(fakeView(1, { reissueNo: 1, reissuedOn: null }))).toThrow(/reissuedOn/);
+  });
+
+  it('dòng chính và dòng phụ', () => {
+    const c = fakeView(7, { courseName: 'Trang điểm cá nhân', className: 'CN5', issuedOn: '2026-08-15' });
+    expect(certificateTitle(c)).toBe('Trang điểm cá nhân · CN5');
+    expect(certificateSub(c)).toBe('CC-2026-0007 · cấp 15/08/2026');
+    expect(() => certificateSub({ code: 'CC-2026-0007', issuedOn: '15/08/2026' })).toThrow();
+  });
+
+  it('tên tệp và tiêu đề PDF theo số giấy', () => {
+    expect(certificatePrintNames({ code: 'CC-2026-0007' })).toEqual({ baseName: 'Giay-chung-nhan-CC-2026-0007', pdfTitle: 'Giấy chứng nhận CC-2026-0007' });
+  });
+
+  it('đường "Xem trong sổ": ?khach=<mã>, mã được mã hoá; thiếu slug hoặc mã → ném lỗi', () => {
+    expect(certificateRegisterPath('hv', 'abc-1')).toBe('/hv/giay-chung-nhan?khach=abc-1');
+    expect(certificateRegisterPath('hv', 'a b&c')).toBe('/hv/giay-chung-nhan?khach=a%20b%26c');
+    expect(() => certificateRegisterPath('', 'abc')).toThrow();
+    expect(() => certificateRegisterPath('hv', '')).toThrow();
   });
 });

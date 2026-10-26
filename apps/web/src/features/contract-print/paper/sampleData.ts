@@ -232,7 +232,8 @@ const SERVICE_LONG = build({
       subjectName: 'Phù dâu',
       quantity: 2,
       unitPrice: 1_200_000,
-      lineTotal: 2_400_000,
+      lineDiscount: 100_000, // giảm riêng dòng này: 2 × 1.200.000 − 100.000 = 2.300.000 (máy chủ tính)
+      lineTotal: 2_300_000,
       date: '2026-12-12',
       startTime: '06:00',
       endTime: '07:30',
@@ -241,8 +242,8 @@ const SERVICE_LONG = build({
       surcharges: [sub({ name: 'Phụ phí ca sớm — phù dâu', quantity: 2, unitPrice: 50_000, lineTotal: 100_000 })],
     }),
   ],
-  subtotal: 7_752_000,
-  discount: 600_000,
+  subtotal: 7_652_000,
+  discount: 500_000,
   total: 7_152_000,
   deposit: 2_000_000,
   installments: [

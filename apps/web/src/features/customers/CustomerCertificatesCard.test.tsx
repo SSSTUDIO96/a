@@ -78,11 +78,11 @@ const stateOf = (perms: readonly string[]) => ({
   permissions: new Set(perms),
 });
 
-function renderCard(perms: readonly string[] = SYSTEM_ROLES.manager.permissions, kind: 'ACADEMY' | 'TEAM' | 'INDIVIDUAL' | undefined = 'ACADEMY') {
+function renderCard(perms: readonly string[] = SYSTEM_ROLES.manager.permissions, kind: 'ACADEMY' | 'TEAM' | 'INDIVIDUAL' | 'chua-ro' = 'ACADEMY') {
   return render(
     <MemoryRouter>
       <StaticPermissionsProvider value={permissionsValue(stateOf(perms))}>
-        <CustomerCertificatesCard orgId={ORG} slug={SLUG} customerId={CUS} orgKind={kind} breakpoint="desktop" />
+        <CustomerCertificatesCard orgId={ORG} slug={SLUG} customerId={CUS} orgKind={kind === 'chua-ro' ? undefined : kind} breakpoint="desktop" />
       </StaticPermissionsProvider>
     </MemoryRouter>,
   );
@@ -101,7 +101,7 @@ afterEach(() => {
 });
 
 describe('Thẻ Giấy chứng nhận — loại tổ chức và quyền', () => {
-  it.each(['TEAM', 'INDIVIDUAL', undefined] as const)('tổ chức %s → không hiện gì và KHÔNG gọi máy chủ', (kind) => {
+  it.each(['TEAM', 'INDIVIDUAL', 'chua-ro'] as const)('tổ chức %s → không hiện gì và KHÔNG gọi máy chủ', (kind) => {
     const calls = stub(OWN);
     const { container } = renderCard(SYSTEM_ROLES.owner.permissions, kind);
     expect(container.textContent).toBe('');
@@ -331,5 +331,42 @@ describe('CustomerDetail — chỗ đặt thẻ Giấy chứng nhận', () => {
     await screen.findByRole('region', { name: 'Hợp đồng của khách' });
     await waitFor(() => expect(certCalls(calls)).toHaveLength(1));
     expect(screen.queryByRole('region', { name: 'Giấy chứng nhận của học viên' })).toBeNull();
+  });
+  it('đổi sang học viên khác: KHÔNG hiện lại giấy của học viên trước trong lúc chờ (tránh In lại nhầm người)', async () => {
+    const other = { ...CUSTOMER, id: 'k2', fullName: 'Phạm Quỳnh Hương' };
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((r) => {
+      release = r;
+    });
+    const org = { membershipId: 'm-1', id: ORG, name: 'Học viện', slug: SLUG, kind: 'ACADEMY', roles: [{ key: 'owner', name: 'Chủ' }] };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = new URL(String(input), 'http://localhost');
+        const path = url.pathname.replace('/api/v1', '');
+        if (path === '/auth/refresh') return json(200, { accessToken: 't', expiresIn: 900 });
+        if (path === '/auth/me') return json(200, { id: 'u', email: 'a@b.vn', fullName: 'Chiến', organizations: [org] });
+        if (path === `/orgs/${ORG}`) return json(200, { ...org, timezone: 'Asia/Ho_Chi_Minh', currency: 'VND', status: 'ACTIVE', myRoles: ['owner'], myPermissions: [...SYSTEM_ROLES.owner.permissions] });
+        if (path === `/orgs/${ORG}/customers`) return json(200, { items: [CUSTOMER, other], page: 1, pageSize: 20, total: 2 });
+        if (path === `/orgs/${ORG}/customers/k1`) return json(200, CUSTOMER);
+        if (path === `/orgs/${ORG}/customers/k2`) return json(200, other);
+        if (path === `/orgs/${ORG}/contracts`) return json(200, { items: [], page: 1, pageSize: 10, total: 0 });
+        if (path.endsWith('/portal')) return json(200, { eligible: { ok: true, reasons: [] }, phoneLast4: '2333', hasCourseContract: true, link: null, devices: [], limits: { linkTtlDays: 7, maxDevices: 2, maxFailed: 5, rememberDays: 90 } });
+        if (path === `/orgs/${ORG}/certificates`) {
+          if (url.searchParams.get('customerId') === 'k2') {
+            await gate;
+            return json(200, pageOf([]));
+          }
+          return json(200, pageOf(OWN));
+        }
+        return apiErr(404, 'NOT_FOUND', path);
+      }),
+    );
+    open();
+    const first = await screen.findByRole('region', { name: 'Giấy chứng nhận của học viên' });
+    expect(within(first).getByText('CC-2026-0002 · cấp 15/08/2026')).toBeTruthy();
+    await userEvent.setup().click(await screen.findByText('Phạm Quỳnh Hương', { selector: '.kh-row__name, .kh-row__name *, a *, a' }).catch(() => screen.getByText('Phạm Quỳnh Hương')));
+    await waitFor(() => expect(screen.queryByText('CC-2026-0002 · cấp 15/08/2026')).toBeNull());
+    release();
   });
 });

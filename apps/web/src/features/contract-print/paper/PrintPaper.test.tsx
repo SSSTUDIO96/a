@@ -116,8 +116,9 @@ describe('PrintPaper: tắt từng khối → chữ đặc trưng của khối b
 });
 
 describe('PrintPaper: che theo quyền người xem', () => {
-  const hiddenContact: ContractPrintData = { ...SAMPLE.SERVICE.long, customer: { ...SAMPLE.SERVICE.long.customer, phone: null, email: null, contactHidden: true } };
-  const hiddenPay: ContractPrintData = { ...SAMPLE.SERVICE.long, payments: null, paymentsHidden: true };
+  // Cố ý để SĐT / email / phiếu thu VẪN còn trong dữ liệu mà cờ che bật: bộ vẽ phải nghe cờ (máy chủ che là chính, đây là lớp thứ hai).
+  const hiddenContact: ContractPrintData = { ...SAMPLE.SERVICE.long, customer: { ...SAMPLE.SERVICE.long.customer, contactHidden: true } };
+  const hiddenPay: ContractPrintData = { ...SAMPLE.SERVICE.long, paymentsHidden: true };
 
   for (const layout of PRINT_LAYOUTS) {
     it(`bố cục ${layout}: contactHidden → SĐT và email in "……", không lộ số thật`, () => {
@@ -135,7 +136,7 @@ describe('PrintPaper: che theo quyền người xem', () => {
 
   it('biến {SĐT khách}, {Đã thu}, {Còn lại} trong chữ mở đầu bị che → "……"', () => {
     const config = { ...sampleConfig(1, 'SERVICE'), openingText: 'SĐT {SĐT khách} đã thu {Đã thu} còn {Còn lại}' };
-    const r = render(<PrintPaper data={{ ...hiddenContact, payments: null, paymentsHidden: true }} config={config} logoUrl={null} />);
+    const r = render(<PrintPaper data={{ ...hiddenContact, paymentsHidden: true }} config={config} logoUrl={null} />);
     expect(text(r.container)).toContain('SĐT …… đã thu …… còn ……');
   });
 });

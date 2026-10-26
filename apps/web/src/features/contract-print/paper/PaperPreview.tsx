@@ -31,7 +31,8 @@ export function PaperPreview({ layout, children, onPages }: { layout: PrintLayou
     const measure = () => {
       // offsetHeight là chiều cao CHƯA thu phóng; trừ padding xem trước (= lề trang) để còn vùng chữ.
       const cs = getComputedStyle(el);
-      const inner = el.offsetHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) - parseFloat(cs.borderTopWidth) - parseFloat(cs.borderBottomWidth);
+      const px = (v: string) => Number.parseFloat(v) || 0; // chuỗi rỗng (môi trường không có bố cục) = không có lề
+      const inner = el.offsetHeight - px(cs.paddingTop) - px(cs.paddingBottom) - px(cs.borderTopWidth) - px(cs.borderBottomWidth);
       const n = estimatePages(Math.max(0, inner), layout);
       setPages(n);
       onPagesRef.current?.(n);
