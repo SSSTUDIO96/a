@@ -350,6 +350,10 @@ async function overflow(page: Page): Promise<{ page: number; innerWidth: number;
       const r = el.getBoundingClientRect();
       if (r.width > 0 && (r.right > iw + 0.5 || r.left < -0.5)) offenders.push(`${el.tagName}.${el.className} [${Math.round(r.left)}..${Math.round(r.right)}]`);
     }
+    // Hộp cắt nội dung thừa (overflow) thì rect vẫn nằm trong khung: kiểm thêm chữ bị cắt ngang ở cột lựa chọn.
+    for (const el of Array.from(document.querySelectorAll<HTMLElement>('.hdin-aside, .hdin-aside *'))) {
+      if (el.scrollWidth > el.clientWidth + 1 && el.clientWidth > 0) offenders.push(`cắt ngang ${el.tagName}.${el.className} (${el.scrollWidth} > ${el.clientWidth})`);
+    }
     return { page: document.documentElement.scrollWidth, innerWidth: iw, offenders: offenders.slice(0, 8) };
   });
 }
@@ -449,7 +453,7 @@ describe('hộp In trên máy chủ thật — hợp đồng DỊCH VỤ nháp',
 
     await page.getByRole('button', { name: PRINT_BTN }).click();
     await page.getByText('Đã ghi lần in thứ 1').waitFor();
-    expect(await order(page)).toEqual(['post-201', 'print']);
+    await expect.poll(() => order(page), { timeout: 5000 }).toEqual(['post-201', 'print']);
     const rows = await printRows(w.draftService);
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({ printNo: 1, source: 'TEMPLATE', contractStatus: 'DRAFT' });
@@ -504,7 +508,7 @@ describe('hộp In trên máy chủ thật — hợp đồng KHOÁ HỌC', () =>
     await shot(page, 'hop-in-khoa-hoc-1440');
     await page.getByRole('button', { name: PRINT_BTN }).click();
     await page.getByText('Đã ghi lần in thứ 1').waitFor();
-    expect(await order(page)).toEqual(['post-201', 'print']);
+    await expect.poll(() => order(page), { timeout: 5000 }).toEqual(['post-201', 'print']);
     const rows = await printRows(w.course);
     expect(rows[0]).toMatchObject({ printNo: 1, source: 'TEMPLATE', contractStatus: 'CONFIRMED' });
     const est = Number(await page.locator('.hdin-pages').getAttribute('data-pages'));
@@ -561,7 +565,7 @@ describe('hộp In trên máy chủ thật — dữ liệu đổi, giữ mẫu �
     await http('POST', `/orgs/${w.org}/contracts/${w.confirmedService}/payments`, w.owner.token, { method: 'CASH', amount: 2_000_000 }, 201);
     await page.getByRole('button', { name: PRINT_BTN }).click();
     await page.getByText(/Hợp đồng vừa thay đổi — đã tải dữ liệu mới/).waitFor();
-    expect(await order(page)).toEqual(['post-409']);
+    await expect.poll(() => order(page), { timeout: 5000 }).toEqual(['post-409']);
     expect(await page.getByText('Đã thu thêm 2.000.000 ₫').count()).toBeGreaterThan(0);
     expect(await page.getByText(/Bản xem trước đã được làm mới/).count()).toBe(1);
     expect((await printRows(w.confirmedService)).length).toBe(1); // 409: KHÔNG ghi gì
@@ -569,7 +573,7 @@ describe('hộp In trên máy chủ thật — dữ liệu đổi, giữ mẫu �
     await shot(page, 'hop-in-409-du-lieu-doi-1440');
     await page.getByRole('button', { name: PRINT_BTN }).click();
     await page.getByText(/Đã ghi lần in thứ 2/).waitFor();
-    expect(await order(page)).toEqual(['post-409', 'post-201', 'print']);
+    await expect.poll(() => order(page), { timeout: 5000 }).toEqual(['post-409', 'post-201', 'print']);
     const rows = await printRows(w.confirmedService);
     expect(rows.length).toBe(2);
     expect(rows[1]).toMatchObject({ printNo: 2, source: 'TEMPLATE' });
@@ -638,7 +642,7 @@ describe('hộp In trên máy chủ thật — dữ liệu đổi, giữ mẫu �
     await http('POST', `/orgs/${w.org}/contracts/${id}/status`, w.owner.token, { to: 'CANCELLED', reason: 'Khách huỷ lịch (bài thử)' }, 200);
     await page.getByRole('button', { name: PRINT_BTN }).click();
     await page.getByText(/Hợp đồng đã huỷ nên không có bản in/).waitFor();
-    expect(await order(page)).toEqual(['post-409']);
+    await expect.poll(() => order(page), { timeout: 5000 }).toEqual(['post-409']);
     expect(await page.getByRole('button', { name: PRINT_BTN }).isDisabled()).toBe(true);
     expect((await printRows(id)).length).toBe(0);
     await shot(page, 'hop-in-409-da-huy-1440');
