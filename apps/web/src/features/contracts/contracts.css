@@ -214,69 +214,13 @@
 .ct-txm__form { display: flex; flex-direction: column; gap: 4px; }
 .ct-txm .ct-okband { margin-bottom: 10px; }
 
-/* Bản in */
-.ui-dialog.ct-print-dlg { width: min(960px, 100%); }
-.ct-print-dlg .ui-dialog__body { background: var(--soft); }
-.ct-paper__wrap { display: flex; justify-content: center; }
-.ct-paper { width: min(640px, 100%); background: #fff; border: 1px solid var(--line); padding: 36px 40px; font-size: 13.5px; line-height: 1.5; color: #1d1d1f; }
-.ct-paper p { margin: 0 0 6px; }
-.ct-paper__top { display: flex; justify-content: space-between; gap: 12px; padding-bottom: 8px; border-bottom: 1.5px solid #1d1d1f; font-size: 12px; }
-.ct-paper__t { text-align: center; font-size: 19px; margin: 18px 0 2px; letter-spacing: .02em; }
-.ct-paper__no { text-align: center; color: var(--muted); font-size: 12px; margin-bottom: 12px !important; }
-.ct-paper__tbl { width: 100%; border-collapse: collapse; margin: 8px 0; }
-.ct-paper__tbl td { border: 1px solid #c9c4c0; padding: 5px 8px; vertical-align: top; }
-.ct-paper__r { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; width: 34%; }
-.ct-paper__b td { font-weight: 700; }
-.ct-paper__sub { display: block; font-size: 12px; color: var(--muted); }
-.ct-paper__sec h3 { font-size: 13.5px; margin: 12px 0 4px; }
-.ct-paper__src { font-weight: 400; }
-.ct-paper__ol { margin: 0; padding-left: 2.2em; } /* đủ chỗ cho số 2 chữ số (điều 10–99) khỏi lấn ra lề giấy khi in */
-.ct-paper__muted { color: var(--muted); }
-.ct-paper__sign { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 22px; text-align: center; }
-.ct-paper__sign div { display: flex; flex-direction: column; gap: 52px; }
-.ct-paper__sign span { overflow-wrap: anywhere; }
-
 @media (max-width: 640px) {
   .ct-kind-phone { display: block; }
   .ct-kind-phone .ct-kind { padding: 0; }
   .ct-cl__r { grid-template-columns: auto minmax(0, 1fr); }
   .ct-cl__seat { grid-column: 2; flex-direction: row; justify-content: space-between; align-items: center; }
   .ct-tpl__n .ui-field { max-width: none; }
-  .ct-paper { padding: 20px 16px; font-size: 13px; }
-  .ct-paper__sign { gap: 10px; }
 }
-
-/*
- * In: chỉ tờ hợp đồng, chảy tự nhiên qua nhiều trang (N1).
- * Tờ giấy nằm trong lớp phủ hộp thoại (.ui-overlay position: fixed, .ui-dialog overflow: hidden + max-height).
- * Chrome lặp phần "cố định" ở mọi trang và không cho nó chảy sang trang sau → trước đây trang 2 chồng chữ,
- * hợp đồng ngắn in 2 bản. Cách sửa: khi đang mở bản in, BỎ HẲN (display: none — không chỉ vô hình) mọi thứ
- * khác trong body, và đưa lớp phủ + hộp thoại + thân hộp về dòng chảy thường (static, không cắt, cao tự do).
- * Chỉ áp khi trang có .ct-print-dlg nên không ảnh hưởng việc in ở màn khác.
- */
-@page hop-dong { size: A4; margin: 16mm 15mm; }
-@media print {
-  html:has(.ct-print-dlg), body:has(.ct-print-dlg) {
-    height: auto !important; overflow: visible !important; background: #fff !important;
-  }
-  body:has(.ct-print-dlg) > :not(.ui-overlay:has(.ct-print-dlg)) { display: none !important; }
-  .ui-overlay:has(.ct-print-dlg) {
-    position: static !important; inset: auto !important; display: block !important;
-    padding: 0 !important; background: none !important; z-index: auto !important;
-  }
-  .ui-dialog.ct-print-dlg {
-    display: block !important; width: auto !important; height: auto !important; max-height: none !important;
-    overflow: visible !important; border-radius: 0 !important; box-shadow: none !important; background: none !important;
-  }
-  .ct-print-dlg .ui-dialog__head, .ct-print-dlg .ui-dialog__foot { display: none !important; }
-  .ct-print-dlg .ui-dialog__body { overflow: visible !important; padding: 0 !important; background: none !important; }
-  .ct-paper__wrap { display: block; }
-  .ct-paper { page: hop-dong; width: 100%; border: 0; padding: 0; }
-  .ct-paper__tbl tr, .ct-paper__ol li { break-inside: avoid; }
-  .ct-paper__sec h3 { break-after: avoid; }
-  .ct-paper__sign { break-inside: avoid; }
-}
-
 
 /* ---------- Bản vẽ D 3.4: ô Sự kiện, ngày của dòng, phụ phí tự thêm ---------- */
 .ct-oc { display: flex; align-items: center; gap: 10px; min-width: 0; flex-wrap: wrap; }

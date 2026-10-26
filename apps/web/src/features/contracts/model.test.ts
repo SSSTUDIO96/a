@@ -16,6 +16,7 @@ import {
   legacyAddedCount,
   lineInput,
   overridesFromView,
+  patchBody,
   placedFromView,
   removedText,
   skippedText,
@@ -723,5 +724,34 @@ describe('D 3.4: báo của máy chủ', () => {
     expect(legacyAddedCount([view()], d, next)).toBe(2);
     expect(legacyAddedCount([view({ surcharges: [sur()] })], d, next)).toBe(1);
     expect(legacyAddedCount([view({ surcharges: [sur(), sur({ id: 's2', surchargeRuleId: 'r-le' })] })], d, next)).toBe(0);
+  });
+});
+
+// Gói G-W5 (bản vẽ G mục 4.2): màn dịch vụ cũng chọn mẫu điều khoản — nháp mang termsTemplateId, thân tạo / sửa gửi đúng.
+describe('G-W5: mẫu điều khoản của hợp đồng dịch vụ (termsTemplateId)', () => {
+  const withTerms = (id: string | null) => draftWith([pkgLine({ start: '09:00', end: '10:00' })], { termsTemplateId: id });
+
+  it('thân TẠO: có mẫu thì gửi termsTemplateId; chưa chọn thì KHÔNG có khoá (máy chủ dùng mẫu mặc định lúc xác nhận)', () => {
+    expect(buildBody(withTerms('t-a'), TZ)).toMatchObject({ termsTemplateId: 't-a' });
+    expect(buildBody(withTerms(null), TZ)).not.toHaveProperty('termsTemplateId');
+  });
+
+  it('thân SỬA: luôn có khoá — mẫu đã chọn gửi mã; về "theo mẫu mặc định" gửi null (không im lặng giữ mẫu cũ)', () => {
+    expect(patchBody(withTerms('t-b'), TZ)).toMatchObject({ termsTemplateId: 't-b' });
+    expect(patchBody(withTerms(null), TZ)).toHaveProperty('termsTemplateId', null);
+  });
+
+  it('nháp mới trống: chưa chọn mẫu', () => {
+    expect(EMPTY_DRAFT.termsTemplateId).toBeNull();
+  });
+
+  it('mở hợp đồng đã lưu: nháp mang mẫu đã chọn của hợp đồng', () => {
+    const det = (id: string | null) =>
+      ({
+        id: 'hd', eventDate: '2026-10-21T17:00:00.000Z', customer: { id: 'c', fullName: 'A', phone: null, email: null },
+        discount: 0, depositRequired: 0, notes: null, termsTemplateId: id, lines: [],
+      }) as never as Parameters<typeof draftFromDetail>[0];
+    expect(draftFromDetail(det('t-a'), TZ).termsTemplateId).toBe('t-a');
+    expect(draftFromDetail(det(null), TZ).termsTemplateId).toBeNull();
   });
 });

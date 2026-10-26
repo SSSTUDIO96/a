@@ -8,11 +8,15 @@ import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 
 import { SYSTEM_ROLES, type Permission } from '@makeup/shared';
 import { ApiError } from '../../api/errors';
 import * as contractsApi from '../../api/contracts';
+import * as printApiModule from '../../api/print';
 import * as scheduleApi from '../../api/schedule';
 import * as catalogApi from '../../api/catalog';
 import * as staffApi from '../../api/staff';
 import { avatarColorIndex } from '../../ui/Avatar';
 import { staffNaming } from '../../ui/staffName';
+import { ShellHeaderContext, type ShellHeader } from '../../layout/PageHeader';
+import { sampleConfig } from '../contract-print/paper/sampleData';
+import { printData, record } from '../contract-print/dialog/PrintDialog.fixtures';
 import { ContractEditor } from './ContractEditor';
 import { ExtraPackageDialog } from './ExtraPackageDialog';
 import { StaffRow as ContractStaffRow } from './StaffRow';
@@ -29,6 +33,17 @@ vi.mock('../../api/contracts', () => ({
   voidContractLine: vi.fn(),
   changeContractStatus: vi.fn(),
   listContracts: vi.fn(),
+  listContractTexts: vi.fn(),
+  createContractText: vi.fn(),
+  updateContractText: vi.fn(),
+}));
+
+// Hộp In thật (contract-print) chạy trên tầng API giả: màn hợp đồng chỉ cần mở được hộp và gọi print-data / bản chụp lần in.
+vi.mock('../../api/print', () => ({
+  getPrintData: vi.fn(),
+  getContractPrint: vi.fn(),
+  createContractPrint: vi.fn(),
+  listPrintTemplates: vi.fn(),
 }));
 
 vi.mock('../../api/catalog', () => ({
@@ -62,6 +77,7 @@ vi.mock('../../api/staff', () => ({
 vi.mock('../../api/schedule', () => ({ listCustomers: vi.fn(), getCustomer: vi.fn() }));
 
 const api = vi.mocked(contractsApi);
+const printApi = vi.mocked(printApiModule);
 // Quote đợi 300ms rồi mới gọi; khi cả bộ vitest chạy song song, 1 giây chờ mặc định không đủ.
 configure({ asyncUtilTimeout: 5000 });
 const TZ = 'Asia/Ho_Chi_Minh';
@@ -210,6 +226,9 @@ const OWNER = SYSTEM_ROLES.owner.permissions;
 
 beforeEach(() => {
   vi.clearAllMocks();
+  api.listContractTexts.mockResolvedValue([] as never);
+  // Xác nhận hợp đồng đã lưu kiểm điều khoản đã in (print-data): mặc định chưa in lần nào.
+  printApi.getPrintData.mockResolvedValue(printData({ lastPrint: null, printCount: 0 }));
 });
 
 afterEach(() => {
@@ -1717,5 +1736,293 @@ describe('D 3.4 — hộp "Thêm phát sinh" (hợp đồng đã xác nhận)', 
     expect((within(card).getByLabelText('Sự kiện') as HTMLSelectElement).value).toBe('oc-tiec');
     expect((within(card).getByRole('textbox', { name: 'Ngày của dòng' }) as HTMLInputElement).value).toBe('19/10/2026');
     expect(within(card).getByText('Khác ngày sự kiện')).toBeTruthy();
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// Gói G-W5 (bản vẽ G mục 4.2, 4.4, 5.2): nút In ở màn dịch vụ, "Lưu nháp & in", hợp đồng huỷ, termsTemplateId, câu hỏi lại khi xác nhận.
+
+type Bp = 'desktop' | 'tablet' | 'phone';
+
+// Khổ màn cho useBreakpoint: 1440 = desktop, 1024 = tablet, 390 = phone.
+function setBreakpoint(bp: Bp) {
+  const onQuery = (q: string) => (bp === 'phone' && q.includes('max-width: 640px') && !q.includes('min-width')) || (bp === 'tablet' && q.includes('min-width: 641px'));
+  vi.stubGlobal('matchMedia', (q: string) => ({ matches: onQuery(q), media: q, addEventListener: () => undefined, removeEventListener: () => undefined, addListener: () => undefined, removeListener: () => undefined, onchange: null, dispatchEvent: () => false }));
+}
+
+// Điện thoại: nút In nằm ở thanh trên (phoneAction của PageHeader) do khung ứng dụng vẽ — bài dựng lại khung đó.
+function TopBarHost({ children }: { children: React.ReactNode }) {
+  const [h, setH] = useStateForTest<ShellHeader | null>(null);
+  return (
+    <ShellHeaderContext.Provider value={setH}>
+      <div data-testid="topbar">{h?.phoneAction}</div>
+      {children}
+    </ShellHeaderContext.Provider>
+  );
+}
+
+function renderWithPrint(perms: readonly Permission[], bp: Bp = 'desktop', contractId: string | null = 'hd-1', url = '/studio/hop-dong/hd-1') {
+  setBreakpoint(bp);
+  const has = (p: Permission) => perms.includes(p);
+  return render(
+    <MemoryRouter initialEntries={[url]}>
+      <TopBarHost>
+        <ContractEditor orgId="org-1" slug="studio" tz={TZ} has={has} contractId={contractId} />
+      </TopBarHost>
+    </MemoryRouter>,
+  );
+}
+
+const TERMS_A = { id: 't-a', kind: 'TERMS', appliesTo: ['SERVICE'], name: 'Điều khoản dịch vụ', body: '1. Cọc không hoàn lại.\n2. Huỷ trước 48 giờ.', version: 2, isDefault: true, isActive: true, createdAt: '', updatedAt: '2026-10-01T03:00:00.000Z', updatedBy: null };
+const TERMS_B = { ...TERMS_A, id: 't-b', name: 'Điều khoản ngắn', body: '1. Cọc không hoàn lại.', version: 1, isDefault: false };
+
+function printDataOf(terms: string[], over: Record<string, unknown> = {}, kind: 'SERVICE' | 'COURSE' = 'SERVICE') {
+  const base = printData({ lastPrint: null, printCount: 0 }, 'DRAFT');
+  return {
+    ...base,
+    contract: { ...base.contract, kind },
+    data: { ...base.data, terms: { title: 'Điều khoản', items: terms, source: null, snapshot: false } },
+    ...over,
+  } as never;
+}
+
+// Lần in gần nhất đã chụp: điều khoản đã in cho khách.
+function lastPrintOf(terms: string[]) {
+  const d = printData({}, 'DRAFT').data;
+  return {
+    print: record({ id: 'pr-1' }),
+    config: sampleConfig(2, 'SERVICE'),
+    data: { ...d, terms: { title: 'Điều khoản', items: terms, source: null, snapshot: false } },
+    dataHash: 'b'.repeat(64),
+    logoUrl: null,
+    warnings: [],
+  } as never;
+}
+
+describe('G-W5: nút In trên màn hợp đồng dịch vụ (3 khổ)', () => {
+  beforeEach(() => {
+    api.getContract.mockResolvedValue(detail('DRAFT') as never);
+    api.quoteContract.mockResolvedValue(quote([]) as never);
+    printApi.getPrintData.mockResolvedValue(printDataOf(['1. Cọc không hoàn lại.']));
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it.each([['desktop'], ['tablet']] as const)('%s: nút "In hợp đồng" nằm ở đầu thẻ đầu, trước "Thu tiền" và "Huỷ hợp đồng" (hợp đồng đã xác nhận)', async (bp) => {
+    api.getContract.mockResolvedValue(detail('CONFIRMED') as never);
+    renderWithPrint(OWNER, bp);
+    const head = (await screen.findByRole('heading', { name: /HĐ-2026-0142/ })).closest('.ct-head') as HTMLElement;
+    const order = Array.from(head.querySelectorAll('button, a'))
+      .map((el) => el.textContent?.trim())
+      .filter((t) => t === 'In hợp đồng' || t === 'Thu tiền' || t === 'Huỷ hợp đồng');
+    expect(order).toEqual(['In hợp đồng', 'Thu tiền', 'Huỷ hợp đồng']);
+    // Trạng thái đứng trước nút In.
+    const html = head.innerHTML;
+    expect(html.indexOf('Đã xác nhận')).toBeLessThan(html.indexOf('In hợp đồng'));
+    // Không có bản thứ hai ở thanh trên (chỉ điện thoại mới có).
+    expect(within(screen.getByTestId('topbar')).queryByRole('button')).toBeNull();
+    expect(screen.getAllByRole('button', { name: 'In hợp đồng' })).toHaveLength(1);
+  });
+
+  it('điện thoại (390): nút "In" nằm ở thanh trên cạnh nhãn trạng thái, cỡ nhỏ; không có bản thứ hai trong thẻ đầu', async () => {
+    renderWithPrint(OWNER, 'phone');
+    await screen.findByText('600.000 ₫', { selector: '.ct-ln__ft b' });
+    const bar = screen.getByTestId('topbar');
+    const btn = within(bar).getByRole('button', { name: 'In' });
+    expect(btn.className).toContain('ui-btn--sm');
+    expect(within(bar).getByText('Nháp')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'In hợp đồng' })).toBeNull();
+    expect(document.querySelector('.ct-head')?.textContent).not.toMatch(/In hợp đồng/);
+  });
+
+  it('bấm "In hợp đồng" (đã lưu, không thay đổi) → mở hộp In của hợp đồng này, không lưu lại', async () => {
+    renderWithPrint(OWNER);
+    await screen.findByText('600.000 ₫', { selector: '.ct-ln__ft b' });
+    await userEvent.click(screen.getByRole('button', { name: 'In hợp đồng' }));
+    expect(await screen.findByText(/Chọn mẫu in/)).toBeTruthy();
+    expect(printApi.getPrintData).toHaveBeenCalledWith('org-1', 'hd-1', expect.any(AbortSignal));
+    expect(api.updateContract).not.toHaveBeenCalled();
+  });
+
+  it('có thay đổi chưa lưu: nút đổi thành "Lưu nháp & in" (điện thoại: "Lưu & in")', async () => {
+    renderWithPrint(OWNER);
+    await screen.findByText('600.000 ₫', { selector: '.ct-ln__ft b' });
+    await userEvent.type(screen.getByLabelText('Ghi chú hợp đồng'), 'Nhà ở ngõ nhỏ');
+    expect(screen.getByRole('button', { name: 'Lưu nháp & in' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'In hợp đồng' })).toBeNull();
+  });
+
+  it('điện thoại có thay đổi chưa lưu: "Lưu & in" ở thanh trên', async () => {
+    renderWithPrint(OWNER, 'phone');
+    await screen.findByText('600.000 ₫', { selector: '.ct-ln__ft b' });
+    await userEvent.type(screen.getByLabelText('Ghi chú hợp đồng'), 'Nhà ở ngõ nhỏ');
+    expect(within(screen.getByTestId('topbar')).getByRole('button', { name: 'Lưu & in' })).toBeTruthy();
+  });
+
+  it('"Lưu nháp & in": LƯU trước (PATCH), lưu xong MỚI mở hộp (đúng thứ tự)', async () => {
+    const events: string[] = [];
+    api.updateContract.mockImplementation((async () => {
+      events.push('lưu');
+      return detail('DRAFT', { notes: 'Nhà ở ngõ nhỏ', updatedAt: '2026-10-20T08:00:00.000Z' });
+    }) as never);
+    printApi.getPrintData.mockImplementation((async () => {
+      events.push('mở hộp');
+      return printDataOf(['1. Cọc không hoàn lại.']);
+    }) as never);
+    renderWithPrint(OWNER);
+    await screen.findByText('600.000 ₫', { selector: '.ct-ln__ft b' });
+    await userEvent.type(screen.getByLabelText('Ghi chú hợp đồng'), 'Nhà ở ngõ nhỏ');
+    await userEvent.click(screen.getByRole('button', { name: 'Lưu nháp & in' }));
+    expect(await screen.findByText(/Chọn mẫu in/)).toBeTruthy();
+    expect(events).toEqual(['lưu', 'mở hộp']);
+    expect(api.updateContract.mock.calls[0]?.[2]).toMatchObject({ notes: 'Nhà ở ngõ nhỏ' });
+  });
+
+  it('"Lưu nháp & in" mà lưu lỗi (403): hộp KHÔNG mở, lỗi hiện trên màn', async () => {
+    api.updateContract.mockRejectedValue(new ApiError('FORBIDDEN', 'Bạn không có quyền sửa hợp đồng', 403, 'r'));
+    renderWithPrint(OWNER);
+    await screen.findByText('600.000 ₫', { selector: '.ct-ln__ft b' });
+    await userEvent.type(screen.getByLabelText('Ghi chú hợp đồng'), 'Ghi chú mới');
+    await userEvent.click(screen.getByRole('button', { name: 'Lưu nháp & in' }));
+    expect((await screen.findByRole('alert', { name: '' })).textContent).toContain('Bạn không có quyền sửa hợp đồng');
+    expect(printApi.getPrintData).not.toHaveBeenCalled();
+    expect(screen.queryByText(/Chọn mẫu in/)).toBeNull();
+  });
+
+  it('hợp đồng chưa lưu và thiếu dữ liệu: "Lưu nháp & in" không mở hộp (kiểm lỗi cục bộ, không gọi máy chủ)', async () => {
+    renderWithPrint(OWNER, 'desktop', null, '/studio/hop-dong/moi');
+    await userEvent.click(await screen.findByRole('button', { name: 'Lưu nháp & in' }));
+    expect(api.createContract).not.toHaveBeenCalled();
+    expect(printApi.getPrintData).not.toHaveBeenCalled();
+  });
+
+  it.each([['desktop'], ['phone']] as const)('%s: hợp đồng đã huỷ → nút In tắt, chú thích "Hợp đồng đã huỷ — không in", bấm không mở hộp', async (bp) => {
+    api.getContract.mockResolvedValue(detail('CANCELLED', { cancelReason: 'Khách đổi ý' }) as never);
+    renderWithPrint(OWNER, bp);
+    await screen.findByText('Đã huỷ: Khách đổi ý');
+    const btn = within(bp === 'phone' ? screen.getByTestId('topbar') : (document.querySelector('.ct-head') as HTMLElement)).getByRole('button', { name: bp === 'phone' ? 'In' : 'In hợp đồng' });
+    expect((btn as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByText('Hợp đồng đã huỷ — không in')).toBeTruthy();
+    await userEvent.click(btn);
+    expect(printApi.getPrintData).not.toHaveBeenCalled();
+  });
+
+  it('nút Sửa mẫu in chỉ theo quyền contracts.texts (canManageTemplates)', async () => {
+    const perms = OWNER.filter((p) => p !== 'contracts.texts');
+    renderWithPrint(perms);
+    await screen.findByText('600.000 ₫', { selector: '.ct-ln__ft b' });
+    await userEvent.click(screen.getByRole('button', { name: 'In hợp đồng' }));
+    await screen.findByText(/Chọn mẫu in/);
+    expect(screen.queryByRole('link', { name: /Sửa mẫu in/ })).toBeNull();
+  });
+});
+
+describe('G-W5: thẻ điều khoản ở màn dịch vụ gửi termsTemplateId', () => {
+  beforeEach(() => {
+    api.getContract.mockResolvedValue(detail('DRAFT') as never);
+    api.quoteContract.mockResolvedValue(quote([]) as never);
+    api.listContractTexts.mockResolvedValue([TERMS_A, TERMS_B] as never);
+  });
+
+  it('thẻ chỉ có Điều khoản (không nội quy); tải mẫu dành cho dịch vụ', async () => {
+    renderWithPrint(OWNER);
+    expect(await screen.findByRole('combobox', { name: 'Mẫu điều khoản' })).toBeTruthy();
+    expect(screen.queryByRole('combobox', { name: 'Mẫu nội quy' })).toBeNull();
+    expect(api.listContractTexts).toHaveBeenCalledWith('org-1', { appliesTo: 'SERVICE' }, expect.any(AbortSignal));
+  });
+
+  it('chọn mẫu rồi Lưu nháp → PATCH mang termsTemplateId của mẫu đã chọn', async () => {
+    api.updateContract.mockResolvedValue(detail('DRAFT') as never);
+    renderWithPrint(OWNER);
+    const sel = (await screen.findByRole('combobox', { name: 'Mẫu điều khoản' })) as HTMLSelectElement;
+    await waitFor(() => expect(sel.querySelectorAll('option').length).toBeGreaterThan(1));
+    await userEvent.selectOptions(sel, 't-b');
+    await userEvent.click(screen.getByRole('button', { name: 'Lưu nháp' }));
+    await waitFor(() => expect(api.updateContract).toHaveBeenCalled());
+    expect(api.updateContract.mock.calls[0]?.[2]).toMatchObject({ termsTemplateId: 't-b' });
+  });
+
+  it('chọn lại "Theo mẫu mặc định" → PATCH gửi termsTemplateId: null (bỏ mẫu đã chọn)', async () => {
+    api.getContract.mockResolvedValue(detail('DRAFT', { termsTemplateId: 't-b', termsTemplateVersion: 1 }) as never);
+    api.updateContract.mockResolvedValue(detail('DRAFT') as never);
+    renderWithPrint(OWNER);
+    const sel = (await screen.findByRole('combobox', { name: 'Mẫu điều khoản' })) as HTMLSelectElement;
+    await waitFor(() => expect(sel.value).toBe('t-b'));
+    await userEvent.selectOptions(sel, '');
+    await userEvent.click(screen.getByRole('button', { name: 'Lưu nháp' }));
+    await waitFor(() => expect(api.updateContract).toHaveBeenCalled());
+    expect(api.updateContract.mock.calls[0]?.[2]).toHaveProperty('termsTemplateId', null);
+  });
+
+  it('hợp đồng đã xác nhận: hiện bản chụp, không cho đổi mẫu', async () => {
+    api.getContract.mockResolvedValue(detail('CONFIRMED', { terms: '1. Cọc không hoàn lại.', termsTemplateId: 't-a', termsTemplateVersion: 2 }) as never);
+    renderWithPrint(OWNER);
+    expect(await screen.findByText('Bản v2 đã chụp vào hợp đồng')).toBeTruthy();
+    expect(screen.queryByRole('combobox', { name: 'Mẫu điều khoản' })).toBeNull();
+  });
+});
+
+describe('G-W5: câu hỏi lại khi xác nhận nếu điều khoản khác bản đã in (màn dịch vụ)', () => {
+  const QUESTION = 'Điều khoản sẽ chụp khác bản đã in cho khách — vẫn xác nhận?';
+  beforeEach(() => {
+    api.getContract.mockResolvedValue(detail('DRAFT') as never);
+    api.quoteContract.mockResolvedValue(quote([]) as never);
+    api.changeContractStatus.mockResolvedValue({ ...detail('CONFIRMED'), createdAppointments: [] } as never);
+  });
+  async function clickConfirm() {
+    renderWithPrint(OWNER);
+    await screen.findByText('600.000 ₫', { selector: '.ct-ln__ft b' });
+    const btn = await confirmButton();
+    await waitFor(() => expect((btn as HTMLButtonElement).disabled).toBe(false));
+    await userEvent.click(btn);
+  }
+
+  it('đã in, điều khoản sắp chụp KHÁC → hỏi đúng câu bản vẽ; chưa gọi xác nhận', async () => {
+    printApi.getPrintData.mockResolvedValue(printDataOf(['1. Cọc không hoàn lại.', '2. Huỷ trước 24 giờ.'], { lastPrint: { ...record({ id: 'pr-1' }), sameData: false }, printCount: 1 }));
+    printApi.getContractPrint.mockResolvedValue(lastPrintOf(['1. Cọc không hoàn lại.', '2. Huỷ trước 48 giờ.']));
+    await clickConfirm();
+    const dlg = await screen.findByRole('dialog');
+    expect(within(dlg).getByText(QUESTION)).toBeTruthy();
+    expect(api.changeContractStatus).not.toHaveBeenCalled();
+    expect(printApi.getContractPrint).toHaveBeenCalledWith('org-1', 'hd-1', 'pr-1', undefined);
+  });
+
+  it('"Vẫn xác nhận" → mới gọi xác nhận; "Xem lại" → không gọi', async () => {
+    printApi.getPrintData.mockResolvedValue(printDataOf(['Khác'], { lastPrint: { ...record({ id: 'pr-1' }), sameData: false }, printCount: 1 }));
+    printApi.getContractPrint.mockResolvedValue(lastPrintOf(['1. Cọc không hoàn lại.']));
+    await clickConfirm();
+    let dlg = await screen.findByRole('dialog');
+    await userEvent.click(within(dlg).getByRole('button', { name: 'Xem lại' }));
+    await waitFor(() => expect(screen.queryByText(QUESTION)).toBeNull());
+    expect(api.changeContractStatus).not.toHaveBeenCalled();
+    await userEvent.click(await confirmButton());
+    dlg = await screen.findByRole('dialog');
+    await userEvent.click(within(dlg).getByRole('button', { name: 'Vẫn xác nhận' }));
+    await waitFor(() => expect(api.changeContractStatus).toHaveBeenCalledTimes(1));
+    expect(api.changeContractStatus.mock.calls[0]?.[2]).toEqual({ to: 'CONFIRMED' });
+  });
+
+  it('đã in, điều khoản GIỐNG → xác nhận ngay, không hỏi', async () => {
+    printApi.getPrintData.mockResolvedValue(printDataOf(['1. Cọc không hoàn lại.'], { lastPrint: { ...record({ id: 'pr-1' }), sameData: true }, printCount: 1 }));
+    printApi.getContractPrint.mockResolvedValue(lastPrintOf(['1. Cọc không hoàn lại.']));
+    await clickConfirm();
+    await waitFor(() => expect(api.changeContractStatus).toHaveBeenCalledTimes(1));
+    expect(screen.queryByText(QUESTION)).toBeNull();
+  });
+
+  it('chưa in lần nào → xác nhận ngay, không hỏi, không tải bản chụp', async () => {
+    printApi.getPrintData.mockResolvedValue(printDataOf(['1. Cọc không hoàn lại.']));
+    await clickConfirm();
+    await waitFor(() => expect(api.changeContractStatus).toHaveBeenCalledTimes(1));
+    expect(printApi.getContractPrint).not.toHaveBeenCalled();
+    expect(screen.queryByText(QUESTION)).toBeNull();
+  });
+
+  it('không kiểm được (print-data lỗi) → KHÔNG xác nhận, báo lỗi (không im lặng bỏ qua cảnh báo)', async () => {
+    printApi.getPrintData.mockRejectedValue(new ApiError('INTERNAL', 'Máy chủ bận', 500, 'r'));
+    await clickConfirm();
+    expect((await screen.findByRole('alert', { name: '' })).textContent).toContain('Chưa kiểm được điều khoản đã in cho khách');
+    expect(api.changeContractStatus).not.toHaveBeenCalled();
   });
 });

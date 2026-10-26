@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { CONTRACT_STATUS_LABELS, type Permission } from '@makeup/shared';
 import { addContractLine, changeContractStatus, createContract, listContractTexts, updateContract, voidContractLine } from '../../api/contracts';
