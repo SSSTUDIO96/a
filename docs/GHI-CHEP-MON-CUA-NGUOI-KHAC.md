@@ -335,3 +335,5 @@ Thêm ngày 19/10/2026 cho bản vẽ F (giấy chứng nhận). Cột giống m
 - Dung lượng: bản đóng gói `dist/pdf-lib.min.js` 525 KB, khoảng 207 KB sau nén gzip. Gói npm đầy đủ (có mã nguồn, bản cjs/es) khoảng 19,5 MB, nhưng app chỉ tải bản min.
 - Thử cài bằng `pnpm add pdf-lib@1.17.1` qua proxy ở thư mục nháp, chạy được (19/10/2026).
 
+### Dùng thêm (26/10/2026)
+- **Lora** (họ `SSA Lora`, có sẵn ở `apps/web/public/mau/phong/ss-album/lora/`) và **Cormorant Garamond** (`apps/web/public/mau/phong/CormorantGaramond-*.ttf`) dùng thêm cho **mẫu in hợp đồng** bố cục 1 và 5 (bản vẽ G, ký duyệt G câu 5). Không chép thêm bản nào; nhúng vào PDF khi in (giấy phép OFL cho phép nhúng).
