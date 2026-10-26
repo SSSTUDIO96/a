@@ -519,6 +519,93 @@ describe('cửa gác chuyển đỏ với từng kiểu lỗi', { timeout: 180_0
     expect(hit[0]).toContain('KHÁC phản hồi mã bịa');
   });
 
+  // Ba đột biến bản vẽ G mục 5.1 cho đường in (gói G-M4) — bản vẽ đánh 14, 15, 16; số đó đã dùng nên đánh TIẾP sau số lớn
+  // nhất hiện có (22, đính chính 25/10/2026 mục 4): 23 ↔ bản vẽ 14, 24 ↔ 15, 25 ↔ 16. Cửa gác chạy trên ĐÚNG 3 đường in (đã
+  // cài lỗi) — fixture vẫn dựng bằng app thật đủ đường.
+  const PRINT_ROUTES = new Set([
+    'GET /orgs/:orgId/contracts/:contractId/print-data',
+    'GET /orgs/:orgId/contracts/:contractId/prints/:printId',
+    'POST /orgs/:orgId/contracts/:contractId/prints',
+  ]);
+  const printOnly = (routes: AnyRoute[]) => {
+    const kept = routes.filter((r) => PRINT_ROUTES.has(`${r.method.toUpperCase()} ${r.path}`));
+    if (kept.length !== PRINT_ROUTES.size) throw new Error(`Bảng route có ${kept.length}/${PRINT_ROUTES.size} đường in`);
+    return kept;
+  };
+  const gateSummary = (r: GateReport) => GATE_CHECKS.map((n) => `${n} ${r[n].passed}/${r[n].total}`).join(', ');
+
+  it('Bản vẽ G — 3 đường in chưa cài lỗi: cửa gác 14 phép xanh trọn (vế GIỮ của ba đột biến dưới)', async () => {
+    const r = await gateOn(printOnly(ALL_ROUTES));
+    const bad = GATE_CHECKS.filter((n) => r[n].violations.length > 0).map((n) => `${n}: ${r[n].violations.join('; ')}`);
+    console.log(`[G in gốc] ${gateSummary(r)}`);
+    expect(bad).toEqual([]);
+    expect(r.crossId.total).toBe(3);
+    expect(r.refBase.total).toBe(3);
+    expect(r.crossRef.total).toBe(3);
+  });
+
+  it('Đột biến 23 — print-data tra hợp đồng chỉ theo id (quên tổ chức) → phép crossId đỏ', async () => {
+    const mutant = onDb('get', '/orgs/:orgId/contracts/:contractId/print-data', (db) =>
+      db.$extends({
+        query: {
+          contract: {
+            findFirst({ args, query }) {
+              dropOrg(args.where);
+              return query(args);
+            },
+          },
+        },
+      }) as unknown as Db,
+    );
+    const r = await gateOn(printOnly(replace(mutant)));
+    const hit = r.crossId.violations.filter((v) => v.startsWith('GET /orgs/:orgId/contracts/:contractId/print-data '));
+    console.log(`[đột biến 23] crossId vi phạm: ${r.crossId.violations.length}/${r.crossId.total}: ${hit.join('; ')}`);
+    expect(hit).toEqual(['GET /orgs/:orgId/contracts/:contractId/print-data với id của A → 200']);
+  });
+
+  it('Đột biến 24 — POST prints tra mẫu chỉ theo templateId (quên tổ chức) → phép crossRef đỏ ở templateId', async () => {
+    const mutant = onDb('post', '/orgs/:orgId/contracts/:contractId/prints', (db) =>
+      db.$extends({
+        query: {
+          printTemplate: {
+            findFirst({ args, query }) {
+              dropOrg(args.where);
+              return query(args);
+            },
+          },
+        },
+      }) as unknown as Db,
+    );
+    const r = await gateOn(printOnly(replace(mutant)));
+    const hit = r.crossRef.violations.filter((v) => v.startsWith('POST /orgs/:orgId/contracts/:contractId/prints [templateId'));
+    console.log(`[đột biến 24] crossRef vi phạm: ${r.crossRef.violations.length}/${r.crossRef.total}: ${hit.join('; ')}`);
+    expect(hit.length).toBe(1);
+    expect(hit[0]).toContain('KHÁC phản hồi mã bịa');
+  });
+
+  it('Đột biến 25 — POST prints báo "lần in thuộc hợp đồng khác" khác lời "không tìm thấy" (lộ sự tồn tại) → phép crossRef đỏ', async () => {
+    const original = ALL_ROUTES.find((r) => r.method === 'post' && r.path === '/orgs/:orgId/contracts/:contractId/prints');
+    if (!original) throw new Error('Không có route ghi nhật ký in');
+    const mutant = { ...original, handler: async (ctx: Parameters<typeof original.handler>[0]) => {
+      try {
+        return await original.handler(ctx);
+      } catch (err) {
+        const based = (ctx.body as { basedOnPrintId?: string }).basedOnPrintId;
+        if (err instanceof AppError && err.code === 'NOT_FOUND' && based) {
+          const exists = await ctx.deps.db.contractPrint.findUnique({ where: { id: based }, select: { id: true } });
+          if (exists) throw new AppError('NOT_FOUND', 'Lần in này thuộc hợp đồng khác');
+        }
+        throw err;
+      }
+    } } as AnyRoute;
+    const r = await gateOn(printOnly(replace(mutant)));
+    const hit = r.crossRef.violations.filter((v) => v.startsWith('POST /orgs/:orgId/contracts/:contractId/prints [basedOnPrintId'));
+    console.log(`[đột biến 25] crossRef vi phạm: ${r.crossRef.violations.length}/${r.crossRef.total}: ${hit.join('; ')}`);
+    // Hai mẫu có basedOnPrintId (PRIOR_CONFIG, REPRINT) — cả hai đỏ.
+    expect(hit.length).toBe(2);
+    expect(hit.every((v) => v.includes('KHÁC phản hồi mã bịa'))).toBe(true);
+  });
+
   // Năm đột biến bản vẽ E mục 6.3 (gói E5), đánh số TIẾP SAU 17 (15–17 đã dùng cho giấy chứng nhận — nhật ký quyết định thay
   // 20/10, dòng E3): 18 ↔ bản vẽ 15, 19 ↔ 16, 20 ↔ 17, 21 ↔ 18, 22 ↔ 19. Cửa gác chạy trên ĐÚNG 11 đường cổng (5 đường học
   // viên + 6 đường trung tâm) — fixture vẫn dựng bằng app thật đủ đường.

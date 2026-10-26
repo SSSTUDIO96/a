@@ -1,6 +1,8 @@
 // Mẫu dữ liệu cho cửa gác cách ly (dùng chung cho tenant-isolation.test.ts và gate-mutants.test.ts).
 import { randomUUID } from 'node:crypto';
-import type { GateOrg, RefSamples, RefVariants, Samples } from './gate';
+import request from 'supertest';
+import type { GateOrg, RefSamples, RefVariants, SampleCtx, Samples } from './gate';
+import { bearer } from './helpers';
 import type { PartialSamples } from './gate-partial';
 
 // Thân yêu cầu hợp lệ cho các đường POST/PATCH có tham số id (khoá: "METHOD /đường").
@@ -73,7 +75,39 @@ export const SAMPLES: Samples = {
   'POST /orgs/:orgId/portal-devices/:deviceId/block': () => ({ reason: 'Thử cửa gác' }),
   // Mẫu in hợp đồng (bản vẽ G, gói G-M3). Đường dẫn mang mã mẫu của tổ chức khác → 404 trước mọi ghi.
   'PATCH /orgs/:orgId/print-templates/:templateId': () => ({ name: 'Đổi tên thử' }),
+  // Nhật ký in (bản vẽ G, gói G-M4): mã băm dữ liệu in của hợp đồng TRONG ĐƯỜNG DẪN, đọc bằng chủ tổ chức sở hữu hợp đồng
+  // (phép id chéo: hợp đồng của A) — lệnh chỉ còn bị chặn bởi điều kiện tổ chức, không phải lệch mã băm.
+  'POST /orgs/:orgId/contracts/:contractId/prints': async (o, req) => ({
+    source: 'TEMPLATE',
+    templateId: o.ids.templateId,
+    expectedTemplateVersion: await templateVersion(o, req),
+    expectedDataHash: (await currentPrintData(req)).dataHash,
+  }),
 };
+
+// Dữ liệu in hiện hành của hợp đồng trong đường dẫn …/contracts/:contractId/prints (đọc bằng chủ tổ chức sở hữu).
+async function currentPrintData(req: SampleCtx): Promise<{ dataHash: string }> {
+  const body = await req.ownerGet((u) => u.replace(/\/prints$/, '/print-data'));
+  if (typeof body.dataHash !== 'string') throw new Error('Mẫu in: print-data không có dataHash');
+  return { dataHash: body.dataHash };
+}
+
+// Phiên bản HIỆN HÀNH của mẫu dịch vụ mặc định của `o` (đọc bằng chủ của `o`, qua print-data hợp đồng mẫu của `o` — đường
+// này có trong bảng route thu hẹp của đột biến đường in) — mẫu có thể vừa được cửa gác sửa một phần.
+async function templateVersion(o: GateOrg, req: SampleCtx): Promise<number> {
+  const res = await request(req.app).get(`/api/v1/orgs/${o.orgId}/contracts/${o.ids.contractId}/print-data`).set(bearer(o.owner));
+  const v = ((res.body as { templates?: { id: string; version: number }[] }).templates ?? []).find((t) => t.id === o.ids.templateId)?.version;
+  if (res.status !== 200 || typeof v !== 'number') throw new Error(`Mẫu in: không đọc được phiên bản mẫu ${res.status}`);
+  return v;
+}
+
+// Mã băm bản chụp của lần in gốc (đã che theo người xem = chủ) — mẫu REPRINT gửi đúng mã băm này.
+async function printSnapshotHash(o: GateOrg, req: SampleCtx): Promise<string> {
+  const res = await request(req.app).get(`/api/v1/orgs/${o.orgId}/contracts/${o.ids.contractId}/prints/${o.ids.printId}`).set(bearer(o.owner));
+  const h = (res.body as { dataHash?: unknown }).dataHash;
+  if (res.status !== 200 || typeof h !== 'string') throw new Error(`Mẫu in: không đọc được bản chụp lần in ${res.status}`);
+  return h;
+}
 
 // Mẫu HỢP LỆ dùng toàn mã của chính tổ chức — cửa gác tự thay TỪNG trường mã bằng mã của tổ chức khác.
 // Đường có trường "…Id" mới mà chưa có mẫu ở đây → cửa gác đỏ ("chưa có mẫu tham chiếu chéo").
@@ -290,6 +324,18 @@ export const REF_SAMPLES: RefSamples = {
     (o) => ({ classId: o.ids.endedClassId }),
     (o) => ({ classId: o.ids.endedClassId, customerId: o.ids.customerId }),
     (o) => ({ ids: o.ids.certificateId }),
+  ],
+  // Nhật ký in (bản vẽ G, gói G-M4): ba nguồn in. Mẫu tự đọc mã băm hiện hành bằng chủ của `self` để mẫu gốc ra 201;
+  // thay templateId / basedOnPrintId bằng mã của A hoặc mã bịa → 404 giống hệt.
+  'POST /orgs/:orgId/contracts/:contractId/prints': [
+    async (o, req) => ({
+      source: 'TEMPLATE',
+      templateId: o.ids.templateId,
+      expectedTemplateVersion: await templateVersion(o, req),
+      expectedDataHash: (await currentPrintData(req)).dataHash,
+    }),
+    async (o, req) => ({ source: 'PRIOR_CONFIG', basedOnPrintId: o.ids.printId, expectedDataHash: (await currentPrintData(req)).dataHash }),
+    async (o, req) => ({ source: 'REPRINT', basedOnPrintId: o.ids.printId, expectedDataHash: await printSnapshotHash(o, req) }),
   ],
 };
 

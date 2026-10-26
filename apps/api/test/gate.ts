@@ -42,6 +42,10 @@ export interface SampleCtx {
   // đó — kể cả khi đường dẫn mang mã của tổ chức kia (phép id chéo): lệnh chỉ còn bị chặn bởi điều kiện tổ chức, không phải
   // bởi lệch phiên bản. Mã không thuộc fixture (mã bịa) → mốc 0.
   currentVersion: () => Promise<string>;
+  // GET một đường dẫn dựng từ đường dẫn sắp gọi (đã thay :orgId bằng tổ chức SỞ HỮU bản ghi trỏ tới — mã cuối có trong fixture),
+  // bằng chủ của tổ chức đó. Vd. mã băm dữ liệu in của hợp đồng trong đường dẫn: `req.ownerGet((u) => u.replace(/prints$/, 'print-data'))`.
+  // Mã không thuộc fixture → ném lỗi (không đoán).
+  ownerGet: (path: (ownUrl: string) => string) => Promise<Record<string, unknown>>;
 }
 
 export interface GateCheck {
@@ -99,6 +103,16 @@ export function sampleCtx(app: App, fx: GateFixture, url: string): SampleCtx {
       const v = (res.body as { updatedAt?: string }).updatedAt;
       if (res.status !== 200 || !v) throw new Error(`Cửa gác: không đọc được phiên bản hiện hành ${own} → ${res.status}`);
       return v;
+    },
+    ownerGet: async (path) => {
+      const bare = url.split('?')[0]!;
+      const id = [...bare.matchAll(UUID_RE)].reverse().map((m) => m[0]).find((x) => [fx.a, fx.b].some((o) => Object.values(o.ids).includes(x)));
+      const owner = [fx.a, fx.b].find((o) => id && Object.values(o.ids).includes(id));
+      if (!owner) throw new Error(`Cửa gác: ${bare} không trỏ bản ghi nào của fixture`);
+      const target = path(bare.replace(/\/orgs\/[^/]+\//, `/orgs/${owner.orgId}/`));
+      const res = await request(app).get(target).set(bearer(owner.owner));
+      if (res.status !== 200) throw new Error(`Cửa gác: không đọc được ${target} → ${res.status}`);
+      return res.body as Record<string, unknown>;
     },
   };
 }
@@ -412,6 +426,19 @@ async function setupOrg(app: App, db: Db, label: string): Promise<GateOrg> {
   };
   const templateId = await defaultTemplate('SERVICE');
   const courseTemplateId = await defaultTemplate('COURSE');
+  // ---- Nhật ký in (bản vẽ G, gói G-M4): một lần in TEMPLATE của hợp đồng mẫu — đọc print-data lấy mã băm + phiên bản mẫu.
+  const pdRes = await request(app).get(`/api/v1${o}/contracts/${contractId}/print-data`).set(bearer(owner));
+  const pdBody = pdRes.body as { dataHash?: string; templates?: { id: string; version: number }[] };
+  const tVersion = pdBody.templates?.find((t) => t.id === templateId)?.version;
+  if (pdRes.status !== 200 || !pdBody.dataHash || !tVersion) {
+    throw new Error(`Cửa gác: đọc dữ liệu in hợp đồng mẫu thất bại ${pdRes.status}: ${JSON.stringify(pdRes.body).slice(0, 300)}`);
+  }
+  const printId = await post(app, owner, `${o}/contracts/${contractId}/prints`, {
+    source: 'TEMPLATE',
+    templateId,
+    expectedTemplateVersion: tVersion,
+    expectedDataHash: pdBody.dataHash,
+  });
   // ---- Cổng học viên (bản vẽ E 6.3): học viên có SĐT, đường dẫn tạo bằng đường E4, mở bằng 4 số qua đường E3.
   const seeded = await seedPortal(app, { orgId, owner, label });
   return {
@@ -469,6 +496,7 @@ async function setupOrg(app: App, db: Db, label: string): Promise<GateOrg> {
       certificateId,
       templateId,
       courseTemplateId,
+      printId,
       ...seeded.ids,
     },
   };

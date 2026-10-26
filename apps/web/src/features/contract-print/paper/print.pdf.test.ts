@@ -189,7 +189,13 @@ async function print(j: Job): Promise<Printed> {
       fixedOffenders,
       frame: f ? { count: frames.length, text: f.textContent ?? '', children: f.children.length, ariaHidden: f.getAttribute('aria-hidden'), display: getComputedStyle(f).display, position: getComputedStyle(f).position } : null,
       clipped,
-      fontsError: [...document.fonts].filter((x) => x.status === 'error').map((x) => x.family),
+      fontsError: (() => {
+        const bad: string[] = [];
+        document.fonts.forEach((x) => {
+          if (x.status === 'error') bad.push(x.family);
+        });
+        return bad;
+      })(),
       zoomInPrint: getComputedStyle(document.querySelector('.hdin-zoom') as Element).zoom,
       headingPaddingsPx: heads.map((h) => parseFloat(getComputedStyle(h).paddingTop)),
       headings: Array.from(paper.querySelectorAll('h2, h3')).map((h) => (h.textContent ?? '').replace(/\s+/g, ' ').trim()),
@@ -537,7 +543,8 @@ describe('PDF: ẩn theo quyền', () => {
 
 // ---------- dò chỗ ngắt trang: dịch tờ xuống 0, 4, 8, … mm để chỗ ngắt rơi vào mọi vị trí ----------
 
-const OFFSETS = [0, 3, 6, 9, 12, 15, 18, 21, 24, 27, 30, 33, 36, 40, 44, 48, 52, 56, 60, 64];
+// 0 → 108 mm, bước 4 mm: khối tiền nằm giữa trang 1 nên cần dịch xa mới rơi vào chỗ ngắt.
+const OFFSETS = Array.from({ length: 28 }, (_, i) => i * 4);
 
 function pageOf(p: Printed, text: string, which: 'first' | 'last' = 'first'): number {
   const idx = p.perPage.map((t, i) => (t.includes(norm(text)) ? i : -1)).filter((i) => i >= 0);
