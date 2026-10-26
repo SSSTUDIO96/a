@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="ten" content="Đi kèm: 21 mẫu chào mừng trong ô chọn + nút ẩn/hiện thẻ trên trang học viên — R&D 11">
+<title>Đi kèm — R&D 11</title>
+<link rel="stylesheet" href="../v4-chung/v4.css">
+<link rel="stylesheet" href="../v8-chung/v8.css">
+<link rel="stylesheet" href="chung/v11.css">
+<style>#man-mau-21 .mgrid ul li{display:block!important}</style>
+</head>
+<body>
+<script src="../v8-chung/v8.js"></script>
+<script src="chung/v11.js"></script>
+<script>
+const { man, mucLuc, boot } = V4;
+const { studio } = V11;
+// Chung cho cả 3 phương án mã số (không phụ thuộc cách cấp mã).
+// (a) Ô chọn mẫu chào mừng: 10 mẫu mới (gắn nhãn "Mới", xếp trước) + 11 mẫu cũ = 21. Hiện app chỉ có 11 (design-templates.ts).
+// (b) Thẻ đã tạo: công tắc "Hiện trên trang học viên" cho thẻ Chào mừng / Feedback — ghi DesignCard.portalVisible (cột đã có).
+const THE = [
+  { img: '../anh-rnd10/cm-01-doc.png', ten: 'Vũ Thu Trang', loai: 'Chào mừng · cm-01 · Giấy dấu sáp', hd: 'HĐ-0142 · Khoá học', ngay: '21/10/2026', hien: true },
+  { img: '../anh-rnd10/cm-04-doc.png', ten: 'Đặng Quỳnh Như', loai: 'Chào mừng · cm-04 · Thư giấy vân', hd: 'HĐ-0131 · Khoá học', ngay: '20/10/2026', hien: false },
+  { img: '../../../apps/web/public/mau/anh-nho/fb-02-khoa.jpg', ten: 'Lê Thị Mai', loai: 'Feedback · fb-02 · Thẻ trắng nổi có sao', hd: 'HĐ-0133 · Khoá học', ngay: '18/10/2026', hien: true },
+  { img: '../../../apps/web/public/mau/anh-nho/lc-05.jpg', ten: 'Phạm Quỳnh Hương', loai: 'Lời chúc · lc-05 · Chúc mừng hoàn thành khoá học', hd: 'HĐ-0137 · Khoá học', ngay: '17/10/2026', loiChuc: true },
+];
+const the = (t) => `<div class="cardrow${t.hien === false ? ' an' : ''}"><img src="${t.img}" alt="">
+  <div class="tx"><b data-f="Customer.fullName">${t.ten}</b><span data-f="DesignCard.kind · templateCode">${t.loai}</span><span>${t.hd}</span><span class="fx">Tạo ${t.ngay}</span>
+  ${t.loiChuc
+    ? '<span class="vis fx">Lời chúc không hiện trên trang học viên</span>'
+    : `<label class="vis" data-f="DesignCard.portalVisible"><span class="sw${t.hien ? ' on' : ''}"></span>${t.hien ? 'Hiện trên trang học viên' : '<span style="color:var(--muted)">Đang ẩn khỏi trang học viên</span>'}</label>`}
+  <span class="act"><button class="btn sm">Tải ảnh</button><button class="btn sm ghost">Xoá</button></span></div></div>`;
+const daTao = `<nav class="mtk-tabs" aria-label="Mẫu thiết kế"><a href="#">Chào mừng</a><a href="#">Feedback</a><a href="#">Lời chúc</a><a class="on" href="#">Thẻ đã tạo</a><a href="#">Câu chúc soạn sẵn</a></nav>
+  <section class="card"><div class="cards-f"><div class="seg sm"><button class="on">Tất cả</button><button>Chào mừng</button><button>Feedback</button><button>Lời chúc</button></div><select class="ctl sm" style="width:auto"><option>Mọi hợp đồng</option></select></div>
+  <div class="cards">${THE.map(the).join('')}</div></section>`;
+
+mucLuc('Đi kèm (chung cho cả 3 phương án)', '(a) 10 mẫu chào mừng mới vào ô chọn (tổng 21, mẫu mới xếp trước, gắn nhãn "Mới"). (b) Công tắc ẩn/hiện từng thẻ Chào mừng / Feedback trên trang học viên.', [
+  ['Máy tính (1440) và điện thoại (390)', [
+    ['mau-21', 'Mẫu thiết kế → Chào mừng: ô chọn 21 mẫu', '(a)'],
+    ['an-hien', 'Mẫu thiết kế → Thẻ đã tạo: công tắc "Hiện trên trang học viên"', '(b)'],
+  ]],
+]);
+man('mau-21', { nav: 'mau', title: 'Mẫu thiết kế', back: '#muc-luc' }, studio({ mau: 'cm-01', ten: 'Vũ Thu Trang', hd: 'HĐ-0142', ma: '07', maHien: '07' }));
+man('an-hien', { nav: 'mau', title: 'Mẫu thiết kế', back: '#muc-luc' }, daTao);
+boot();
+</script>
+</body>
+</html>

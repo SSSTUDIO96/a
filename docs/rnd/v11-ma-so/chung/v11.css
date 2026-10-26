@@ -1,0 +1,110 @@
+/* Bản mẫu R&D 11 — mã số học viên trong lớp. Token, khung, component lấy nguyên từ ../v4-chung/v4.css (chép đúng
+   apps/web/src/styles/tokens.css) và ../v8-chung/v8.css (thẻ lớp). Chỉ thêm phần riêng: ô mã số, cột xem trước thẻ.
+   Không thêm màu mới. */
+
+/* ---- Trang khoá học (nền sau hộp thoại) — giống features/courses/CourseDetail ---- */
+.kc-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.kc-head h1{font-size:22px;font-weight:700}
+.kc-head .sub{color:var(--muted);font-size:13px}
+
+/* ---- Hộp thoại "Học viên lớp …" (EnrollmentsDialog, rộng 560) ---- */
+.dlg.hv560{width:min(700px,100%)}
+.dlg .eyebrow{display:block;font-size:12.5px;color:var(--muted);font-weight:500;margin-bottom:2px}
+.enr{margin:0 -22px}
+.enr .lh{padding:10px 22px 6px}
+.enr-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:2px 12px;align-items:center;padding:10px 22px;border-bottom:1px solid var(--line-2)}
+.enr-row .who{display:flex;flex-direction:column;align-items:flex-start;gap:0;min-width:0}
+.enr-row .who b{font-weight:600;overflow-wrap:anywhere}
+.enr-row .sub{font-size:12.5px;color:var(--muted);overflow-wrap:anywhere}
+.enr-row .rt{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.enr-row .money{font-size:13px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.enr-row.edit{background:var(--accent-soft);box-shadow:inset 3px 0 0 var(--accent)}
+.enr-row.gone .who b{color:var(--muted);font-weight:500}
+.enr-row .err-line{grid-column:2 / -1;color:var(--danger);font-size:12px}
+
+/* Ô mã số: số to, chữ số cùng bề ngang. */
+.ma{display:inline-grid;place-items:center;min-width:44px;height:34px;padding:0 6px;border:1px solid var(--line);border-radius:8px;background:var(--soft);font-weight:700;font-size:15px;font-variant-numeric:tabular-nums;color:var(--text);white-space:nowrap}
+.ma.moi{border-color:var(--accent-line);background:var(--accent-soft);color:var(--accent)}
+.ma.trong{border-style:dashed;background:#fff;color:var(--faint);font-weight:500}
+.ma.huy{background:#fff;color:var(--faint);text-decoration:line-through}
+.ma-btn{display:inline-flex;align-items:center;gap:4px;border:0;background:none;padding:0;color:inherit;cursor:pointer}
+.ma-btn .pen{color:var(--faint)}
+.ma-in{width:64px;height:34px;border:1px solid var(--accent);border-radius:8px;text-align:center;font-weight:700;font-size:15px;font-variant-numeric:tabular-nums;background:#fff;box-shadow:0 0 0 3px var(--accent-soft)}
+.ma-in.err{border-color:var(--danger);box-shadow:0 0 0 3px var(--danger-bg)}
+.ma-in.ph::placeholder{color:var(--faint);font-weight:500;font-size:12.5px}
+.ma-edit{display:flex;align-items:center;gap:6px}
+.dlg-note{margin:10px 0 6px}
+.dat-nhanh{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 12px;border:1px dashed var(--accent-line);border-radius:10px;background:#FFFCFD;margin:8px 0 6px;font-size:13px}
+.dat-nhanh .ctl{width:auto}
+.dat-nhanh b{font-weight:600}
+
+/* ---- Màn Mẫu thiết kế (DesignStudio: 260 · xem trước · 360) ---- */
+.mtk-tabs{display:flex;gap:4px;margin:-6px 0 16px;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none}
+.mtk-tabs a{flex:none;padding:8px 12px;color:var(--muted);text-decoration:none;font-weight:500;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
+.mtk-tabs a.on{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
+.studio{display:grid;grid-template-columns:260px minmax(0,1fr) 340px;gap:16px;align-items:start}
+.mgrid .scope{display:flex;border-bottom:1px solid var(--line)}
+.mgrid .scope button{flex:1;border:0;background:none;padding:10px 8px;font-size:13px;color:var(--muted);font-weight:500;border-bottom:2px solid transparent;margin-bottom:-1px;display:flex;gap:6px;justify-content:center}
+.mgrid .scope button.on{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
+.mgrid ul{list-style:none;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:12px}
+.thumb{position:relative;display:block;border:2px solid transparent;border-radius:8px;outline:1px solid var(--line);overflow:hidden;aspect-ratio:4/5;background:var(--line-2)}
+.thumb img{display:block;width:100%;height:100%;object-fit:cover}
+.thumb.on{border-color:var(--accent);outline-color:var(--accent)}
+.thumb .code{position:absolute;left:4px;bottom:4px;background:rgba(34,28,25,.72);color:#fff;font-size:10.5px;font-weight:600;padding:1px 5px;border-radius:4px}
+.thumb .moi{position:absolute;right:4px;top:4px;background:var(--accent);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px}
+.prev{padding:12px}
+.mau-xem{position:relative;overflow:hidden;border-radius:6px;background:var(--line-2);aspect-ratio:1080/1350;width:100%}
+.mau-xem iframe{position:absolute;left:0;top:0;width:1080px;height:1350px;border:0;transform:scale(var(--k,.4));transform-origin:0 0;pointer-events:none}
+.prev-bar{display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap}
+.prev-bar .cap{flex:1;min-width:0;color:var(--muted);font-size:13px}
+.auto{display:flex;flex-direction:column;gap:6px;padding:10px 12px;border:1px solid var(--line-2);border-radius:10px;background:var(--soft);font-size:13px}
+.auto .it{display:flex;gap:8px;justify-content:space-between}
+.auto .it span{color:var(--muted)}
+.auto .it b{font-weight:600;text-align:right;min-width:0;overflow-wrap:anywhere}
+.auto .it.ma-it{border:1px solid var(--accent-line);background:#fff;border-radius:8px;padding:6px 8px;margin:0 -4px;align-items:center}
+.auto .it.ma-it b{font-size:16px}
+.auto .note{font-size:12px;color:var(--muted);line-height:1.45}
+.mau-pa{display:flex;flex-direction:column;gap:10px}
+
+/* ---- Thẻ đã tạo (CardList) ---- */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:12px;padding:14px 18px}
+.cardrow{display:grid;grid-template-columns:96px minmax(0,1fr);gap:12px;border:1px solid var(--line);border-radius:10px;padding:10px;background:#fff}
+.cardrow img{width:96px;aspect-ratio:4/5;object-fit:cover;border-radius:6px;border:1px solid var(--line-2)}
+.cardrow .tx{display:flex;flex-direction:column;gap:2px;min-width:0;font-size:13px}
+.cardrow .tx b{font-size:14px}
+.cardrow .tx span{color:var(--muted)}
+.cardrow .vis{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:12.5px;color:var(--text)}
+.cardrow .act{display:flex;gap:6px;margin-top:6px}
+.cardrow.an img{opacity:.55}
+.cards-f{display:flex;gap:8px;flex-wrap:wrap;padding:12px 18px;border-bottom:1px solid var(--line)}
+
+/* ---- Bảng đo độ dài mã ---- */
+.do-luoi{display:grid;grid-template-columns:110px repeat(6,minmax(0,1fr));gap:6px 10px;align-items:center;padding:12px 18px}
+.do-luoi .h{font-size:12px;font-weight:700;color:var(--muted);text-align:center}
+.do-luoi .m{font-weight:600;font-size:13px}
+.do-luoi .o{display:flex;flex-direction:column;align-items:center;gap:2px}
+.do-luoi img{height:52px;max-width:100%;object-fit:contain;border-radius:4px}
+.do-luoi .kq{font-size:11px;font-weight:700}
+.do-luoi .kq.ok{color:var(--ok)} .do-luoi .kq.sat{color:var(--warn)} .do-luoi .kq.vo{color:var(--danger)}
+
+@media (max-width:1180px){ .studio{grid-template-columns:240px minmax(0,1fr)} .studio .fcol{grid-column:1 / -1} }
+@media (max-width:640px){
+  .kc-head h1{font-size:18px}
+  .dlg-bg.full{padding:0;place-items:stretch}
+  .dlg-bg.full .dlg{width:100%;height:100%;max-height:none;border-radius:0}
+  .enr{margin:0 -16px}
+  .enr .lh{padding:10px 16px 6px}
+  .enr-row{padding:10px 16px;gap:4px 10px;grid-template-columns:auto minmax(0,1fr)}
+  .enr-row>.ma,.enr-row>.ma-btn,.enr-row>.ma-edit{grid-row:span 2;align-self:start}
+  .enr-row .rt{grid-column:2;flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:flex-start;gap:4px 8px}
+  .enr-row .money{font-size:12px;color:var(--muted)}
+  .enr-row .err-line{grid-column:1 / -1}
+  .thumb .moi{font-size:8.5px;padding:0 4px;right:2px;top:2px}
+  .studio{grid-template-columns:minmax(0,1fr);gap:12px}
+  .studio .pcol{order:1} .studio .gcol{order:2} .studio .fcol{order:3}
+  .mgrid ul{grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;padding:10px}
+  .mgrid ul li:nth-child(n+6){display:none}
+  .thumb .code{display:none}
+  .cards{padding:12px}
+  .do-luoi{grid-template-columns:64px repeat(3,minmax(0,1fr))}
+}

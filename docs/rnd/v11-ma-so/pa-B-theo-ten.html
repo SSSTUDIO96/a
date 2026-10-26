@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="ten" content="Mã số — Phương án B (đánh số theo tên khi chốt danh sách) — R&D 11">
+<title>Mã số B — R&D 11</title>
+<link rel="stylesheet" href="../v4-chung/v4.css">
+<link rel="stylesheet" href="../v8-chung/v8.css">
+<link rel="stylesheet" href="chung/v11.css">
+</head>
+<body>
+<script src="../v8-chung/v8.js"></script>
+<script src="chung/v11.js"></script>
+<script>
+const { man, mucLuc, boot, icon } = V4;
+const { HV, HV_SAU_CHOT, dong, hopThoai, studio, maBox } = V11;
+
+// Phương án B (học từ số báo danh kỳ thi THPT): trước ngày chốt học viên CHƯA có mã. Chủ trung tâm bấm "Chốt & đánh số"
+// → mã 01..N theo thứ tự a, b, c của TÊN (chữ cuối của họ tên; trùng tên thì xét họ đệm). Ghi danh sau ngày chốt nhận
+// số tiếp theo (N+1…), KHÔNG chen vào giữa. "Đánh số lại" thì cả lớp xếp lại theo tên.
+const tenRieng = (t) => t.trim().split(/\s+/).pop();
+const theoTen = (a, b) => tenRieng(a.ten).localeCompare(tenRieng(b.ten), 'vi') || a.ten.localeCompare(b.ten, 'vi');
+const daChot = HV.filter((h) => !h.huy).sort(theoTen);              // 9 người lúc chốt 20/10
+const MA = new Map(daChot.map((h, i) => [h.ten, String(i + 1).padStart(2, '0')]));
+MA.set(HV_SAU_CHOT.ten, '10');                                       // ghi danh 22/10, sau chốt → số tiếp theo
+// Nếu đánh số lại theo tên (có Lý Thanh Hà): đếm số người bị đổi số.
+const laiTatCa = [...daChot, HV_SAU_CHOT].sort(theoTen);
+const doiSo = laiTatCa.filter((h, i) => MA.get(h.ten) !== String(i + 1).padStart(2, '0')).length;
+
+function dsB(canhBao) {
+  const moiSo = new Map(laiTatCa.map((h, i) => [h.ten, String(i + 1).padStart(2, '0')]));
+  const hang = [...daChot, HV_SAU_CHOT].map((h) => dong(h, {
+    trai: canhBao && moiSo.get(h.ten) !== MA.get(h.ten)
+      ? maBox(`${MA.get(h.ten)} → ${moiSo.get(h.ten)}`, 'moi')
+      : maBox(MA.get(h.ten), h === HV_SAU_CHOT ? 'moi' : ''),
+    tag: h === HV_SAU_CHOT ? '<span class="tag ps">Ghi danh sau ngày chốt</span>' : undefined,
+  })).join('');
+  const huy = HV.filter((h) => h.huy).map((h) => dong(h, { trai: maBox('—', 'trong'), cls: 'gone', sub: `${h.hd} · huỷ ${h.huy} (trước ngày chốt) · ${h.lydo} · không được đánh số` })).join('');
+  const bn = canhBao
+    ? `<div class="bn yel dlg-note">${icon('warn', 's')}<span><b>Đánh số lại theo tên?</b> ${doiSo - 1}/${daChot.length} người đã có số sẽ bị đổi số (vì tên "Hà" xếp thứ 2, chen vào giữa). 6 thẻ chào mừng đã xuất ảnh vẫn in số cũ — cần xuất lại và gửi lại cho học viên.</span></div>`
+    : `<div class="bn ok dlg-note">${icon('check', 's')}<span>Đã chốt danh sách <b>20/10/2026</b>: ${daChot.length} học viên được đánh số 01–${String(daChot.length).padStart(2, '0')} theo <b>tên (A→Z)</b>. Người ghi danh sau ngày chốt nhận số tiếp theo.</span></div>`;
+  return `${bn}<div class="enr"><div class="lh">Đang học · xếp theo mã<span class="sp"></span>${daChot.length + 1} học viên</div>${hang}
+  <div class="lh">Đã huỷ ghi danh<span class="sp"></span>1</div>${huy}</div>`;
+}
+const chanB = (canhBao) => canhBao
+  ? '<button class="btn">Không đánh lại</button><button class="btn pri">Đánh số lại cho cả lớp</button>'
+  : '<button class="btn">Đánh số lại theo tên</button><button class="btn">Đóng</button>';
+// Trước ngày chốt: chưa ai có mã.
+function dsChuaChot() {
+  const hang = HV.filter((h) => !h.huy).map((h) => dong(h, { trai: maBox('—', 'trong') })).join('');
+  return `<div class="bn yel dlg-note">${icon('warn', 's')}<span>Lớp <b>chưa chốt danh sách</b> — học viên chưa có mã số; thẻ chào mừng làm lúc này <b>không có ô mã</b>. Chốt xong, app đánh số 01–09 theo tên (A→Z).</span></div>
+  <div class="enr"><div class="lh">Đang học · xếp theo ngày ghi danh<span class="sp"></span>9 học viên</div>${hang}</div>`;
+}
+
+mucLuc('Mã số — Phương án B: đánh số theo tên khi chốt danh sách', 'Như số báo danh kỳ thi: trước ngày chốt chưa có số; bấm "Chốt & đánh số" thì cấp 01–N theo thứ tự a, b, c của tên. Người ghi danh sau nhận số tiếp theo.', [
+  ['Máy tính (1440) và điện thoại (390)', [
+    ['b-chua-chot', 'Trước khi chốt: chưa có mã, nút "Chốt & đánh số theo tên"', ''],
+    ['b-lop', 'Sau khi chốt: mã 01–09 theo tên, người ghi danh sau nhận 10', 'màn (i)'],
+    ['b-lai', 'Bấm "Đánh số lại theo tên": cảnh báo số người đổi số, số thẻ đã xuất', ''],
+    ['b-the', 'Mẫu thiết kế → Chào mừng: thẻ cm-04 hiện mã 08', 'màn (ii)'],
+  ]],
+]);
+man('b-chua-chot', { nav: 'dao-tao', kid: 'Khoá & lớp', title: 'Học viên lớp K12', back: '#muc-luc' }, hopThoai(9, dsChuaChot(), '<button class="btn">Đóng</button><button class="btn pri">Chốt &amp; đánh số theo tên</button>'));
+man('b-lop', { nav: 'dao-tao', kid: 'Khoá & lớp', title: 'Học viên lớp K12', back: '#muc-luc' }, hopThoai(10, dsB(false), chanB(false)));
+man('b-lai', { nav: 'dao-tao', kid: 'Khoá & lớp', title: 'Học viên lớp K12', back: '#muc-luc' }, hopThoai(10, dsB(true), chanB(true)));
+man('b-the', { nav: 'mau', title: 'Mẫu thiết kế', back: '#muc-luc' }, studio({
+  mau: 'cm-04', ten: 'Vũ Thu Trang', hd: 'HĐ-0142', ma: MA.get('Vũ Thu Trang'), maHien: MA.get('Vũ Thu Trang'),
+  ghiChuMa: 'Lớp K12 đã chốt danh sách 20/10/2026 — số theo tên (A→Z). Thẻ làm trước ngày chốt không có ô mã; lớp đánh số lại thì thẻ đã xuất mang số cũ.',
+}));
+boot();
+</script>
+</body>
+</html>

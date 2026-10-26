@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="ten" content="Mã số — Phương án A (số theo thứ tự ghi danh, giữ nguyên) — R&D 11">
+<title>Mã số A — R&D 11</title>
+<link rel="stylesheet" href="../v4-chung/v4.css">
+<link rel="stylesheet" href="../v8-chung/v8.css">
+<link rel="stylesheet" href="chung/v11.css">
+</head>
+<body>
+<script src="../v8-chung/v8.js"></script>
+<script src="chung/v11.js"></script>
+<script>
+const { man, mucLuc, boot, icon } = V4;
+const { HV, dong, hopThoai, studio } = V11;
+
+// Phương án A: mã = số thứ tự ghi danh trong lớp, cấp ngay lúc hợp đồng xác nhận (cùng lúc sinh Enrollment), không bao giờ
+// cấp lại số đã dùng. Người huỷ giữ số trên bản ghi huỷ (lịch sử); số đó để trống.
+let n = 0;
+const MA = HV.map(() => String(++n).padStart(2, '0')); // 01..10 theo thứ tự ghi danh, kể cả người đã huỷ (03)
+const dangHoc = HV.map((h, i) => [h, MA[i]]).filter(([h]) => !h.huy);
+const daHuy = HV.map((h, i) => [h, MA[i]]).filter(([h]) => h.huy);
+
+const pen = '<svg class="i s pen" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>';
+function dsA(suaTen) {
+  const hang = dangHoc.map(([h, m]) => {
+    if (h.ten === suaTen) {
+      return dong(h, {
+        cls: 'edit',
+        trai: `<span class="ma-edit"><input class="ma-in err" value="02" aria-label="Mã số"></span>`,
+        loi: 'Mã 02 đã có trong lớp: Lê Thị Mai. Chọn số khác.',
+        tag: '<span class="row" style="gap:6px"><button class="btn sm">Huỷ</button><button class="btn sm pri dis">Lưu</button></span>',
+      });
+    }
+    const moi = h.ten === 'Đỗ Hải Yến';
+    return dong(h, { trai: `<button class="ma-btn" aria-label="Sửa mã ${m}">${V11.maBox(m, moi ? 'moi' : '')}${pen}</button>` });
+  }).join('');
+  const huy = daHuy.map(([h, m]) => dong(h, { trai: V11.maBox(m, 'huy'), cls: 'gone', sub: `${h.hd} · huỷ ${h.huy} · ${h.lydo} · số ${m} để trống, không cấp lại` })).join('');
+  return `<div class="bn grey dlg-note">${icon('warn', 's')}<span>Mã số tự cấp theo <b>thứ tự ghi danh</b> (01, 02…) và <b>giữ nguyên</b>. Bấm vào mã để sửa tay. Người huỷ ghi danh để trống số của mình.</span></div>
+  <div class="enr"><div class="lh">Đang học<span class="sp"></span>${dangHoc.length} học viên</div>${hang}
+  <div class="lh">Đã huỷ ghi danh<span class="sp"></span>${daHuy.length}</div>${huy}</div>`;
+}
+
+mucLuc('Mã số — Phương án A: số theo thứ tự ghi danh, giữ nguyên', 'Mã cấp tự động lúc hợp đồng khoá học xác nhận (01, 02…), không đổi về sau, sửa tay được, không trùng trong lớp. Bấm "Hiện trường dữ liệu" để thấy ô nào lấy từ đâu.', [
+  ['Máy tính (1440) và điện thoại (390)', [
+    ['a-lop', 'Đào tạo → lớp K12 → Học viên: xem / sửa mã', 'màn (i)'],
+    ['a-lop-sua', 'Sửa tay một mã bị trùng → báo lỗi, gợi ý số trống', ''],
+    ['a-the', 'Mẫu thiết kế → Chào mừng: thẻ cm-01 hiện mã 07', 'màn (ii)'],
+  ]],
+]);
+man('a-lop', { nav: 'dao-tao', kid: 'Khoá & lớp', title: 'Học viên lớp K12', back: '#muc-luc' }, hopThoai(9, dsA(null)));
+man('a-lop-sua', { nav: 'dao-tao', kid: 'Khoá & lớp', title: 'Học viên lớp K12', back: '#muc-luc' }, hopThoai(9, dsA('Trần Bảo Ngọc')));
+man('a-the', { nav: 'mau', title: 'Mẫu thiết kế', back: '#muc-luc' }, studio({
+  mau: 'cm-01', ten: 'Vũ Thu Trang', hd: 'HĐ-0142', ma: '07', maHien: '07',
+  ghiChuMa: 'Lấy từ danh sách học viên lớp K12 (số thứ tự ghi danh). Sửa mã ở Đào tạo → Học viên; thẻ đã xuất trước khi sửa vẫn mang số cũ.',
+}));
+boot();
+</script>
+</body>
+</html>

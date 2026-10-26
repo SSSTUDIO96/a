@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="ten" content="Mã số — Phương án C (trung tâm tự đặt mã, app gợi ý) — R&D 11">
+<title>Mã số C — R&D 11</title>
+<link rel="stylesheet" href="../v4-chung/v4.css">
+<link rel="stylesheet" href="../v8-chung/v8.css">
+<link rel="stylesheet" href="chung/v11.css">
+</head>
+<body>
+<script src="../v8-chung/v8.js"></script>
+<script src="chung/v11.js"></script>
+<script>
+const { man, mucLuc, boot, icon } = V4;
+const { HV, dong, hopThoai, studio, maBox } = V11;
+
+// Phương án C (học từ sơ đồ ghế của phần mềm vé sự kiện / sơ đồ bàn tiệc cưới): mã là CHỮ NGẮN do trung tâm đặt, tối đa
+// 3 ký tự (đo: 4 ký tự như "A-07" vỡ ô mã ở 6/10 mẫu mới). Ghi danh xong app gợi ý số trống nhỏ nhất; "Đặt nhanh theo
+// hàng ghế" điền A1, A2… cho cả lớp theo thứ tự ghi danh. Người huỷ ghi danh NHẢ mã, người khác dùng lại được ngay.
+const MA = { 'Đặng Quỳnh Như': 'A1', 'Lê Thị Mai': 'A2', 'Phạm Quỳnh Hương': 'A3', 'Tôn Nữ Hoàng Bảo Ngọc Phương Thảo': 'A4',
+  'Hoàng Minh Anh': 'B1', 'Vũ Thu Trang': 'B2', 'Bùi Khánh Linh': 'B3', 'Trần Bảo Ngọc': 'B4' };
+
+function dsC(loi) {
+  const hang = HV.filter((h) => !h.huy).map((h) => {
+    const m = MA[h.ten];
+    if (!m) {
+      // Đỗ Hải Yến vừa ghi danh: chưa đặt mã → ô trống có gợi ý (hoặc lỗi trùng nếu gõ B2).
+      return loi
+        ? dong(h, { cls: 'edit', trai: '<span class="ma-edit"><input class="ma-in err" value="B2" aria-label="Mã số"></span>', loi: 'B2 đã đặt cho Vũ Thu Trang. Mã còn trống gần nhất: A5.' })
+        : dong(h, { trai: '<span class="ma-edit"><input class="ma-in ph" placeholder="gợi ý A5" aria-label="Mã số"></span>', tag: '<span class="tag ps">Chưa có mã</span>' });
+    }
+    return dong(h, { trai: `<span class="ma-edit"><input class="ma-in" style="border-color:var(--line);box-shadow:none" value="${m}" aria-label="Mã số"></span>` });
+  }).join('');
+  const huy = HV.filter((h) => h.huy).map((h) => dong(h, { trai: maBox('A5', 'huy'), cls: 'gone', sub: `${h.hd} · huỷ ${h.huy} · ${h.lydo} · đã nhả mã A5 — người khác dùng lại được` })).join('');
+  return `<div class="bn grey dlg-note">${icon('warn', 's')}<span>Mã do trung tâm đặt: <b>tối đa 3 ký tự</b> (chữ hoặc số, ví dụ 07, A5, B12), không trùng trong lớp. Ô trống thì app gợi ý mã còn trống.</span></div>
+  <div class="dat-nhanh"><b>Đặt nhanh theo hàng ghế:</b> hàng <select class="ctl sm"><option>A, B, C…</option><option>1, 2, 3…</option></select> mỗi hàng <select class="ctl sm"><option>4</option><option>5</option><option>6</option></select> ghế <button class="btn sm dashed">Điền cho 9 học viên</button></div>
+  <div class="enr"><div class="lh">Đang học<span class="sp"></span>9 học viên</div>${hang}
+  <div class="lh">Đã huỷ ghi danh<span class="sp"></span>1</div>${huy}</div>`;
+}
+const chanC = '<button class="btn">Huỷ</button><button class="btn pri">Lưu mã</button>';
+
+mucLuc('Mã số — Phương án C: trung tâm tự đặt mã, app gợi ý', 'Mã là chữ ngắn tối đa 3 ký tự (07, A5, B12) trung tâm tự đặt cho khớp sơ đồ ghế thật. App gợi ý mã trống; có nút đặt nhanh theo hàng ghế. Người huỷ nhả mã.', [
+  ['Máy tính (1440) và điện thoại (390)', [
+    ['c-lop', 'Đào tạo → lớp K12 → Học viên: bảng mã sửa trực tiếp + đặt nhanh theo hàng ghế', 'màn (i)'],
+    ['c-lop-loi', 'Gõ mã trùng → báo lỗi, gợi ý mã trống', ''],
+    ['c-the', 'Mẫu thiết kế → Chào mừng: thẻ cm-03 hiện mã B2', 'màn (ii)'],
+  ]],
+]);
+man('c-lop', { nav: 'dao-tao', kid: 'Khoá & lớp', title: 'Học viên lớp K12', back: '#muc-luc' }, hopThoai(9, dsC(false), chanC));
+man('c-lop-loi', { nav: 'dao-tao', kid: 'Khoá & lớp', title: 'Học viên lớp K12', back: '#muc-luc' }, hopThoai(9, dsC(true), chanC));
+man('c-the', { nav: 'mau', title: 'Mẫu thiết kế', back: '#muc-luc' }, studio({
+  mau: 'cm-03', ten: 'Vũ Thu Trang', hd: 'HĐ-0142', ma: 'B2', maHien: 'B2',
+  ghiChuMa: 'Mã do trung tâm đặt ở Đào tạo → Học viên lớp K12 (hàng B, ghế 2). Học viên chưa có mã thì thẻ bỏ ô mã.',
+}));
+boot();
+</script>
+</body>
+</html>
