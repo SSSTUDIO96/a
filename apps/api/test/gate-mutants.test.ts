@@ -448,7 +448,8 @@ describe('cửa gác chuyển đỏ với từng kiểu lỗi', { timeout: 180_0
     console.log(`[F gốc] ${Object.entries(r).map(([n, c]) => `${n} ${c.passed}/${c.total}`).join(', ')}`);
     expect(bad).toEqual([]);
     expect(r.crossId.total).toBe(5);
-    expect(r.crossRef.total).toBe(5);
+    // 6 = 5 trường cũ + ids (GET /certificates?ids=…, việc tồn 89: refFieldPaths nhận cả trường tên đúng "ids").
+    expect(r.crossRef.total).toBe(6);
   });
 
   it('Đột biến 15 — GET /certificates/:certificateId tra chỉ theo id (quên tổ chức) → phép crossId đỏ', async () => {
@@ -515,6 +516,31 @@ describe('cửa gác chuyển đỏ với từng kiểu lỗi', { timeout: 180_0
     const r = await gateOn(certOnly(replace(onDb('get', '/orgs/:orgId/certificates', wrap))));
     const hit = r.crossRef.violations.filter((v) => v.startsWith('GET /orgs/:orgId/certificates [customerId'));
     console.log(`[đột biến 17] crossRef vi phạm: ${r.crossRef.violations.length}/${r.crossRef.total}; leak ${r.leak.violations.length}: ${hit.join('; ')}`);
+    expect(hit.length).toBe(1);
+    expect(hit[0]).toContain('KHÁC phản hồi mã bịa');
+  });
+
+  // Đánh TIẾP sau số lớn nhất hiện có (25). Việc tồn 89: refFieldPaths cũ (/Ids?$/) không bắt trường tên đúng "ids" nên đột biến này
+  // lọt qua cửa gác (đã đo: tenant-isolation 18/18 xanh, 1499/1499 phép); regex mới /(^ids|Ids?)$/ làm mẫu `ids` thành một phép crossRef.
+  it('Đột biến 26 — GET /certificates bỏ lọc tổ chức khi có ?ids= → phép crossRef đỏ ở ids (lộ giấy của A)', async () => {
+    const wrap = (db: Db) =>
+      db.$extends({
+        query: {
+          certificate: {
+            findMany({ args, query }) {
+              if ((args.where as { id?: { in?: unknown } } | undefined)?.id?.in) dropOrg(args.where);
+              return query(args);
+            },
+            count({ args, query }) {
+              if ((args.where as { id?: { in?: unknown } } | undefined)?.id?.in) dropOrg(args.where);
+              return query(args);
+            },
+          },
+        },
+      }) as unknown as Db;
+    const r = await gateOn(certOnly(replace(onDb('get', '/orgs/:orgId/certificates', wrap))));
+    const hit = r.crossRef.violations.filter((v) => v.startsWith('GET /orgs/:orgId/certificates [ids'));
+    console.log(`[đột biến 26] crossRef vi phạm: ${r.crossRef.violations.length}/${r.crossRef.total}; leak ${r.leak.violations.length}: ${hit.join('; ')}`);
     expect(hit.length).toBe(1);
     expect(hit[0]).toContain('KHÁC phản hồi mã bịa');
   });

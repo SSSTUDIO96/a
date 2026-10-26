@@ -4,6 +4,7 @@ import { WORK_STATUS_LABELS } from '@makeup/shared';
 import type { Appointment } from '../../api/types';
 import { Avatar, Tooltip, WithTooltip } from '../../ui';
 import { staffNaming, type StaffNaming } from '../../ui/staffName';
+import { lopLabel } from '../certificates/logic';
 import {
   apptSwatch,
   COURSE_SESSION_LABEL,
@@ -77,7 +78,7 @@ export function timeRange(a: Pick<Appointment, 'startsAt' | 'endsAt'>): string {
 export function apptTip(a: Appointment, colorBy: ColorBy = DEFAULT_COLOR_BY): string {
   const parts = [timeRange(a), kindTextBy(a, colorBy)];
   if (a.customer) parts.push(a.customer.fullName);
-  if (a.courseClass) parts.push(`Lớp ${a.courseClass.name}`);
+  if (a.courseClass) parts.push(lopLabel(a.courseClass.name));
   // Tô theo Sự kiện: tên sự kiện + nhân vật đã nằm trong chữ loại ở trên, không lặp nhân vật.
   if (a.subjectName && !(colorBy === 'occasion' && a.occasion)) parts.push(a.subjectName);
   if (a.staff.length === 0) parts.push('Chưa có thợ');

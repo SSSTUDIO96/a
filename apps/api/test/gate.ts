@@ -117,7 +117,8 @@ export function sampleCtx(app: App, fx: GateFixture, url: string): SampleCtx {
   };
 }
 
-// Các đường dẫn trường "…Id"/"…Ids" trong thân và tham số truy vấn của một route (vd "lines[].addons[].serviceId").
+// Các đường dẫn trường "…Id"/"…Ids" trong thân và tham số truy vấn của một route (vd "lines[].addons[].serviceId"), kể cả trường tên
+// đúng "ids" (vd GET /certificates?ids=…): regex cũ /Ids?$/ phân biệt hoa thường nên bỏ sót "ids" (việc tồn 89).
 export function refFieldPaths(route: AnyRoute): string[] {
   const out = new Set<string>();
   const walk = (node: unknown, prefix: string) => {
@@ -127,7 +128,7 @@ export function refFieldPaths(route: AnyRoute): string[] {
       for (const [k, v] of Object.entries(n.properties as Record<string, unknown>)) {
         // Trường MẢNG mã (photoFileIds…) → đường "k[]": cửa gác thay từng phần tử bằng mã của tổ chức khác.
         const isArr = !!v && typeof v === 'object' && ((v as { type?: unknown }).type === 'array' || 'items' in (v as object));
-        if (/Ids?$/.test(k)) out.add(isArr ? `${prefix}${k}[]` : `${prefix}${k}`);
+        if (/(^ids|Ids?)$/.test(k)) out.add(isArr ? `${prefix}${k}[]` : `${prefix}${k}`);
         walk(v, `${prefix}${k}.`);
       }
     }

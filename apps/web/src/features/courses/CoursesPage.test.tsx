@@ -217,6 +217,16 @@ describe('Khoá & lớp — danh sách và chi tiết (C3 mục 2.1)', () => {
     expect(screen.queryByRole('button', { name: 'Mở lớp' })).toBeNull();
   });
 
+  it('aria-label thẻ lớp không in "Lớp Lớp …": tên "Lớp K13" giữ nguyên, tên "K14" được thêm "Lớp " (dùng lopLabel)', async () => {
+    const detail = { course: NC, classes: [cls('k13', 'nc', 'Lớp K13', 3, 8), cls('k14', 'nc', 'K14', 2, 8)] };
+    setupServer(OWNER, (method, path) => (method === 'GET' && path === '/orgs/org-1/courses/nc' ? json(200, detail) : undefined));
+    renderAt('/hv/dao-tao/nc');
+    const k13 = await screen.findByRole('article', { name: 'Lớp K13' });
+    expect(k13.getAttribute('aria-label')).toBe('Lớp K13');
+    expect(screen.getByRole('article', { name: 'Lớp K14' }).getAttribute('aria-label')).toBe('Lớp K14');
+    expect(screen.queryByRole('article', { name: /Lớp Lớp/ })).toBeNull();
+  });
+
   it('quyền: chỉ courses.read (giảng viên) → không có Thêm khoá, Cài đặt nhóm, Sửa, Mở lớp, Ghi danh; vẫn xem được học viên', async () => {
     setupServer(INSTRUCTOR);
     renderAt('/hv/dao-tao/nc');

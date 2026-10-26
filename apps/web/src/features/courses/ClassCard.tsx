@@ -7,6 +7,7 @@ import { calendarText, certNotEndedReason, fullDate, isClassEnded, NO_TIME_REASO
 import { OffButton } from './OffButton';
 import { SeatBar, SeatTag } from './SeatTag';
 import { staffInitials, useCurrentOrgStaffNaming } from '../staff/useStaffNaming';
+import { lopLabel } from '../certificates/logic';
 
 // Thẻ lớp (bản vẽ C3 mục 2.1): ai, khi nào, ở đâu + thanh đầy + "x đã ghi danh / tối đa y" + nút Ghi danh.
 // Ghi danh = mở Lập hợp đồng khoá học, chọn sẵn lớp: /:orgSlug/hop-dong/moi?kind=COURSE&classId=<id> (cần contracts.write).
@@ -57,7 +58,7 @@ export function ClassCard({ cls, title, canEnroll, onEdit, onStudents, onCalenda
   const calLabel = cls.calendar.total === 0 ? 'Đưa lên Lịch' : 'Cập nhật Lịch';
   const certMode = onCertificates && !cancelled && today !== undefined ? (isClassEnded(cls.endDate, today) ? 'ready' : 'wait') : null;
   return (
-    <article className={`kc-class kc-class--${state}`} aria-label={`Lớp ${title}`}>
+    <article className={`kc-class kc-class--${state}`} aria-label={lopLabel(title)}>
       <div className="kc-class__t">
         <b className="kc-class__name">{title}</b>
         {cancelled ? <StatusTag tone="danger">Đã huỷ</StatusTag> : <SeatTag enrolledCount={cls.enrolledCount} capacity={cls.capacity} />}

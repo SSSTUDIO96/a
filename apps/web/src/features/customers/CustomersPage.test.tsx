@@ -4,6 +4,7 @@ import { createMemoryRouter, RouterProvider } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SYSTEM_ROLES } from '@makeup/shared';
 import { routes } from '../../app/routes';
+import { AVATAR_TIP } from './CustomerEditForm';
 
 // Màn Khách hàng chạy thật trong khung với máy chủ giả lập qua fetch — C2 mục 2.
 configure({ asyncUtilTimeout: 5000 });
@@ -343,6 +344,23 @@ describe('Khách mới, sửa tại chỗ', () => {
     await userEvent.click(within(form).getByRole('button', { name: 'Huỷ' }));
     await screen.findByRole('region', { name: 'Thông tin khách' });
     expect(writes(calls).filter((c) => c.method === 'PATCH')).toHaveLength(1);
+  });
+
+  it('Ảnh học viên — giải thích nằm trong tooltip "?" của dòng "Ảnh đại diện", không viết ra màn dưới nút ảnh', async () => {
+    setupServer(OWNER, avatarServer(null));
+    renderAt('/chien/khach-hang/k1');
+    const form = await openEditForm();
+    const row = form.querySelector('.ui-row') as HTMLElement;
+    expect(row.querySelector('.ui-row__label')?.textContent).toContain('Ảnh đại diện');
+    expect(row.querySelector('.ui-row__ctl .ui-img')).toBeTruthy();
+    // Không còn dòng gợi ý 12px dưới ô ảnh, và không dòng chữ nào ngoài tooltip nhắc "in lên giấy chứng nhận".
+    expect(form.querySelector('.ui-img__hint')).toBeNull();
+    expect(screen.queryByRole('tooltip')).toBeNull();
+    const tip = row.querySelector('.ui-row__label .ui-tip') as HTMLElement;
+    await userEvent.hover(tip);
+    expect((await screen.findByRole('tooltip')).textContent).toBe(AVATAR_TIP);
+    expect(AVATAR_TIP).toContain('in lên giấy chứng nhận');
+    expect(AVATAR_TIP).toContain('500 px');
   });
 
   it('Ảnh học viên: thiếu files.write → form sửa không có ô ảnh và Lưu không gửi avatarFileId', async () => {

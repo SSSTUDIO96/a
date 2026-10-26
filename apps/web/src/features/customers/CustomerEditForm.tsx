@@ -8,6 +8,9 @@ import { Button, ImageUpload, SettingRow, Textarea, TextInput } from '../../ui';
 import { Strip } from '../staff/parts';
 import { customerPatch, draftOf, type CustomerDraft } from './logic';
 
+// Giải thích ô ảnh nằm trong tooltip "?" sau nhãn (luật giao diện: một dòng cài đặt = nhãn + điều khiển, không viết giải thích ra màn).
+export const AVATAR_TIP = 'Học viên: ảnh này in lên giấy chứng nhận. Nên dùng ảnh vuông, cạnh từ 500 px.';
+
 // Sửa tại chỗ (C2 2.2 #c-sua): Họ và tên * · Số điện thoại ? · Email · Ghi chú. Lưu = PATCH chỉ trường đã đổi;
 // xoá trắng ô = gửi null. Ô "Ảnh đại diện" (có files.write): tải ảnh lên ngay (CUSTOMER_AVATAR), mã tệp đi theo PATCH khi bấm Lưu; Bỏ ảnh = avatarFileId null. Lỗi 400 hiện dưới ô (chữ máy chủ); lỗi mạng giữ chữ đang gõ.
 export function CustomerEditForm({ orgId, c, canFiles, onCancel, onSaved }: { orgId: string; c: Customer; canFiles: boolean; onCancel: () => void; onSaved: (c: Customer) => void }) {
@@ -55,27 +58,30 @@ export function CustomerEditForm({ orgId, c, canFiles, onCancel, onSaved }: { or
       <div className="ui-card__body">
         {banner && <Strip tone="danger" icon="warn">{banner}</Strip>}
         {canFiles && (
-          <ImageUpload
-            className="kh-edit__img"
-            layout="inline"
-            shape="round"
-            size={72}
-            label="Ảnh đại diện"
-            value={avatarUrl}
-            disabled={saving}
-            errorMessage={userMessage}
-            error={errors.avatarFileId || null}
-            hint="Học viên: ảnh này in lên giấy chứng nhận. Nên dùng ảnh vuông, cạnh từ 500 px."
-            onUpload={async (file) => {
-              const stored = await uploadFile(orgId, { purpose: 'CUSTOMER_AVATAR', name: file.name.slice(0, 200) || 'anh-hoc-vien', data: file }, newIdempotencyKey());
-              setAvatarId(stored.id);
-              setAvatarUrl(stored.signedUrl);
-            }}
-            onRemove={() => {
-              setAvatarId(null);
-              setAvatarUrl(null);
-            }}
-          />
+          <SettingRow label="Ảnh đại diện" tip={AVATAR_TIP} controlWidth={360}>
+            {/* Bọc div 100%: ô ảnh kiểu inline là hộp flex tự co theo nội dung, trong cột điều khiển (flex) nó co hẹp và nút rớt xuống dưới ô tròn. */}
+            <div style={{ width: '100%' }}>
+              <ImageUpload
+                layout="inline"
+                shape="round"
+                size={72}
+                label="Ảnh đại diện"
+                value={avatarUrl}
+                disabled={saving}
+                errorMessage={userMessage}
+                error={errors.avatarFileId || null}
+                onUpload={async (file) => {
+                  const stored = await uploadFile(orgId, { purpose: 'CUSTOMER_AVATAR', name: file.name.slice(0, 200) || 'anh-hoc-vien', data: file }, newIdempotencyKey());
+                  setAvatarId(stored.id);
+                  setAvatarUrl(stored.signedUrl);
+                }}
+                onRemove={() => {
+                  setAvatarId(null);
+                  setAvatarUrl(null);
+                }}
+              />
+            </div>
+          </SettingRow>
         )}
         <SettingRow label="Họ và tên" htmlFor={ids.name} required controlWidth={360}>
           <TextInput id={ids.name} value={d.fullName} maxLength={120} disabled={saving} error={errors.fullName || null} onChange={(e) => set('fullName', e.target.value)} />
