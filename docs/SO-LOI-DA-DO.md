@@ -208,3 +208,10 @@ Mỗi lỗi ghi đủ: triệu chứng · gốc bệnh · số đo · cách ch�
 - **Gốc:** điều phối chép từ bảng gói việc trong bản vẽ (viết trước khi ký) mà không đối chiếu bản ký duyệt — bản ký duyệt đè bản vẽ.
 - **Bắt được nhờ:** thợ E1 đọc ký duyệt, thử cả hai tên trên database thật, chọn đúng và nộp phiếu vướng thay vì làm theo phiếu giao.
 - **Cách chặn:** trước khi viết phiếu giao, điều phối grep bản KY-DUYET-* của bản vẽ đó tìm mọi chỗ "đổi", "thay", "không" và chép các điểm đè vào phiếu. Thứ tự migration chung ghi tại một chỗ: E 200000 → F 210000 → G 220000.
+
+## 30. Điều phối dẫn số dòng từ một dòng grep mà không đọc nội dung (26/10/2026)
+
+- **Triệu chứng:** ký duyệt bản vẽ H ghi "`enroll.ts:161` luôn tạo dòng mới". Thợ tra cứu H-H1 đo lại: dòng 161 là bộ lọc `status: 'ACTIVE'` trong hàm huỷ ghi danh; chỗ tạo dòng thật là 126–136.
+- **Gốc:** điều phối grep chữ `status: 'ACTIVE'`, thấy dòng 161 rồi tự đoán đó là chỗ `create`, không mở tệp đọc khối xung quanh. Kết luận (ghi danh lại luôn tạo dòng mới) vẫn đúng, nhưng chứng cứ dẫn sai.
+- **Hậu quả nếu không bắt:** thợ sau mở dòng 161 sẽ thấy hàm huỷ, nghi cả kết luận, mất công đào lại; hoặc tệ hơn, tin dòng sai mà sửa nhầm chỗ.
+- **Cách chặn:** mọi đường_dẫn:dòng ghi vào bản vẽ / ký duyệt phải lấy từ lệnh in ra NỘI DUNG dòng đó (`sed -n`, đọc tệp), không lấy từ kết quả grep một chữ. Gói tra cứu đầu ca (kiểu H-H1) giữ lại cho mọi bản vẽ — chính nó bắt được lỗi này.
