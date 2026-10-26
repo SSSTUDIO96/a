@@ -6,13 +6,21 @@ import { Button, Dialog, Select, SettingRow, TextInput, Textarea } from '../../u
 import { useRetainedIdempotencyKey } from '../auth/useRetainedIdempotencyKey';
 import { viDate } from './logic';
 
-// Hộp "Cấp lại giấy chứng nhận {số}" (bản vẽ F mục 6.5, 4.6): lý do (chọn; "Khác" thì gõ, bắt buộc, ≤ 500), tên in trên giấy (điền sẵn tên
-// HIỆN HÀNH của học viên — không sửa hồ sơ học viên), mẫu, phông. Cấp lại GIỮ SỐ: bản cũ chuyển "Đã thu hồi", bản mới ghi "Bản cấp lại {hôm nay}".
+// Hộp "Cấp lại giấy chứng nhận {số}" (bản vẽ F mục 6.5, 4.6): lý do (chọn; "Khác" thì gõ, bắt buộc, ≤ 500), tên in trên giấy (lý do "Sai tên / sai dấu":
+// điền sẵn tên HIỆN HÀNH trong hồ sơ học viên; lý do khác — "Đổi mẫu", "Khác": điền sẵn tên ĐÃ IN trên bản đang hiệu lực, để cấp lại chỉ đổi mẫu
+// không lấy lại tên hồ sơ (nghiệm thu F, L5). Người dùng đã gõ vào ô tên thì đổi lý do không ghi đè). Không sửa hồ sơ học viên), mẫu, phông. Cấp lại GIỮ SỐ: bản cũ chuyển "Đã thu hồi", bản mới ghi "Bản cấp lại {hôm nay}".
 // Gửi kèm Idempotency-Key giữ qua lần bấm lại. Lỗi 409 hiện lời tiếng Việt rõ, KHÔNG giấu nút (việc tồn 69: ghi danh đã huỷ).
 
 export const REISSUE_REASON_MAX = 500;
 export const NAME_MAX = 120;
 export const OTHER_REASON = 'Khác';
+// Lý do duy nhất lấy lại tên từ hồ sơ học viên.
+export const NAME_FIX_REASON = REISSUE_REASONS[0];
+
+// Tên điền sẵn vào ô "Tên in trên giấy" theo lý do.
+export function reissueDefaultName(target: Pick<CertificateView, 'studentName' | 'customer'>, reason: string): string {
+  return reason === NAME_FIX_REASON ? target.customer.fullName : target.studentName;
+}
 export const ENROLLMENT_CANCELLED_MESSAGE = 'Học viên đã huỷ ghi danh khoá này nên không cấp lại được giấy chứng nhận. Bản đang hiệu lực vẫn in lại được.';
 
 const FONT_KEEP = 'keep';
@@ -45,9 +53,11 @@ export function ReissueDialog({ orgId, target, today, onClose, onReissued, onSta
   const ids = useId();
   const templates = useMemo(() => listDesignTemplates({ kind: 'CERTIFICATE' }), []);
   const oldTemplateOk = isCertificateTemplateCode(target.templateCode);
-  const [reasonKind, setReasonKind] = useState<string>(REISSUE_REASONS[0]);
+  const [reasonKind, setReasonKind] = useState<string>(NAME_FIX_REASON);
   const [reasonText, setReasonText] = useState('');
-  const [name, setName] = useState(target.customer.fullName);
+  // null = người dùng chưa gõ vào ô tên: ô theo lý do (reissueDefaultName); đã gõ thì giữ chữ của họ.
+  const [typedName, setTypedName] = useState<string | null>(null);
+  const name = typedName ?? reissueDefaultName(target, reasonKind);
   const [templateCode, setTemplateCode] = useState(oldTemplateOk ? target.templateCode : '');
   const [font, setFont] = useState<string>(FONT_KEEP);
   const [busy, setBusy] = useState(false);
@@ -151,7 +161,7 @@ export function ReissueDialog({ orgId, target, today, onClose, onReissued, onSta
           </p>
         )}
         <SettingRow label="Tên in trên giấy" htmlFor={`${ids}-name`} required controlWidth={280}>
-          <TextInput id={`${ids}-name`} value={name} onChange={(e) => setName(e.target.value)} maxLength={NAME_MAX} error={fields.studentName ?? null} autoComplete="off" />
+          <TextInput id={`${ids}-name`} value={name} onChange={(e) => setTypedName(e.target.value)} maxLength={NAME_MAX} error={fields.studentName ?? null} autoComplete="off" />
         </SettingRow>
         <p className="gcr-reissue__note">Tên trong hồ sơ học viên không đổi theo — sửa hồ sơ nếu tên ở đó cũng sai.</p>
         <SettingRow label="Mẫu" htmlFor={`${ids}-tpl`} controlWidth={280}>

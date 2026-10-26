@@ -10,7 +10,7 @@ import { useBreakpoint, type Breakpoint } from '../../layout/useBreakpoint';
 import { usePermissions } from '../../layout/usePermissions';
 import { Button, Card, Dialog, EmptyState, IconLock, IconWarn, Select, Skeleton, StatusTag, TextInput } from '../../ui';
 import { useOrgInfo } from '../staff/useOrgInfo';
-import { pdfFileName, todayInTz, viDate } from './logic';
+import { lopLabel, pdfFileName, todayInTz, viDate } from './logic';
 import { PrintSheet } from './PrintSheet';
 import type { RenderDeps } from './render';
 import { ReissueDialog } from './ReissueDialog';
@@ -627,7 +627,7 @@ export function RegisterPage({ breakpoint, renderDeps }: RegisterPageProps = {})
                 {!tablet && (
                   <td className="gcr-col-course">
                     <span className="gcr-name">{c.courseName}</span>
-                    <span className="gcr-sub">Lớp {c.className}</span>
+                    <span className="gcr-sub">{lopLabel(c.className)}</span>
                   </td>
                 )}
                 <td className="num">{viDate(c.issuedOn)}</td>
@@ -713,8 +713,8 @@ export function RegisterPage({ breakpoint, renderDeps }: RegisterPageProps = {})
           {(filters.classId || filters.customerId) && (
             <div className="gcr-chips">
               {filters.classId && (
-                <button type="button" className="gcr-chip" aria-label={`Bỏ lọc lớp ${clsName}`} onClick={() => patch({ lop: null })}>
-                  Lớp {clsName} <span aria-hidden="true">×</span>
+                <button type="button" className="gcr-chip" aria-label={`Bỏ lọc ${lopLabel(clsName).replace(/^Lớp/i, 'lớp')}`} onClick={() => patch({ lop: null })}>
+                  {lopLabel(clsName)} <span aria-hidden="true">×</span>
                 </button>
               )}
               {filters.customerId && (

@@ -318,7 +318,10 @@ export const REF_SAMPLES: RefSamples = {
   'PUT /orgs/:orgId/occasions/order': [(o) => ({ occasionIds: allOccasionIds(o) })],
   // Giấy chứng nhận (bản vẽ F, gói S1b): lọc sổ theo lớp / học viên — MỖI trường một mẫu riêng. Gộp classId + customerId
   // trong một mẫu (như bản vẽ 9.2) thì thay customerId bằng mã của A vẫn kèm classId của B → rỗng, cửa gác MÙ với đột
-  // biến 17 (đã đo: 0/3 vi phạm). Mẫu ids không có trường "…Id" — chỉ chạy mẫu gốc.
+  // biến 17 (đã đo: 0/3 vi phạm). Mẫu ids (mẫu cuối, giá trị = mã giấy của chính B) có sẵn cho crossRef thay bằng mã giấy của A, NHƯNG
+  // gate.ts refFieldPaths chỉ nhận trường tên "…Id"/"…Ids" (regex /Ids?$/, phân biệt hoa thường) nên "ids" chưa được thay — đột biến N4 (bỏ lọc tổ chức
+  // khi có ?ids=) vẫn lọt (nghiệm thu F, L3). Đổi gate.ts thành /(^ids|Ids?)$/ là bắt được: đã thử cùng lệnh, N4 + đổi regex → crossRef ĐỎ, riêng đổi
+  // regex → xanh (phiếu vướng gửi điều phối; gate.ts không thuộc gói sửa F).
   'GET /orgs/:orgId/certificates': [
     (o) => ({ customerId: o.ids.customerId }),
     (o) => ({ classId: o.ids.endedClassId }),

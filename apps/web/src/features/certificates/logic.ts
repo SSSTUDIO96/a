@@ -90,6 +90,12 @@ export function codeRange(items: Pick<CertificateView, 'code'>[]): string {
   return `${first} → ${tail}`;
 }
 
+// "Lớp K12" nếu tên lớp chưa có chữ "Lớp" ở đầu, giữ nguyên nếu đã có (tên lớp thường đã là "Lớp K12": không in "Lớp Lớp K12").
+// Cùng luật với mẫu giấy (public/mau/chung/cc.js: /^lớp\b/i).
+export function lopLabel(className: string): string {
+  return /^lớp\b/i.test(className) ? className : `Lớp ${className}`;
+}
+
 // Số phông trong fontOverride: 'ky-3' → '3'. Giá trị lạ → ném lỗi.
 export function fontNumber(font: string | null): string | null {
   if (font === null) return null;

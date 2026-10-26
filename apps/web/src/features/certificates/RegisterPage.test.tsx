@@ -305,6 +305,17 @@ describe('Sổ — lọc và phân trang (máy chủ lọc)', () => {
     expect(screen.queryByRole('button', { name: /Bỏ lọc lớp/ })).toBeNull();
   });
 
+  it('tên lớp đã có chữ "Lớp" (như dữ liệu thật "Lớp K12") → cột Khoá · Lớp và chip lọc lớp KHÔNG in "Lớp Lớp K12"', async () => {
+    const v = fakeView(21, { className: 'Lớp K13', courseClassId: CLASS_ID });
+    setupServer(OWNER, undefined, () => pageOf([v]));
+    renderAt(`/hv/giay-chung-nhan?lop=${CLASS_ID}`);
+    const chip = await screen.findByRole('button', { name: 'Bỏ lọc lớp K13' });
+    expect(chip.textContent).toBe('Lớp K13 ×');
+    const row = (await rows())[0] as HTMLElement;
+    expect(row.querySelector('.gcr-col-course .gcr-sub')?.textContent).toBe('Lớp K13');
+    expect(document.body.textContent).not.toMatch(/Lớp Lớp/);
+  });
+
   it('?khach= → gửi customerId + chip tên học viên (để liên kết "Xem trong sổ" từ hồ sơ học viên dùng được)', async () => {
     const calls = setupServer(OWNER);
     renderAt('/hv/giay-chung-nhan?khach=c-huong');
@@ -511,7 +522,54 @@ describe('Cấp lại (giữ số, ghi "bản cấp lại")', () => {
     fireEvent.change(within(d).getByLabelText('Phông tên'), { target: { value: 'ky-3' } });
     fireEvent.click(within(d).getByRole('button', { name: 'Cấp lại và in' }));
     await screen.findByRole('dialog', { name: 'In lại giấy chứng nhận' });
-    expect(posts(calls)[0]?.body).toEqual({ reason: 'Đổi tên theo giấy khai sinh', studentName: 'Lê Thị Mai', templateCode: 'cc-08', fontOverride: 'ky-3' });
+    // Lý do "Khác" (không phải "Sai tên") giữ TÊN ĐÃ IN của bản đang hiệu lực (B: "Le Thi Mai"), không lấy lại tên hồ sơ "Lê Thị Mai" (nghiệm thu F, L5).
+    expect(posts(calls)[0]?.body).toEqual({ reason: 'Đổi tên theo giấy khai sinh', studentName: 'Le Thi Mai', templateCode: 'cc-08', fontOverride: 'ky-3' });
+  });
+
+  it('L5: lý do "Đổi mẫu" / "Khác" → ô tên điền sẵn tên ĐÃ IN (không lấy lại tên hồ sơ) và gửi đúng tên đó; "Sai tên / sai dấu" → tên hồ sơ; tên đã gõ không bị ghi đè', async () => {
+    // Bản đang hiệu lực đã sửa tên in ("Hoàng Gia Bảo Anh") khác tên hồ sơ ("Hoàng Gia Bảo").
+    const T8 = fakeView(8, { studentName: 'Hoàng Gia Bảo Anh', customer: { id: 'c-bao', fullName: 'Hoàng Gia Bảo' }, templateCode: 'cc-05', reissueNo: 1, reissuedOn: TODAY });
+    const calls = setupServer(
+      OWNER,
+      (m, p) => (m === 'POST' && p.endsWith('/reissue') ? json(201, fakeView(8, { reissueNo: 2, reissuedOn: TODAY })) : undefined),
+      () => pageOf([T8]),
+    );
+    renderAt('/hv/giay-chung-nhan');
+    const d = await openReissue();
+    const reason = () => within(d).getByRole('combobox', { name: /^Lý do/ });
+    const nameBox = () => within(d).getByLabelText(/^Tên in trên giấy/) as HTMLInputElement;
+    expect(nameBox().value).toBe('Hoàng Gia Bảo');
+    fireEvent.change(reason(), { target: { value: 'Đổi mẫu' } });
+    expect(nameBox().value).toBe('Hoàng Gia Bảo Anh');
+    fireEvent.change(reason(), { target: { value: 'Khác' } });
+    expect(nameBox().value).toBe('Hoàng Gia Bảo Anh');
+    fireEvent.change(reason(), { target: { value: 'Sai tên / sai dấu' } });
+    expect(nameBox().value).toBe('Hoàng Gia Bảo');
+    // Đã gõ tay → đổi lý do không ghi đè.
+    fireEvent.change(nameBox(), { target: { value: 'Hoàng Gia Bảo An' } });
+    fireEvent.change(reason(), { target: { value: 'Đổi mẫu' } });
+    expect(nameBox().value).toBe('Hoàng Gia Bảo An');
+    fireEvent.change(nameBox(), { target: { value: 'Hoàng Gia Bảo Anh' } });
+    fireEvent.change(within(d).getByLabelText('Mẫu'), { target: { value: 'cc-09' } });
+    fireEvent.click(within(d).getByRole('button', { name: 'Cấp lại và in' }));
+    await screen.findByRole('dialog', { name: 'In lại giấy chứng nhận' });
+    expect(posts(calls)[0]?.body).toEqual({ reason: 'Đổi mẫu', studentName: 'Hoàng Gia Bảo Anh', templateCode: 'cc-09' });
+  });
+
+  it('L5: chỉ đổi mẫu, KHÔNG đụng ô tên → thân gửi tên đã in của bản đang hiệu lực, không phải tên hồ sơ', async () => {
+    const T8 = fakeView(8, { studentName: 'Hoàng Gia Bảo Anh', customer: { id: 'c-bao', fullName: 'Hoàng Gia Bảo' }, templateCode: 'cc-05', reissueNo: 1, reissuedOn: TODAY });
+    const calls = setupServer(
+      OWNER,
+      (m, p) => (m === 'POST' && p.endsWith('/reissue') ? json(201, fakeView(8, { reissueNo: 2, reissuedOn: TODAY })) : undefined),
+      () => pageOf([T8]),
+    );
+    renderAt('/hv/giay-chung-nhan');
+    const d = await openReissue();
+    fireEvent.change(within(d).getByLabelText(/^Lý do/), { target: { value: 'Đổi mẫu' } });
+    fireEvent.change(within(d).getByLabelText('Mẫu'), { target: { value: 'cc-08' } });
+    fireEvent.click(within(d).getByRole('button', { name: 'Cấp lại và in' }));
+    await screen.findByRole('dialog', { name: 'In lại giấy chứng nhận' });
+    expect(posts(calls)[0]?.body).toEqual({ reason: 'Đổi mẫu', studentName: 'Hoàng Gia Bảo Anh', templateCode: 'cc-08' });
   });
 
   it('tên trống → báo dưới ô, không gửi; chọn "Theo mẫu" gửi fontOverride null', async () => {

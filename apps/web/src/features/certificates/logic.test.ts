@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { asciiSlug, codeRange, estimateMegabytes, fontNumber, formatBytes, isLargeBatch, isSmallPhoto, SMALL_PHOTO_PX, pdfFileName, pngFileName, progressText, todayInTz, viDate, withPdfExt } from './logic';
+import { asciiSlug, codeRange, estimateMegabytes, fontNumber, formatBytes, isLargeBatch, isSmallPhoto, lopLabel, SMALL_PHOTO_PX, pdfFileName, pngFileName, progressText, todayInTz, viDate, withPdfExt } from './logic';
 
 describe('logic.ts: ngày, tên tệp, cỡ tệp', () => {
   it('viDate đổi YYYY-MM-DD → dd/mm/yyyy, sai dạng thì ném lỗi', () => {
@@ -66,5 +66,15 @@ describe('logic.ts: ngày, tên tệp, cỡ tệp', () => {
     expect(isSmallPhoto({ width: 300, height: 300 })).toBe(true);
     expect(isSmallPhoto({ width: null, height: null })).toBe(false);
     expect(isSmallPhoto(null)).toBe(false);
+  });
+});
+
+describe('lopLabel: không in "Lớp Lớp …"', () => {
+  it('thêm "Lớp " khi tên chưa có; giữ nguyên khi đã có (không phân biệt hoa thường); "Lớp" dính liền chữ khác vẫn thêm', () => {
+    expect(lopLabel('K12')).toBe('Lớp K12');
+    expect(lopLabel('Lớp K12')).toBe('Lớp K12');
+    expect(lopLabel('lớp k12')).toBe('lớp k12');
+    expect(lopLabel('Lớp')).toBe('Lớp');
+    expect(lopLabel('Lớpx')).toBe('Lớp Lớpx');
   });
 });
