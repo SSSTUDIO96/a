@@ -4,9 +4,9 @@ import { uploadFile } from '../../api/files';
 import { newIdempotencyKey } from '../../api/idempotency';
 import { updateCustomer } from '../../api/schedule';
 import type { Customer } from '../../api/types';
-import { Avatar, Button, ImageUpload, SettingRow, Textarea, TextInput } from '../../ui';
+import { Button, ImageUpload, SettingRow, Textarea, TextInput } from '../../ui';
 import { Strip } from '../staff/parts';
-import { customerPatch, draftOf, initialsOf, type CustomerDraft } from './logic';
+import { customerPatch, draftOf, type CustomerDraft } from './logic';
 
 // Sửa tại chỗ (C2 2.2 #c-sua): Họ và tên * · Số điện thoại ? · Email · Ghi chú. Lưu = PATCH chỉ trường đã đổi;
 // xoá trắng ô = gửi null. Ô "Ảnh đại diện" (có files.write): tải ảnh lên ngay (CUSTOMER_AVATAR), mã tệp đi theo PATCH khi bấm Lưu; Bỏ ảnh = avatarFileId null. Lỗi 400 hiện dưới ô (chữ máy chủ); lỗi mạng giữ chữ đang gõ.
@@ -63,7 +63,6 @@ export function CustomerEditForm({ orgId, c, canFiles, onCancel, onSaved }: { or
             label="Ảnh đại diện"
             value={avatarUrl}
             disabled={saving}
-            emptyContent={<Avatar name={d.fullName || c.fullName} initials={initialsOf(d.fullName || c.fullName)} colorKey={c.id} className="kh-edit__av" />}
             errorMessage={userMessage}
             error={errors.avatarFileId || null}
             hint="Học viên: ảnh này in lên giấy chứng nhận. Nên dùng ảnh vuông, cạnh từ 500 px."
