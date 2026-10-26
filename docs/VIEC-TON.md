@@ -102,3 +102,4 @@ Danh sách việc các thợ, thợ chấm và R&D đã nêu nhưng **chưa làm
 | 82 | Thẻ cổng phía trung tâm liệt kê cả máy của các đường dẫn CŨ (center.ts:117 không lọc theo đường dẫn) nên sau khi tạo đường dẫn mới có thể thấy "(0/2)" kèm máy cũ — xem có nên tách "máy của đường dẫn hiện tại" | thợ sửa E |
 | 83 | formatVnd dùng khoảng trắng thường trước "₫" nên trong câu thường có thể xuống dòng riêng "5.000.000 / ₫" — đổi sang khoảng trắng không ngắt ở packages/shared (kiểm mọi bài so chuỗi tiền) | thợ sửa E |
 | 84 | Nhãn trạng thái giấy chứng nhận đang có 2 bản: statusLabel trong certificates/RegisterPage.tsx và certificateStatus trong customers/logic.ts — gộp về certificates/logic.ts (luật 6 cấm bản sao) | thợ F-W3c |
+| 85 | Bản vẽ G: đột biến gate 17, 18 của bản vẽ (PATCH mẫu in có .default; danh sách mẫu quên lọc tổ chức) — phần G-M3 — chưa có trong gate-mutants (đánh số tiếp sau 25) | thợ G-M4 |
