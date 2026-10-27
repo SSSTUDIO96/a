@@ -21,7 +21,12 @@
 .ten{font-family:var(--f-tay-1);font-size:calc(110px*var(--tay-co-1));line-height:1.15;margin-top:4px}
 .bd{font:400 37px/1.5 var(--f-chan);margin-top:26px;color:#EFE3CC;flex:1 1 0;min-height:0;overflow:hidden}
 .bd b{font-weight:600;color:#fff}
-.sg{display:flex;flex-direction:column;align-items:flex-end;text-align:right}
+/* Bản vẽ H: khối MÃ SỐ (nhãn "SỐ" + số data-f="ma"), màu lấy từ bảng màu của mẫu, đặt chỗ không đè chữ/ảnh/logo/QR; mã trống → mau.js ẩn hẳn khối. */
+.cuoi{display:flex;align-items:flex-end;gap:24px;flex:none}
+.seat{flex:none;display:flex;align-items:center;gap:14px;padding:10px 24px 10px 22px;border:1px solid rgba(230,211,179,.6)}
+.seat-l{font:500 15px var(--f-sans);letter-spacing:.26em;text-transform:uppercase;color:#A99C86}
+.seat-n{font:600 44px/1 var(--f-chan);color:#EFE3CC}
+.sg{display:flex;flex-direction:column;align-items:flex-end;text-align:right;margin-left:auto}
 .sg .n{font-family:var(--f-tay-3);font-size:calc(66px*var(--tay-co-3));color:#E6D3B3;line-height:1.1}
 .sg .r{font:500 16px var(--f-sans);letter-spacing:.26em;text-transform:uppercase;color:#A99C86;margin-top:6px}
 .vuong .w{padding:46px 70px 44px}.vuong .dg{margin-top:28px}.vuong .bd{font-size:31px;margin-top:14px}.vuong .cir{width:120px;height:120px}.vuong .ten{font-size:calc(92px*var(--tay-co-1))}
@@ -29,6 +34,6 @@
 <div class="top"><div class="tl"><span class="ld"><img data-f="logo" alt=""></span><span class="th" data-f="th"></span></div><div class="cir"><img class="ph" data-f="anh" alt=""></div></div>
 <div class="dg">Thân gửi</div><div class="ten" data-f="ten" data-fit="2"></div>
 <div class="bd" data-fitc="46">Chào mừng em đến với lớp <b data-f="khoa"></b> – <b data-f="lop"></b>. Buổi học đầu tiên vào <b data-f="thu"></b>, ngày <b data-f="ngayCham"></b>, <span data-f="gio"></span> tại <span data-f="diachi"></span>. Hẹn gặp em ở lớp!</div>
-<div class="sg"><div class="n" data-f="gv"></div><div class="r">Giảng viên lớp <span data-f="lop"></span></div></div></div></div>
+<div class="cuoi"><div class="seat"><span class="seat-l">Số</span><b class="seat-n" data-f="ma"></b></div><div class="sg"><div class="n" data-f="gv"></div><div class="r">Giảng viên lớp <span data-f="lop"></span></div></div></div></div></div>
 <script>window.MAC_DINH={};</script>
 <script src="chung/qrcode.js"></script><script src="chung/mau.js"></script><script src="chung/html-to-image.js"></script><script src="chung/xuat.js"></script></body></html>

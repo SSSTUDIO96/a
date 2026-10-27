@@ -40,7 +40,12 @@
 .ten{font-family:var(--f-tay-1);font-size:calc(128px*var(--tay-co-1));line-height:1.12;width:100%;padding:0 6px;color:#231C19}
 .ky .hl{margin-top:16px}
 .duoi{display:flex;justify-content:space-between;gap:24px;margin-top:16px;font:500 15px var(--f-sans);letter-spacing:.32em;text-transform:uppercase;color:#6E5A3F}
-.duoi span:last-child{text-align:right}
+.duoi>span:last-child{text-align:right}
+/* Bản vẽ H: khối MÃ SỐ (nhãn "SỐ" + số data-f="ma"), màu lấy từ bảng màu của mẫu, đặt chỗ không đè chữ/ảnh/logo/QR; mã trống → mau.js ẩn hẳn khối. */
+.duoi{position:relative;align-items:center;min-height:40px}
+.seat{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;align-items:center;gap:10px}
+.seat-l{font:500 15px var(--f-sans);letter-spacing:.32em;text-transform:uppercase;color:#6E5A3F}
+.seat-n{font:600 36px/1 var(--f-chan);letter-spacing:0;color:#231C19}
 .vuong .w{padding:40px 60px 40px}
 .vuong .top+.hl{margin-top:22px}
 .vuong .mid{gap:50px}
@@ -68,7 +73,7 @@
 </div></div>
 <div class="sp"></div>
 <div class="ky"><div class="ten" data-f="ten" data-fit="2"></div><div class="hl"></div>
-<div class="duoi"><span>Học viên mới</span><span>Hẹn gặp em ở lớp</span></div></div>
+<div class="duoi"><span>Học viên mới</span><span class="seat"><span class="seat-l">Số</span><b class="seat-n" data-f="ma"></b></span><span>Hẹn gặp em ở lớp</span></div></div>
 </div></div>
 <script>window.MAC_DINH={};</script>
 <script src="chung/qrcode.js"></script><script src="chung/mau.js"></script>

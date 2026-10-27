@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=1080">
+<title>Thẻ chào mừng cm-01 – Giấy dấu sáp</title>
+<!-- Makeup Pro · R&D-10 (19/10/2026), vào app theo bản vẽ H (26/10/2026): phông của app (phong/phong.css + ss-album.css, nối ở chung/cm.css), ô mã data-f="ma".
+     · kiểu (a) "Giấy + dấu sáp" của R&D-07 vòng 2, dựng thành mẫu chào mừng hoàn chỉnh.
+     Chất liệu: tấm giấy kem vân thớ đặt trên nền hoa lá nét khắc xanh lam, dấu sáp vàng ở đỉnh giấy mang chữ cái đầu tên trung tâm.
+     Bố cục: dấu sáp → logo + tên trung tâm → ảnh tròn (bên phải là huy hiệu MÃ SỐ) → tên khoá chữ vàng → "Thân gửi" + TÊN chữ ký TO.
+     Ô dữ liệu: logo, th, anh (khung tròn), khoa, lop, ngay, ten, diachi (như mẫu hiện có) + ma (mã số học viên trong lớp, bản vẽ H; trống thì ẩn hẳn khối .seat).
+     Phông: MonteCarlo (chữ ký, OFL; = 'MP Chữ ký 5' của app) · Cormorant Garamond · Montserrat. Khổ: 1080×1350 mặc định, ?kho=vuong → 1080×1080. ?ma=12 đổi mã số. -->
+<link rel="stylesheet" href="phong/phong.css"><link rel="stylesheet" href="phong/ss-album/ss-album.css"><link rel="stylesheet" href="chung/mau.css"><link rel="stylesheet" href="chung/cm.css">
+<style>
+:root{--chu:#2A2420;--phu:#5C4E3E;--nhan:#6B5535;--vien:#B8975A}
+#c{background:#F7F5EF;color:var(--chu)}
+.w{left:120px;top:150px;width:840px;height:1090px;padding:84px 56px 46px}
+.top{display:flex;align-items:center;justify-content:center;gap:16px;width:100%}
+.lg{width:58px;height:58px}
+.th{font:600 21px var(--f-sans);letter-spacing:.3em;color:var(--nhan);text-transform:uppercase;min-width:0}
+.hang{display:flex;align-items:center;width:100%;margin-top:6px}.hang>.l,.hang>.r{flex:1;display:flex;justify-content:center}
+.av{width:262px;height:262px;box-shadow:0 0 0 8px #F5EFE3,0 0 0 10px var(--vien),0 0 0 16px #F5EFE3,0 0 0 17px rgba(184,151,90,.6)}
+.seat{flex-direction:column;width:124px;height:124px;border-radius:50%;background:#FBF7EC;border:2px solid #6B5535;box-shadow:inset 0 0 0 5px #FBF7EC,inset 0 0 0 6.5px #B8975A}
+.seat-l{font:600 15px var(--f-sans);letter-spacing:.3em;color:var(--nhan);text-indent:.3em;margin-top:4px}
+.seat-n{font:600 40px/1 var(--f-chan2);color:var(--chu);margin-top:4px}
+.k1{font:500 19px var(--f-sans);letter-spacing:.4em;color:var(--nhan);text-transform:uppercase;margin-top:12px}
+.kh{font:600 58px/1.08 var(--f-chan);text-transform:uppercase;letter-spacing:.04em;margin-top:12px}
+.lo{font:italic 400 30px var(--f-chan);color:var(--phu);margin-top:10px}
+.or{display:flex;align-items:center;gap:16px;margin:20px 0 10px}.or i{width:110px;height:1px;background:var(--vien)}.or b{width:10px;height:10px;transform:rotate(45deg);border:1px solid var(--vien)}
+.dg{font:italic 400 34px var(--f-chan);color:var(--phu)}
+.ten{font-size:calc(112px*var(--tay-co-1));margin-top:0;color:var(--chu)}
+.by{font:italic 400 28px var(--f-chan);color:var(--phu);margin-top:6px}
+.ft{font:500 18px var(--f-sans);letter-spacing:.3em;text-transform:uppercase;color:var(--nhan)}
+.dc{font:400 26px var(--f-chan);color:var(--phu);margin-top:6px;max-width:100%;white-space:nowrap}
+/* vuông 1080×1080 */
+.vuong .w{left:150px;top:96px;width:780px;height:896px;padding:70px 40px 30px}
+.vuong .top{gap:12px}.vuong .lg{width:46px;height:46px}.vuong .th{font-size:18px}
+.vuong .hang{margin-top:6px}.vuong .av{width:170px;height:170px}.vuong .seat{width:104px;height:104px}.vuong .seat-n{font-size:31px}
+.vuong .k1{font-size:17px}.vuong .kh{font-size:46px;margin-top:8px}.vuong .lo{font-size:26px;margin-top:6px}
+.vuong .or{margin:10px 0 4px}.vuong .dg{font-size:28px}.vuong .ten{font-size:calc(98px*var(--tay-co-1))}.vuong .by{font-size:24px}.vuong .dc{font-size:23px}.vuong .ft{font-size:16px}
+</style></head><body><div id="c"><div class="w">
+<div class="top"><img class="lg" data-f="logo" alt=""><div class="th" data-f="th" data-fitw data-do></div></div>
+<div class="sp" style="flex:.4 1 0"></div><div class="hang"><div class="l"></div><div class="av"><img data-f="anh" alt=""></div><div class="r"><div class="seat"><span class="seat-l" data-do>SỐ</span><b class="seat-n" data-f="ma" data-do></b></div></div></div>
+<div class="sp" style="flex:.5 1 0;min-height:14px"></div><div class="k1" data-do>Chào mừng đến với lớp</div>
+<div class="kh vang" data-f="khoa" data-fit="2" data-do data-vang="#684010,#8E6116,#684010,#8E6116"></div>
+<div class="lo" data-do>Lớp <span data-f="lop"></span> · khai giảng <span data-f="ngayCham"></span></div>
+<div class="or"><i></i><b></b><i></i></div>
+<div class="sp" style="flex:.4 1 0;min-height:4px"></div><div class="dg" data-do>Thân gửi</div>
+<div class="ten" data-f="ten" data-fit="2" data-do></div>
+<div class="by" data-do>Thân ái, <span data-f="th"></span></div>
+<div class="sp"></div>
+<div class="ft" data-f="thangNam" data-do></div><div class="dc" data-f="diachi" data-fitw data-do></div>
+</div></div>
+<script>window.MAC_DINH={ten:'Đặng Quỳnh Như'};</script>
+<script src="chung/ve.js"></script><script src="chung/ve-moi.js"></script>
+<script src="chung/mau.js"></script><script src="chung/cm.js"></script>
+<script>(function(){const V=window.VE,vuong=new URLSearchParams(location.search).get('kho')==='vuong';V.kho(1080,vuong?1080:1350);
+ const b=vuong?{x:150,y:96,w:780,h:896}:{x:120,y:150,w:840,h:1090};const [m,n]=V.NEN_MAU['khac-lam'];
+ const chu=((window.MAU_DU_LIEU.th||'').trim()[0]||'').toUpperCase();
+ VE_MOUNT(V.veKhac(m,n)+`<defs>${V.LOC}</defs>`+V.giayVan(V.hinhChuNhat(b))+(chu?V.dauSap(540,b.y+6,vuong?46:56,chu):''));})();</script>
+<script src="chung/html-to-image.js"></script><script src="chung/xuat.js"></script></body></html>

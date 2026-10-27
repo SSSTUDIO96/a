@@ -39,11 +39,11 @@ describe('danh mục ↔ tệp vẽ', () => {
     }
   });
 
-  it('BẮT: ô trên tệp vẽ của các mẫu chào mừng khớp ô khai trong danh mục (shd-11 gồm cả gv, lịch, địa chỉ)', () => {
+  it('BẮT: ô trên tệp vẽ của các mẫu chào mừng khớp ô khai trong danh mục (shd-11 gồm cả gv, lịch, địa chỉ, mã số)', () => {
     for (const t of DESIGN_TEMPLATES.filter((x) => x.kind === 'WELCOME')) {
       expect(slotsOnFile(t.code), t.code).toEqual([...t.slots].sort());
     }
-    expect(slotsOnFile('shd-11')).toEqual(['anh', 'diachi', 'gv', 'khoa', 'lich', 'logo', 'lop', 'ngay', 'ten', 'th']);
+    expect(slotsOnFile('shd-11')).toEqual(['anh', 'diachi', 'gv', 'khoa', 'lich', 'logo', 'lop', 'ma', 'ngay', 'ten', 'th']);
   });
 });
 
@@ -106,9 +106,10 @@ describe('tương phản chữ nhỏ trên mẫu', () => {
 });
 
 describe('mẫu chào mừng thứ 20 — shd-11 "Chữ ký mảnh nền đá"', () => {
-  it('BẮT: có trên lưới thẻ chào mừng của hợp đồng khoá học — đủ 11 mẫu trong app (+ 9 mẫu đợt 1 của R&D = 20)', () => {
+  it('BẮT: có trên lưới thẻ chào mừng của hợp đồng khoá học — 21 mẫu trong app (10 cm mới đứng trước + 11 shd; bản vẽ H)', () => {
     const codes = templateChoices('WELCOME', 'COURSE', 'fit').map((c) => c.template.code);
-    expect(codes).toHaveLength(11);
+    expect(codes).toHaveLength(21);
+    expect(codes.slice(0, 10)).toEqual(Array.from({ length: 10 }, (_, i) => `cm-${String(i + 1).padStart(2, '0')}`));
     expect(codes.at(-1)).toBe('shd-11');
     expect(thumbnailUrl(T('shd-11'), 'COURSE')).toBe('/mau/anh-nho/shd-11.jpg');
     expect(T('shd-11').slots.filter((s) => (PHOTO_SLOTS as readonly string[]).includes(s))).toEqual([]);

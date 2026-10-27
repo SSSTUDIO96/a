@@ -13,6 +13,10 @@
 .w{position:absolute;inset:0;display:flex;flex-direction:column;padding:70px 80px 64px}
 .top{display:flex;align-items:center;gap:14px}.top img{width:58px;height:58px}
 .th{font:600 20px var(--f-sans);letter-spacing:.26em;text-transform:uppercase;color:#8A2E45}
+/* Bản vẽ H: khối MÃ SỐ (nhãn "SỐ" + số data-f="ma"), màu lấy từ bảng màu của mẫu, đặt chỗ không đè chữ/ảnh/logo/QR; mã trống → mau.js ẩn hẳn khối. */
+.seat{margin-left:auto;flex:none;display:flex;align-items:center;gap:12px;padding:9px 22px 9px 18px;border:1.5px solid #8A2E45;border-radius:40px}
+.seat-l{font:600 15px var(--f-sans);letter-spacing:.3em;text-transform:uppercase;color:#8A2E45}
+.seat-n{font:700 40px/1 var(--f-chan2);color:#8A2E45}
 .mid{display:flex;align-items:center;justify-content:space-between;margin-top:56px}
 .dt .l{font:600 18px var(--f-sans);letter-spacing:.34em;color:#7B6F68;text-transform:uppercase}
 .dt .d{font:900 250px/0.9 var(--f-chan2);color:#8A2E45;margin-top:14px}
@@ -27,7 +31,7 @@
 .qr{width:132px;height:132px;color:#241E1C;flex:none}
 .vuong .w{padding:52px 72px 46px}.vuong .mid{margin-top:26px}.vuong .dt .d{font-size:180px}.vuong .cir{width:330px;height:330px}.vuong .hw{margin-top:22px;font-size:calc(76px*var(--tay-co-3))}.vuong .ten{font-size:54px}.vuong .qr{width:112px;height:112px}
 </style></head><body><div id="c"><div class="w">
-<div class="top"><img data-f="logo" alt=""><span class="th" data-f="th"></span></div>
+<div class="top"><img data-f="logo" alt=""><span class="th" data-f="th"></span><div class="seat"><span class="seat-l">Số</span><b class="seat-n" data-f="ma"></b></div></div>
 <div class="mid"><div class="dt"><div class="l">Khai giảng</div><div class="d" data-f="ngayD"></div><div class="m" data-f="thangSo"></div><div class="y" data-f="nam"></div></div>
 <div class="cir"><img class="ph" data-f="anh" alt=""></div></div>
 <div class="hw">Chào mừng</div>

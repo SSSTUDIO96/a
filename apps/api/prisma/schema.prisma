@@ -1366,6 +1366,8 @@ model CourseClass {
   endMinute              Int?              @map("end_minute")
   capacity               Int
   enrolledCount          Int               @default(0) @map("enrolled_count")
+  // Bản vẽ H: số lớn nhất từng cấp trong lớp (không lùi). Câu giữ chỗ tăng cùng lúc với enrolled_count.
+  seatCounter            Int               @default(0) @map("seat_counter")
   status                 CourseClassStatus @default(OPEN)
   instructorMembershipId String?           @map("instructor_membership_id") @db.Uuid
   studioLocationId       String?           @map("studio_location_id") @db.Uuid
@@ -1406,6 +1408,9 @@ model Enrollment {
   enrolledAt     DateTime         @map("enrolled_at") @db.Timestamptz(3)
   cancelledAt    DateTime?        @map("cancelled_at") @db.Timestamptz(3)
   cancelReason   String?          @map("cancel_reason")
+  // Bản vẽ H: mã số trong lớp (1–999). ACTIVE bắt buộc có (CHECK enrollments_active_seat); không trùng giữa các ghi danh
+  // ACTIVE cùng lớp (index một phần enrollments_seat_active). Huỷ ghi danh giữ số (lịch sử), số không cấp lại.
+  seatNo         Int?             @map("seat_no")
 
   organization           Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   courseClass            CourseClass  @relation(fields: [courseClassId, organizationId], references: [id, organizationId], onDelete: Restrict)

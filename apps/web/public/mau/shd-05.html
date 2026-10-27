@@ -15,6 +15,10 @@
 .av{position:absolute;left:50%;top:128px;width:600px;height:600px;margin-left:-300px;border-radius:50%;overflow:hidden;box-shadow:0 0 0 14px #FFFDF9}
 .th0{position:absolute;left:56px;top:50px;display:flex;align-items:center;gap:14px;background:#FFFDF9;padding:12px 22px 12px 14px;border-radius:40px}
 .th0 img{width:44px;height:44px}.th0 span{font:600 17px var(--f-sans);letter-spacing:.24em;text-transform:uppercase}
+/* Bản vẽ H: khối MÃ SỐ (nhãn "SỐ" + số data-f="ma"), màu lấy từ bảng màu của mẫu, đặt chỗ không đè chữ/ảnh/logo/QR; mã trống → mau.js ẩn hẳn khối. */
+.seat{position:absolute;right:56px;top:50px;display:flex;align-items:center;gap:12px;background:#FFFDF9;padding:8px 26px 8px 24px;border-radius:40px}
+.seat-l{font:600 15px var(--f-sans);letter-spacing:.26em;text-transform:uppercase;color:#7C716A}
+.seat-n{font:600 40px/1 var(--f-chan);color:#1F1B1A}
 .pn{position:absolute;left:0;right:0;top:800px;bottom:0;display:flex;flex-direction:column;padding:30px 70px 56px}
 .hw{font-family:var(--f-tay-2);font-size:calc(118px*var(--tay-co-2));line-height:.95;color:#A0475C;padding-left:4px}
 .ten{font:500 70px/1.1 var(--f-chan);margin-top:4px}
@@ -22,7 +26,7 @@
 .gr .l{font:600 15px var(--f-sans);letter-spacing:.26em;text-transform:uppercase;color:#7C716A}
 .gr .v{font:500 28px/1.25 var(--f-chan);margin-top:8px}
 .vuong .pt{height:520px}.vuong .av{top:96px;width:390px;height:390px;margin-left:-195px;box-shadow:0 0 0 10px #FFFDF9}.vuong .pn{top:520px;padding:24px 70px 40px}.vuong .ten{font-size:56px}
-</style></head><body><div id="c"><div class="pt"><div class="av"><img class="ph" data-f="anh" alt=""></div><div class="th0"><img data-f="logo" alt=""><span data-f="th"></span></div></div>
+</style></head><body><div id="c"><div class="pt"><div class="av"><img class="ph" data-f="anh" alt=""></div><div class="th0"><img data-f="logo" alt=""><span data-f="th"></span></div><div class="seat"><span class="seat-l">Số</span><b class="seat-n" data-f="ma"></b></div></div>
 <div class="pn"><div class="hw">Chào mừng</div>
 <div class="ten" data-f="ten" data-fit="2"></div><div class="sp" style="min-height:24px"></div>
 <div class="gr"><div><div class="l">Khoá học</div><div class="v"><span data-f="khoa"></span> · <span data-f="lop"></span></div></div>

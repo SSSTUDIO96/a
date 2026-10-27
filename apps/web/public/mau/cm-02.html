@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=1080">
+<title>Thẻ chào mừng cm-02 – Panel viên thuốc</title>
+<!-- Makeup Pro · R&D-10 (19/10/2026), vào app theo bản vẽ H (26/10/2026): phông của app (phong/phong.css + ss-album.css, nối ở chung/cm.css), ô mã data-f="ma".
+     · kiểu (b) "Panel góc lõm" của R&D-07 vòng 2: tấm giấy kem bo góc lõm, vòm trên/dưới, viền nổi, trên nền hoa lá nét khắc xanh rêu.
+     Bố cục hai cột: ẢNH KHUNG TRÒN bên trái (bản R&D-10 là khung viên thuốc; đổi TRÒN theo ký duyệt H quyết định 1 — app chỉ có 1 mẫu viên thuốc là shd-11); bên phải tên khoá chữ vàng,
+     lớp / khai giảng và PHIẾU MÃ SỐ; dưới cùng là "Thân gửi" + TÊN chữ ký TO trải hết bề ngang.
+     Ô dữ liệu: logo, th, anh (khung tròn), khoa, lop, ngay, ten, diachi + ma (mã số học viên trong lớp, bản vẽ H; trống thì ẩn hẳn khối .seat).
+     Phông: Ephesis (chữ ký, OFL; = 'MP Chữ ký 6' của app) · Cormorant Garamond · Montserrat. Khổ 1080×1350, ?kho=vuong → 1080×1080. ?ma=12 đổi mã số. -->
+<link rel="stylesheet" href="phong/phong.css"><link rel="stylesheet" href="phong/ss-album/ss-album.css"><link rel="stylesheet" href="chung/mau.css"><link rel="stylesheet" href="chung/cm.css">
+<style>
+:root{--chu:#2A2420;--phu:#5C4E3E;--nhan:#6B5535;--vien:#B8975A;--f-tay-1:var(--f-tay-2);--tay-co-1:var(--tay-co-2)}
+#c{background:#F3F1E7;color:var(--chu)}
+.w{left:134px;top:196px;width:812px;height:1000px;padding:6px 34px 0}
+.top{display:flex;align-items:center;justify-content:center;gap:16px;width:100%}
+.lg{width:56px;height:56px}
+.th{font:600 20px var(--f-sans);letter-spacing:.3em;color:var(--nhan);text-transform:uppercase;min-width:0}
+.mid{display:flex;align-items:center;gap:44px;width:100%;margin-top:34px;flex:none}
+.av{width:288px;height:288px;box-shadow:0 0 0 8px #F5EFE3,0 0 0 10px var(--vien),0 0 0 15px #F5EFE3,0 0 0 16px rgba(184,151,90,.6)}
+.av img{object-position:50% 40%}
+.inf{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;text-align:left}
+.k1{font:500 18px var(--f-sans);letter-spacing:.34em;color:var(--nhan);text-transform:uppercase}
+.kh{font:600 52px/1.1 var(--f-chan);text-transform:uppercase;letter-spacing:.03em;margin-top:12px;text-align:left}
+.lo{font:italic 400 29px var(--f-chan);color:var(--phu);margin-top:12px}
+.lo b{font-weight:500;font-style:normal}
+.seat{margin-top:26px;gap:16px;padding:14px 24px 14px 20px;border:2px solid #6B5535;border-radius:18px;background:#FBF7EC;box-shadow:inset 0 0 0 4px #FBF7EC,inset 0 0 0 5.5px #B8975A;align-self:flex-start}
+.seat-l{font:600 15px/1.35 var(--f-sans);letter-spacing:.26em;color:var(--nhan);text-transform:uppercase;text-align:left}
+.seat-n{font:600 56px/1 var(--f-chan2);color:var(--chu)}
+.or{display:flex;align-items:center;gap:16px;margin:30px 0 8px}.or i{width:130px;height:1px;background:var(--vien)}.or b{width:10px;height:10px;transform:rotate(45deg);border:1px solid var(--vien)}
+.dg{font:italic 400 32px var(--f-chan);color:var(--phu)}
+.ten{font-size:calc(104px*var(--tay-co-1));color:var(--chu)}
+.by{font:italic 400 27px var(--f-chan);color:var(--phu);margin-top:4px}
+.ft{font:500 17px var(--f-sans);letter-spacing:.3em;text-transform:uppercase;color:var(--nhan)}
+.dc{font:400 25px var(--f-chan);color:var(--phu);margin-top:6px;max-width:100%;white-space:nowrap}
+.vuong .w{left:122px;top:116px;width:836px;height:868px;padding:0 34px}
+.vuong .lg{width:44px;height:44px}.vuong .th{font-size:18px}
+.vuong .mid{margin-top:20px;gap:40px}.vuong .av{width:224px;height:224px}
+.vuong .kh{font-size:44px;margin-top:8px}.vuong .lo{font-size:26px;margin-top:8px}.vuong .k1{font-size:16px}
+.vuong .seat{margin-top:16px}.vuong .seat-n{font-size:48px}
+.vuong .or{margin:14px 0 4px}.vuong .dg{font-size:28px}.vuong .ten{font-size:calc(88px*var(--tay-co-1))}.vuong .by{font-size:24px}.vuong .dc{font-size:23px}.vuong .ft{font-size:16px}
+</style></head><body><div id="c"><div class="w">
+<div class="top"><img class="lg" data-f="logo" alt=""><div class="th" data-f="th" data-fitw data-do></div></div>
+<div class="mid"><div class="av"><img data-f="anh" alt=""></div>
+ <div class="inf"><div class="k1" data-do>Chào mừng đến với lớp</div>
+  <div class="kh vang" data-f="khoa" data-fit="3" data-do data-vang="#684010,#8E6116,#684010,#8E6116"></div>
+  <div class="lo" data-do>Lớp <b data-f="lop"></b><br>khai giảng <span data-f="ngayCham"></span></div>
+  <div class="seat"><span class="seat-l" data-do>Mã<br>số</span><b class="seat-n" data-f="ma" data-do></b></div></div></div>
+<div class="sp"></div>
+<div class="or"><i></i><b></b><i></i></div>
+<div class="dg" data-do>Thân gửi</div>
+<div class="ten" data-f="ten" data-fit="2" data-do></div>
+<div class="by" data-do>Thân ái, <span data-f="th"></span></div>
+<div class="sp"></div>
+<div class="ft" data-f="thangNam" data-do></div><div class="dc" data-f="diachi" data-fitw data-do></div>
+</div></div>
+<script>window.MAC_DINH={ten:'Đặng Quỳnh Như'};</script>
+<script src="chung/ve.js"></script><script src="chung/ve-moi.js"></script>
+<script src="chung/mau.js"></script><script src="chung/cm.js"></script>
+<script>(function(){const V=window.VE,vuong=new URLSearchParams(location.search).get('kho')==='vuong';V.kho(1080,vuong?1080:1350);
+ const b=vuong?{x:90,y:40,w:900,h:1000}:{x:110,y:96,w:860,h:1158},r=40,a=vuong?70:84,sh=36;const d=V.hinhPanel(b,r,a,sh),bi={x:b.x+16,y:b.y+16,w:b.w-32,h:b.h-32};const [m,n]=V.NEN_MAU['khac-reu'];
+ VE_MOUNT(V.veKhac(m,n)+`<defs>${V.LOC}</defs>`+V.giayVan(d)+`<path d="${V.hinhPanel(bi,r+16,a-6,sh-14)}" fill="none" stroke="#D3C5AC" stroke-width="2.2" transform="translate(1.2,1.8)"/><path d="${V.hinhPanel(bi,r+16,a-6,sh-14)}" fill="none" stroke="#FFFFFF" stroke-width="1.6"/>`);})();</script>
+<script src="chung/html-to-image.js"></script><script src="chung/xuat.js"></script></body></html>

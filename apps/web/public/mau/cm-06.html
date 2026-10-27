@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=1080">
+<title>Thẻ chào mừng cm-06 – Tiền giấy xanh</title>
+<!-- Makeup Pro · R&D-10 (19/10/2026), vào app theo bản vẽ H (26/10/2026): phông của app (phong/phong.css + ss-album.css, nối ở chung/cm.css), ô mã data-f="ma".
+     · kiểu (f) "Khung tiền giấy guilloche xanh" của R&D-07 vòng 2: viền lưới sóng đan chéo, dải lá acanthus, bốn ô hoa thị góc.
+     Bố cục "tờ tiền": hàng đầu logo + tên trung tâm bên trái, MÃ SỐ như "mệnh giá" trong huy hiệu hoa thị bên phải; ảnh tròn đặt trên hoa thị guilloche lớn
+     ở giữa; TÊN chữ ký TO nằm trên DẢI XANH NHẠT như dải chữ chạy ngang tờ tiền; dưới là lớp / khai giảng, lời chào, địa chỉ.
+     Ô dữ liệu: logo, th, anh (khung tròn), khoa, lop, ngay, ten, diachi + ma (mã số học viên trong lớp, bản vẽ H; trống thì ẩn hẳn khối .seat).
+     Phông: MonteCarlo (chữ ký, OFL; = 'MP Chữ ký 5' của app) · Cormorant Garamond · Playfair Display · Montserrat. Khổ 1080×1350, ?kho=vuong → 1080×1080. ?ma=12 đổi mã số. -->
+<link rel="stylesheet" href="phong/phong.css"><link rel="stylesheet" href="phong/ss-album/ss-album.css"><link rel="stylesheet" href="chung/mau.css"><link rel="stylesheet" href="chung/cm.css">
+<style>
+:root{--chu:#13203D;--phu:#2C3E5C;--nhan:#1F4E8C;--vien:#1F4E8C}
+#c{background:#F6F1E3;color:var(--chu)}
+.w{left:136px;top:128px;width:808px;height:1098px;padding:6px 6px 0}
+.hd{display:flex;align-items:center;justify-content:space-between;width:100%;gap:16px}
+.brand{display:flex;align-items:center;gap:14px;min-width:0;flex:1}
+.lg{width:60px;height:60px}
+.th{font:600 20px/1.35 var(--f-sans);letter-spacing:.26em;color:var(--nhan);text-transform:uppercase;text-align:left;min-width:0}
+.seat{flex:none;flex-direction:column;width:124px;height:124px;border-radius:50%;background:#FBF6EA;border:2px solid var(--nhan);box-shadow:inset 0 0 0 5px #FBF6EA,inset 0 0 0 6.5px var(--nhan);margin:14px 18px 0 0}
+.seat-l{font:600 14px var(--f-sans);letter-spacing:.32em;text-indent:.32em;color:var(--nhan)}
+.seat-n{font:600 44px/1 var(--f-chan2);color:var(--chu);margin-top:2px}
+.av{width:244px;height:244px;box-shadow:0 0 0 6px #FBF6EA,0 0 0 8px var(--nhan),0 0 0 14px #FBF6EA,0 0 0 15px var(--nhan)}
+.k1{font:500 19px var(--f-sans);letter-spacing:.4em;color:var(--nhan);text-transform:uppercase}
+.kh{font:600 58px/1.06 var(--f-chan);text-transform:uppercase;letter-spacing:.04em;margin-top:10px}
+.band{width:calc(100% + 12px);margin:0 -6px;background:#DCE7F3;border-top:2px solid var(--nhan);border-bottom:2px solid var(--nhan);box-shadow:0 -4px 0 -2px #DCE7F3,0 4px 0 -2px #DCE7F3;padding:12px 20px 6px;position:relative}
+.band::before,.band::after{content:"";position:absolute;left:0;right:0;height:1px;background:var(--nhan);opacity:.7}.band::before{top:6px}.band::after{bottom:6px}
+.dg{font:italic 400 32px var(--f-chan);color:var(--phu)}
+.ten{font-size:calc(108px*var(--tay-co-1));color:var(--chu)}
+.row{display:flex;gap:70px;justify-content:center;margin-top:20px}
+.kv{display:flex;flex-direction:column;gap:2px}
+.kv b{font:600 16px var(--f-sans);letter-spacing:.3em;color:var(--nhan);text-transform:uppercase}
+.kv span{font:600 38px/1.15 var(--f-chan2);color:var(--chu)}
+.by{font:italic 400 28px var(--f-chan);color:var(--phu);margin-top:18px}
+.ft{font:500 18px var(--f-sans);letter-spacing:.3em;text-transform:uppercase;color:var(--nhan)}
+.dc{font:400 26px var(--f-chan);color:var(--phu);margin-top:6px;max-width:100%;white-space:nowrap}
+.vuong .w{left:136px;top:126px;width:808px;height:818px}
+.vuong .lg{width:46px;height:46px}.vuong .th{font-size:17px}.vuong .seat{width:104px;height:104px;margin:6px 14px 0 0}.vuong .seat-n{font-size:36px}
+.vuong .av{width:176px;height:176px}.vuong .k1{font-size:16px}.vuong .kh{font-size:44px;margin-top:6px}
+.vuong .band{padding:6px 16px 0}.vuong .dg{font-size:26px}.vuong .ten{font-size:calc(80px*var(--tay-co-1))}
+.vuong .row{margin-top:6px;gap:56px}.vuong .kv span{font-size:28px}.vuong .kv b{font-size:14px}.vuong .by{font-size:22px;margin-top:4px}.vuong .dc{font-size:23px}.vuong .ft{font-size:16px}
+.vuong .s1{min-height:16px!important}.vuong .s2{min-height:14px!important}.vuong .kv{flex-direction:row;align-items:baseline;gap:12px}.vuong .seat{width:96px;height:96px}.vuong .seat-n{font-size:31px}.vuong .seat-l{font-size:12px}
+</style></head><body><div id="c"><div class="w">
+<div class="hd"><div class="brand"><img class="lg" data-f="logo" alt=""><div class="th" data-f="th" data-do></div></div>
+ <div class="seat"><span class="seat-l" data-do>SỐ</span><b class="seat-n" data-f="ma" data-do></b></div></div>
+<div class="sp" style="flex:.4 1 0;min-height:8px"></div>
+<div class="k1" data-do>Chào mừng đến với lớp</div>
+<div class="kh vang" data-f="khoa" data-fit="2" data-do data-vang="#10285A,#2A5598,#10285A,#2A5598"></div>
+<div class="sp s1" style="flex:.5 1 0;min-height:40px"></div>
+<div class="av"><img data-f="anh" alt=""></div>
+<div class="sp s2" style="flex:.6 1 0;min-height:30px"></div>
+<div class="band"><div class="dg" data-do>Thân gửi</div><div class="ten" data-f="ten" data-fit="2" data-do></div></div>
+<div class="row"><div class="kv"><b data-do>Lớp</b><span data-f="lop" data-do></span></div><div class="kv"><b data-do>Khai giảng</b><span data-f="ngayCham" data-do></span></div></div>
+<div class="by" data-do>Thân ái, <span data-f="th"></span></div>
+<div class="sp"></div>
+<div class="ft" data-f="thangNam" data-do></div><div class="dc" data-f="diachi" data-fitw data-do></div>
+</div></div>
+<script>window.MAC_DINH={ten:'Đặng Quỳnh Như'};</script>
+<script src="chung/ve.js"></script><script src="chung/ve-moi.js"></script>
+<script src="chung/mau.js"></script><script src="chung/cm.js"></script>
+<script>(function(){const V=window.VE,vuong=new URLSearchParams(location.search).get('kho')==='vuong';V.kho(1080,vuong?1080:1350);
+ VE_MOUNT(V.khungTienGiay('#1F4E8C'));
+ window.CM_SAU.push(()=>{const c=document.getElementById('c').getBoundingClientRect();const mid=(q)=>{const r=document.querySelector(q).getBoundingClientRect();return [r.left-c.left+r.width/2,r.top-c.top+r.height/2,r.width];};
+  const [ax,ay,aw]=mid('.av'),[sx,sy,sw]=mid('.seat');
+  VE_MOUNT(`<g opacity=".8">${V.hoaThi(ax,ay,aw/2+(vuong?30:42),'#1F4E8C')}</g><circle cx="${ax}" cy="${ay}" r="${aw/2+(vuong?20:32)}" fill="#FBF6EA"/>`+
+    `<g opacity=".85">${V.hoaThi(sx,sy,sw/2+14,'#1F4E8C')}</g>`,true);});})();</script>
+<script src="chung/html-to-image.js"></script><script src="chung/xuat.js"></script></body></html>
