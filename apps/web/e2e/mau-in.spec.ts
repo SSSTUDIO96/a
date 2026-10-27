@@ -323,12 +323,12 @@ for (const [label, key] of [
 // Màn hợp đồng NHÁP có thanh nút riêng: nút In có ở cả hai loại, ở máy tính lẫn điện thoại, và mở được hộp In (chưa ghi dòng nào).
 for (const vp of [VIEWPORTS[0], VIEWPORTS[2]]) {
   for (const [label, pick] of [
-    ['dịch vụ', () => [seed.draftServiceId, seed.draftServiceCode]],
-    ['khoá học', () => [seed.draftCourseId, seed.draftCourseCode]],
+    ['dịch vụ', () => ({ id: seed.draftServiceId, code: seed.draftServiceCode })],
+    ['khoá học', () => ({ id: seed.draftCourseId, code: seed.draftCourseCode })],
   ] as const) {
     test(`nút In có ở hợp đồng ${label} nháp ở ${vp.name}`, async ({ browser }) => {
       const { context, page } = await openAs(browser, vp);
-      const [id, code] = pick();
+      const { id, code } = pick();
       const dlg = await openDialog(page, vp, id, code);
       await expect(dlg.getByText(`${code} · Nháp`)).toBeVisible();
       await noHorizontalOverflow(page, `hộp In nháp ${label} ${vp.name}`);
