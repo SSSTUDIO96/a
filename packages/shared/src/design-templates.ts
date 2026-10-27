@@ -53,6 +53,8 @@ export const SLOT_SOURCES = {
   lai: { label: 'Ngày cấp lại', from: 'Certificate.reissuedOn (chỉ bản cấp lại)', contract: 'COURSE' },
   gd: { label: 'Người ký (Giám đốc)', from: 'OrganizationProfile.certSignerName (chụp vào Certificate.signerName)', contract: 'COURSE' },
   gdcv: { label: 'Chức danh người ký', from: 'OrganizationProfile.certSignerTitle (trống = "Giám đốc trung tâm")', contract: 'COURSE' },
+  // Bản vẽ H (mã số học viên): ô mã số trên MỌI mẫu chào mừng. Tệp vẽ nhận ?ma=07; trống thì ẩn hẳn khối mã (chung/mau.js).
+  ma: { label: 'Mã số trong lớp', from: 'Enrollment.seatNo (ghi danh ACTIVE của khách ở lớp của thẻ) → seatLabel', contract: 'COURSE' },
 } as const satisfies Record<string, SlotSource>;
 
 export type SlotKey = keyof typeof SLOT_SOURCES;
@@ -92,6 +94,9 @@ export interface DesignTemplate {
   // để dạng viên thuốc" (anh Chiến 19/10/2026).
   frameShape: FrameShape;
   origin: 'HOC_TU_ANH' | 'TU_SANG_TAC'; // ghi nguồn
+  // Mẫu mới của đợt gần nhất (bản vẽ H: 10 mẫu chào mừng cm-01..10). Ô chọn mẫu vẽ nhãn "Mới" bằng CSS trên ảnh nhỏ —
+  // không vẽ chữ vào ảnh nhỏ. Mẫu khác không có khoá này.
+  isNew?: true;
 }
 
 const BOTH_SIZES: DesignSize[] = ['1080x1350', '1080x1080'];
@@ -123,6 +128,10 @@ function tpl(
   return { code, version: 1, kind, name, contractKinds, slots, photos: photosOf(slots), fonts, sizes, origin, photoFrames, frameShape };
 }
 
+// Đổi bố cục tệp vẽ → tăng version (thẻ cũ giữ templateVersion đã lưu).
+const withVersion = (t: DesignTemplate, version: number): DesignTemplate => ({ ...t, version });
+const markNew = (t: DesignTemplate): DesignTemplate => ({ ...t, isNew: true });
+
 const VT = (n: number) => `MP Viết tay ${n}`;
 // Nhóm phông chữ ký nét mảnh đều (phong.css 'MP Chữ ký N'); mẫu dùng chữ ký làm phông viết tay mặc định.
 const KY = (n: number) => `MP Chữ ký ${n}`;
@@ -145,33 +154,52 @@ function cert(code: string, name: string, ky: string, tieuDe: string, origin: De
 // trang bày docs/rnd/v3-bay-mau.html. Phông theo dòng "Phông:" của trang bày.
 export const DESIGN_TEMPLATES: readonly DesignTemplate[] = [
   // ---------- Chào mừng (hợp đồng khoá học; ảnh học viên lấy từ `anh`, không tải lên) ----------
+  // Bản vẽ H: 21 mẫu, mẫu nào cũng có ô mã số `ma`. 10 mẫu mới cm-01..10 (R&D-10, theo phong cách anh Chiến gửi 19/10/2026)
+  // đứng TRƯỚC 11 mẫu cũ. Tên học viên viết chữ ký nét mảnh của app: MonteCarlo = MP Chữ ký 5, Ephesis = MP Chữ ký 6
+  // (public/mau/chung/cm.css nối --f-tay-1/2 vào --f-ky-5/6; không mang bản phông riêng). Khung ảnh tròn cả 10 mẫu
+  // (cm-02 R&D dùng viên thuốc → đổi tròn theo ký duyệt H quyết định 1; viên thuốc chỉ có shd-11).
+  ...([
+    ['cm-01', 'Giấy dấu sáp', 5],
+    ['cm-02', 'Panel viên thuốc', 6],
+    ['cm-03', 'Tem răng cưa', 5],
+    ['cm-04', 'Thư giấy vân', 5],
+    ['cm-05', 'Bằng khen cổ điển', 6],
+    ['cm-06', 'Tờ tiền xanh', 5],
+    ['cm-07', 'Thảm Ba Tư', 5],
+    ['cm-08', 'Giấy xé + washi', 6],
+    ['cm-09', 'Thiệp gập ruy băng', 5],
+    ['cm-10', 'Gương oval cổ điển', 5],
+  ] as const).map(([code, name, ky]) =>
+    markNew(tpl(code, 'WELCOME', name, COURSE, ['logo', 'th', 'anh', 'khoa', 'lop', 'ngay', 'ten', 'diachi', 'ma'], [KY(ky), CHAN, CHAN_DAM, SANS], 'HOC_TU_ANH')),
+  ),
+  // 11 mẫu cũ: thêm khối mã số (bản vẽ H mục 4.4) → version 2.
   // shd-01 thêm ảnh học viên khung tròn 19/10/2026 (trước đây là mẫu duy nhất không có ảnh).
-  tpl('shd-01', 'WELCOME', 'Thư mời kem', COURSE,
-    ['logo', 'th', 'anh', 'khoa', 'lop', 'ngay', 'ten', 'diachi'], [VT(1), CHAN, SANS], 'HOC_TU_ANH'),
-  tpl('shd-02', 'WELCOME', 'Đen vàng khung tròn', COURSE,
-    ['logo', 'th', 'anh', 'ten', 'khoa', 'lop', 'ngay'], [VT(1), CHAN, SANS], 'TU_SANG_TAC'),
-  tpl('shd-03', 'WELCOME', 'Ngày khai giảng lớn', COURSE,
-    ['logo', 'th', 'ngay', 'anh', 'ten', 'khoa', 'lop', 'diachi', 'web'], [VT(3), CHAN_DAM, SANS], 'HOC_TU_ANH'),
-  tpl('shd-04', 'WELCOME', 'Ruy băng tên', COURSE,
-    ['th', 'logo', 'anh', 'ten', 'khoa', 'lop', 'diachi', 'sdt'], [CHAN_DAM, CHAN, SANS], 'HOC_TU_ANH'),
-  tpl('shd-05', 'WELCOME', 'Tạp chí tối giản', COURSE,
-    ['anh', 'logo', 'th', 'ten', 'khoa', 'lop', 'ngay', 'gv'], [VT(2), CHAN, SANS], 'TU_SANG_TAC'),
-  tpl('shd-06', 'WELCOME', 'Xanh rêu khung lệch', COURSE,
-    ['logo', 'th', 'anh', 'ten', 'khoa', 'lop', 'ngay', 'lich'], [VT(1), CHAN, SANS], 'TU_SANG_TAC'),
-  tpl('shd-07', 'WELCOME', 'Vé vào lớp', COURSE,
-    ['logo', 'th', 'anh', 'ten', 'khoa', 'lop', 'ngay', 'lich'], [VT(4), CHAN, SANS], 'TU_SANG_TAC'),
-  tpl('shd-08', 'WELCOME', 'Chữ ký trên nền trắng', COURSE,
-    ['anh', 'ten', 'khoa', 'lop', 'ngay', 'logo', 'th'], [VT(2), CHAN, SANS], 'TU_SANG_TAC'),
-  tpl('shd-09', 'WELCOME', 'Thiệp vàng hồng khung tròn', COURSE,
-    ['logo', 'th', 'anh', 'ten', 'khoa', 'lop', 'ngay', 'gv'], [VT(3), CHAN, SANS], 'TU_SANG_TAC'),
-  tpl('shd-10', 'WELCOME', 'Thư tay của giảng viên', COURSE,
-    ['logo', 'th', 'anh', 'ten', 'khoa', 'lop', 'ngay', 'lich', 'diachi', 'gv'], [VT(1), VT(3), CHAN, SANS], 'TU_SANG_TAC'),
+  withVersion(tpl('shd-01', 'WELCOME', 'Thư mời kem', COURSE,
+    ['logo', 'th', 'anh', 'khoa', 'lop', 'ngay', 'ten', 'diachi', 'ma'], [VT(1), CHAN, SANS], 'HOC_TU_ANH'), 2),
+  withVersion(tpl('shd-02', 'WELCOME', 'Đen vàng khung tròn', COURSE,
+    ['logo', 'th', 'anh', 'ten', 'khoa', 'lop', 'ngay', 'ma'], [VT(1), CHAN, SANS], 'TU_SANG_TAC'), 2),
+  withVersion(tpl('shd-03', 'WELCOME', 'Ngày khai giảng lớn', COURSE,
+    ['logo', 'th', 'ngay', 'anh', 'ten', 'khoa', 'lop', 'diachi', 'web', 'ma'], [VT(3), CHAN_DAM, SANS], 'HOC_TU_ANH'), 2),
+  withVersion(tpl('shd-04', 'WELCOME', 'Ruy băng tên', COURSE,
+    ['th', 'logo', 'anh', 'ten', 'khoa', 'lop', 'diachi', 'sdt', 'ma'], [CHAN_DAM, CHAN, SANS], 'HOC_TU_ANH'), 2),
+  withVersion(tpl('shd-05', 'WELCOME', 'Tạp chí tối giản', COURSE,
+    ['anh', 'logo', 'th', 'ten', 'khoa', 'lop', 'ngay', 'gv', 'ma'], [VT(2), CHAN, SANS], 'TU_SANG_TAC'), 2),
+  withVersion(tpl('shd-06', 'WELCOME', 'Xanh rêu khung lệch', COURSE,
+    ['logo', 'th', 'anh', 'ten', 'khoa', 'lop', 'ngay', 'lich', 'ma'], [VT(1), CHAN, SANS], 'TU_SANG_TAC'), 2),
+  withVersion(tpl('shd-07', 'WELCOME', 'Vé vào lớp', COURSE,
+    ['logo', 'th', 'anh', 'ten', 'khoa', 'lop', 'ngay', 'lich', 'ma'], [VT(4), CHAN, SANS], 'TU_SANG_TAC'), 2),
+  withVersion(tpl('shd-08', 'WELCOME', 'Chữ ký trên nền trắng', COURSE,
+    ['anh', 'ten', 'khoa', 'lop', 'ngay', 'logo', 'th', 'ma'], [VT(2), CHAN, SANS], 'TU_SANG_TAC'), 2),
+  withVersion(tpl('shd-09', 'WELCOME', 'Thiệp vàng hồng khung tròn', COURSE,
+    ['logo', 'th', 'anh', 'ten', 'khoa', 'lop', 'ngay', 'gv', 'ma'], [VT(3), CHAN, SANS], 'TU_SANG_TAC'), 2),
+  withVersion(tpl('shd-10', 'WELCOME', 'Thư tay của giảng viên', COURSE,
+    ['logo', 'th', 'anh', 'ten', 'khoa', 'lop', 'ngay', 'lich', 'diachi', 'gv', 'ma'], [VT(1), VT(3), CHAN, SANS], 'TU_SANG_TAC'), 2),
   // Mẫu thứ 20 (9 mẫu đợt 1 của R&D + shd-01..10 + mẫu này; việc tồn 7): tên học viên viết CHỮ KÝ nét mảnh đều
   // (docs/SO-Y-MUON.md 18/10/2026) trên dòng ký tên; dòng thông tin trống tự ẩn; không có logo thì ẩn ô logo (L6).
   // Mẫu DUY NHẤT khung ảnh viên thuốc: bố cục hai cột dựng quanh ảnh đứng cao, và là mẫu mới nên không đổi mẫu người
   // dùng đã quen.
-  tpl('shd-11', 'WELCOME', 'Chữ ký mảnh nền đá', COURSE,
-    ['logo', 'th', 'anh', 'ten', 'khoa', 'lop', 'ngay', 'lich', 'gv', 'diachi'], [KY(1), CHAN, SANS], 'TU_SANG_TAC', 'pill'),
+  withVersion(tpl('shd-11', 'WELCOME', 'Chữ ký mảnh nền đá', COURSE,
+    ['logo', 'th', 'anh', 'ten', 'khoa', 'lop', 'ngay', 'lich', 'gv', 'diachi', 'ma'], [KY(1), CHAN, SANS], 'TU_SANG_TAC', 'pill'), 2),
 
   // ---------- Feedback (fb-09 chỉ dịch vụ; còn lại cả hai loại hợp đồng) ----------
   tpl('fb-01', 'FEEDBACK', 'Tin nhắn và ảnh polaroid', BOTH_KINDS,

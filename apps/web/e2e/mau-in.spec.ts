@@ -184,6 +184,28 @@ async function noHorizontalOverflow(page: Page, label: string) {
   expect(scrollWidth, `${label}: tràn ngang (scrollWidth ${scrollWidth} > innerWidth ${innerWidth})`).toBeLessThanOrEqual(innerWidth);
 }
 
+// Hộp In là lớp phủ cố định: nội dung trong hộp rộng quá thì tạo thanh cuộn BÊN TRONG hộp, document.scrollWidth không đổi.
+// Nên ở hộp In kiểm thêm: hộp nằm gọn trong khung nhìn, và không phần tử nào trong hộp (trừ tờ giấy xem trước, được co theo
+// khổ) vượt mép phải khung nhìn hay có nội dung rộng hơn chính nó.
+async function noOverflowInDialog(page: Page, label: string) {
+  const bad = await dialogOf(page).evaluate((dlg) => {
+    const vw = window.innerWidth;
+    const out: string[] = [];
+    const box = dlg.getBoundingClientRect();
+    if (box.left < -0.5 || box.right > vw + 0.5) out.push(`hộp ${Math.round(box.left)}…${Math.round(box.right)} ngoài khung ${vw}`);
+    for (const el of [dlg, ...Array.from(dlg.querySelectorAll<HTMLElement>('*'))]) {
+      if (el.closest('.hdin-frame__paper')) continue;
+      const r = el.getBoundingClientRect();
+      if (r.width === 0 || r.height === 0) continue;
+      const name = `${el.tagName.toLowerCase()}.${String(el.className).split(' ')[0] ?? ''}`;
+      if (r.right > vw + 1) out.push(`${name} right ${Math.round(r.right)} > ${vw}`);
+      if (el.scrollWidth > el.clientWidth + 1 && getComputedStyle(el).overflowX !== 'visible') out.push(`${name} scrollWidth ${el.scrollWidth} > clientWidth ${el.clientWidth}`);
+    }
+    return out.slice(0, 5);
+  });
+  expect(bad, `${label}: tràn ngang trong hộp In`).toEqual([]);
+}
+
 // Ảnh khung nhìn thật, không fullPage. Chờ yên mạng + phông xong để ảnh không chụp giữa lúc tải.
 async function shot(page: Page, name: string, vp: Vp) {
   await page.waitForLoadState('networkidle');
@@ -289,6 +311,7 @@ for (const [label, key] of [
       await expect(dlg.getByRole('radio', { checked: true })).toHaveCount(1);
       await expect(dlg.locator('label.is-on')).toContainText(key === 'dich-vu' ? 'Hiện đại' : 'Cổ điển có quốc hiệu');
       await noHorizontalOverflow(page, `hộp In ${label} ${vp.name}`);
+      await noOverflowInDialog(page, `hộp In ${label} ${vp.name}`);
       await shot(page, `hop-in-${key}`, vp);
       // Chưa bấm In thì chưa có dòng nhật ký nào.
       expect((await printData(contractId)).printCount).toBe(0);
@@ -309,6 +332,7 @@ for (const vp of [VIEWPORTS[0], VIEWPORTS[2]]) {
       const dlg = await openDialog(page, vp, id, code);
       await expect(dlg.getByText(`${code} · Nháp`)).toBeVisible();
       await noHorizontalOverflow(page, `hộp In nháp ${label} ${vp.name}`);
+      await noOverflowInDialog(page, `hộp In nháp ${label} ${vp.name}`);
       expect((await printData(id)).printCount).toBe(0);
       await context.close();
     });
@@ -342,6 +366,7 @@ async function printOnce(browser: Browser, vp: Vp, contractId: string, code: str
   expect(after.printCount - before, 'số dòng nhật ký in mới').toBe(1);
   expect(after.lastPrint).toMatchObject({ printNo: 1, source: 'TEMPLATE' });
   await noHorizontalOverflow(page, `sau khi in ${vp.name}`);
+  await noOverflowInDialog(page, `sau khi in ${vp.name}`);
 
   // Đóng rồi mở lại: lần in hiện trên hộp, in lại y hệt (cùng dữ liệu), chưa gọi thêm window.print và chưa ghi thêm dòng.
   await dlg.locator('.hdin-foot__btns').getByRole('button', { name: 'Đóng', exact: true }).click();

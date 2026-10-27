@@ -1,0 +1,18 @@
+/* Khung chung cho 10 mẫu chào mừng cm-01..10 (R&D-10, đưa vào app theo bản vẽ H mục 4.4).
+   PHÔNG: mẫu nạp phong/phong.css + phong/ss-album/ss-album.css CỦA APP bằng <link> (không mang bản phông riêng, không @import).
+   Chữ ký của R&D-10 = MonteCarlo / Ephesis = 'MP Chữ ký 5' / 'MP Chữ ký 6' của app → nối hai biến viết tay của mẫu vào đó.
+   (Trong app 'MP Viết tay 1' là Imperial Script — KHÔNG dùng tên đó cho mẫu cm.) Tham số ?ky=N của mau.js đặt kiểu nội tuyến
+   trên <html>, mạnh hơn khối :root này, nên vẫn đổi được phông chữ ký. */
+:root{--f-tay-1:var(--f-ky-5);--tay-co-1:var(--ky-co-5);--f-tay-2:var(--f-ky-6);--tay-co-2:var(--ky-co-6)}
+#c{font-family:var(--f-chan)}
+.w{position:absolute;display:flex;flex-direction:column;align-items:center;text-align:center}
+.w img.lg{flex:none;object-fit:contain}
+.vang{display:block;width:100%}.vang svg{display:block;overflow:visible;margin:0 auto}
+.ten{font-family:var(--f-tay-1);line-height:1.2;width:100%;padding:0 6px}
+/* Khối MÃ SỐ: nhãn "SỐ" + số (ô data-f="ma"). Mã trống → mau.js ẩn hẳn khối (body.khong-ma). */
+.seat{display:flex;align-items:center;justify-content:center}
+.khong-ma .seat{display:none!important}
+[data-fit]{flex-shrink:0;text-wrap:balance}
+/* Khung ảnh học viên: TRÒN ở cả 10 mẫu (viên thuốc chỉ có shd-11). */
+.av{flex:none;overflow:hidden;border-radius:50%}
+.av img{width:100%;height:100%;object-fit:cover;object-position:50% 38%}

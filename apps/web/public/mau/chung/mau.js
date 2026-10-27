@@ -4,7 +4,9 @@
    - ô không có tham số thì để TRỐNG (không lấy chữ mẫu của R&D, không bịa); ảnh trống thì khung hiện gợi ý "Thêm ảnh …"; logo trống thì
      bỏ hẳn ô logo (kể cả vòng bọc .ld), body thêm lớp khong-logo;
    - dòng phụ `dv` ghép từ đúng các ô có giá trị (khoá học: khoa · Lớp lop; dịch vụ: nv · goi · nsk);
-   - ngày trống thì các ô ngày suy ra (thứ, tháng, năm…) cũng trống.
+   - ngày trống thì các ô ngày suy ra (thứ, tháng, năm…) cũng trống;
+   - mã số trong lớp `ma` (bản vẽ H) trống thì ẩn HẲN khối mã (phần tử .seat bọc ô data-f="ma"), body thêm lớp khong-ma.
+   Không có ?that=1 (trang bày mẫu, ảnh nhỏ) thì mã mẫu là "07".
    Không có ?that=1 thì chạy y như bản R&D (chữ mẫu) — trang bày mẫu vẫn dùng được.
    Khổ: mặc định 1080×1350, ?kho=vuong ra 1080×1080. Phông chữ ký: ?ky=1..8 (5 MonteCarlo, 6 Ephesis, 8 Pinyon Script; không có 7 — WindSong đã gỡ 19/10/2026 — xem phong/ss-album/ss-album.css). */
 (function(){
@@ -21,7 +23,8 @@ const D={
   diachi:G('diachi','25 Hoàng Quốc Việt, Cầu Giấy, Hà Nội'), sdt:G('sdt','0912 345 678'), web:G('web','chienmakeup.vn'),
   loai:(THAT?P.get('loai'):G('loai','khoa'))||'khoa',
   nv:G('nv','Cô dâu'), goi:G('goi','Ngày cưới trọn gói'), nsk:G('nsk','24/10/2026'), noi:G('noi','Tại nhà · Long Biên, Hà Nội'),
-  nfb:G('nfb','12/10/2026'), sao:+(G('sao','5')||0), cc:G('cc',''), td:G('td',''), nkt:G('nkt','20/12/2026')
+  nfb:G('nfb','12/10/2026'), sao:+(G('sao','5')||0), cc:G('cc',''), td:G('td',''), nkt:G('nkt','20/12/2026'),
+  ma:G('ma','07')
 };
 
 const DV=D.loai==='dv';
@@ -71,6 +74,8 @@ document.querySelectorAll('[data-f]').forEach(el=>{const v=D[el.dataset.f];
     else{el.src=TRONG;el.style.visibility='hidden';}}
   else el.textContent=v==null?'':v;});
 document.body.dataset.thieuAnh=String(thieuAnh);
+// Ô mã số trống (chế độ dữ liệu thật, học viên chưa có mã — hợp đồng nháp): ẩn hẳn khối .seat (nhãn "SỐ" + số), không in số bịa.
+if(!D.ma){document.body.classList.add('khong-ma');document.querySelectorAll('[data-f="ma"]').forEach(el=>{(el.closest('.seat')||el).style.display='none';});}
 document.querySelectorAll('[data-chat]').forEach(el=>{const parts=D.nd.match(/[^.!?]+[.!?]*/g)||[D.nd];
   const n=+el.dataset.chat||3;const g=[];parts.forEach((s,i)=>{const k=Math.min(n-1,Math.floor(i*n/parts.length));g[k]=(g[k]||'')+s;});
   el.innerHTML=g.filter(Boolean).map(t=>`<div class="bb">${t.trim().replace(/&/g,'&amp;').replace(/</g,'&lt;')}</div>`).join('');});
